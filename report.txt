@@ -1,0 +1,268 @@
+================================================================================
+XSIGHT DESIGN REVIEW — TEAM TIGER INVESTIGATION REPORT
+================================================================================
+Date:        2026-09-02
+Subject:     Whiteboard design sketch "widgets.jpg" — Xsight runs dashboard
+Reviewed by: Team Tiger (5 members, each reviewing independently)
+Scope:       Opinions on the design only — no changes were made to the design
+             or to the transcribed TypeScript models (src/*.ts).
+
+--------------------------------------------------------------------------------
+1. WHAT WAS INVESTIGATED
+--------------------------------------------------------------------------------
+The sketch defines a dashboard application "Xsight" for browsing test runs,
+described in three model layers:
+
+  - View Models       — page layout (a "flex-rows" engine with numbered rows
+                        and cells) plus per-panel templated configurations for
+                        the filters, table, and refresher panels.
+  - Data Models       — runtime state: current user, filter values, compiled
+                        query string, pagination (window/current), refresher
+                        settings, current rows, and a per-page cache.
+  - User View Models  — the user's chosen template ("view") per page/panel and
+                        per-template settings overrides, applied on top of the
+                        View Models.
+
+A faithful TypeScript transcription exists in:
+  src/view-models.ts, src/data-models.ts, src/user-view-models.ts, src/index.ts
+
+--------------------------------------------------------------------------------
+2. CLOSE INSPECTION OF THE PICTURE (pre-review findings)
+--------------------------------------------------------------------------------
+The image was re-examined in four zoomed quadrants before the review. Details
+surfaced beyond the first-pass transcription:
+
+  - The filter bar in the UI mock contains "Statuses" and "Updated" fields that
+    are only implied (as "< ... >") in the View Model's filter elements.
+  - Table template pills read: default / e2e / regression / simple / "...".
+    Page and filters panels each carry their own pill row (default / simple).
+  - A control cluster of three icons (sort, settings, kebab) sits above the
+    table — annotated "Component control, sorting and configuration."
+  - Row actions: most rows show only a kebab menu; exactly one Success row
+    shows an inline "repeat" link. No rule for this is stated.
+  - Pagination appears twice (above and below the table), both with a
+    "10 / Page" selector and pages 1..10 ... 99; page 5 is current. The bottom
+    bar is paired with a "<---Spacer--->" layout slot.
+  - The pages cache is asymmetric: page #1 (previous loaded state), #2
+    (preload for previous), #5 (current), #6 (preload for current). Pages 3
+    and 4 — adjacent to current — are not cached.
+  - Sketch-quality slips: the options endpoint is spelled "applicaitons"; two
+    table columns are both numbered "5:" (Status and Actions); sample rows
+    repeat id 123457 across many rows; actions are marked <TBD>.
+  - Timestamps confirmed as ISO form "2025-11-05T11:30:42.760Z".
+  - The default search value in the data model is the user's email address.
+
+--------------------------------------------------------------------------------
+3. TEAM TIGER OPINIONS (one agent per member)
+--------------------------------------------------------------------------------
+
+3.1 FRONTEND ARCHITECT
+    Verdict: direction is right; two review-blockers.
+
+    Strengths:
+    - Defends the three-layer split: the layers map cleanly to three
+      lifecycles — shipped config, ephemeral runtime state, persisted per-user
+      profile. Two pagination panels sharing one "runs.pagination" binding
+      already demonstrate the payoff.
+    - The template system plus user overrides is the right way to avoid
+      forking pages per team.
+
+    Concerns:
+    - String-path binding is the biggest worry: three resolution scopes
+      (view-model tree, data-model tree, relative filter paths) share one
+      syntax with no compile-time safety. Requires load-time registry
+      validation and typed accessors — keep the indirection, validate it.
+    - BLOCKER: numeric-keyed rows/columns. Inserting a column renumbers
+      everything after it and silently invalidates stored user settings — the
+      very thing the User View Model layer exists to persist. Columns need
+      stable string ids plus an ordering array; row identity keyed by absolute
+      row number breaks the moment page size changes.
+    - BLOCKER: the refresher panel conflates a widget with a data service — it
+      owns the endpoint, data path, and cache path. Drop it from a "simple"
+      layout and nothing loads data. Orchestration belongs in a page-level
+      service; the panel should just be a control.
+    - "filters.query" is derived state stored beside its source values — a
+      staleness bug waiting to happen unless the recompute trigger is explicit.
+    - "my own" user-authored templates have no home: View Models are static
+      config, yet that is where a user-created template would have to live.
+    - Naming/DSL nits: a cell field named `default` with value "default"
+      should be `template`; `panel` and `model` on a cell are redundant and
+      can drift; "m-8/12 s-1/2" is an unvalidated micro-grammar; merge and
+      versioning semantics for user settings overrides are undefined.
+
+3.2 UX DESIGNER
+    Verdict: right anatomy (filters -> pagination -> table); consolidate.
+
+    - Double pagination: keep the full bar at the bottom only; reduce the top
+      to a results summary ("showing 41-50 of ~990"). Two "10 / Page"
+      selectors is duplicated chrome inviting sync bugs and confusion.
+    - Template pills at three levels are power-user candy, new-user poison —
+      especially with "simple" meaning something different at each level. One
+      visible switcher at page level; per-panel templates behind settings.
+    - The 5-second auto-refresh will fight the reader: rows repaint while
+      someone scans a failure or opens a menu. Pause on hover/open menu,
+      refresh in place with an "N updated" affordance, and simplify the
+      checkbox + editable-interval control to on/off.
+    - Row actions are inconsistent: "repeat" inline on one row while all else
+      hides in a kebab teaches users actions are unpredictable. Pick one
+      pattern (always-kebab, or a consistent inline action slot disabled with
+      a tooltip when unavailable).
+    - Status as plain text is a missed opportunity: it is THE column in a
+      test-runs tool. Color-coded badges (with icon/shape, not color alone),
+      and surface the status message on hover instead of a click-through.
+    - Search is buried on its own row despite likely being the most-used
+      control; no applied-filter state (chips / clear-all) exists.
+    - Sorting belongs on column headers, not in a toolbar of three unlabeled
+      icons; that corner is overloaded.
+    - Small: near-identical ids/names mean status/reference must carry visual
+      differentiation; confirm truncation for Reference/Inbound codes; the
+      spacer slot must collapse responsively; the user email in the top bar
+      needs a purpose (menu: sign out, preferences) or it is dead chrome.
+
+3.3 BACKEND / API ENGINEER
+    Verdict: good model split; the compiled query string is the design smell.
+
+    - Storing the compiled query string in the data model ("applications=ABC&
+      started=...") duplicates state that should be derived at request time.
+      It will drift from the structured filter values and couples client state
+      to the wire format.
+    - Polling: every open tab issues a full filtered query every 5 s with no
+      conditional-request story. For an always-open dashboard that scales
+      badly. Minimum: ETag/If-None-Match or a `since` watermark so "nothing
+      changed" is a cheap 304. Better: SSE — run status transitions are
+      naturally an event feed, not a snapshot to re-poll.
+    - Page-number pagination over live data causes rows to shift/duplicate
+      between refreshes (the repeated id 123457 in the sample already hints at
+      the symptom). Wants cursor/keyset pagination over a pinned total order;
+      the sort ["reference", "id"] must be a stable total order regardless.
+    - Cache coherence: the refresher only rewrites the current page, so cached
+      neighbor pages go stale within one tick — no versioning, no invalidation
+      rule, no TTL. Needs a snapshot/version token so cached pages come from
+      one consistent read, or explicit invalidation.
+    - URL templates in view models hard-code API routes into UI config; prefer
+      hypermedia links returned per resource. The ${application} placeholder
+      is ambiguous under multi-select, and row data as sketched does not carry
+      an application field. Two interpolation scopes share one ${...} syntax.
+    - Endpoint string-splicing ("?${query}&page=${current}") has no escaping
+      story and breaks when query is empty; filters, sort, and pagination
+      should be one coherent, spec'd parameter set.
+    - Likes: view-model/data-model split, remote-sourced select options, and
+      status as {state, message}. Flags: the "applicaitons" typo, and the
+      hard-coded "https://workbench" origin (should be relative/injected).
+
+3.4 QA / TEST ENGINEER
+    Verdict: the architecture is testable; the spec is not yet buildable.
+
+    - Likes: the three layers can be schema-validated, snapshot-rendered per
+      template, and override-fuzzed in isolation — but nothing validates the
+      bindings between layers.
+    - Silent path failures, proven by the sketch itself: the layout binds
+      "panels.runs.pagination" and "misc.spacer", and neither panel exists in
+      the panels view model. Demands boot/CI-time path resolution with a
+      defined, visible failure state. (BLOCKER)
+    - The "applicaitons" typo is exactly what string-typed endpoints
+      guarantee: a 404 and an empty select with no diagnostic. Wants a typed
+      endpoint catalog or contract tests over every source/endpoint string.
+    - Template combinatorics are unbounded without a fallback chain: open-
+      ended template names including user-created ones, per-template settings
+      overrides, no rule for deleted/renamed templates or orphaned settings.
+      Demands a fallback chain and supported-combinations list. (BLOCKER)
+    - Row identity is broken as specced: absolute-position keys, duplicate id
+      123457 in the sample, "repeat" on one row with no rule, and a 5 s
+      refresher mutating the table under the cursor (stale-target clicks).
+      Demands a stable unique row key, refresh paused during interaction, and
+      the display rule for "repeat". (BLOCKER)
+    - Cache invalidation unspecified: filter change, sort change (sort lives
+      INSIDE runs.filters — does re-sorting flush?), and page-size change
+      (which re-keys absolute row numbers, corrupting every entry) have no
+      stated behavior; neighbor pages are never refreshed. (BLOCKER)
+    - Undefined states needing a spec before build: empty result set, fetch
+      failure mid-tick (does an error clobber good data?), page 99, unknown
+      status strings, auth expiry inside the refresh loop.
+    - Spec-quality signal: duplicate column "5:", the typo, <TBD> actions —
+      this is a direction, not a spec; institutionalize "ask, don't assume".
+    - Privacy flag: the user's email is the default search value interpolated
+      raw into the refresher URL — PII lands in server access logs by default,
+      and URL-encoding/injection behavior is untested.
+
+3.5 PERFORMANCE / STATE-MANAGEMENT ENGINEER
+    Verdict: good instincts; one root cause behind every weakness — cache
+    entries and row keys encode position and page number, not identity
+    (run id) or context (query).
+
+    - The 1/2/5/6 cache window is the oddest choice: it preloads only forward.
+      Paging BACK from 5 to 4 — the most common gesture — is always a miss,
+      while page 2 sits warm for an unlikely path. Symmetric neighbors
+      (4/5/6) plus "the page I came from" fit the stated intent better; and
+      "previous loaded state" is stale within seconds under a 5 s poll anyway.
+    - Absolute row numbers as keys conflate position with identity: any
+      re-sort, filter change, or one new run arriving renumbers rows 51-60
+      everywhere — 100% renderer churn (no DOM reuse, focus/animation loss)
+      and silent poisoning of cached pages. Key rows by run id; the row
+      number is a display artifact.
+    - BLOCKER: the cache is keyed by page number only, but contents depend on
+      the compiled query. Nothing invalidates runs.pages on filter/sort
+      change, so navigation after a filter change serves rows from the old
+      query as if current. Key the cache by (query, page) or bump a query
+      epoch that flushes it — the compiled query string is already the perfect
+      cache key; it is just not used as one.
+    - The 5 s poll rewrites runs.data.current wholesale: cheap at 10 rows, but
+      clobbers open menus/hover/focus/selection and reruns the whole resolve
+      pipeline. Diff by run id and patch changed rows (usually one status
+      flip), pause when the tab is hidden or a menu is open, add jitter/
+      backoff so a slow backend does not stack requests.
+    - Preloaded pages are never refreshed by the poll, so page 6 ages from
+      fetch time and visibly flickers on arrival; adjacent cached pages
+      fetched at different times over offset pagination can duplicate or drop
+      boundary rows. A snapshot/cursor token per query epoch fixes both; at
+      minimum "render immediately, revalidate immediately".
+    - Layered resolution (template + user overlay + string-path binding) must
+      be compiled ONCE per template selection into concrete accessors, not
+      re-resolved per cell inside the 5-second render loop; dangling paths
+      need loud errors.
+    - Memory itself is a non-issue (kilobytes), but the open Record cache
+      with page numbers to 99 needs an explicit eviction rule — the risk of
+      an unbounded cache here is correctness (stale service), not RAM.
+    - Likes: preloading for instant pagination, the declarative refresher
+      panel, the tiny 10-row render window.
+
+--------------------------------------------------------------------------------
+4. WHERE THE TEAM CONVERGES (independent agreement)
+--------------------------------------------------------------------------------
+  1. The three-layer model split is the right foundation — unanimous.
+  2. String-path bindings need load/CI-time validation with loud, defined
+     failure states (architect, QA, perf).
+  3. Row and column identity must be stable ids, not positions/numbers
+     (architect, backend, QA, perf).
+  4. Cache invalidation on filter/sort/page-size change is the unwritten
+     chapter the design lives or dies on (architect, backend, QA, perf).
+  5. The 5-second refresh needs an interaction-aware, diff-based policy
+     (UX, QA, perf; backend adds conditional requests / SSE).
+  6. filters.query as stored derived state will drift from its source values
+     (architect, backend; perf notes it is nonetheless the ideal cache key).
+
+Aggregated blockers before build:
+  - Stable ids for rows (run id) and columns (string ids + order array).
+  - Data-fetch orchestration moved out of the refresher panel.
+  - Path-resolution validation with defined failure states.
+  - Cache keyed by (query, page) or flushed on query change; written
+    invalidation rules for filter/sort/page-size changes.
+  - Template fallback chain and settings-override semantics.
+  - Refresh-during-interaction policy and the "repeat" action display rule.
+
+Additional flags: "applicaitons" endpoint typo; hard-coded https://workbench
+origin; user email as default search value (PII in server logs, unescaped
+interpolation); duplicate column key "5:" and duplicate id 123457 in the
+sketch's sample data; undefined empty/error/edge UI states.
+
+--------------------------------------------------------------------------------
+5. METHOD NOTES
+--------------------------------------------------------------------------------
+  - The source image was inspected as four zoomed quadrant crops (temporary
+    files, since removed) to recover fine detail before the review.
+  - Each team member ran as an independent agent with a role-specific brief
+    (Frontend Architect, UX Designer, Backend/API Engineer, QA Engineer,
+    Performance/State Engineer), grounded in widgets.jpg and the src/*.ts
+    transcription. Opinions only; no design or code changes were made.
+
+                                                              — end of report —

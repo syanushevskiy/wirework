@@ -1,0 +1,58 @@
+/**
+ * Wirework React adapter layout styles — semantic classes only (guidelines:
+ * no utility-class frameworks, no hardcoded values in markup). Hosts import
+ * this stylesheet once, plus each layout engine's own; themable via the
+ * --ww-* custom properties.
+ */
+
+.ww-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-gap, 0.5rem);
+}
+
+.ww-cell {
+  min-width: 0;
+}
+
+/* ---- edit-mode chrome (placed by each engine) ---- */
+
+.ww-cell-actions {
+  display: inline-flex;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.ww-cell-action {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--ww-color-action-border, #93c5fd);
+  border-radius: 0.25rem;
+  color: var(--ww-color-action-text, #1e3a8a);
+  background: var(--ww-color-action, #eff6ff);
+}
+
+.ww-cell-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ---- problems ---- */
+
+.ww-cell-problem,
+.ww-widget-error {
+  border: 1px dashed var(--ww-color-problem, #b91c1c);
+  color: var(--ww-color-problem, #b91c1c);
+  padding: var(--ww-gap, 0.5rem);
+  border-radius: 0.25rem;
+}
+
+.ww-page-problem {
+  border: 1px solid var(--ww-color-problem, #b91c1c);
+  color: var(--ww-color-problem, #b91c1c);
+  padding: var(--ww-gap, 0.5rem);
+  border-radius: 0.25rem;
+}

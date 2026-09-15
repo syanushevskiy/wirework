@@ -1,0 +1,18 @@
+/** flex-rows engine styles — semantic classes only; themable via --ww-*. */
+.ww-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-gap, 0.5rem);
+}
+
+.ww-flex-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ww-flex-item > .ww-cell,
+.ww-flex-item > .ww-cell-problem {
+  flex: 1 1 auto;
+  min-width: 0;
+}

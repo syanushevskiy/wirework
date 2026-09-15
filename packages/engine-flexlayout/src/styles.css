@@ -1,0 +1,18 @@
+/** FlexLayout engine styles — semantic classes only; themable via --ww-*. */
+@import "flexlayout-react/style/light.css";
+
+/* FlexLayout fills its container; give it one. */
+.ww-flexlayout {
+  position: relative;
+  height: var(--ww-flexlayout-height, 32rem);
+}
+
+.ww-flexlayout .flexlayout__tab {
+  padding: var(--ww-gap, 0.5rem);
+  overflow: auto;
+}
+
+.ww-flexlayout-chrome {
+  display: inline-flex;
+  margin-left: var(--ww-gap, 0.5rem);
+}

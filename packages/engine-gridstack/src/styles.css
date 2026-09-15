@@ -1,0 +1,55 @@
+/** gridstack engine styles — semantic classes only; themable via --ww-*. */
+@import "gridstack/dist/gridstack.min.css";
+
+.ww-gridstack {
+  width: 100%;
+}
+
+.ww-gridstack .grid-stack-item-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ww-gridstack .ww-grid-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.ww-gridstack .ww-grid-item > .ww-cell,
+.ww-gridstack .ww-grid-item > .ww-cell-problem {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ww-gridstack .ww-grid-handle {
+  cursor: move;
+  user-select: none;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--ww-gap, 0.5rem);
+  padding: 0 var(--ww-gap, 0.5rem);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  color: var(--ww-color-handle-text, #14532d);
+  background: var(--ww-color-handle-alt, #dcfce7);
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.ww-gridstack .ww-grid-handle-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ww-page[data-layout-mode="edit"] .ww-gridstack .grid-stack-item-content {
+  outline: 1px dashed var(--ww-color-edit-alt, #16a34a);
+  border-radius: 0.25rem;
+}

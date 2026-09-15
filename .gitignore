@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.idea/
+*.log
+.DS_Store
+# playwright / bdd artifacts
+e2e/.features-gen/
+e2e/test-results/
+e2e/playwright-report/
+# temp image crops
+.crops/
+
+# storybook build output
+storybook-static/

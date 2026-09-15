@@ -1,0 +1,48 @@
+/** react-grid-layout engine styles — semantic classes only; themable via --ww-*. */
+@import "react-grid-layout/css/styles.css";
+
+.ww-grid-container {
+  width: 100%;
+}
+
+.ww-grid-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ww-grid-item > .ww-cell,
+.ww-grid-item > .ww-cell-problem {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ww-grid-handle {
+  cursor: move;
+  user-select: none;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--ww-gap, 0.5rem);
+  padding: 0 var(--ww-gap, 0.5rem);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  color: var(--ww-color-handle-text, #1e3a8a);
+  background: var(--ww-color-handle, #dbeafe);
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.ww-grid-handle-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ww-page[data-layout-mode="edit"] .ww-grid-item {
+  outline: 1px dashed var(--ww-color-edit, #2563eb);
+  border-radius: 0.25rem;
+}
