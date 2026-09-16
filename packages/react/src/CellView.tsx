@@ -7,7 +7,7 @@
  */
 import { useMemo, type ComponentType, type CSSProperties } from "react";
 import type { EventBus, Store, WidgetProps } from "@wirework/schema";
-import { readableStore, type CellProblem, type ResolvedCell } from "@wirework/engine";
+import { readableStore, type CellProblem, type ResolvedCell, type ResolvedCellOk } from "@wirework/engine";
 import { useCellEmitter } from "./useCellEmitter";
 import { WidgetErrorBoundary } from "./WidgetErrorBoundary";
 
@@ -31,6 +31,10 @@ function problemMessage(problem: CellProblem): string {
       return `No template "${problem.template}" at "${problem.path}"`;
     case "invalid-view-model":
       return `Invalid view model: ${problem.message}`;
+    case "unmet-contract":
+      return `Unmet contract: ${problem.message}`;
+    case "duplicate-cell-id":
+      return `Duplicate cell id "${problem.id}" — ids must be unique on a page`;
   }
 }
 
@@ -50,9 +54,7 @@ function ProblemCell({ cell, problem, style }: CellViewProps & { problem: CellPr
   );
 }
 
-type HealthyCell = ResolvedCell & { definition: NonNullable<ResolvedCell["definition"]> };
-
-function WidgetCell({ cell, page, store, bus, style, width }: CellViewProps & { cell: HealthyCell }) {
+function WidgetCell({ cell, page, store, bus, style, width }: CellViewProps & { cell: ResolvedCellOk }) {
   const emit = useCellEmitter(bus, cell.definition, page, cell.key);
   const readable = useMemo(() => readableStore(store), [store]);
   // The registry stores framework-agnostic definitions; this adapter renders
@@ -65,6 +67,7 @@ function WidgetCell({ cell, page, store, bus, style, width }: CellViewProps & { 
       data-testid="cell"
       data-cell={cell.key}
       data-widget={cell.widget}
+      data-kind={cell.definition.kind}
       data-width={width}
       data-fallback={cell.fallback?.used}
     >
@@ -78,10 +81,7 @@ function WidgetCell({ cell, page, store, bus, style, width }: CellViewProps & { 
 
 export function CellView(props: CellViewProps) {
   const { cell } = props;
-  if (cell.problem || !cell.definition) {
-    const problem: CellProblem =
-      cell.problem ?? { kind: "unknown-widget", widget: cell.widget };
-    return <ProblemCell {...props} problem={problem} />;
-  }
-  return <WidgetCell {...props} cell={{ ...cell, definition: cell.definition }} />;
+  // `problem` discriminates the union: no narrowing helper, no re-spread.
+  if (cell.problem) return <ProblemCell {...props} problem={cell.problem} />;
+  return <WidgetCell {...props} cell={cell} />;
 }

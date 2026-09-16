@@ -12,12 +12,21 @@
  * binding convention of the view models.
  */
 
+import type { Validator } from "./widget";
+
 export type Unsubscribe = () => void;
 
 /** What a WIDGET receives: read and observe, never write. */
 export interface ReadableStore {
-  /** Read the value at a dot-separated path. Undefined if the path is absent. */
+  /**
+   * Read the value at a dot-separated path. Undefined if the path is absent.
+   * The type parameter is an UNCHECKED assertion about live data — use
+   * `getAs` when the shape matters.
+   */
   get<T = unknown>(path: string): T | undefined;
+
+  /** Read and VALIDATE: undefined when the path is absent or the value fails. */
+  getAs<T>(path: string, validator: Validator<T>): T | undefined;
 
   /**
    * Listen for changes affecting `path` (the path itself, an ancestor, or a
@@ -29,18 +38,26 @@ export interface ReadableStore {
 
   /**
    * The current state root, for tooling (path enumeration, inspectors).
-   * READ-ONLY by convention — mutating it bypasses change detection.
+   * READ-ONLY — mutating it bypasses change detection.
    */
-  snapshot(): Record<string, unknown>;
+  snapshot(): Readonly<Record<string, unknown>>;
 }
 
 /** The full store: hosts, the engine's reaction interpreter, tooling. */
 export interface Store extends ReadableStore {
   /**
-   * Replace the value at a path (immutable update along the path).
+   * Replace the value at a DATA path (immutable update along the path).
    * Subscribers of the path, its ancestors and its descendants are notified.
+   * Refuses configuration paths (`viewModels`, `userViewModels`): a page
+   * must not be able to rewrite its own description through a reaction.
    */
   set(path: string, value: unknown): void;
+
+  /**
+   * Write a CONFIGURATION path — what `set` refuses. For editors, builders
+   * and state inspectors, which change the page on purpose.
+   */
+  setConfig(path: string, value: unknown): void;
 
   /**
    * Replace the ENTIRE state tree (state inspectors / imports). Notifies

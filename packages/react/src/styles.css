@@ -40,6 +40,26 @@
   opacity: 0.5;
 }
 
+/* ---- palette / catalog previews ---- */
+
+.ww-preview {
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  border-radius: 0.25rem;
+  background: var(--ww-color-preview, #ffffff);
+}
+
+.ww-preview-scale {
+  transform-origin: top left;
+  padding: var(--ww-gap, 0.5rem);
+}
+
+.ww-preview-empty {
+  font-size: 0.75rem;
+  color: var(--ww-color-muted, #6b7280);
+}
+
 /* ---- problems ---- */
 
 .ww-cell-problem,

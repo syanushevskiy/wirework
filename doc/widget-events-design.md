@@ -51,9 +51,9 @@ const events = {
   },
 } satisfies WidgetEvents;
 
-function DummyCounter({ viewModel, store, emit }: WidgetProps<VM, typeof events>) { … }
+function AntdCounter({ viewModel, store, emit }: WidgetProps<VM, typeof events>) { … }
 
-export const dummyCounter = defineWidget<VM, typeof events>({ type, io, events, viewModel, component });
+export const antdCounter = defineWidget<VM, typeof events>({ type, io, events, viewModel, component });
 ```
 
 ## Bus
@@ -98,7 +98,7 @@ never from effects (StrictMode double-fires them).
 Host code:
 
 ```ts
-useWidgetEvent(bus, eventFilter(dummyRunsTable, "row-selected"), (event) =>
+useWidgetEvent(bus, eventFilter(antdRunsTable, "row-selected"), (event) =>
   store.set("runs.selected", event.payload.id),   // payload typed, no cast
 );
 ```
@@ -153,7 +153,7 @@ problem, not a bus feature.
 A widget only EMITS (the button is the archetype: no inputs, no state, one
 `clicked` event). WHO reacts, and how, is layered:
 
-1. **Host code** — `useWidgetEvent(bus, eventFilter(dummyButton, "clicked"),
+1. **Host code** — `useWidgetEvent(bus, eventFilter(antdButton, "clicked"),
    handler)` or `bus.subscribe(...)`: for behaviour the application owns and
    nobody configures. Typed payload, no cast.
 2. **User configuration (reactions)** — the widget's view model says what
@@ -175,7 +175,7 @@ A widget only EMITS (the button is the archetype: no inputs, no state, one
 value; builders default a `set` reaction's `from` to it (else to the only
 field, else to the whole payload).
 
-### Input validation (dummy-input as the reference)
+### Input validation (antd-input as the reference)
 
 A text input is a CONTROLLED widget: the text lives in the store (input
 port `value`), each keystroke emits `changed { value, valid, message? }`,

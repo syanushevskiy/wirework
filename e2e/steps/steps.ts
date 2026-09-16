@@ -16,29 +16,119 @@ When("I disable the user overlay", async ({ page }) => {
 
 /* ------------------------------ builder ------------------------------ */
 
+/**
+ * The LIVE page only: the builder palette renders real widget instances as
+ * previews, so widget test ids must be looked up inside the page view.
+ */
+const live = (page: Page) => page.getByTestId("page");
+
+/* ------------------------- antd form controls ------------------------- */
+
+/**
+ * The open antd dropdown (a Select or an AutoComplete popup). Excludes one
+ * that is animating out: closing and opening overlap, and both are briefly
+ * "not hidden".
+ */
+const dropdown = (page: Page) =>
+  page.locator(
+    ".ant-select-dropdown:not(.ant-select-dropdown-hidden):not(.ant-slide-up-leave):not(.ant-slide-up-leave-active)",
+  );
+
+/**
+ * An option in the open dropdown. antd puts the label in `title`, so an
+ * exact match is a title match; `prefix` covers labels that carry a
+ * trailing description ("reset-counter — Set demo.counter back to 0").
+ */
+const option = (page: Page, label: string, match: "exact" | "prefix" = "exact") =>
+  dropdown(page).locator(
+    match === "exact"
+      ? `.ant-select-item-option[title="${label}"]`
+      : `.ant-select-item-option[title^="${label}"]`,
+  );
+
+/** Open an antd Select by its test id and pick one option. */
+async function chooseOption(page: Page, testId: string, label: string, match: "exact" | "prefix" = "exact") {
+  await page.getByTestId(testId).click();
+  await option(page, label, match).click();
+}
+
+/** antd Select roots carry the class; a plain field is an `input` element. */
+const isSelect = (control: ReturnType<Page["locator"]>) =>
+  control.evaluate((element) => element.classList.contains("ant-select"));
+
+const paletteSearch = (page: Page) => page.getByTestId("widget-search").locator("input");
+
+/**
+ * The widget catalog is a picker: the cards exist only while the search is
+ * focused or holds a query. Focus it, then dismiss the suggestion popup —
+ * it would cover the cards underneath.
+ */
+async function openPalette(page: Page) {
+  if (await page.getByTestId("widget-palette").getAttribute("data-state") === "open") return;
+  await paletteSearch(page).click();
+  await paletteSearch(page).press("Escape");
+  await expect(page.getByTestId("widget-palette")).toHaveAttribute("data-state", "open");
+}
+
+When("I open the widget palette", async ({ page }) => {
+  await openPalette(page);
+});
+
 When("I choose the {string} widget", async ({ page }, widget: string) => {
-  await page.getByTestId("widget-select").click();
-  await page.getByRole("option", { name: widget }).click();
+  await openPalette(page);
+  // The palette: one card (a button with a live preview) per widget.
+  const card = page.locator(`[data-testid="widget-card"][data-widget="${widget}"]`);
+  await card.click();
+  await expect(card).toHaveAttribute("aria-pressed", "true");
+});
+
+When("I search the palette for {string}", async ({ page }, query: string) => {
+  const search = paletteSearch(page);
+  await search.click();
+  await search.fill(query);
+  await search.press("Escape");
+});
+
+When("I pick the widget suggestion {string}", async ({ page }, widget: string) => {
+  const search = paletteSearch(page);
+  await search.click();
+  await search.fill(widget.slice(0, 6));
+  await option(page, widget).click();
+});
+
+Then("the widget catalog is hidden", async ({ page }) => {
+  await expect(page.getByTestId("widget-palette")).toHaveAttribute("data-state", "closed");
+  await expect(page.locator('[data-testid="widget-card"]')).toHaveCount(0);
+});
+
+Then("the palette reports no matches", async ({ page }) => {
+  await expect(page.getByTestId("widget-palette-empty")).toBeVisible();
+});
+
+Then("the palette shows {int} widget previews", async ({ page }, count: number) => {
+  await expect(page.locator('[data-testid="widget-card"] [data-testid="widget-preview"]')).toHaveCount(count);
+});
+
+Then("the preview of {string} reads {string}", async ({ page }, widget: string, text: string) => {
+  await expect(page.locator(`[data-testid="widget-preview"][data-widget="${widget}"]`)).toContainText(text);
 });
 
 When(
   "I set the {string} port {string} to {string}",
   async ({ page }, section: string, port: string, path: string) => {
     if (section !== "input") throw new Error(`only input ports exist (got "${section}")`);
-    // Input ports use the autocomplete combobox: open (unless already
-    // open), type, pick the matching suggestion or the custom entry.
-    const query = page.getByTestId("path-query");
-    if (!(await query.isVisible().catch(() => false))) {
-      await page.getByTestId(`port-${section}-${port}`).click();
-    }
+    // Input ports use the autocomplete: type the path, then take the
+    // matching suggestion — or keep what was typed, since a path may name
+    // state that does not exist yet.
+    const field = page.getByTestId(`port-${section}-${port}`);
+    await field.click();
+    const query = field.locator("input");
     await query.fill(path);
-    await expect(page.getByRole("option").first()).toBeVisible();
-    // Prefer the exact suggestion; otherwise take the custom 'Use "…"' entry.
-    const exact = page.getByRole("option", { name: path, exact: true });
+    const exact = option(page, path);
     if ((await exact.count()) > 0) {
-      await exact.first().click();
+      await exact.click();
     } else {
-      await page.getByRole("option", { name: `Use "${path}"` }).click();
+      await query.blur();
     }
   },
 );
@@ -51,13 +141,14 @@ When(
 );
 
 Then("the path suggestions include {string}", async ({ page }, path: string) => {
-  await expect(page.getByRole("option", { name: path, exact: true })).toBeVisible();
+  await expect(option(page, path)).toHaveCount(1);
 });
 
 Then(
   "the path suggestions do not include {string}",
   async ({ page }, path: string) => {
-    await expect(page.getByRole("option", { name: path, exact: true })).toHaveCount(0);
+    await expect(dropdown(page)).toBeVisible();
+    await expect(option(page, path)).toHaveCount(0);
   },
 );
 
@@ -107,41 +198,62 @@ Then(
   "the echo widget at {string} shows {string}",
   async ({ page }, path: string, value: string) => {
     const echo = page
-      .locator(`[data-testid="dummy-echo"][data-path="${path}"]`)
-      .getByTestId("dummy-echo-value");
+      .locator(`[data-testid="page"] [data-testid="antd-echo"][data-path="${path}"]`)
+      .getByTestId("antd-echo-value");
     await expect(echo).toHaveText(value);
   },
 );
 
 When("I click the counter {int} times", async ({ page }, times: number) => {
-  const counter = page.getByTestId("dummy-counter");
+  const counter = live(page).getByTestId("antd-counter");
   for (let i = 0; i < times; i += 1) {
     await counter.click();
   }
 });
 
 Then("the runs table has {int} rows", async ({ page }, count: number) => {
-  await expect(page.getByTestId("runs-row")).toHaveCount(count);
+  await expect(live(page).getByTestId("runs-row")).toHaveCount(count);
 });
 
 Then(
   "the runs table row {string} shows {string} for {string}",
   async ({ page }, runId: string, value: string, property: string) => {
     const cell = page
-      .locator(`[data-testid="runs-row"][data-run-id="${runId}"]`)
+      .locator(`[data-testid="page"] [data-testid="runs-row"][data-run-id="${runId}"]`)
       .locator(`td[data-property="${property}"]`);
     await expect(cell).toHaveText(value);
   },
 );
 
+Then("the runs table is not loading", async ({ page }) => {
+  await expect(live(page).getByTestId("antd-runs-table")).toHaveAttribute("data-loading", "false");
+});
+
+When("I go to page {int} of the pagination", async ({ page }, number: number) => {
+  // antd titles every page item with its number.
+  await live(page).getByTestId("antd-pagination").locator(`li.ant-pagination-item[title="${number}"]`).click();
+});
+
+Then("the pagination shows page {int}", async ({ page }, number: number) => {
+  await expect(live(page).getByTestId("antd-pagination")).toHaveAttribute("data-page", String(number));
+});
+
 /* ------------------------------ overlay ------------------------------ */
 
 Then("the label reads {string}", async ({ page }, text: string) => {
-  await expect(page.getByTestId("dummy-label").first()).toHaveText(text);
+  await expect(live(page).getByTestId("antd-label").first()).toHaveText(text);
+});
+
+Then("the status badge reads {string}", async ({ page }, text: string) => {
+  await expect(live(page).getByTestId("status-badge")).toHaveText(text);
+});
+
+Then("the cell {string} has kind {string}", async ({ page }, cell: string, kind: string) => {
+  await expect(page.locator(`[data-testid="cell"][data-cell="${cell}"]`)).toHaveAttribute("data-kind", kind);
 });
 
 Then("the label tone is {string}", async ({ page }, tone: string) => {
-  await expect(page.getByTestId("dummy-label").first()).toHaveAttribute("data-tone", tone);
+  await expect(live(page).getByTestId("antd-label").first()).toHaveAttribute("data-tone", tone);
 });
 
 /* --------------------------- state inspector --------------------------- */
@@ -244,7 +356,7 @@ When("I clear the event log", async ({ page }) => {
 });
 
 When("I click the runs table row {string}", async ({ page }, runId: string) => {
-  await page.locator(`[data-testid="runs-row"][data-run-id="${runId}"]`).click();
+  await page.locator(`[data-testid="page"] [data-testid="runs-row"][data-run-id="${runId}"]`).click();
 });
 
 When(
@@ -252,7 +364,7 @@ When(
   async ({ page }, cell: string, times: number) => {
     const counter = page
       .locator(`[data-testid="cell"][data-cell="${cell}"]`)
-      .getByTestId("dummy-counter");
+      .getByTestId("antd-counter");
     for (let i = 0; i < times; i += 1) {
       await counter.click();
     }
@@ -306,6 +418,10 @@ async function settledBox(page: Page, locator: ReturnType<Page["locator"]>): Pro
  * top-left of `to` (the grab offset is preserved), whatever their sizes.
  */
 async function dragBetween(page: Page, from: ReturnType<Page["locator"]>, to: ReturnType<Page["locator"]>) {
+  // Bounding boxes are viewport-relative and the palette sits above the
+  // grid: bring the grid on screen or the pointer lands outside the window.
+  await page.getByTestId("page").scrollIntoViewIfNeeded();
+  await from.scrollIntoViewIfNeeded();
   const a = await settledBox(page, from);
   const b = await settledBox(page, to);
   const grabX = a.width / 2;
@@ -336,8 +452,7 @@ Then(
 );
 
 When("I select the {string} layout engine", async ({ page }, engine: string) => {
-  await page.getByTestId("engine-select").click();
-  await page.getByRole("option", { name: engine, exact: true }).click();
+  await chooseOption(page, "engine-select", engine);
   await expect(page.getByTestId("page")).toHaveAttribute("data-engine", engine);
 });
 
@@ -395,6 +510,7 @@ When(
   "I widen the cell {string} by {int} columns",
   async ({ page }, cell: string, columns: number) => {
     const item = gridItem(page, cell);
+    await item.scrollIntoViewIfNeeded();
     const box = await settledBox(page, item);
     const w = Number(await item.getAttribute("data-w"));
     if (!w) throw new Error(`grid item ${cell} has no data-w`);
@@ -418,12 +534,9 @@ When(
   async ({ page }, event: string, path: string, from: string) => {
     await page.getByTestId(`reaction-${event}-set`).fill(path);
     const fromControl = page.getByTestId(`reaction-${event}-from`);
-    if ((await fromControl.getAttribute("role")) === "combobox") {
+    if (await isSelect(fromControl)) {
       // Object payloads offer their fields; "" means the whole payload.
-      await fromControl.click();
-      await page
-        .getByRole("option", { name: from === "" ? "whole payload" : from, exact: true })
-        .click();
+      await chooseOption(page, `reaction-${event}-from`, from === "" ? "whole payload" : from);
     } else {
       await fromControl.fill(from);
     }
@@ -433,15 +546,13 @@ When(
 When(
   "I set the reaction for {string} to call {string}",
   async ({ page }, event: string, action: string) => {
-    await page.getByTestId(`reaction-${event}-kind`).click();
-    await page.getByRole("option", { name: "call action", exact: true }).click();
-    await page.getByTestId(`reaction-${event}-call`).click();
-    await page.getByRole("option", { name: new RegExp(`^${action}\\b`) }).click();
+    await chooseOption(page, `reaction-${event}-kind`, "call action");
+    await chooseOption(page, `reaction-${event}-call`, action, "prefix");
   },
 );
 
 When("I click the button {string}", async ({ page }, label: string) => {
-  await page.getByTestId("dummy-button").filter({ hasText: label }).click();
+  await live(page).getByTestId("antd-button").filter({ hasText: label }).click();
 });
 
 Then(
@@ -452,11 +563,11 @@ Then(
 );
 
 Then("the counter shows {string}", async ({ page }, text: string) => {
-  await expect(page.getByTestId("dummy-counter")).toContainText(text);
+  await expect(live(page).getByTestId("antd-counter")).toContainText(text);
 });
 
 Then("no widget has crashed", async ({ page }) => {
-  await expect(page.getByTestId("widget-error")).toHaveCount(0);
+  await expect(live(page).getByTestId("widget-error")).toHaveCount(0);
 });
 
 /* ------------------------------- panels ------------------------------- */
@@ -474,27 +585,26 @@ Then("the {string} panel is collapsed", async ({ page }, name: string) => {
 
 When("I set the setting {string} to {string}", async ({ page }, name: string, value: string) => {
   const control = page.getByTestId(`setting-${name}`);
-  if ((await control.getAttribute("role")) === "combobox") {
+  if (await isSelect(control)) {
     // Enum settings are selects.
-    await control.click();
-    await page.getByRole("option", { name: value, exact: true }).click();
+    await chooseOption(page, `setting-${name}`, value);
   } else {
     await control.fill(value);
   }
 });
 
 When("I type {string} into the input", async ({ page }, text: string) => {
-  await page.getByTestId("dummy-input").fill(text);
+  await live(page).getByTestId("antd-input").fill(text);
 });
 
 Then("the input is invalid with {string}", async ({ page }, message: string) => {
-  await expect(page.getByTestId("dummy-input")).toHaveAttribute("data-valid", "false");
-  await expect(page.getByTestId("dummy-input-message")).toHaveText(message);
+  await expect(live(page).getByTestId("antd-input")).toHaveAttribute("data-valid", "false");
+  await expect(live(page).getByTestId("antd-input-message")).toHaveText(message);
 });
 
 Then("the input is valid", async ({ page }) => {
-  await expect(page.getByTestId("dummy-input")).toHaveAttribute("data-valid", "true");
-  await expect(page.getByTestId("dummy-input-message")).toHaveCount(0);
+  await expect(live(page).getByTestId("antd-input")).toHaveAttribute("data-valid", "true");
+  await expect(live(page).getByTestId("antd-input-message")).toHaveCount(0);
 });
 
 Then("the builder shows a setting {string}", async ({ page }, name: string) => {

@@ -1,0 +1,42 @@
+{
+  "name": "@wirework/antd-widgets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./stories": "./src/stories/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@wirework/react": "workspace:*",
+    "@wirework/schema": "workspace:*",
+    "@wirework/widget-contracts": "workspace:*",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "antd": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "^10.6.0",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@wirework/engine": "workspace:*",
+    "@wirework/events": "workspace:*",
+    "@wirework/store": "workspace:*",
+    "antd": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "storybook": "^10.6.0",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

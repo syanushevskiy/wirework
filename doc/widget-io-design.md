@@ -35,7 +35,7 @@ interface WidgetIO {
 }
 ```
 
-A port describes the VALUE, not the path: `dummy-counter`'s `value` port is
+A port describes the VALUE, not the path: `antd-counter`'s `value` port is
 `z.number()` — whatever path it is bound to must hold a number.
 
 Widgets receive a `ReadableStore` (`get` / `subscribe` / `snapshot`) — not a
@@ -116,12 +116,19 @@ off the zod validator:
 - a zod enum → a select of its values (plus "default: …" when defaulted),
 - non-primitive (arrays, objects) → left to defaults; edit in the inspector.
 
+## Contracts
+
+Label, button and input implement the standard CONTRACTS
+(doc/widget-contracts-design.md): their ports, events and settings are
+declared once in `@wirework/widget-contracts` and reused by every
+implementation.
+
 ## Examples
 
 | widget            | inputs                       | events (reaction required?)     |
 | ----------------- | ---------------------------- | ------------------------------- |
-| dummy-counter     | `value: number`              | `incremented { value }` — YES   |
-| dummy-runs-table  | `data: RunsData`             | `row-selected { id }` — no      |
-| dummy-echo        | `value: unknown`             | —                               |
-| dummy-label       | `text?: string` (optional)   | —                               |
-| dummy-crash       | —                            | —                               |
+| antd-counter     | `value: number`              | `incremented { value }` — YES   |
+| antd-runs-table  | `data: RunsData`, `loading?: boolean` | `row-selected { id }` — no |
+| antd-echo        | `value: unknown`             | —                               |
+| antd-label       | `text?: string` (optional)   | —                               |
+| antd-crash       | —                            | —                               |

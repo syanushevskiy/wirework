@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r --no-bail run test",
     "dev": "pnpm --filter playground dev",
     "e2e": "pnpm --filter e2e test",
-    "storybook": "pnpm --filter @wirework/widgets-examples storybook",
-    "build-storybook": "pnpm --filter @wirework/widgets-examples build-storybook"
+    "storybook": "pnpm --filter @wirework/antd-widgets storybook",
+    "build-storybook": "pnpm --filter @wirework/antd-widgets build-storybook"
   },
   "packageManager": "pnpm@10.33.0",
   "pnpm": {

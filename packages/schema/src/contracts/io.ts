@@ -10,6 +10,7 @@
  * (doc/widget-events-design.md).
  */
 import { z } from "zod";
+import { hasForbiddenSegment, isConfigPath } from "./names";
 import type { Validator } from "./widget";
 
 /** One store-binding port of a widget. */
@@ -33,16 +34,21 @@ export interface WidgetIO {
   inputs: Record<string, PortDefinition>;
 }
 
-/** Segments the store refuses (they would address the prototype chain). */
-const FORBIDDEN_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
-
-/** A dot-separated store path ("runs.data.current"), never through the prototype chain. */
+/**
+ * A dot-separated DATA path ("runs.data.current"): never through the
+ * prototype chain, and never into a configuration tree — a binding or a
+ * reaction may not address the view models that describe the page itself.
+ */
 export const storePathSchema = z
   .string()
   .regex(/^[^.\s]+(\.[^.\s]+)*$/, "must be a dot-separated store path")
   .refine(
-    (path) => !path.split(".").some((segment) => FORBIDDEN_SEGMENTS.has(segment)),
+    (path) => !hasForbiddenSegment(path),
     "must not contain __proto__, prototype or constructor segments",
+  )
+  .refine(
+    (path) => !isConfigPath(path),
+    "must not address a configuration tree (viewModels, userViewModels) — only editors write those",
   );
 export type StorePath = z.infer<typeof storePathSchema>;
 
@@ -58,20 +64,21 @@ function sectionSchema(ports: Record<string, PortDefinition>) {
   }
   // strict: binding a port the widget never declared is a config error.
   const object = z.object(shape).strict();
-  // Port-less / all-optional sections may be omitted from templates entirely.
-  const allOptional = Object.values(ports).every((port) => port.required === false);
-  return Object.keys(ports).length === 0 || allOptional
+  // Port-less / all-optional sections may be omitted from templates entirely
+  // (`.every` on no ports is already true).
+  return Object.values(ports).every((port) => port.required === false)
     ? object.default({})
     : object;
 }
 
 /**
  * Builds the `inputs` part of a widget's view-model schema from its IO
- * declaration. Compose widget settings on top with `.extend()`.
+ * declaration. STRICT, and `.extend()`/`.merge()` keep it strict: a
+ * misspelled setting must fail loudly, not be silently stripped.
  */
 export function ioBindingsSchema(io: WidgetIO) {
-  return z.object({ inputs: sectionSchema(io.inputs) });
+  return z.object({ inputs: sectionSchema(io.inputs) }).strict();
 }
 
 /** IO declaration for widgets with no store bindings. */
-export const NO_IO: WidgetIO = { inputs: {} };
+export const NO_IO = { inputs: {} } satisfies WidgetIO;

@@ -19,6 +19,7 @@ import {
 } from "@wirework/schema";
 import {
   createActions,
+  createContracts,
   createLayoutEngines,
   createRegistry,
   resolveTemplate,
@@ -37,7 +38,12 @@ import {
   userViewModels as fixtureUserViewModels,
   viewModels as fixtureViewModels,
 } from "@wirework/view-data-models-examples";
-import { brokenWidgets, dummyRunsTable, exampleWidgets } from "@wirework/widgets-examples";
+import { standardContracts } from "@wirework/widget-contracts";
+import { antdRunsTable, antdWidgets, brokenWidgets } from "@wirework/antd-widgets";
+import { createRunsActions, RUNS_PAGE_SIZE } from "../actions/runs-actions";
+import { createRunsServer } from "../api/runs-server";
+import { statusBadgeContract } from "../contracts/status-badge";
+import { statusBadge } from "../widgets/status-badge";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
 import type { WidgetSettings } from "./use-widget-form";
 
@@ -48,8 +54,14 @@ export type PageName = (typeof PAGES)[number];
 const USER_PAGE: PageName = "demo";
 
 function boot() {
+  // Contracts: the standard kinds plus this app's own; widgets implement them.
+  const contracts = createContracts();
+  for (const contract of standardContracts) contracts.register(contract);
+  contracts.register(statusBadgeContract);
+
   const registry = createRegistry();
-  for (const widget of exampleWidgets) registry.register(widget);
+  for (const widget of antdWidgets) registry.register(widget);
+  registry.register(statusBadge);
 
   // Layout engines are plugins too: a page template names one.
   const layoutEngines = createLayoutEngines();
@@ -78,6 +90,9 @@ function boot() {
     // eslint-disable-next-line no-console
     handler: ({ event, args }) => console.log("[action log-event]", event, args),
   });
+  // Server-side paging for the demo table: a fake server with real latency.
+  const runsServer = createRunsServer({ seed: seedData.runs.data, total: 23, latencyMs: 600 });
+  for (const action of createRunsActions(runsServer)) actions.register(action);
 
   // Negative proof: every broken definition must be rejected loudly.
   const rejections: string[] = [];
@@ -92,14 +107,16 @@ function boot() {
     }
   }
 
-  // One state tree: both view-model trees live next to the data models.
+  // One state tree: both view-model trees live next to the data models. The
+  // runs start as the first page the server rendered; paging requests more.
   const store = createStore({
     viewModels: fixtureViewModels,
     userViewModels: fixtureUserViewModels,
     ...seedData,
+    runs: { ...runsServer.pageOf({ page: 1, pageSize: RUNS_PAGE_SIZE }), loading: false },
   });
   const bus = createEventBus();
-  return { registry, layoutEngines, actions, store, bus, rejections };
+  return { registry, contracts, layoutEngines, actions, store, bus, rejections };
 }
 
 /**
@@ -121,7 +138,7 @@ function nextCustomId(viewModels: ViewModels, cellIds: string[]): string {
 export function usePlayground() {
   // useState, not useMemo: React may discard memo caches, which would
   // silently recreate the store and reset all runtime state.
-  const [{ registry, layoutEngines, actions, store, bus, rejections }] = useState(boot);
+  const [{ registry, contracts, layoutEngines, actions, store, bus, rejections }] = useState(boot);
   // Reactive: inspector edits, addWidget, editors and saved sessions all go
   // through the store.
   const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? fixtureViewModels;
@@ -142,7 +159,7 @@ export function usePlayground() {
    * the host turns it into STATE ("runs.selected") that any widget can
    * display. The payload is typed by the widget's declaration — no cast.
    */
-  useWidgetEvent(bus, eventFilter(dummyRunsTable, "row-selected"), (event) =>
+  useWidgetEvent(bus, eventFilter(antdRunsTable, "row-selected"), (event) =>
     store.set("runs.selected", event.payload.id),
   );
 
@@ -181,7 +198,7 @@ export function usePlayground() {
       const current = resolveTemplate(layoutEngines, viewModels.pages?.["builder"]?.["default"]);
       if (!engine || current.problem !== undefined || current.engine.cells(current.template).length > 0) return;
       editing.cancel();
-      store.set("viewModels", updatePageTemplate(viewModels, "builder", "default", () => engine.empty()));
+      store.setConfig("viewModels", updatePageTemplate(viewModels, "builder", "default", () => engine.empty()));
     },
     [layoutEngines, viewModels, store, editing.cancel],
   );
@@ -228,7 +245,7 @@ export function usePlayground() {
       );
       const customTemplates =
         (withCell.widgets["custom"] as Record<string, unknown> | undefined) ?? {};
-      store.set("viewModels", {
+      store.setConfig("viewModels", {
         ...withCell,
         widgets: {
           ...withCell.widgets,
@@ -241,6 +258,7 @@ export function usePlayground() {
 
   return {
     registry,
+    contracts,
     layoutEngines,
     actions,
     engineNames: layoutEngines.names(),

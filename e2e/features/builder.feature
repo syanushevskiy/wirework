@@ -1,6 +1,6 @@
 Feature: Widget builder
-  Widgets can be added to a page at runtime from a dropdown of registered
-  widgets. Each widget declares typed input ports and typed events; the
+  Widgets can be added to a page at runtime from a palette of live widget
+  previews. Each widget declares typed input ports and typed events; the
   builder asks for a store path per input, a reaction per event (required
   when the event carries state), and the widget's primitive settings
   (required ones gate Add), then writes it all into the view models —
@@ -12,22 +12,22 @@ Feature: Widget builder
 
   Scenario: Added widgets are wired together through inputs and reactions
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.custom"
     And I set the reaction for "incremented" to set "demo.custom" from "value"
     And I add the widget
-    And I choose the "dummy-echo" widget
+    And I choose the "antd-echo" widget
     And I set the "input" port "value" to "demo.custom"
     And I add the widget
     Then the page has 2 cells
-    And I see a widget "dummy-counter"
-    And I see a widget "dummy-echo"
+    And I see a widget "antd-counter"
+    And I see a widget "antd-echo"
     When I click the counter 1 times
     Then the echo widget at "demo.custom" shows "1"
 
   Scenario: A widget cannot be added until required ports and reactions are bound
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     Then the add widget button is disabled
     When I set the "input" port "value" to "demo.custom"
     Then the add widget button is disabled
@@ -36,14 +36,14 @@ Feature: Widget builder
 
   Scenario: Input autocomplete offers only type-compatible existing paths
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     And I open the "input" port "value" suggestions
     Then the path suggestions include "demo.counter"
     And the path suggestions do not include "runs.data"
 
   Scenario: An input port can be bound from the suggestions
     Given I open the "builder" page
-    When I choose the "dummy-echo" widget
+    When I choose the "antd-echo" widget
     And I open the "input" port "value" suggestions
     Then the path suggestions include "runs.data"
     When I set the "input" port "value" to "demo.counter"
@@ -52,13 +52,13 @@ Feature: Widget builder
 
   Scenario: Widget settings are offered with their defaults
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     Then the builder shows a setting "step"
     And the builder shows a setting "label"
 
   Scenario: A label cannot be added until its required text is set
     Given I open the "builder" page
-    When I choose the "dummy-label" widget
+    When I choose the "antd-label" widget
     Then the add widget button is disabled
     When I set the setting "text" to "Hello from the builder"
     Then the add widget button is enabled
@@ -68,7 +68,7 @@ Feature: Widget builder
 
   Scenario: A label can take its text from a store path
     Given I open the "builder" page
-    When I choose the "dummy-label" widget
+    When I choose the "antd-label" widget
     And I set the setting "text" to "fallback text"
     And I set the "input" port "text" to "runs.data.byId.123456.name"
     And I add the widget
@@ -77,7 +77,7 @@ Feature: Widget builder
   Scenario: A placed widget can be modified and removed
     Given I open the "builder" page
     Then the edit target is "view models"
-    When I choose the "dummy-label" widget
+    When I choose the "antd-label" widget
     And I set the setting "text" to "before"
     And I add the widget
     Then the label reads "before"
@@ -95,11 +95,11 @@ Feature: Widget builder
 
   Scenario: Layout edits on the builder page are saved into the view models
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
     And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
-    And I choose the "dummy-counter" widget
+    And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.b"
     And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
@@ -113,12 +113,12 @@ Feature: Widget builder
 
   Scenario: A reaction defaults to the payload's only field
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     Then the reaction for "incremented" takes "value" from the payload
 
   Scenario: A reaction writing the whole payload does not crash the counter
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.whole"
     And I set the reaction for "incremented" to set "demo.whole" from ""
     And I add the widget
@@ -128,14 +128,14 @@ Feature: Widget builder
 
   Scenario: An input validates with a premade rule and stores its text
     Given I open the "builder" page
-    When I choose the "dummy-input" widget
+    When I choose the "antd-input" widget
     Then the builder shows a setting "validation"
     And the reaction for "changed" takes "value" from the payload
     When I set the "input" port "value" to "demo.email"
     And I set the setting "validation" to "email"
     And I set the reaction for "changed" to set "demo.email" from "value"
     And I add the widget
-    And I choose the "dummy-echo" widget
+    And I choose the "antd-echo" widget
     And I set the "input" port "value" to "demo.email"
     And I add the widget
     And I type "not-an-email" into the input
@@ -147,7 +147,7 @@ Feature: Widget builder
 
   Scenario: An input validates with a custom pattern
     Given I open the "builder" page
-    When I choose the "dummy-input" widget
+    When I choose the "antd-input" widget
     And I set the "input" port "value" to "demo.code"
     And I set the setting "pattern" to "^[A-Z]{3}-[0-9]+$"
     And I set the setting "patternMessage" to "use the form ABC-123"
@@ -157,3 +157,59 @@ Feature: Widget builder
     Then the input is invalid with "use the form ABC-123"
     When I type "ABC-42" into the input
     Then the input is valid
+
+  Scenario: An app-defined contract and its widget register like the standard ones
+    Given I open the "builder" page
+    When I choose the "status-badge" widget
+    And I set the "input" port "state" to "runs.data.byId.123456.status.state"
+    And I set the setting "prefix" to "Run: "
+    And I add the widget
+    Then the status badge reads "Run: Failed"
+    And the cell "custom-1" has kind "status-badge"
+
+  Scenario: Standard-contract widgets carry their kind
+    Given I open the "builder" page
+    When I choose the "antd-label" widget
+    And I set the setting "text" to "kinded"
+    And I add the widget
+    Then the cell "custom-1" has kind "label"
+
+  Scenario: The palette shows a live preview of every registered widget
+    Given I open the "builder" page
+    When I open the widget palette
+    Then the palette shows 8 widget previews
+    And the preview of "antd-label" reads "Sample text"
+    And the preview of "antd-counter" reads "Increment (3)"
+    And the preview of "antd-runs-table" reads "Nightly"
+    And the preview of "status-badge" reads "Run: Success"
+    And the preview of "antd-crash" reads "crashed"
+
+  Scenario: The catalog opens with the search and closes after it
+    Given I open the "builder" page
+    Then the widget catalog is hidden
+    When I open the widget palette
+    Then the palette shows 8 widget previews
+    When I search the palette for "counter"
+    Then the palette shows 1 widget previews
+
+  Scenario: The palette is searched to find a widget
+    Given I open the "builder" page
+    When I open the widget palette
+    Then the palette shows 8 widget previews
+    When I search the palette for "table"
+    Then the palette shows 1 widget previews
+    And the preview of "antd-runs-table" reads "Nightly"
+    When I search the palette for "nothing-like-this"
+    Then the palette shows 0 widget previews
+    And the palette reports no matches
+    When I search the palette for ""
+    Then the palette shows 8 widget previews
+
+  Scenario: A widget is found through the search suggestions and added
+    Given I open the "builder" page
+    When I pick the widget suggestion "antd-button"
+    Then the palette shows 1 widget previews
+    When I choose the "antd-button" widget
+    And I set the reaction for "clicked" to call "log-event"
+    And I add the widget
+    Then the page has 1 cells

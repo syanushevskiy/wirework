@@ -16,23 +16,37 @@ export {
   resolveTemplate,
 } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
-export { pickTemplate, resolveCell, resolvePage, unboundRequirements } from "./resolve";
+export {
+  contractProblems,
+  duplicateCellIds,
+  engineCells,
+  pickTemplate,
+  resolveCell,
+  resolvePage,
+  usableOverlay,
+} from "./resolve";
 export { readableStore } from "./readable";
 export type {
   CellProblem,
   FallbackNote,
   ResolvedCell,
+  ResolvedCellOk,
+  ResolvedCellProblem,
   ResolvedPage,
   ResolvedPagePlan,
   ResolvedPageProblem,
   ResolveInput,
 } from "./resolve";
 export { validateViewModels } from "./validate";
-export type { ValidationProblem, ValidationReport } from "./validate";
+export type { ProblemSeverity, ValidationProblem, ValidationReport } from "./validate";
+export { createNamedRegistry, RegistrationError } from "./named-registry";
+export type { NamedRegistry, NamedRegistryOptions } from "./named-registry";
 export { collectPaths, compatibleStorePaths, deepMerge, deletePath, getPath, setPath } from "./paths";
 export { createEmitter, WidgetEventError } from "./emitter";
 export { createActions, ActionRegistrationError } from "./actions";
 export type { ActionRegistry } from "./actions";
+export { createContracts, ContractRegistrationError } from "./contracts";
+export type { ContractRegistry } from "./contracts";
 export { bindReactions, reactionValue } from "./reactions";
 export {
   pageTemplates,

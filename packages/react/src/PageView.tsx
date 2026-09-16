@@ -20,7 +20,7 @@
  */
 import type { ComponentType } from "react";
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
-import type { ActionRegistry, LayoutEngineRegistry, WidgetRegistry } from "@wirework/engine";
+import type { ActionRegistry, LayoutEngineRegistry, ResolvedPage, WidgetRegistry } from "@wirework/engine";
 import type { LayoutRendererProps } from "./layout";
 import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
@@ -34,6 +34,12 @@ export interface PageViewProps {
   layoutEngines: LayoutEngineRegistry;
   /** Host actions that `call` reactions may invoke. */
   actions?: ActionRegistry;
+  /**
+   * An already-resolved plan (from `usePagePlan`). Pass it when the host
+   * needs the plan too: without it the page is resolved twice per render
+   * and the host's plan is a different object from the rendered one.
+   */
+  plan?: ResolvedPage;
   store: Store;
   bus: EventBus;
   /** Edit mode: the engine's interactive editing + per-cell chrome. */
@@ -52,6 +58,7 @@ export function PageView({
   registry,
   layoutEngines,
   actions,
+  plan: providedPlan,
   store,
   bus,
   editable = false,
@@ -60,7 +67,10 @@ export function PageView({
   onRemoveCell,
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
-  const plan = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions });
+  // A host that already resolved the page (an editor) passes its plan in,
+  // so the same inputs are never resolved twice per render.
+  const resolved = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions });
+  const plan = providedPlan ?? resolved;
   useReactions(bus, store, plan, actions);
   const { cells, cellById, renderCell, renderChrome } = usePageRenderers({
     plan,

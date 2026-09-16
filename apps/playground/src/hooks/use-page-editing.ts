@@ -180,11 +180,15 @@ export function usePageEditing({
   /** Ops apply only inside a session (chrome exists only in edit mode anyway). */
   const push = useCallback((op: Op) => setOps((current) => (current ? [...current, op] : current)), []);
 
-  /** Store dedups unchanged trees, so committing both is always safe. */
+  /**
+   * Store dedups unchanged trees, so committing both is always safe.
+   * `setConfig`: the view models are configuration, which `set` refuses —
+   * only editors like this one may write them.
+   */
   const commit = useCallback(
     (next: EditableTrees) => {
-      store.set("viewModels", next.viewModels);
-      store.set("userViewModels", next.userViewModels);
+      store.setConfig("viewModels", next.viewModels);
+      store.setConfig("userViewModels", next.userViewModels);
     },
     [store],
   );

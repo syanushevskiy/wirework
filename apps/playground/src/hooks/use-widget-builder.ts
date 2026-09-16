@@ -5,22 +5,42 @@
  * view models (doc/widget-io-design.md, doc/widget-events-design.md).
  */
 import { useCallback, useMemo, useState } from "react";
-import type { Store, WidgetBindings } from "@wirework/schema";
-import type { ActionRegistry, WidgetRegistry } from "@wirework/engine";
+import type { AnyWidgetDefinition, Store, WidgetBindings } from "@wirework/schema";
+import type { ActionRegistry, ContractRegistry, WidgetRegistry } from "@wirework/engine";
 import { useWidgetForm, type WidgetSettings } from "./use-widget-form";
+
+export interface WidgetGroup {
+  /** Contract kind, or "other" for widgets implementing none. */
+  kind: string;
+  label: string;
+  widgets: { type: string; description?: string; definition: AnyWidgetDefinition }[];
+}
 
 export function useWidgetBuilder(
   registry: WidgetRegistry,
+  contracts: ContractRegistry,
   store: Store,
   actions: ActionRegistry,
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void,
 ) {
   const [widgetType, setWidgetType] = useState<string>("");
-  /** Registered widgets with their descriptions, for the dropdown. */
-  const widgetTypes = useMemo(
-    () => registry.types().map((type) => ({ type, description: registry.get(type)?.description })),
-    [registry],
-  );
+  /** Registered widgets grouped by the contract kind they implement. */
+  const widgetGroups = useMemo<WidgetGroup[]>(() => {
+    const byKind = new Map<string, WidgetGroup["widgets"]>();
+    for (const type of registry.types()) {
+      const definition = registry.get(type);
+      if (!definition) continue;
+      const kind = definition.kind ?? "other";
+      byKind.set(kind, [...(byKind.get(kind) ?? []), { type, description: definition.description, definition }]);
+    }
+    // Contract kinds first (registration order); widgets of no contract last.
+    const entries = [...byKind.entries()].sort(([a], [b]) => Number(a === "other") - Number(b === "other"));
+    return entries.map(([kind, widgets]) => ({
+      kind,
+      label: kind === "other" ? "other widgets" : `${kind} — ${contracts.get(kind)?.description ?? "app-defined contract"}`,
+      widgets,
+    }));
+  }, [registry, contracts]);
   const definition = widgetType ? registry.get(widgetType) : undefined;
   const form = useWidgetForm(definition, store, actions);
 
@@ -40,5 +60,5 @@ export function useWidgetBuilder(
     form.reset();
   }, [definition, form.collect, form.reset, onAdd]);
 
-  return { widgetTypes, widgetType, selectWidget, form, canAdd: form.valid, add };
+  return { widgetGroups, widgetType, selectWidget, form, canAdd: form.valid, add };
 }

@@ -105,13 +105,18 @@ export function removeWidgetModel(viewModels: ViewModels, model: string): ViewMo
   return deletePath(viewModels, model);
 }
 
-/** Replace one widget template (`model` dot path + template name) in the BASE tree. */
+/**
+ * Replace one widget template (`model` dot path + template name) in the
+ * BASE tree. The template name is passed as its OWN segment: a name
+ * containing a dot must not be split into a nested branch (that silently
+ * lost the edit — team-tiger, Katya).
+ */
 export function updateWidgetTemplate(
   viewModels: ViewModels,
   model: string,
   template: string,
   update: (current: unknown) => unknown,
 ): ViewModels {
-  const path = `${model}.${template}`;
-  return setPath(viewModels, path, update(getPath(viewModels, path)));
+  const segments = [...model.split("."), template];
+  return setPath(viewModels, segments, update(getPath(viewModels, segments.join("."))));
 }

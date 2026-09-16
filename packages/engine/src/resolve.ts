@@ -14,13 +14,14 @@
  *   user-selected view -> cell's `template` -> "default" -> problem.
  * A fallback that engages is REPORTED on the resolved cell/page, never silent.
  */
-import type {
-  AnyWidgetDefinition,
-  CellBase,
-  PageViewModel,
-  UserViewModels,
-  ViewModels,
-  WidgetEvents,
+import {
+  userViewModelsSchema,
+  type AnyWidgetDefinition,
+  type CellBase,
+  type PageViewModel,
+  type UserViewModels,
+  type ViewModels,
+  type WidgetEvents,
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
@@ -30,9 +31,12 @@ import { pageTemplates } from "./trees";
 
 export type CellProblem =
   | { kind: "unknown-widget"; widget: string }
+  | { kind: "duplicate-cell-id"; id: string }
   | { kind: "dangling-model-path"; path: string }
   | { kind: "missing-template"; path: string; template: string }
-  | { kind: "invalid-view-model"; message: string };
+  | { kind: "invalid-view-model"; message: string }
+  /** The template parses, but the widget's CONTRACT is unmet (ports, events, actions). */
+  | { kind: "unmet-contract"; message: string };
 
 /** Emitted when a requested template was absent and a fallback engaged. */
 export interface FallbackNote {
@@ -40,22 +44,37 @@ export interface FallbackNote {
   used: string;
 }
 
-export interface ResolvedCell {
+interface ResolvedCellBase {
   /** Stable cell id from the layout (never positional). */
-  key: string;
-  widget: string;
+  readonly key: string;
+  readonly widget: string;
   /** Dot-path of the widget's template map (for editors writing back). */
-  model: string;
-  /** Widget template actually used. Absent when none could be picked. */
-  template?: string;
-  /** VALIDATED view model (template + user overlay). Absent on `problem`. */
-  viewModel?: unknown;
-  /** Registered definition. Absent on `unknown-widget`. */
-  definition?: AnyWidgetDefinition;
+  readonly model: string;
   /** Set when the requested template was missing and a fallback was used. */
-  fallback?: FallbackNote;
-  problem?: CellProblem;
+  readonly fallback?: FallbackNote;
 }
+
+/** A cell that renders: definition and validated view model are present. */
+export interface ResolvedCellOk extends ResolvedCellBase {
+  readonly problem?: undefined;
+  readonly template: string;
+  readonly viewModel: unknown;
+  readonly definition: AnyWidgetDefinition;
+}
+
+/** A cell that cannot render; `definition` is present unless it is unknown. */
+export interface ResolvedCellProblem extends ResolvedCellBase {
+  readonly problem: CellProblem;
+  readonly template?: string;
+  readonly viewModel?: undefined;
+  readonly definition?: AnyWidgetDefinition;
+}
+
+/**
+ * Discriminated on `problem`: `if (cell.problem)` narrows to the failed
+ * case, and the healthy case needs no cast (team-tiger, Vlad).
+ */
+export type ResolvedCell = ResolvedCellOk | ResolvedCellProblem;
 
 interface ResolvedPageBase {
   /** Page name this plan was resolved for. */
@@ -92,6 +111,45 @@ export interface ResolveInput {
 }
 
 /**
+ * Cell ids must be unique per page: reactions are addressed by (page, cell),
+ * so two cells sharing an id cross-fire each other's reactions. Shared by
+ * resolve and boot validation.
+ */
+export function duplicateCellIds(cells: readonly CellBase[]): Set<string> {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const cell of cells) {
+    if (seen.has(cell.id)) duplicates.add(cell.id);
+    seen.add(cell.id);
+  }
+  return duplicates;
+}
+
+/**
+ * The cells of a template, or a problem when the engine plugin throws:
+ * a third-party engine must not take the page down with a raw TypeError.
+ */
+export function engineCells(
+  engine: { name: string; cells: (template: PageViewModel) => CellBase[] },
+  template: PageViewModel,
+): { cells: CellBase[]; problem?: undefined } | { cells?: undefined; problem: string } {
+  try {
+    return { cells: engine.cells(template) };
+  } catch (error) {
+    return {
+      problem: `layout engine "${engine.name}" failed to list cells: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/** The user overlay, or undefined when it is structurally invalid. */
+export function usableOverlay(userViewModels: UserViewModels | undefined): UserViewModels | undefined {
+  if (userViewModels === undefined) return undefined;
+  const parsed = userViewModelsSchema.safeParse(userViewModels);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
  * Shared template selection (used by resolve AND boot validation so the two
  * can never disagree): first candidate present and non-null wins.
  */
@@ -102,7 +160,9 @@ export function pickTemplate(
   const requested = candidates.find((name): name is string => typeof name === "string");
   for (const name of candidates) {
     if (typeof name !== "string") continue;
-    if (templateMap[name] !== undefined && templateMap[name] !== null) {
+    // Own properties only: "valueOf" or "toString" would otherwise "resolve"
+    // to an inherited function and fail later with a confusing message.
+    if (Object.hasOwn(templateMap, name) && templateMap[name] !== undefined && templateMap[name] !== null) {
       return requested !== undefined && requested !== name
         ? { name, fallback: { requested, used: name } }
         : { name };
@@ -113,11 +173,12 @@ export function pickTemplate(
 
 /**
  * Contract check independent of the widget's own schema: every required
- * input port must be bound to a path, and every REQUIRED event must have at
+ * input port must be bound to a path, every REQUIRED event must have at
  * least one reaction under `on` (that is how widget state reaches the
- * store). Returns a message describing what is missing, or undefined.
+ * store), and every `call` must name a registered action. Returns a
+ * message describing what is missing, or undefined.
  */
-export function unboundRequirements(
+export function contractProblems(
   definition: AnyWidgetDefinition,
   viewModel: unknown,
   actions?: ActionRegistry,
@@ -154,19 +215,28 @@ export function unboundRequirements(
   return parts.length > 0 ? parts.join("; ") : undefined;
 }
 
-export function resolveCell(cell: CellBase, input: ResolveInput): ResolvedCell {
-  const { viewModels, userViewModels, page, registry, actions } = input;
-  const base: ResolvedCell = { key: cell.id, widget: cell.widget, model: cell.model };
+/**
+ * One cell of a page: registry lookup, template selection (with the user's
+ * overlay), validation by the widget's own schema and the contract check.
+ * The SINGLE cell pipeline — boot validation maps its problems rather than
+ * repeating it (team-tiger, Alexei).
+ */
+export function resolveCell(cell: CellBase, input: ResolveInput, duplicate = false): ResolvedCell {
+  const { viewModels, page, registry, actions } = input;
+  const base = { key: cell.id, widget: cell.widget, model: cell.model } as const;
+  const userViewModels = usableOverlay(input.userViewModels);
 
   const definition = registry.get(cell.widget);
   if (!definition) {
     return { ...base, problem: { kind: "unknown-widget", widget: cell.widget } };
   }
-  base.definition = definition;
+  if (duplicate) {
+    return { ...base, definition, problem: { kind: "duplicate-cell-id", id: cell.id } };
+  }
 
   const templates = getPath(viewModels, cell.model);
   if (templates === null || typeof templates !== "object") {
-    return { ...base, problem: { kind: "dangling-model-path", path: cell.model } };
+    return { ...base, definition, problem: { kind: "dangling-model-path", path: cell.model } };
   }
   const templateMap = templates as Record<string, unknown>;
 
@@ -177,6 +247,7 @@ export function resolveCell(cell: CellBase, input: ResolveInput): ResolvedCell {
   if (!picked) {
     return {
       ...base,
+      definition,
       problem: {
         kind: "missing-template",
         path: cell.model,
@@ -185,30 +256,28 @@ export function resolveCell(cell: CellBase, input: ResolveInput): ResolvedCell {
     };
   }
 
-  base.template = picked.name;
-  const overlay = userWidget?.settings?.[picked.name];
-  const merged = deepMerge(templateMap[picked.name], overlay);
+  const failed = (problem: CellProblem): ResolvedCellProblem => ({
+    ...base,
+    definition,
+    template: picked.name,
+    fallback: picked.fallback,
+    problem,
+  });
+
+  const merged = deepMerge(templateMap[picked.name], userWidget?.settings?.[picked.name]);
+  let viewModel: unknown;
   try {
-    const viewModel = definition.viewModel.parse(merged);
-    const unbound = unboundRequirements(definition, viewModel, actions);
-    if (unbound) {
-      return {
-        ...base,
-        fallback: picked.fallback,
-        problem: { kind: "invalid-view-model", message: unbound },
-      };
-    }
-    return { ...base, fallback: picked.fallback, viewModel };
+    viewModel = definition.viewModel.parse(merged);
   } catch (error) {
-    return {
-      ...base,
-      fallback: picked.fallback,
-      problem: {
-        kind: "invalid-view-model",
-        message: error instanceof Error ? error.message : String(error),
-      },
-    };
+    return failed({
+      kind: "invalid-view-model",
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
+  const unmet = contractProblems(definition, viewModel, actions);
+  if (unmet) return failed({ kind: "unmet-contract", message: unmet });
+
+  return { ...base, definition, template: picked.name, fallback: picked.fallback, viewModel };
 }
 
 const problemPage = (page: string, view: string, problem: string): ResolvedPageProblem => ({
@@ -218,7 +287,10 @@ const problemPage = (page: string, view: string, problem: string): ResolvedPageP
 });
 
 export function resolvePage(input: ResolveInput): ResolvedPage {
-  const { viewModels, userViewModels, page, layoutEngines } = input;
+  const { viewModels, page, layoutEngines } = input;
+  // A structurally broken overlay is ignored here exactly as boot
+  // validation ignores it, so the two passes see the same trees.
+  const userViewModels = usableOverlay(input.userViewModels);
 
   // Base templates with the user's own layered on top.
   const templates = pageTemplates(viewModels, userViewModels, page);
@@ -241,12 +313,24 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
     return problemPage(page, picked.name, `Page "${page}" template "${picked.name}": ${resolution.problem}`);
   }
   const { engine, template } = resolution;
+  const listed = engineCells(engine, template);
+  if (listed.problem !== undefined) {
+    return problemPage(page, picked.name, `Page "${page}" template "${picked.name}": ${listed.problem}`);
+  }
+  // First cell of a duplicated id renders; the later ones are problems, so
+  // one emit can never fire another cell's reactions.
+  const duplicates = duplicateCellIds(listed.cells);
+  const seen = new Set<string>();
   return {
     page,
     view: picked.name,
     fallback: picked.fallback,
     engine: engine.name,
     template,
-    cells: (engine.cells(template) as CellBase[]).map((cell) => resolveCell(cell, input)),
+    cells: listed.cells.map((cell) => {
+      const repeated = duplicates.has(cell.id) && seen.has(cell.id);
+      seen.add(cell.id);
+      return resolveCell(cell, { ...input, userViewModels }, repeated);
+    }),
   };
 }

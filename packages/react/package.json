@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@wirework/engine": "workspace:*",
-    "@wirework/schema": "workspace:*"
+    "@wirework/events": "workspace:*",
+    "@wirework/schema": "workspace:*",
+    "@wirework/store": "workspace:*"
   },
   "peerDependencies": {
     "react": "catalog:",

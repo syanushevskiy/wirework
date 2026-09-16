@@ -40,6 +40,17 @@ export interface WidgetProps<VM = unknown, E extends WidgetEvents = WidgetEvents
   emit: Emit<E>;
 }
 
+/**
+ * Sample data for a catalog/palette preview (doc/widget-previews-design.md):
+ * the widget is rendered live, in an isolated sandbox, with this.
+ */
+export interface WidgetPreviewSpec {
+  /** Store state the preview's input ports read (e.g. `{ preview: { count: 3 } }`). */
+  seed?: Record<string, unknown>;
+  /** View-model template (bindings + settings) to render with; `{}` when absent. */
+  viewModel?: Record<string, unknown>;
+}
+
 /** The registration envelope for a widget. */
 export interface WidgetDefinition<
   VM = unknown,
@@ -53,6 +64,13 @@ export interface WidgetDefinition<
   type: string;
   /** Human description shown by builders next to the type. */
   description?: string;
+  /**
+   * The contract kind this widget implements ("label", "button", ...),
+   * set by `implementContract`. Tooling groups and swaps by it.
+   */
+  kind?: string;
+  /** Sample data for a live palette preview; without it the palette tries `{}`. */
+  preview?: WidgetPreviewSpec;
   /**
    * Typed input ports (store values the widget reads). The view model
    * binds port names to store paths under the reserved `inputs` key.

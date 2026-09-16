@@ -24,8 +24,12 @@ export const cellBaseSchema = z.object({
   widget: z.string().min(1),
   /** Dot-path into the view models tree holding this widget's templates. */
   model: z.string().min(1),
-  /** Which template of that view model to use by default. */
-  template: z.string().min(1),
+  /**
+   * Which template of that view model to use by default. No dots: template
+   * names are joined into dot paths by editors, so a "v1.0" would write to
+   * a nested branch and lose the edit.
+   */
+  template: z.string().min(1).regex(/^[^.]+$/, "template names must not contain a dot"),
 });
 export type CellBase = z.infer<typeof cellBaseSchema>;
 
@@ -50,7 +54,8 @@ export interface ViewModels {
   widgets: Record<string, unknown>;
 }
 
-export const viewModelsSchema: z.ZodType<ViewModels> = z.object({
+// `satisfies`, not an annotation: the annotation would erase `.shape`/`.extend`.
+export const viewModelsSchema = z.object({
   pages: z.record(z.string(), z.record(z.string(), pageViewModelSchema)),
   widgets: z.record(z.string(), z.unknown()),
-});
+}) satisfies z.ZodType<ViewModels>;

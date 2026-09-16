@@ -20,18 +20,21 @@ export const viewModels: ViewModels = {
         // Already vertically compact: react-grid-layout will not move
         // anything on mount, so an edit session starts from exactly this.
         cells: [
-          { id: "label-main", widget: "dummy-label", model: "widgets.demo.label", template: "default", x: 0, y: 0, w: 12, h: 1 },
-          { id: "counter-main", widget: "dummy-counter", model: "widgets.demo.counter", template: "default", x: 0, y: 1, w: 6, h: 2 },
-          { id: "echo-counter", widget: "dummy-echo", model: "widgets.demo.echo", template: "default", x: 6, y: 1, w: 3, h: 2 },
-          { id: "echo-demo", widget: "dummy-echo", model: "widgets.demo.echoAll", template: "default", x: 9, y: 1, w: 3, h: 2 },
-          { id: "table-main", widget: "dummy-runs-table", model: "widgets.demo.table", template: "default", x: 0, y: 3, w: 9, h: 4 },
+          { id: "label-main", widget: "antd-label", model: "widgets.demo.label", template: "default", x: 0, y: 0, w: 12, h: 1 },
+          { id: "counter-main", widget: "antd-counter", model: "widgets.demo.counter", template: "default", x: 0, y: 1, w: 6, h: 2 },
+          { id: "echo-counter", widget: "antd-echo", model: "widgets.demo.echo", template: "default", x: 6, y: 1, w: 3, h: 2 },
+          { id: "echo-demo", widget: "antd-echo", model: "widgets.demo.echoAll", template: "default", x: 9, y: 1, w: 3, h: 2 },
+          { id: "table-main", widget: "antd-runs-table", model: "widgets.demo.table", template: "default", x: 0, y: 3, w: 9, h: 5 },
+          // Server-side paging: a page change CALLS a host action that
+          // requests the rows and writes them to the table's path.
+          { id: "pagination-runs", widget: "antd-pagination", model: "widgets.demo.runsPagination", template: "default", x: 0, y: 8, w: 9, h: 1 },
           // Displays the run the HOST wrote to "runs.selected" in reaction
           // to the table's `row-selected` event (doc/widget-events-design.md).
-          { id: "echo-selected-run", widget: "dummy-echo", model: "widgets.demo.echoSelectedRun", template: "default", x: 9, y: 3, w: 3, h: 2 },
+          { id: "echo-selected-run", widget: "antd-echo", model: "widgets.demo.echoSelectedRun", template: "default", x: 9, y: 3, w: 3, h: 2 },
           // A click is an INTENT: the reaction calls a host action by name.
-          { id: "button-reset", widget: "dummy-button", model: "widgets.demo.resetButton", template: "default", x: 9, y: 5, w: 3, h: 2 },
+          { id: "button-reset", widget: "antd-button", model: "widgets.demo.resetButton", template: "default", x: 9, y: 5, w: 3, h: 2 },
           // A controlled input: text lives at demo.name, written by the reaction.
-          { id: "input-name", widget: "dummy-input", model: "widgets.demo.nameInput", template: "default", x: 0, y: 7, w: 6, h: 2 },
+          { id: "input-name", widget: "antd-input", model: "widgets.demo.nameInput", template: "default", x: 0, y: 9, w: 6, h: 2 },
         ],
       },
     },
@@ -86,9 +89,23 @@ export const viewModels: ViewModels = {
           on: { clicked: [{ call: "reset-counter" }] },
         },
       },
+      runsPagination: {
+        default: {
+          inputs: { page: "runs.page", total: "runs.total", pageSize: "runs.pageSize" },
+          // In order, each awaited: store what the user asked for, then
+          // request that page (the action writes runs.data and runs.total).
+          on: {
+            changed: [
+              { set: "runs.page", from: "page" },
+              { set: "runs.pageSize", from: "pageSize" },
+              { call: "runs/load-page" },
+            ],
+          },
+        },
+      },
       table: {
         default: {
-          inputs: { data: "runs.data" },
+          inputs: { data: "runs.data", loading: "runs.loading" },
           columns: [
             { name: "#", property: "id" },
             { name: "Name", property: "name" },
@@ -116,29 +133,29 @@ export const failurePathViewModels: ViewModels = {
             // 1. widget type nobody registered
             { id: "ghost", widget: "ghost-widget", model: "widgets.demo.label", template: "default", width: "m-4/12" },
             // 2. model path pointing nowhere
-            { id: "dangling", widget: "dummy-label", model: "widgets.nowhere.label", template: "default", width: "m-4/12" },
+            { id: "dangling", widget: "antd-label", model: "widgets.nowhere.label", template: "default", width: "m-4/12" },
             // 3. template that fails the widget's validator
-            { id: "bad-template", widget: "dummy-label", model: "widgets.demo.badLabel", template: "default", width: "m-4/12" },
+            { id: "bad-template", widget: "antd-label", model: "widgets.demo.badLabel", template: "default", width: "m-4/12" },
           ],
           [
             // 4. widget that throws during render — isolated by the boundary
-            { id: "crash", widget: "dummy-crash", model: "widgets.demo.crash", template: "default", width: "m-6/12" },
+            { id: "crash", widget: "antd-crash", model: "widgets.demo.crash", template: "default", width: "m-6/12" },
             // 5. healthy neighbour proving isolation
-            { id: "healthy", widget: "dummy-label", model: "widgets.demo.label", template: "default", width: "m-6/12" },
+            { id: "healthy", widget: "antd-label", model: "widgets.demo.label", template: "default", width: "m-6/12" },
           ],
           [
             // 6. requested template missing -> REPORTED fallback to "default"
-            { id: "fallback-label", widget: "dummy-label", model: "widgets.demo.label", template: "nope", width: "m-6/12" },
+            { id: "fallback-label", widget: "antd-label", model: "widgets.demo.label", template: "nope", width: "m-6/12" },
             // 7. requested template missing and NO "default" -> problem
-            { id: "orphan", widget: "dummy-label", model: "widgets.demo.orphan", template: "nope", width: "m-6/12" },
+            { id: "orphan", widget: "antd-label", model: "widgets.demo.orphan", template: "nope", width: "m-6/12" },
           ],
           [
             // 8. reaction to an event the widget never declares -> problem
-            { id: "bad-reaction", widget: "dummy-counter", model: "widgets.demo.badReaction", template: "default", width: "m-6/12" },
+            { id: "bad-reaction", widget: "antd-counter", model: "widgets.demo.badReaction", template: "default", width: "m-6/12" },
             // 9. required event with no reaction bound -> problem
-            { id: "unreacted", widget: "dummy-counter", model: "widgets.demo.unreacted", template: "default", width: "m-6/12" },
+            { id: "unreacted", widget: "antd-counter", model: "widgets.demo.unreacted", template: "default", width: "m-6/12" },
             // 10. reaction calling an action nobody registered -> problem
-            { id: "bad-action", widget: "dummy-button", model: "widgets.demo.badAction", template: "default", width: "m-6/12" },
+            { id: "bad-action", widget: "antd-button", model: "widgets.demo.badAction", template: "default", width: "m-6/12" },
           ],
         ],
       },
@@ -156,7 +173,7 @@ export const failurePathViewModels: ViewModels = {
         },
       },
       badLabel: {
-        // dummy-label requires `text: string` — this must fail validation
+        // antd-label requires `text: string` — this must fail validation
         default: { text: 42 },
       },
       orphan: {
@@ -167,7 +184,7 @@ export const failurePathViewModels: ViewModels = {
         default: { message: "playground intentional crash" },
       },
       badReaction: {
-        // dummy-counter declares only `incremented` — `nope` must be rejected
+        // antd-counter declares only `incremented` — `nope` must be rejected
         default: {
           inputs: { value: "demo.counter" },
           on: { nope: [{ set: "demo.never" }] },
@@ -206,7 +223,7 @@ export const seedData: { demo: { counter: number }; runs: { data: RunsData } } =
   demo: { counter: 0 },
   runs: {
     data: {
-      order: ["123456", "123457"],
+      order: ["123456", "123457", "123458", "123459", "123460", "123461"],
       byId: {
         "123456": {
           id: "123456",
@@ -221,6 +238,34 @@ export const seedData: { demo: { counter: number }; runs: { data: RunsData } } =
           reference: "REF59456736",
           inbound: "IND557328",
           status: { state: "Success", message: "Finished" },
+        },
+        "123458": {
+          id: "123458",
+          name: "E2E Run # 98767",
+          reference: "REF59456737",
+          inbound: "IND557329",
+          status: { state: "Running", message: "Step 3 of 7" },
+        },
+        "123459": {
+          id: "123459",
+          name: "Nightly regression",
+          reference: "REF59456738",
+          inbound: "IND557330",
+          status: { state: "Success", message: "Finished" },
+        },
+        "123460": {
+          id: "123460",
+          name: "Smoke suite",
+          reference: "REF59456739",
+          inbound: "IND557331",
+          status: { state: "Failed", message: "2 assertions failed" },
+        },
+        "123461": {
+          id: "123461",
+          name: "Migration check",
+          reference: "REF59456740",
+          inbound: "IND557332",
+          status: { state: "Queued", message: "Waiting for a runner" },
         },
       },
     },

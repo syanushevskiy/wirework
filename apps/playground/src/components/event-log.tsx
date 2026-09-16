@@ -5,8 +5,8 @@
  * Every row carries the widget type, event name and source cell as data
  * attributes so scenarios can assert on exactly which cell emitted what.
  */
+import { Button, Flex, Typography } from "antd";
 import type { EventBus } from "@wirework/schema";
-import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "./collapsible-card";
 import { useEventLog } from "../hooks/use-event-log";
 
@@ -23,38 +23,31 @@ export function EventLog({ bus }: { bus: EventBus }) {
         </span>
       }
     >
-      <ol className="grid max-h-64 gap-1 overflow-y-auto font-mono text-xs">
-        {events.map((event) => (
-          <li
-            key={event.seq}
-            data-testid="event-log-row"
-            data-seq={event.seq}
-            data-widget={event.widget}
-            data-event={event.name}
-            data-cell={event.cell}
-            className="flex flex-wrap gap-x-2"
-          >
-            <span className="text-muted-foreground">#{event.seq}</span>
-            <span>
-              {event.widget}/{event.name}
-            </span>
-            <span className="text-muted-foreground">from {event.cell}</span>
-            <code data-testid="event-log-payload">{event.payload}</code>
-          </li>
-        ))}
-      </ol>
-      <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="event-log-clear"
-          disabled={events.length === 0}
-          onClick={clear}
-        >
+      <Flex vertical gap="small" align="start">
+        <ol className="pg-event-list">
+          {events.map((event) => (
+            <li
+              key={event.seq}
+              data-testid="event-log-row"
+              data-seq={event.seq}
+              data-widget={event.widget}
+              data-event={event.name}
+              data-cell={event.cell}
+              className="pg-event-row"
+            >
+              <Typography.Text type="secondary">#{event.seq}</Typography.Text>
+              <span>
+                {event.widget}/{event.name}
+              </span>
+              <Typography.Text type="secondary">from {event.cell}</Typography.Text>
+              <code data-testid="event-log-payload">{event.payload}</code>
+            </li>
+          ))}
+        </ol>
+        <Button size="small" data-testid="event-log-clear" disabled={events.length === 0} onClick={clear}>
           Clear
         </Button>
-      </div>
+      </Flex>
     </CollapsibleCard>
   );
 }

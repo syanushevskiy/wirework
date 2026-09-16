@@ -8,6 +8,7 @@ import type { ReadableStore, Store } from "@wirework/schema";
 export function readableStore(store: Store): ReadableStore {
   return {
     get: (path) => store.get(path),
+    getAs: (path, validator) => store.getAs(path, validator),
     subscribe: (path, listener) => store.subscribe(path, listener),
     snapshot: () => store.snapshot(),
   };

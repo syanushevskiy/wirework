@@ -34,7 +34,9 @@ export function createEmitter(
   const { type: widget } = definition;
 
   return (name, payload) => {
-    const declared = events[name];
+    // Own properties only: "constructor" or "toString" would otherwise
+    // "resolve" to an inherited function and fail with a confusing message.
+    const declared = Object.hasOwn(events, name) ? events[name] : undefined;
     if (!declared) {
       throw new WidgetEventError(
         `Widget "${widget}" does not declare event "${name}" (declared: ${Object.keys(events).join(", ") || "none"})`,

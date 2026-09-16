@@ -4,7 +4,7 @@
  * refs); the subscription itself keys on the filter's primitive fields.
  *
  * Pair with `eventFilter(definition, name)` for a typed payload:
- *   useWidgetEvent(bus, eventFilter(dummyRunsTable, "row-selected"),
+ *   useWidgetEvent(bus, eventFilter(antdRunsTable, "row-selected"),
  *                  (e) => store.set("runs.selected", e.payload.id));
  */
 import { useEffect, useRef } from "react";

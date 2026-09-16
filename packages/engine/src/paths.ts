@@ -1,8 +1,5 @@
 /** Dot-path helpers for resolving view-model references and store tooling. */
-import type { ReadableStore, Validator } from "@wirework/schema";
-
-/** Segments that would touch the prototype chain instead of own data. */
-const FORBIDDEN_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+import { CONFIG_ROOTS, FORBIDDEN_SEGMENTS, isConfigPath, type ReadableStore, type Validator } from "@wirework/schema";
 
 export function getPath(root: unknown, path: string): unknown {
   let current: unknown = root;
@@ -28,7 +25,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 /**
  * Enumerate every dot path reachable in a state tree (branches AND leaves),
  * for tooling such as path autocomplete. Array elements are addressed by
- * numeric segments; forbidden segments are skipped.
+ * numeric segments; forbidden segments, and any key `storePathSchema`
+ * would reject (dots, whitespace), are skipped — a suggestion the schema
+ * refuses is worse than no suggestion.
  */
 export function collectPaths(root: unknown, maxDepth = 8): string[] {
   const paths: string[] = [];
@@ -38,7 +37,7 @@ export function collectPaths(root: unknown, maxDepth = 8): string[] {
       ? value.map((element, index) => [String(index), element] as const)
       : Object.entries(value);
     for (const [key, child] of entries) {
-      if (FORBIDDEN_SEGMENTS.has(key) || key.includes(".") || key === "") continue;
+      if (FORBIDDEN_SEGMENTS.has(key) || key === "" || /[.\s]/.test(key)) continue;
       const path = prefix === "" ? key : `${prefix}.${key}`;
       paths.push(path);
       walk(child, path, depth + 1);
@@ -49,16 +48,21 @@ export function collectPaths(root: unknown, maxDepth = 8): string[] {
 }
 
 /**
- * Existing store paths whose CURRENT value satisfies the given validator —
+ * Existing DATA paths whose CURRENT value satisfies the given validator —
  * the autocomplete source for binding a typed input port
- * (doc/widget-io-design.md). A live value may still change shape later;
- * this is a tooling aid, not a runtime guarantee.
+ * (doc/widget-io-design.md). Configuration trees are excluded: a binding
+ * may not address the view models (see `storePathSchema`), so offering
+ * them would only produce templates the widget then rejects. A live value
+ * may still change shape later; this is a tooling aid, not a guarantee.
  */
 export function compatibleStorePaths(
   store: ReadableStore,
   validator: Validator<unknown>,
 ): string[] {
-  return collectPaths(store.snapshot()).filter((path) => {
+  const data = Object.fromEntries(
+    Object.entries(store.snapshot()).filter(([root]) => !CONFIG_ROOTS.includes(root)),
+  );
+  return collectPaths(data).filter((path) => {
     try {
       validator.parse(store.get(path));
       return true;
@@ -84,8 +88,8 @@ export function deepMerge(base: unknown, overlay: unknown): unknown {
 }
 
 /** Immutable delete of a dot path; missing paths return the same tree. */
-export function deletePath<T extends object>(root: T, path: string): T {
-  const segments = path.split(".");
+export function deletePath<T extends object>(root: T, path: string | readonly string[]): T {
+  const segments = segmentsOf(path);
   const drop = (container: unknown, index: number): unknown => {
     if (!isPlainObject(container)) return container;
     const key = segments[index];
@@ -100,20 +104,43 @@ export function deletePath<T extends object>(root: T, path: string): T {
 }
 
 /**
- * Immutable write at a dot path into a plain-object tree: clones the
- * containers along the path, creates missing ones, never touches the
- * prototype chain. Arrays are not traversed (view-model trees are keyed).
+ * Segments of a path. Pass an ARRAY when a segment may itself contain a dot
+ * (template names, widget keys): joining first and splitting later writes
+ * to the wrong branch and loses the edit.
  */
-export function setPath<T extends object>(root: T, path: string, value: unknown): T {
-  const segments = path.split(".");
-  const assign = (container: unknown, index: number): Record<string, unknown> => {
+function segmentsOf(path: string | readonly string[]): string[] {
+  return typeof path === "string" ? path.split(".") : [...path];
+}
+
+/**
+ * Immutable write at a dot path (or explicit segments) into a view-model
+ * tree: clones the containers along the path, creates missing ones, never
+ * touches the prototype chain. Arrays ARE traversed by numeric segment and
+ * stay arrays; a non-numeric segment through an array is refused.
+ */
+export function setPath<T extends object>(root: T, path: string | readonly string[], value: unknown): T {
+  const segments = segmentsOf(path);
+  const shown = segments.join(".");
+  const assign = (container: unknown, index: number): unknown => {
     const key = segments[index];
     if (key === undefined || key === "" || FORBIDDEN_SEGMENTS.has(key)) {
-      throw new Error(`Refusing to write path "${path}": bad segment ${JSON.stringify(key)}`);
+      throw new Error(`Refusing to write path "${shown}": bad segment ${JSON.stringify(key)}`);
+    }
+    const last = index === segments.length - 1;
+    if (Array.isArray(container)) {
+      if (!/^\d+$/.test(key)) {
+        throw new Error(`Refusing to write path "${shown}": segment "${key}" through an array needs a numeric index`);
+      }
+      const next = [...container];
+      next[Number(key)] = last ? value : assign(next[Number(key)], index + 1);
+      return next;
     }
     const base: Record<string, unknown> = isPlainObject(container) ? { ...container } : {};
-    base[key] = index === segments.length - 1 ? value : assign(base[key], index + 1);
+    base[key] = last ? value : assign(base[key], index + 1);
     return base;
   };
   return assign(root, 0) as T;
 }
+
+/** True when a path addresses a configuration tree (re-exported for hosts). */
+export { isConfigPath };

@@ -1,0 +1,12 @@
+/**
+ * antd widget styles — semantic classes only (guidelines). Most tones map
+ * to antd Typography types; `accent` has none, so it takes the theme's
+ * primary colour through antd's CSS variable. Hosts import this once.
+ */
+.ww-label[data-tone="accent"] {
+  color: var(--ant-color-primary, #1677ff);
+}
+
+.ww-runs-table .ant-table-row {
+  cursor: pointer;
+}

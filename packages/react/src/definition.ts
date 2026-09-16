@@ -4,7 +4,15 @@
  * view model AND its events declaration.
  */
 import type { ComponentType } from "react";
-import type { WidgetDefinition, WidgetEvents, WidgetProps } from "@wirework/schema";
+import type {
+  AnyWidgetContract,
+  ContractProps,
+  ContractViewModel,
+  WidgetDefinition,
+  WidgetEvents,
+  WidgetPreviewSpec,
+  WidgetProps,
+} from "@wirework/schema";
 
 export type ReactWidgetDefinition<
   VM = unknown,
@@ -20,4 +28,35 @@ export function defineWidget<VM, E extends WidgetEvents = WidgetEvents>(
   def: ReactWidgetDefinition<VM, E>,
 ): ReactWidgetDefinition<VM, E> {
   return def;
+}
+
+export interface ContractImplementation<C extends AnyWidgetContract> {
+  /** Unique registry name of THIS implementation ("antd-button", "mui-button"). */
+  type: string;
+  /** Defaults to the contract's description. */
+  description?: string;
+  /** Defaults to the contract's preview. */
+  preview?: WidgetPreviewSpec;
+  component: ComponentType<ContractProps<C>>;
+}
+
+/**
+ * A widget definition that implements a contract: ports, events and view
+ * model come from the contract, only the component (and the type name) is
+ * the implementation's. The definition records the contract's `kind`.
+ */
+export function implementContract<C extends AnyWidgetContract>(
+  contract: C,
+  implementation: ContractImplementation<C>,
+): ReactWidgetDefinition<ContractViewModel<C>, C["events"]> {
+  return {
+    type: implementation.type,
+    description: implementation.description ?? contract.description,
+    kind: contract.kind,
+    preview: implementation.preview ?? contract.preview,
+    io: contract.io,
+    events: contract.events,
+    viewModel: contract.viewModel,
+    component: implementation.component,
+  };
 }

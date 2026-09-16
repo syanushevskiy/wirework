@@ -10,13 +10,14 @@ Feature: Layout engines
   Scenario: The demo page renders on the grid engine
     Given I open the "demo" page
     Then the page layout uses the "react-grid-layout" engine
-    And the page has 8 cells
-    And I see a widget "dummy-label"
-    And I see a widget "dummy-counter"
-    And I see a widget "dummy-echo"
-    And I see a widget "dummy-runs-table"
+    And the page has 9 cells
+    And I see a widget "antd-label"
+    And I see a widget "antd-counter"
+    And I see a widget "antd-echo"
+    And I see a widget "antd-runs-table"
+    And I see a widget "antd-pagination"
     And the cell "counter-main" is placed at x 0 y 1 w 6 h 2
-    And the cell "table-main" is placed at x 0 y 3 w 9 h 4
+    And the cell "table-main" is placed at x 0 y 3 w 9 h 5
 
   Scenario: The default page view applies without user selection
     Given I open the "demo" page
@@ -62,7 +63,7 @@ Feature: Layout engines
     Then the page layout uses the "gridstack" engine
     When I select the "react-grid-layout" layout engine
     Then the page layout uses the "react-grid-layout" engine
-    When I choose the "dummy-label" widget
+    When I choose the "antd-label" widget
     And I set the setting "text" to "first"
     And I add the widget
     Then the engine is locked as "react-grid-layout"
@@ -70,11 +71,11 @@ Feature: Layout engines
   Scenario: A third engine plugs in without core changes (gridstack)
     Given I open the "builder" page
     When I select the "gridstack" layout engine
-    And I choose the "dummy-counter" widget
+    And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
     And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
-    And I choose the "dummy-label" widget
+    And I choose the "antd-label" widget
     And I set the setting "text" to "second"
     And I add the widget
     Then the page layout uses the "gridstack" engine
@@ -94,11 +95,11 @@ Feature: Layout engines
   Scenario: A tree engine plugs in without core changes (FlexLayout)
     Given I open the "builder" page
     When I select the "flexlayout" layout engine
-    And I choose the "dummy-counter" widget
+    And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.f"
     And I set the reaction for "incremented" to set "demo.f" from "value"
     And I add the widget
-    And I choose the "dummy-echo" widget
+    And I choose the "antd-echo" widget
     And I set the "input" port "value" to "demo.f"
     And I add the widget
     Then the page layout uses the "flexlayout" engine

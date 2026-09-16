@@ -5,14 +5,16 @@
  * the React-typed widget definition and the React-typed layout-engine
  * definition live here; the engine itself knows nothing about React.
  */
-export { defineWidget } from "./definition";
-export type { ReactWidgetDefinition } from "./definition";
+export { defineWidget, implementContract } from "./definition";
+export type { ContractImplementation, ReactWidgetDefinition } from "./definition";
 export { defineLayoutEngine } from "./layout";
 export type { LayoutRendererProps, ReactLayoutEngine } from "./layout";
 export { CellChrome } from "./CellChrome";
 export type { CellChromeProps } from "./CellChrome";
 export { PageView } from "./PageView";
 export type { PageViewProps } from "./PageView";
+export { WidgetPreview } from "./WidgetPreview";
+export type { WidgetPreviewProps } from "./WidgetPreview";
 export { usePagePlan } from "./usePagePlan";
 export { useReactions } from "./useReactions";
 export { useStorePath } from "./useStorePath";

@@ -4,59 +4,38 @@
  * has a unique kebab-case name, a template validator, every layout
  * operation, and a renderer.
  */
-import type { AnyLayoutEngine, PageViewModel } from "@wirework/schema";
-import { pageViewModelSchema } from "@wirework/schema";
-
-const NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+import { KEBAB_NAME, pageViewModelSchema, type AnyLayoutEngine, type PageViewModel } from "@wirework/schema";
+import { createNamedRegistry, RegistrationError } from "./named-registry";
 
 export interface LayoutEngineRegistry {
   register(engine: AnyLayoutEngine): void;
   get(name: string): AnyLayoutEngine | undefined;
-  names(): string[];
+  names(): readonly string[];
+  list(): readonly AnyLayoutEngine[];
 }
 
-export class LayoutEngineRegistrationError extends Error {
-  constructor(
-    message: string,
-    readonly engineName: string,
-  ) {
-    super(message);
-    this.name = "LayoutEngineRegistrationError";
-  }
-}
+export { RegistrationError as LayoutEngineRegistrationError };
+
+const OPERATIONS = ["empty", "cells", "appendCell", "removeCell", "applyChange"] as const;
 
 export function createLayoutEngines(): LayoutEngineRegistry {
-  const engines = new Map<string, AnyLayoutEngine>();
+  const registry = createNamedRegistry<AnyLayoutEngine>({
+    label: "Layout engine",
+    keyOf: (engine) => engine.name,
+    pattern: KEBAB_NAME,
+    invariants: [
+      (engine) => (typeof engine.template?.parse !== "function" ? "has no template validator" : undefined),
+      (engine) => OPERATIONS.filter((operation) => typeof engine[operation] !== "function")
+        .map((operation) => `lacks the "${operation}" operation`)[0],
+      (engine) => (engine.renderer === undefined || engine.renderer === null ? "has no renderer" : undefined),
+    ],
+  });
+
   return {
-    register(engine): void {
-      const { name } = engine;
-      if (!name || !NAME_PATTERN.test(name)) {
-        throw new LayoutEngineRegistrationError(
-          `Layout engine name ${JSON.stringify(name)} is not a valid kebab-case identifier`,
-          String(name),
-        );
-      }
-      if (engines.has(name)) {
-        throw new LayoutEngineRegistrationError(`Layout engine "${name}" is already registered`, name);
-      }
-      if (typeof engine.template?.parse !== "function") {
-        throw new LayoutEngineRegistrationError(`Layout engine "${name}" has no template validator`, name);
-      }
-      for (const operation of ["empty", "cells", "appendCell", "removeCell", "applyChange"] as const) {
-        if (typeof engine[operation] !== "function") {
-          throw new LayoutEngineRegistrationError(
-            `Layout engine "${name}" lacks the "${operation}" operation`,
-            name,
-          );
-        }
-      }
-      if (engine.renderer === undefined || engine.renderer === null) {
-        throw new LayoutEngineRegistrationError(`Layout engine "${name}" has no renderer`, name);
-      }
-      engines.set(name, engine);
-    },
-    get: (name) => engines.get(name),
-    names: () => [...engines.keys()],
+    register: (engine) => registry.register(engine),
+    get: (name) => registry.get(name),
+    names: () => registry.keys(),
+    list: () => registry.list(),
   };
 }
 

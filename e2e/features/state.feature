@@ -22,10 +22,10 @@ Feature: State inspector
     Given I open the "demo" page
     When I replace the state JSON with "not json at all"
     Then the state error is shown
-    And I see a widget "dummy-label"
+    And I see a widget "antd-label"
 
   Scenario: A structurally invalid view-model tree is rejected and never reaches the store
     Given I open the "demo" page
     When I replace the state JSON with '{"viewModels": {}}'
     Then the state error is shown
-    And I see a widget "dummy-label"
+    And I see a widget "antd-label"

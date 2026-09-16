@@ -8,12 +8,18 @@
   },
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@wirework/schema": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "catalog:"
+    "@wirework/events": "workspace:*",
+    "@wirework/schema": "workspace:*",
+    "@wirework/store": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

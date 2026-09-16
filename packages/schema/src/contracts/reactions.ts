@@ -19,25 +19,31 @@
  * caught at boot), exactly like `ioBindingsSchema` derives ports.
  */
 import { z } from "zod";
+import { ACTION_NAME } from "./names";
 import type { WidgetEvents } from "./events";
 import { ioBindingsSchema, storePathSchema, type IoBindings, type WidgetIO } from "./io";
 
-export const setReactionSchema = z.object({
-  /** Store path to write. */
-  set: storePathSchema,
-  /** Dot-path into the payload ("id", "status.state"); absent = whole payload. */
-  from: z.string().optional(),
-  /** Literal to write instead of the payload. */
-  value: z.unknown().optional(),
-});
+/** strict: a misspelled key ("form" for "from") must fail, never be dropped. */
+export const setReactionSchema = z
+  .object({
+    /** Store path to write. */
+    set: storePathSchema,
+    /** Dot-path into the payload ("id", "status.state"); absent = whole payload. */
+    from: z.string().optional(),
+    /** Literal to write instead of the payload. */
+    value: z.unknown().optional(),
+  })
+  .strict();
 export type SetReaction = z.infer<typeof setReactionSchema>;
 
-export const callReactionSchema = z.object({
-  /** Name of a host-registered action (kebab-case). */
-  call: z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, "must be a kebab-case action name"),
-  /** Static arguments handed to the action next to the event. */
-  with: z.record(z.string(), z.unknown()).optional(),
-});
+export const callReactionSchema = z
+  .object({
+    /** Name of a host-registered action ("reset-counter", "runs/load"). */
+    call: z.string().regex(ACTION_NAME, "must be a kebab-case action name, optionally namespaced"),
+    /** Static arguments handed to the action next to the event. */
+    with: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 export type CallReaction = z.infer<typeof callReactionSchema>;
 
 export const reactionSchema = z.union([setReactionSchema, callReactionSchema]);
@@ -52,7 +58,7 @@ export function eventBindingsSchema(events: WidgetEvents) {
   for (const name of Object.keys(events)) {
     shape[name] = z.array(reactionSchema).optional();
   }
-  return z.object({ on: z.object(shape).strict().default({}) });
+  return z.object({ on: z.object(shape).strict().default({}) }).strict();
 }
 
 /** `inputs` + `on` in one go. Compose widget settings on top with `.extend()`. */

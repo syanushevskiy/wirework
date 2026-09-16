@@ -19,9 +19,14 @@ export interface ActionContext {
 }
 
 export interface ActionDefinition {
-  /** Kebab-case name referenced by `call` reactions. */
+  /** Name referenced by `call` reactions ("reset-counter", "runs/load"). */
   name: string;
   /** Shown by builders next to the name. */
   description?: string;
-  handler: (context: ActionContext) => void;
+  /**
+   * Host code. May be async: the reactions of ONE event run in declaration
+   * order and each is awaited before the next starts
+   * (doc/actions-design.md), so `[load, navigate]` navigates after the load.
+   */
+  handler: (context: ActionContext) => void | Promise<void>;
 }

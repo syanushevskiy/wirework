@@ -16,49 +16,49 @@ Feature: Widget events
     Given I open the "demo" page
     And I expand the "events" panel
     When I click the counter 1 times
-    Then the event log shows widget "dummy-counter" event "incremented" with payload '{"value":1}'
-    And the event log shows widget "dummy-counter" event "incremented" from cell "counter-main"
+    Then the event log shows widget "antd-counter" event "incremented" with payload '{"value":1}'
+    And the event log shows widget "antd-counter" event "incremented" from cell "counter-main"
 
   Scenario: Every emit is logged, newest first
     Given I open the "demo" page
     And I expand the "events" panel
     When I click the counter 3 times
     Then the event log has 3 entries
-    And the event log shows widget "dummy-counter" event "incremented" with payload '{"value":3}'
+    And the event log shows widget "antd-counter" event "incremented" with payload '{"value":3}'
 
   Scenario: The host subscribes to an event and turns it into state
     Given I open the "demo" page
     And I expand the "events" panel
     Then the echo widget at "runs.selected" shows "∅"
     When I click the runs table row "123456"
-    Then the event log shows widget "dummy-runs-table" event "row-selected" with payload '{"id":"123456"}'
+    Then the event log shows widget "antd-runs-table" event "row-selected" with payload '{"id":"123456"}'
     And the echo widget at "runs.selected" shows '"123456"'
     When I click the runs table row "123457"
     Then the echo widget at "runs.selected" shows '"123457"'
 
   Scenario: The builder lists the events a widget emits
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     Then the widget events list includes "incremented"
-    When I choose the "dummy-runs-table" widget
+    When I choose the "antd-runs-table" widget
     Then the widget events list includes "row-selected"
-    When I choose the "dummy-label" widget
+    When I choose the "antd-label" widget
     Then the widget emits no events
 
   Scenario: Two cells of the same widget emit with their own cell id
     Given I open the "builder" page
     And I expand the "events" panel
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
     And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
-    And I choose the "dummy-counter" widget
+    And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.b"
     And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
     And I click the counter in cell "custom-2" 1 times
     Then the event log has 1 entries
-    And the event log shows widget "dummy-counter" event "incremented" from cell "custom-2"
+    And the event log shows widget "antd-counter" event "incremented" from cell "custom-2"
 
   Scenario: The event log can be cleared
     Given I open the "demo" page
@@ -76,11 +76,11 @@ Feature: Widget events
 
   Scenario: A user wires an event to a store path in the builder
     Given I open the "builder" page
-    When I choose the "dummy-runs-table" widget
+    When I choose the "antd-runs-table" widget
     And I set the "input" port "data" to "runs.data"
     And I set the reaction for "row-selected" to set "runs.picked" from "id"
     And I add the widget
-    And I choose the "dummy-echo" widget
+    And I choose the "antd-echo" widget
     And I set the "input" port "value" to "runs.picked"
     And I add the widget
     Then the echo widget at "runs.picked" shows "∅"
@@ -93,16 +93,31 @@ Feature: Widget events
     When I click the counter 2 times
     Then the echo widget at "demo.counter" shows "2"
     When I click the button "Reset counter"
-    Then the event log shows widget "dummy-button" event "clicked" with payload '{"label":"Reset counter"}'
+    Then the event log shows widget "antd-button" event "clicked" with payload '{"label":"Reset counter"}'
     And the echo widget at "demo.counter" shows "0"
+
+  Scenario: A page change requests that page from the server through a host action
+    Given I open the "demo" page
+    And I expand the "events" panel
+    Then the pagination shows page 1
+    And the runs table has 5 rows
+    When I go to page 2 of the pagination
+    Then the event log shows widget "antd-pagination" event "changed" with payload '{"page":2,"pageSize":5}'
+    And the pagination shows page 2
+    And the runs table row "123461" shows "Queued" for "status.state"
+    And the runs table has 5 rows
+    And the runs table is not loading
+    When I go to page 5 of the pagination
+    Then the runs table row "123478" shows "Running" for "status.state"
+    And the runs table has 3 rows
 
   Scenario: A user wires a button to a host action in the builder
     Given I open the "builder" page
-    When I choose the "dummy-counter" widget
+    When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.counter"
     And I set the reaction for "incremented" to set "demo.counter" from "value"
     And I add the widget
-    And I choose the "dummy-button" widget
+    And I choose the "antd-button" widget
     And I set the setting "label" to "Reset"
     And I set the reaction for "clicked" to call "reset-counter"
     And I add the widget
