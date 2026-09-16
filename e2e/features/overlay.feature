@@ -34,12 +34,12 @@ Feature: User view models
     Given I open the "demo" page
     When I edit the page
     And I remove the cell "echo-demo"
-    Then the page has 8 cells
+    Then the page has 9 cells
     When I save the page
-    Then the page has 8 cells
+    Then the page has 9 cells
     And the page uses the "my-own" view
     When I disable the user overlay
-    Then the page has 9 cells
+    Then the page has 10 cells
 
   Scenario: Layout and widget edits are saved together in one session
     Given I open the "demo" page
@@ -61,10 +61,10 @@ Feature: User view models
     And I set the setting "text" to "Never saved"
     And I save the widget
     And I remove the cell "echo-demo"
-    Then the page has 8 cells
+    Then the page has 9 cells
     When I cancel the page edit
     Then the label reads "WIREWORK PLAYGROUND!!!"
-    And the page has 9 cells
+    And the page has 10 cells
 
   Scenario: Turning the overlay off ends the session and closes the editor
     Given I open the "demo" page

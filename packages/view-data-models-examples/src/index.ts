@@ -24,17 +24,20 @@ export const viewModels: ViewModels = {
           { id: "counter-main", widget: "antd-counter", model: "widgets.demo.counter", template: "default", x: 0, y: 1, w: 6, h: 2 },
           { id: "echo-counter", widget: "antd-echo", model: "widgets.demo.echo", template: "default", x: 6, y: 1, w: 3, h: 2 },
           { id: "echo-demo", widget: "antd-echo", model: "widgets.demo.echoAll", template: "default", x: 9, y: 1, w: 3, h: 2 },
-          { id: "table-main", widget: "antd-runs-table", model: "widgets.demo.table", template: "default", x: 0, y: 3, w: 9, h: 5 },
+          // Refresh by hand or on a timer: `refresh` CALLS the same host
+          // action the pagination uses (doc/refresher-design.md).
+          { id: "refresher-runs", widget: "antd-refresher", model: "widgets.demo.runsRefresher", template: "default", x: 0, y: 3, w: 9, h: 1 },
+          { id: "table-main", widget: "antd-runs-table", model: "widgets.demo.table", template: "default", x: 0, y: 4, w: 9, h: 5 },
           // Server-side paging: a page change CALLS a host action that
           // requests the rows and writes them to the table's path.
-          { id: "pagination-runs", widget: "antd-pagination", model: "widgets.demo.runsPagination", template: "default", x: 0, y: 8, w: 9, h: 1 },
+          { id: "pagination-runs", widget: "antd-pagination", model: "widgets.demo.runsPagination", template: "default", x: 0, y: 9, w: 9, h: 1 },
           // Displays the run the HOST wrote to "runs.selected" in reaction
           // to the table's `row-selected` event (doc/widget-events-design.md).
           { id: "echo-selected-run", widget: "antd-echo", model: "widgets.demo.echoSelectedRun", template: "default", x: 9, y: 3, w: 3, h: 2 },
           // A click is an INTENT: the reaction calls a host action by name.
           { id: "button-reset", widget: "antd-button", model: "widgets.demo.resetButton", template: "default", x: 9, y: 5, w: 3, h: 2 },
           // A controlled input: text lives at demo.name, written by the reaction.
-          { id: "input-name", widget: "antd-input", model: "widgets.demo.nameInput", template: "default", x: 0, y: 9, w: 6, h: 2 },
+          { id: "input-name", widget: "antd-input", model: "widgets.demo.nameInput", template: "default", x: 0, y: 10, w: 6, h: 2 },
         ],
       },
     },
@@ -100,6 +103,18 @@ export const viewModels: ViewModels = {
               { set: "runs.pageSize", from: "pageSize" },
               { call: "runs/load-page" },
             ],
+          },
+        },
+      },
+      runsRefresher: {
+        default: {
+          // The schedule { enabled, interval } lives at runs.autoRefresh;
+          // while runs.loading is true the button spins and ticks are skipped.
+          inputs: { schedule: "runs.autoRefresh", busy: "runs.loading" },
+          on: {
+            changed: [{ set: "runs.autoRefresh" }],
+            // Re-request the page on screen (runs.page, runs.pageSize).
+            refresh: [{ call: "runs/load-page" }],
           },
         },
       },

@@ -104,11 +104,12 @@ Feature: Widget events
     When I go to page 2 of the pagination
     Then the event log shows widget "antd-pagination" event "changed" with payload '{"page":2,"pageSize":5}'
     And the pagination shows page 2
-    And the runs table row "123461" shows "Queued" for "status.state"
+    # Every request moves unfinished runs one step: queued → running → finished.
+    And the runs table row "123461" shows "Running" for "status.state"
     And the runs table has 5 rows
     And the runs table is not loading
     When I go to page 5 of the pagination
-    Then the runs table row "123478" shows "Running" for "status.state"
+    Then the runs table row "123478" shows "Success" for "status.state"
     And the runs table has 3 rows
 
   Scenario: A user wires a button to a host action in the builder

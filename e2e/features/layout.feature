@@ -10,14 +10,15 @@ Feature: Layout engines
   Scenario: The demo page renders on the grid engine
     Given I open the "demo" page
     Then the page layout uses the "react-grid-layout" engine
-    And the page has 9 cells
+    And the page has 10 cells
     And I see a widget "antd-label"
     And I see a widget "antd-counter"
     And I see a widget "antd-echo"
     And I see a widget "antd-runs-table"
     And I see a widget "antd-pagination"
+    And I see a widget "antd-refresher"
     And the cell "counter-main" is placed at x 0 y 1 w 6 h 2
-    And the cell "table-main" is placed at x 0 y 3 w 9 h 5
+    And the cell "table-main" is placed at x 0 y 4 w 9 h 5
 
   Scenario: The default page view applies without user selection
     Given I open the "demo" page

@@ -238,6 +238,36 @@ Then("the pagination shows page {int}", async ({ page }, number: number) => {
   await expect(live(page).getByTestId("antd-pagination")).toHaveAttribute("data-page", String(number));
 });
 
+/* ------------------------------ refresher ------------------------------ */
+
+const refresher = (page: Page) => live(page).getByTestId("antd-refresher");
+
+/** "on" / "off" in a step; anything else is a typo in the scenario, not "off". */
+function onOff(word: string): boolean {
+  if (word !== "on" && word !== "off") throw new Error(`expected "on" or "off", got "${word}"`);
+  return word === "on";
+}
+
+When("I click Refresh", async ({ page }) => {
+  await refresher(page).getByTestId("antd-refresher-refresh").click();
+});
+
+When("I turn auto-refresh {word}", async ({ page }, word: string) => {
+  await refresher(page).getByTestId("antd-refresher-toggle").setChecked(onOff(word));
+});
+
+When("I set the refresh interval to {int} seconds", async ({ page }, seconds: number) => {
+  await refresher(page).getByTestId("antd-refresher-interval").fill(String(seconds));
+});
+
+Then("auto-refresh is {word}", async ({ page }, word: string) => {
+  await expect(refresher(page)).toHaveAttribute("data-enabled", String(onOff(word)));
+});
+
+Then("the refresh interval is {int} seconds", async ({ page }, seconds: number) => {
+  await expect(refresher(page)).toHaveAttribute("data-interval", String(seconds));
+});
+
 /* ------------------------------ overlay ------------------------------ */
 
 Then("the label reads {string}", async ({ page }, text: string) => {

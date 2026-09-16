@@ -49,6 +49,10 @@ kind with the contract's description as the group label.
   placeholder / type / validation (closed rule set) / pattern /
   patternMessage; implementations render a textbox with `aria-invalid`
   and an `alert` holding the message.
+- `refresher` — `schedule` port `{ enabled, interval }` (default off, 5 s),
+  optional `busy` port, required `changed` (the whole schedule) and required
+  `refresh { trigger }`; implementations tick only while enabled and skip a
+  tick while busy or hidden (doc/refresher-design.md).
 
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and

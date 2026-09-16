@@ -6,8 +6,9 @@
  * @wirework/react adapter, @wirework/widget-contracts and antd ONLY. If a
  * widget ever needs engine, store or bus internals, the widget contract
  * has leaked. No widget writes the store — every state change is an
- * emitted event plus a reaction. Label, button and input IMPLEMENT the
- * standard contracts; the others are demo/domain widgets.
+ * emitted event plus a reaction. Label, button, input, pagination and
+ * refresher IMPLEMENT the standard contracts; the others are demo/domain
+ * widgets.
  */
 import { z } from "zod";
 import type { AnyWidgetDefinition } from "@wirework/schema";
@@ -18,15 +19,27 @@ import { antdEcho } from "./widgets/antd-echo";
 import { antdInput } from "./widgets/antd-input";
 import { antdLabel } from "./widgets/antd-label";
 import { antdPagination } from "./widgets/antd-pagination";
+import { antdRefresher } from "./widgets/antd-refresher";
 import { antdRunsTable } from "./widgets/antd-runs-table";
 
-export { antdButton, antdCounter, antdCrash, antdEcho, antdInput, antdLabel, antdPagination, antdRunsTable };
+export {
+  antdButton,
+  antdCounter,
+  antdCrash,
+  antdEcho,
+  antdInput,
+  antdLabel,
+  antdPagination,
+  antdRefresher,
+  antdRunsTable,
+};
 export { validate } from "./validation";
 export type { ValidationRule, ValidationResult } from "./validation";
 export { LABEL_TONES, VALIDATION_RULES } from "@wirework/widget-contracts";
 export type { ButtonEvents } from "./widgets/antd-button";
 export type { InputEvents } from "./widgets/antd-input";
 export type { PaginationEvents } from "./widgets/antd-pagination";
+export type { RefresherEvents } from "./widgets/antd-refresher";
 export type { CounterEvents } from "./widgets/antd-counter";
 export type { RunsTableEvents } from "./widgets/antd-runs-table";
 
@@ -39,6 +52,7 @@ export const antdWidgets: AnyWidgetDefinition[] = [
   antdButton,
   antdInput,
   antdPagination,
+  antdRefresher,
   antdCrash,
 ];
 

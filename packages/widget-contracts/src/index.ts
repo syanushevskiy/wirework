@@ -12,11 +12,14 @@ export { inputContract, INPUT_TYPES, VALIDATION_RULES } from "./input";
 export type { ValidationRule } from "./input";
 export { paginationContract, PAGINATION_SIZES } from "./pagination";
 export type { PaginationSize } from "./pagination";
+export { refresherContract, refreshScheduleSchema, REFRESH_INTERVAL, REFRESH_TRIGGERS } from "./refresher";
+export type { RefreshSchedule, RefreshTrigger } from "./refresher";
 
 import { buttonContract } from "./button";
 import { inputContract } from "./input";
 import { paginationContract } from "./pagination";
 import { labelContract } from "./label";
+import { refresherContract } from "./refresher";
 
 /** Everything a host registers at once. */
-export const standardContracts = [labelContract, buttonContract, inputContract, paginationContract];
+export const standardContracts = [labelContract, buttonContract, inputContract, paginationContract, refresherContract];

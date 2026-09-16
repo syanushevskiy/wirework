@@ -177,25 +177,26 @@ Feature: Widget builder
   Scenario: The palette shows a live preview of every registered widget
     Given I open the "builder" page
     When I open the widget palette
-    Then the palette shows 8 widget previews
+    Then the palette shows 10 widget previews
     And the preview of "antd-label" reads "Sample text"
     And the preview of "antd-counter" reads "Increment (3)"
     And the preview of "antd-runs-table" reads "Nightly"
     And the preview of "status-badge" reads "Run: Success"
     And the preview of "antd-crash" reads "crashed"
+    And the preview of "antd-refresher" reads "Auto-refresh every"
 
   Scenario: The catalog opens with the search and closes after it
     Given I open the "builder" page
     Then the widget catalog is hidden
     When I open the widget palette
-    Then the palette shows 8 widget previews
+    Then the palette shows 10 widget previews
     When I search the palette for "counter"
     Then the palette shows 1 widget previews
 
   Scenario: The palette is searched to find a widget
     Given I open the "builder" page
     When I open the widget palette
-    Then the palette shows 8 widget previews
+    Then the palette shows 10 widget previews
     When I search the palette for "table"
     Then the palette shows 1 widget previews
     And the preview of "antd-runs-table" reads "Nightly"
@@ -203,7 +204,7 @@ Feature: Widget builder
     Then the palette shows 0 widget previews
     And the palette reports no matches
     When I search the palette for ""
-    Then the palette shows 8 widget previews
+    Then the palette shows 10 widget previews
 
   Scenario: A widget is found through the search suggestions and added
     Given I open the "builder" page
