@@ -12,10 +12,13 @@
  *
  * Fallback chain per cell template (team-tiger QA requirement):
  *   user-selected view -> cell's `template` -> "default" -> problem.
- * A fallback that engages is REPORTED on the resolved cell/page, never silent.
+ * A fallback that engages is REPORTED on the resolved cell/page, never
+ * silent — and so is a user overlay that had to be ignored, and the layout
+ * engine's own validation warnings.
  */
 import {
   userViewModelsSchema,
+  validatorKeys,
   type AnyWidgetDefinition,
   type CellBase,
   type PageViewModel,
@@ -25,6 +28,7 @@ import {
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
+import { errorText, issuesText } from "./messages";
 import { deepMerge, getPath } from "./paths";
 import type { WidgetRegistry } from "./registry";
 import { pageTemplates } from "./trees";
@@ -83,6 +87,8 @@ interface ResolvedPageBase {
   view: string;
   /** Set when the user-selected page view was missing. */
   fallback?: FallbackNote;
+  /** Set when a user overlay was given but is invalid, so the page ignores ALL of it. */
+  overlayProblem?: string;
 }
 
 /** A renderable page: engine name, its validated template, cells by id. */
@@ -91,6 +97,8 @@ export interface ResolvedPagePlan extends ResolvedPageBase {
   engine: string;
   template: PageViewModel;
   cells: ResolvedCell[];
+  /** The layout engine's validation findings: the page renders, not as designed. */
+  warnings: string[];
 }
 
 /** A page that cannot render (unknown page / template / engine). */
@@ -102,27 +110,16 @@ export type ResolvedPage = ResolvedPagePlan | ResolvedPageProblem;
 
 export interface ResolveInput {
   viewModels: ViewModels;
+  /**
+   * The user overlay. `resolvePage` checks it once (`checkOverlay`); a
+   * direct `resolveCell` caller passes an already checked one.
+   */
   userViewModels?: UserViewModels;
   page: string;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   /** When given, reactions calling an unregistered action are a cell problem. */
   actions?: ActionRegistry;
-}
-
-/**
- * Cell ids must be unique per page: reactions are addressed by (page, cell),
- * so two cells sharing an id cross-fire each other's reactions. Shared by
- * resolve and boot validation.
- */
-export function duplicateCellIds(cells: readonly CellBase[]): Set<string> {
-  const seen = new Set<string>();
-  const duplicates = new Set<string>();
-  for (const cell of cells) {
-    if (seen.has(cell.id)) duplicates.add(cell.id);
-    seen.add(cell.id);
-  }
-  return duplicates;
 }
 
 /**
@@ -136,17 +133,25 @@ export function engineCells(
   try {
     return { cells: engine.cells(template) };
   } catch (error) {
-    return {
-      problem: `layout engine "${engine.name}" failed to list cells: ${error instanceof Error ? error.message : String(error)}`,
-    };
+    return { problem: `layout engine "${engine.name}" failed to list cells: ${errorText(error)}` };
   }
+}
+
+/**
+ * The user overlay when it is structurally valid; otherwise undefined and
+ * WHY — an invalid overlay is ignored as a whole, and that must be visible.
+ */
+export function checkOverlay(
+  userViewModels: UserViewModels | undefined,
+): { overlay?: UserViewModels; problem?: string } {
+  if (userViewModels === undefined) return {};
+  const parsed = userViewModelsSchema.safeParse(userViewModels);
+  return parsed.success ? { overlay: parsed.data } : { problem: `user view models ignored: ${issuesText(parsed.error)}` };
 }
 
 /** The user overlay, or undefined when it is structurally invalid. */
 export function usableOverlay(userViewModels: UserViewModels | undefined): UserViewModels | undefined {
-  if (userViewModels === undefined) return undefined;
-  const parsed = userViewModelsSchema.safeParse(userViewModels);
-  return parsed.success ? parsed.data : undefined;
+  return checkOverlay(userViewModels).overlay;
 }
 
 /**
@@ -171,48 +176,79 @@ export function pickTemplate(
   return undefined;
 }
 
+type ReactionList = readonly unknown[] | undefined;
+
 /**
  * Contract check independent of the widget's own schema: every required
  * input port must be bound to a path, every REQUIRED event must have at
  * least one reaction under `on` (that is how widget state reaches the
- * store), and every `call` must name a registered action. Returns a
- * message describing what is missing, or undefined.
+ * store), every `call` must name a registered action, and every `from`
+ * must start at a field the event's payload has — a typo there would write
+ * `undefined` on every emit. Returns a message describing what is wrong, or
+ * undefined.
  */
 export function contractProblems(
   definition: AnyWidgetDefinition,
   viewModel: unknown,
   actions?: ActionRegistry,
 ): string | undefined {
-  const vm = viewModel as
-    | { inputs?: Record<string, unknown>; on?: Record<string, unknown[] | undefined> }
-    | null;
+  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Record<string, ReactionList> } | null;
+  const events = definition.events as WidgetEvents;
+  const reactions = Object.entries(vm?.on ?? {}).flatMap(([event, list]) =>
+    (list ?? []).map((reaction) => ({ event, reaction: reaction as { call?: unknown; from?: unknown } | null })),
+  );
+
   const unknownActions =
     actions === undefined
       ? []
-      : Object.values(vm?.on ?? {}).flatMap((reactions) =>
-          (reactions ?? []).flatMap((reaction) => {
-            const call = (reaction as { call?: unknown } | null)?.call;
-            return typeof call === "string" && !actions.get(call) ? [call] : [];
-          }),
+      : reactions.flatMap(({ reaction }) =>
+          typeof reaction?.call === "string" && !actions.get(reaction.call) ? [reaction.call] : [],
         );
+  const unknownFields = reactions.flatMap(({ event, reaction }) => {
+    const fields = events[event] ? validatorKeys(events[event].payload) : undefined;
+    const head = typeof reaction?.from === "string" ? reaction.from.split(".")[0] : undefined;
+    return fields !== undefined && head !== undefined && !fields.includes(head)
+      ? [`${event} from "${reaction?.from as string}" (payload fields: ${fields.join(", ") || "none"})`]
+      : [];
+  });
   const unboundPorts = Object.entries(definition.io.inputs).flatMap(([name, port]) =>
     port.required !== false && typeof vm?.inputs?.[name] !== "string" ? [`inputs.${name}`] : [],
   );
-  const unreactedEvents = Object.entries(definition.events as WidgetEvents).flatMap(
-    ([name, event]) => (event.required === true && !vm?.on?.[name]?.length ? [name] : []),
+  const unreactedEvents = Object.entries(events).flatMap(([name, event]) =>
+    event.required === true && !vm?.on?.[name]?.length ? [name] : [],
   );
-  const parts = [
-    ...(unboundPorts.length > 0
-      ? [`required input ports not bound to store paths: ${unboundPorts.join(", ")}`]
-      : []),
-    ...(unreactedEvents.length > 0
-      ? [`required events without a reaction: ${unreactedEvents.join(", ")}`]
-      : []),
-    ...(unknownActions.length > 0
-      ? [`reactions call unknown actions: ${unknownActions.join(", ")} (registered: ${actions?.names().join(", ") || "none"})`]
-      : []),
-  ];
+
+  const parts: string[] = [];
+  if (unboundPorts.length > 0) parts.push(`required input ports not bound to store paths: ${unboundPorts.join(", ")}`);
+  if (unreactedEvents.length > 0) parts.push(`required events without a reaction: ${unreactedEvents.join(", ")}`);
+  if (unknownActions.length > 0) {
+    parts.push(
+      `reactions call unknown actions: ${unknownActions.join(", ")} (registered: ${actions?.names().join(", ") || "none"})`,
+    );
+  }
+  if (unknownFields.length > 0) parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
   return parts.length > 0 ? parts.join("; ") : undefined;
+}
+
+/**
+ * ONE template of a widget with the user's settings for it: parsed by the
+ * widget's own schema, then contract-checked. Resolve runs it on the picked
+ * template; boot validation on every template a cell could pick.
+ */
+export function checkTemplate(
+  definition: AnyWidgetDefinition,
+  template: unknown,
+  userSettings: unknown,
+  actions?: ActionRegistry,
+): { viewModel: unknown; problem?: undefined } | { viewModel?: undefined; problem: CellProblem } {
+  let viewModel: unknown;
+  try {
+    viewModel = definition.viewModel.parse(deepMerge(template, userSettings));
+  } catch (error) {
+    return { problem: { kind: "invalid-view-model", message: errorText(error) } };
+  }
+  const unmet = contractProblems(definition, viewModel, actions);
+  return unmet ? { problem: { kind: "unmet-contract", message: unmet } } : { viewModel };
 }
 
 /**
@@ -222,9 +258,8 @@ export function contractProblems(
  * repeating it (team-tiger, Alexei).
  */
 export function resolveCell(cell: CellBase, input: ResolveInput, duplicate = false): ResolvedCell {
-  const { viewModels, page, registry, actions } = input;
+  const { viewModels, userViewModels, page, registry, actions } = input;
   const base = { key: cell.id, widget: cell.widget, model: cell.model } as const;
-  const userViewModels = usableOverlay(input.userViewModels);
 
   const definition = registry.get(cell.widget);
   if (!definition) {
@@ -256,81 +291,62 @@ export function resolveCell(cell: CellBase, input: ResolveInput, duplicate = fal
     };
   }
 
-  const failed = (problem: CellProblem): ResolvedCellProblem => ({
-    ...base,
-    definition,
-    template: picked.name,
-    fallback: picked.fallback,
-    problem,
-  });
-
-  const merged = deepMerge(templateMap[picked.name], userWidget?.settings?.[picked.name]);
-  let viewModel: unknown;
-  try {
-    viewModel = definition.viewModel.parse(merged);
-  } catch (error) {
-    return failed({
-      kind: "invalid-view-model",
-      message: error instanceof Error ? error.message : String(error),
-    });
+  const checked = checkTemplate(definition, templateMap[picked.name], userWidget?.settings?.[picked.name], actions);
+  if (checked.problem) {
+    return { ...base, definition, template: picked.name, fallback: picked.fallback, problem: checked.problem };
   }
-  const unmet = contractProblems(definition, viewModel, actions);
-  if (unmet) return failed({ kind: "unmet-contract", message: unmet });
-
-  return { ...base, definition, template: picked.name, fallback: picked.fallback, viewModel };
+  return { ...base, definition, template: picked.name, fallback: picked.fallback, viewModel: checked.viewModel };
 }
-
-const problemPage = (page: string, view: string, problem: string): ResolvedPageProblem => ({
-  page,
-  view,
-  problem,
-});
 
 export function resolvePage(input: ResolveInput): ResolvedPage {
   const { viewModels, page, layoutEngines } = input;
-  // A structurally broken overlay is ignored here exactly as boot
-  // validation ignores it, so the two passes see the same trees.
-  const userViewModels = usableOverlay(input.userViewModels);
+  // Checked ONCE per page (it used to be re-parsed for every cell). A
+  // broken overlay is ignored here exactly as boot validation ignores it —
+  // and the plan says so.
+  const { overlay: userViewModels, problem: overlayProblem } = checkOverlay(input.userViewModels);
+  const notes = overlayProblem === undefined ? {} : { overlayProblem };
 
   // Base templates with the user's own layered on top.
   const templates = pageTemplates(viewModels, userViewModels, page);
   if (!templates) {
-    return problemPage(page, "default", `Unknown page "${page}"`);
+    return { page, view: "default", problem: `Unknown page "${page}"`, ...notes };
   }
 
   const userView = userViewModels?.pages?.[page]?.view;
   const picked = pickTemplate(templates, [userView, "default"]);
   if (!picked) {
-    return problemPage(
-      page,
-      userView ?? "default",
-      `Page "${page}" has no template "${userView ?? "default"}"`,
-    );
+    const view = userView ?? "default";
+    return { page, view, problem: `Page "${page}" has no template "${view}"`, ...notes };
   }
 
+  const failed = (problem: string): ResolvedPageProblem => ({
+    page,
+    view: picked.name,
+    problem: `Page "${page}" template "${picked.name}": ${problem}`,
+    ...notes,
+  });
   const resolution = resolveTemplate(layoutEngines, templates[picked.name]);
-  if (resolution.problem !== undefined) {
-    return problemPage(page, picked.name, `Page "${page}" template "${picked.name}": ${resolution.problem}`);
-  }
-  const { engine, template } = resolution;
+  if (resolution.problem !== undefined) return failed(resolution.problem);
+  const { engine, template, warnings } = resolution;
   const listed = engineCells(engine, template);
-  if (listed.problem !== undefined) {
-    return problemPage(page, picked.name, `Page "${page}" template "${picked.name}": ${listed.problem}`);
-  }
-  // First cell of a duplicated id renders; the later ones are problems, so
+  if (listed.problem !== undefined) return failed(listed.problem);
+
+  // First cell of a repeated id renders; the later ones are problems, so
   // one emit can never fire another cell's reactions.
-  const duplicates = duplicateCellIds(listed.cells);
   const seen = new Set<string>();
+  const cellInput = { ...input, userViewModels };
   return {
     page,
     view: picked.name,
     fallback: picked.fallback,
+    ...notes,
     engine: engine.name,
     template,
+    warnings,
     cells: listed.cells.map((cell) => {
-      const repeated = duplicates.has(cell.id) && seen.has(cell.id);
+      const repeated = seen.has(cell.id);
       seen.add(cell.id);
-      return resolveCell(cell, { ...input, userViewModels }, repeated);
+      return resolveCell(cell, cellInput, repeated);
     }),
   };
 }

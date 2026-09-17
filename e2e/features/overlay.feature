@@ -30,6 +30,18 @@ Feature: User view models
     When I disable the user overlay
     Then the label reads "Wirework playground"
 
+  Scenario: In the user's own view a widget edit changes settings only
+    Given I open the "demo" page
+    When I edit the page
+    And I edit the cell "pagination-runs"
+    Then the widget editor keeps inputs and reactions read-only
+    And the reaction for "changed" keeps 2 more reactions
+    When I set the setting "size" to "small"
+    And I save the widget
+    And I save the page
+    And I go to page 2 of the pagination
+    Then the runs table row "123461" shows "Running" for "status.state"
+
   Scenario: Removing a cell on the demo page is saved in the user overlay
     Given I open the "demo" page
     When I edit the page

@@ -195,6 +195,9 @@ importers:
       vite:
         specifier: 'catalog:'
         version: 6.4.3(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/engine:
     dependencies:
@@ -208,6 +211,12 @@ importers:
       '@wirework/store':
         specifier: workspace:*
         version: link:../store
+      '@wirework/view-data-models-examples':
+        specifier: workspace:*
+        version: link:../view-data-models-examples
+      '@wirework/widget-contracts':
+        specifier: workspace:*
+        version: link:../widget-contracts
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -220,9 +229,6 @@ importers:
 
   packages/engine-flex-rows:
     dependencies:
-      '@wirework/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@wirework/react':
         specifier: workspace:*
         version: link:../react
@@ -236,18 +242,21 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.18
+      '@wirework/engine':
+        specifier: workspace:*
+        version: link:../engine
       react:
         specifier: 'catalog:'
         version: 19.2.8
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/engine-flexlayout:
     dependencies:
-      '@wirework/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@wirework/react':
         specifier: workspace:*
         version: link:../react
@@ -267,6 +276,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.5(@types/react@19.2.18)
+      '@wirework/engine':
+        specifier: workspace:*
+        version: link:../engine
       react:
         specifier: 'catalog:'
         version: 19.2.8
@@ -276,12 +288,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/engine-gridstack:
     dependencies:
-      '@wirework/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@wirework/react':
         specifier: workspace:*
         version: link:../react
@@ -301,6 +313,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.5(@types/react@19.2.18)
+      '@wirework/engine':
+        specifier: workspace:*
+        version: link:../engine
       react:
         specifier: 'catalog:'
         version: 19.2.8
@@ -310,12 +325,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/engine-react-grid-layout:
     dependencies:
-      '@wirework/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@wirework/react':
         specifier: workspace:*
         version: link:../react
@@ -335,6 +350,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.5(@types/react@19.2.18)
+      '@wirework/engine':
+        specifier: workspace:*
+        version: link:../engine
       react:
         specifier: 'catalog:'
         version: 19.2.8
@@ -344,6 +362,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/events:
     dependencies:
@@ -354,6 +375,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/react:
     dependencies:

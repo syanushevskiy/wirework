@@ -41,10 +41,18 @@ The React adapter narrows the renderer slot (`ReactLayoutEngine`,
 ```
 
 The engine registry (`createLayoutEngines`) is as strict as the widget one.
-`resolveTemplate(engines, raw)` validates the core shape, finds the plugin
-and validates the template with it — shared by resolve, validation and
-editors, so they cannot disagree. A page whose engine is unknown or whose
-template the engine rejects renders a page problem.
+`resolveTemplate(engines, raw)` validates the core shape, finds the plugin,
+validates the template with it and runs the plugin's `validate` — shared by
+resolve, validation and editors, so they cannot disagree. A page whose
+engine is unknown or whose template the engine rejects renders a page
+problem; `validate` findings are errors at boot and WARNINGS on the render
+plan (`plan.warnings`, shown above the page). A renderer that throws is
+caught by a page-level boundary, so the host and its tools stay usable.
+
+`layoutEngineProblems(engine)` (`@wirework/engine`) checks what the
+operations DO — `empty()` valid and cell-less, `appendCell` keeps identity
+and order, `removeCell` removes exactly one and ignores unknown ids, no
+operation mutates its input. Every engine package's unit tests run it.
 
 ## Engines shipped
 
@@ -75,9 +83,11 @@ plus one per engine. `@wirework/react` depends on no layout library.
 
 A new package: define the template schema, implement the operations
 (`empty`, `cells`, `appendCell`, `removeCell`, `applyChange`, optional
-`validate`), write the renderer against `LayoutRendererProps`, register the
-plugin in the host. No core, schema or adapter change — gridstack and
-FlexLayout above did exactly this.
+`validate`), write the renderer against `LayoutRendererProps`, scope the
+stylesheet under the renderer's own root class (engines share item class
+names), add a unit test asserting `layoutEngineProblems(engine)` is empty,
+register the plugin in the host and import its stylesheet there. No core,
+schema or adapter change — gridstack and FlexLayout above did exactly this.
 
 ## Renderer gotchas (learned from gridstack and FlexLayout)
 
@@ -115,20 +125,25 @@ the store's current trees with the ops replayed on top (an inspector edit
 made meanwhile shows through — live rebase); "Save page" commits the
 replayed result; "Cancel" drops the ops. Nothing is written until Save.
 
-Widget edits open the shared widget form in a dialog, prefilled from the
-cell's resolved view model.
+Widget edits open the shared widget form in a maskless drawer, prefilled
+from the cell's resolved view model.
 
 ## Where edits go
 
 The playground routes every op by an EDIT TARGET:
 
-- **user** (the demo page with the user overlay on): page-template ops copy
-  the shown template into the user's OWN template (`userViewModels.pages
-  .<page>.templates["my-own"]`, the sketch's "my own" pill), edit that and
-  select it as the page `view`; widget edits become per-cell settings
-  overlays (`...cells[<cellId>].settings[<template>]`). The base view
-  models never change; turning the overlay off shows the original page and
-  ends any session.
+- **user** (the demo page with the user overlay on): page-template ops
+  edit what the user SEES — the user's OWN template
+  (`userViewModels.pages.<page>.templates["my-own"]`, the sketch's "my own"
+  pill) while it is the page `view`, otherwise a fresh copy of the shown
+  template, selected as the view. Widget edits become per-cell SETTINGS
+  overlays (`...cells[<cellId>].settings[<template>]`). The overlay never
+  carries `inputs` or `on` — the schema rejects them — so a user's view
+  cannot rebind a widget, call an action or write a data path the page
+  never declared; the editor shows ports and reactions read-only there.
+  The base view models never change; turning the overlay off shows the
+  original page and ends any session. An overlay that fails its schema is
+  ignored as a whole, and the page says so (`plan.overlayProblem`).
 - **base** (everywhere else, e.g. the builder): ops rewrite the base view
   models — the page template and the widget template at `cell.model`.
   Removing a builder-owned cell also drops its template when nothing else
@@ -142,14 +157,16 @@ independent.
 
 ## Known limitations (decisions pending)
 
-- The widget editor edits ONE reaction per event (the first); further
-  reactions and `value` literals in a template are not shown and are
-  dropped on save. A multi-reaction form is a UI decision.
+- The widget editor EDITS one reaction per event (the first). The rest of
+  the chain is kept and listed ("then 2 more reactions"), and the first
+  reaction keeps its `with` / `value` while its target is unchanged — a
+  save never shortens a chain. Editing the others is a UI decision.
 - Saving materialises defaulted settings (the form is prefilled from the
   resolved view model), so "blank means default" holds for the builder
   only; an overlay becomes a full copy rather than a diff.
-- On the user target the overlay is deep-merged, so a blanked optional
-  port or reaction cannot UNSET a base value.
+- On the user target settings are deep-merged, so a blanked setting cannot
+  UNSET a base value.
+- "Add widget" is disabled while a page edit is open (Save or Cancel first).
 - flex-rows has no interactive editing and no e2e page in the playground.
 
 ## Tested (e2e/features/layout.feature, overlay.feature, builder.feature)

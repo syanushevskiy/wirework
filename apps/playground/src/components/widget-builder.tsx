@@ -16,10 +16,12 @@ export interface WidgetBuilderProps {
   contracts: ContractRegistry;
   store: Store;
   actions: ActionRegistry;
+  /** A page edit session is open: adding would drop it, so Add waits for Save or Cancel. */
+  addLocked: boolean;
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void;
 }
 
-export function WidgetBuilder({ registry, contracts, store, actions, onAdd }: WidgetBuilderProps) {
+export function WidgetBuilder({ registry, contracts, store, actions, addLocked, onAdd }: WidgetBuilderProps) {
   const { widgetGroups, widgetType, selectWidget, form, canAdd, add } = useWidgetBuilder(
     registry,
     contracts,
@@ -38,11 +40,23 @@ export function WidgetBuilder({ registry, contracts, store, actions, onAdd }: Wi
             selected={widgetType}
             onSelect={selectWidget}
             action={
-              <Button type="primary" size="small" data-testid="add-widget" disabled={!canAdd} onClick={add}>
+              <Button
+                type="primary"
+                size="small"
+                data-testid="add-widget"
+                disabled={!canAdd || addLocked}
+                title={addLocked ? "Save or cancel the page edit first" : undefined}
+                onClick={add}
+              >
                 Add widget
               </Button>
             }
           />
+          {addLocked ? (
+            <Typography.Text type="secondary" data-testid="add-widget-locked">
+              Save or cancel the page edit to add widgets.
+            </Typography.Text>
+          ) : null}
           {widgetType !== "" ? (
             <Typography.Text data-testid="widget-selected">
               Selected: <Typography.Text code>{widgetType}</Typography.Text>

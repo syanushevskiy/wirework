@@ -22,10 +22,16 @@ export interface WidgetPaletteProps {
 
 export function WidgetPalette({ groups, selected, onSelect, action }: WidgetPaletteProps) {
   const press = usePalettePress(onSelect);
-  const { query, setQuery, options, items, open, focusProps } = useWidgetSearch(groups);
+  const { query, setQuery, options, items, total, open, focusProps } = useWidgetSearch(groups);
 
   return (
-    <div data-testid="widget-palette" data-state={open ? "open" : "closed"} className="pg-palette" {...focusProps}>
+    <div
+      data-testid="widget-palette"
+      data-state={open ? "open" : "closed"}
+      data-registered={total}
+      className="pg-palette"
+      {...focusProps}
+    >
       <Flex gap="small" wrap align="center">
         <AutoComplete
           data-testid="widget-search"

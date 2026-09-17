@@ -48,10 +48,10 @@ describe("validateViewModels", () => {
   it("reports a broken overlay once and says it is ignored", () => {
     const report = check(page([cell()], templates), { pages: { demo: { cells: [] } } });
     expect(report.ok).toBe(false);
-    expect(messages(report, "error")[0]).toMatch(/invalid user view models.*ignored entirely/s);
+    expect(messages(report, "error")).toEqual([expect.stringMatching(/user view models ignored.*ignored entirely/s)]);
   });
 
-  it("reports dead user configuration", () => {
+  it("regression: dead user configuration is a WARNING, whatever kind it is", () => {
     const report = check(page([cell()], templates), {
       pages: { demo: { view: "nope", cells: { c1: { settings: { ghost: { label: "x" } } } } }, other: {} },
     });
@@ -59,9 +59,38 @@ describe("validateViewModels", () => {
       expect.arrayContaining([
         expect.stringMatching(/user-selected page view "nope" does not exist/),
         expect.stringMatching(/user settings reference unknown template "ghost"/),
+        expect.stringMatching(/unknown page "other"/),
       ]),
     );
-    expect(messages(report, "error")).toEqual([expect.stringMatching(/unknown page "other"/)]);
+    expect(report.ok).toBe(true);
+  });
+
+  it("regression: a user view named like an Object method is not mistaken for a template", () => {
+    const report = check(page([cell()], templates), { pages: { demo: { view: "toString" } } });
+    expect(messages(report, "warning")).toEqual([expect.stringMatching(/"toString" does not exist/)]);
+  });
+
+  it("regression: validates EVERY template a cell could pick, not only the one shown", () => {
+    const withBroken = page([cell()], {
+      counter: { ...templates.counter, compact: { inputs: { value: "demo.n" }, on: { changed: [] }, step: "x" } },
+    });
+    const report = check(withBroken);
+    expect(report.ok).toBe(false);
+    expect(report.errors[0]?.location).toMatch(/template "compact"/);
+  });
+
+  it("regression: a user overlay may not rebind inputs or reactions", () => {
+    const report = check(page([cell()], templates), {
+      pages: { demo: { cells: { c1: { settings: { default: { on: { changed: [{ call: "anything" }] } } } } } } },
+    });
+    expect(messages(report, "error")[0]).toMatch(/may not contain inputs or on/);
+  });
+
+  it("regression: a reaction reading a payload field that does not exist is reported", () => {
+    const typo = page([cell()], {
+      counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "valu" }] } } },
+    });
+    expect(messages(check(typo), "error")[0]).toMatch(/payload fields that do not exist: changed from "valu"/);
   });
 
   it("validates the user's OWN page templates at their own location", () => {

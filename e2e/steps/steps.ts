@@ -105,8 +105,20 @@ Then("the palette reports no matches", async ({ page }) => {
   await expect(page.getByTestId("widget-palette-empty")).toBeVisible();
 });
 
-Then("the palette shows {int} widget previews", async ({ page }, count: number) => {
-  await expect(page.locator('[data-testid="widget-card"] [data-testid="widget-preview"]')).toHaveCount(count);
+const previews = (page: Page) => page.locator('[data-testid="widget-card"] [data-testid="widget-preview"]');
+
+Then("the palette shows {int} widget preview(s)", async ({ page }, count: number) => {
+  await expect(previews(page)).toHaveCount(count);
+});
+
+/**
+ * Compares against what the app says it registered, so adding a widget
+ * does not break unrelated scenarios (team-tiger review, Katya and Sasha).
+ */
+Then("the palette shows a preview of every registered widget", async ({ page }) => {
+  const registered = Number(await page.getByTestId("widget-palette").getAttribute("data-registered"));
+  expect(registered).toBeGreaterThan(0);
+  await expect(previews(page)).toHaveCount(registered);
 });
 
 Then("the preview of {string} reads {string}", async ({ page }, widget: string, text: string) => {
@@ -204,14 +216,14 @@ Then(
   },
 );
 
-When("I click the counter {int} times", async ({ page }, times: number) => {
+When("I click the counter {int} time(s)", async ({ page }, times: number) => {
   const counter = live(page).getByTestId("antd-counter");
   for (let i = 0; i < times; i += 1) {
     await counter.click();
   }
 });
 
-Then("the runs table has {int} rows", async ({ page }, count: number) => {
+Then("the runs table has {int} row(s)", async ({ page }, count: number) => {
   await expect(live(page).getByTestId("runs-row")).toHaveCount(count);
 });
 
@@ -256,7 +268,7 @@ When("I turn auto-refresh {word}", async ({ page }, word: string) => {
   await refresher(page).getByTestId("antd-refresher-toggle").setChecked(onOff(word));
 });
 
-When("I set the refresh interval to {int} seconds", async ({ page }, seconds: number) => {
+When("I set the refresh interval to {int} second(s)", async ({ page }, seconds: number) => {
   await refresher(page).getByTestId("antd-refresher-interval").fill(String(seconds));
 });
 
@@ -264,7 +276,7 @@ Then("auto-refresh is {word}", async ({ page }, word: string) => {
   await expect(refresher(page)).toHaveAttribute("data-enabled", String(onOff(word)));
 });
 
-Then("the refresh interval is {int} seconds", async ({ page }, seconds: number) => {
+Then("the refresh interval is {int} second(s)", async ({ page }, seconds: number) => {
   await expect(refresher(page)).toHaveAttribute("data-interval", String(seconds));
 });
 
@@ -356,11 +368,18 @@ function eventRows(page: Page, widget: string, event: string) {
   );
 }
 
+/** The log's rows render only while its panel is open: a count on a closed panel is always 0. */
+async function openEventLog(page: Page) {
+  await expect(page.getByTestId("panel-events")).toHaveAttribute("data-state", "open");
+}
+
 Then("the event log is empty", async ({ page }) => {
+  await openEventLog(page);
   await expect(page.getByTestId("event-log-row")).toHaveCount(0);
 });
 
-Then("the event log has {int} entries", async ({ page }, count: number) => {
+Then("the event log has {int} entry/entries", async ({ page }, count: number) => {
+  await openEventLog(page);
   await expect(page.getByTestId("event-log-row")).toHaveCount(count);
 });
 
@@ -390,7 +409,7 @@ When("I click the runs table row {string}", async ({ page }, runId: string) => {
 });
 
 When(
-  "I click the counter in cell {string} {int} times",
+  "I click the counter in cell {string} {int} time(s)",
   async ({ page }, cell: string, times: number) => {
     const counter = page
       .locator(`[data-testid="cell"][data-cell="${cell}"]`)
@@ -462,7 +481,7 @@ async function dragBetween(page: Page, from: ReturnType<Page["locator"]>, to: Re
   await page.mouse.up();
 }
 
-Then("the page has {int} cells", async ({ page }, count: number) => {
+Then("the page has {int} cell(s)", async ({ page }, count: number) => {
   // The page must exist: a count of 0 must never pass because nothing rendered.
   await expect(page.getByTestId("page")).toBeVisible();
   await expect(
@@ -495,7 +514,7 @@ When("I select the tab {string}", async ({ page }, name: string) => {
   await page.locator(".flexlayout__tab_button", { hasText: name }).click();
 });
 
-Then("there are at least {int} pending changes", async ({ page }, count: number) => {
+Then("there are at least {int} pending change(s)", async ({ page }, count: number) => {
   await expect
     .poll(async () => Number((await page.getByTestId("pending-changes").textContent())?.split(" ")[0]))
     .toBeGreaterThanOrEqual(count);
@@ -537,7 +556,7 @@ When(
 );
 
 When(
-  "I widen the cell {string} by {int} columns",
+  "I widen the cell {string} by {int} column(s)",
   async ({ page }, cell: string, columns: number) => {
     const item = gridItem(page, cell);
     await item.scrollIntoViewIfNeeded();
@@ -558,6 +577,11 @@ When(
 );
 
 /* ----------------------------- reactions ----------------------------- */
+
+/** Only the path: the payload field stays whatever the builder defaulted it to. */
+When("I set the reaction for {string} to set {string}", async ({ page }, event: string, path: string) => {
+  await page.getByTestId(`reaction-${event}-set`).fill(path);
+});
 
 When(
   "I set the reaction for {string} to set {string} from {string}",
@@ -597,6 +621,8 @@ Then("the counter shows {string}", async ({ page }, text: string) => {
 });
 
 Then("no widget has crashed", async ({ page }) => {
+  // A page that never rendered has no crashed widgets either.
+  await expect(live(page).getByTestId("cell").first()).toBeVisible();
   await expect(live(page).getByTestId("widget-error")).toHaveCount(0);
 });
 
@@ -654,7 +680,23 @@ When("I edit the cell {string}", async ({ page }, cell: string) => {
 });
 
 Then("the cell {string} has no edit chrome", async ({ page }, cell: string) => {
+  // A mistyped cell id has no chrome either: the cell must exist.
+  await expect(live(page).locator(`[data-testid="cell"][data-cell="${cell}"]`)).toBeVisible();
   await expect(page.locator(`[data-testid="cell-edit"][data-cell="${cell}"]`)).toHaveCount(0);
+});
+
+Then("the widget editor keeps inputs and reactions read-only", async ({ page }) => {
+  await expect(page.getByTestId("bindings-locked")).toBeVisible();
+  await expect(page.locator('[data-testid^="reaction-"][data-testid$="-kind"]').first()).toHaveClass(/ant-select-disabled/);
+});
+
+Then("the reaction for {string} keeps {int} more reaction(s)", async ({ page }, event: string, count: number) => {
+  await expect(page.getByTestId(`reaction-${event}-kept`)).toContainText(`then ${count} more reaction`);
+});
+
+Then("adding widgets waits for the page edit to end", async ({ page }) => {
+  await expect(page.getByTestId("add-widget")).toBeDisabled();
+  await expect(page.getByTestId("add-widget-locked")).toBeVisible();
 });
 
 When("I save the widget", async ({ page }) => {

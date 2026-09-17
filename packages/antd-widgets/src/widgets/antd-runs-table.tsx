@@ -82,7 +82,7 @@ function AntdRunsTable({ viewModel, store, emit }: WidgetProps<VM, RunsTableEven
     store,
     emit,
     { data: viewModel.inputs.data, loading: viewModel.inputs.loading },
-    { data: io.inputs.data.default, loading: io.inputs.loading.default },
+    io.inputs,
     viewModel.columns,
   );
 

@@ -9,22 +9,25 @@
  * the EventBus a host injects.
  */
 export { createRegistry, WidgetRegistrationError } from "./registry";
-export type { WidgetRegistry } from "./registry";
+export type { WidgetRegistry, WidgetRegistryOptions } from "./registry";
 export {
   createLayoutEngines,
   LayoutEngineRegistrationError,
   resolveTemplate,
 } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
+export { layoutEngineProblems } from "./layout-engine-checks";
 export {
+  checkOverlay,
+  checkTemplate,
   contractProblems,
-  duplicateCellIds,
   engineCells,
   pickTemplate,
   resolveCell,
   resolvePage,
   usableOverlay,
 } from "./resolve";
+export { errorText, issuesText } from "./messages";
 export { readableStore } from "./readable";
 export type {
   CellProblem,
@@ -47,7 +50,8 @@ export { createActions, ActionRegistrationError } from "./actions";
 export type { ActionRegistry } from "./actions";
 export { createContracts, ContractRegistrationError } from "./contracts";
 export type { ContractRegistry } from "./contracts";
-export { bindReactions, reactionValue } from "./reactions";
+export { bindCellReactions, bindReactions, reactionValue } from "./reactions";
+export type { ReactionTarget } from "./reactions";
 export {
   pageTemplates,
   removeUserCell,

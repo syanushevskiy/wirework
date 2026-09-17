@@ -40,19 +40,23 @@ export function updatePageTemplate(
 }
 
 /**
- * Route a page edit into the USER overlay: the user's template `name` is
- * created from `current` (the template shown) if absent, updated, and
- * selected as the page view.
+ * Route a page edit into the USER overlay and select the user's template
+ * `name` as the page view. The edit applies to what the user SEES: the
+ * user's template while it is the selected view (an earlier edit of the
+ * session may have just created it), otherwise a fresh copy of `shown` —
+ * never placements merged into an own template that is not on screen
+ * (team-tiger review, Alexei).
  */
 export function updateUserPageTemplate(
   userViewModels: UserViewModels,
   page: string,
   name: string,
-  current: PageViewModel,
+  shown: PageViewModel,
   update: (template: PageViewModel) => PageViewModel,
 ): UserViewModels {
   const userPage = userViewModels.pages?.[page] ?? {};
   const templates = userPage.templates ?? {};
+  const own = userPage.view === name ? templates[name] : undefined;
   return {
     ...userViewModels,
     pages: {
@@ -60,7 +64,7 @@ export function updateUserPageTemplate(
       [page]: {
         ...userPage,
         view: name,
-        templates: { ...templates, [name]: update(templates[name] ?? current) },
+        templates: { ...templates, [name]: update(own ?? shown) },
       },
     },
   };
@@ -118,5 +122,5 @@ export function updateWidgetTemplate(
   update: (current: unknown) => unknown,
 ): ViewModels {
   const segments = [...model.split("."), template];
-  return setPath(viewModels, segments, update(getPath(viewModels, segments.join("."))));
+  return setPath(viewModels, segments, update(getPath(viewModels, segments)));
 }

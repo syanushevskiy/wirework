@@ -4,9 +4,12 @@
   "type": "module",
   "scripts": {
     "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm -r --no-bail run test",
-    "dev": "pnpm --filter playground dev",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "pnpm --no-bail --filter \"./packages/**\" run test",
+    "test:e2e": "pnpm --filter e2e test",
     "e2e": "pnpm --filter e2e test",
+    "check": "pnpm typecheck && pnpm test:unit && pnpm test:e2e",
+    "dev": "pnpm --filter playground dev",
     "storybook": "pnpm --filter @wirework/antd-widgets storybook",
     "build-storybook": "pnpm --filter @wirework/antd-widgets build-storybook"
   },

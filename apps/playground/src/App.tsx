@@ -12,7 +12,7 @@ import { EventLog } from "./components/event-log";
 import { StateInspector } from "./components/state-inspector";
 import { WidgetBuilder } from "./components/widget-builder";
 import { WidgetEditor } from "./components/widget-editor";
-import { PAGES, usePlayground } from "./hooks/use-playground";
+import { BUILDER_PAGE, usePlayground } from "./hooks/use-playground";
 
 export function App() {
   const {
@@ -27,6 +27,7 @@ export function App() {
     bus,
     report,
     rejections,
+    pages,
     page,
     selectPage,
     target,
@@ -105,7 +106,7 @@ export function App() {
 
         <div>
           <Flex wrap gap="small" align="center" data-testid="nav" className="pg-nav" component="nav">
-            {PAGES.map((name) => (
+            {pages.map((name) => (
               <Button
                 key={name}
                 size="small"
@@ -129,7 +130,7 @@ export function App() {
           {/* Page toolbar: engine of the shown template, the edit session, the edit target. */}
           <Flex wrap gap="small" align="center" data-testid="layout-toolbar" className="pg-toolbar">
             <label htmlFor="engine-select">engine</label>
-            {page === "builder" && !builderEngineLocked ? (
+            {page === BUILDER_PAGE && !builderEngineLocked ? (
               /* Free choice until the first widget is placed; then locked. */
               <Select
                 id="engine-select"
@@ -174,12 +175,13 @@ export function App() {
             </Tag>
           </Flex>
 
-          {page === "builder" ? (
+          {page === BUILDER_PAGE ? (
             <WidgetBuilder
               registry={registry}
               contracts={contracts}
               store={store}
               actions={actions}
+              addLocked={editing}
               onAdd={addWidget}
             />
           ) : null}
@@ -190,6 +192,7 @@ export function App() {
               cell={editingCell}
               store={store}
               actions={actions}
+              bindingsLocked={target === "user"}
               onSave={saveWidget}
               onCancel={clearCell}
             />

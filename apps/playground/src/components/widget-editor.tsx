@@ -16,11 +16,13 @@ export interface WidgetEditorProps {
   cell: EditableCell;
   store: Store;
   actions: ActionRegistry;
+  /** Editing a user's own view: settings only, inputs and reactions read-only. */
+  bindingsLocked: boolean;
   onSave: (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => void;
   onCancel: () => void;
 }
 
-export function WidgetEditor({ cell, store, actions, onSave, onCancel }: WidgetEditorProps) {
+export function WidgetEditor({ cell, store, actions, bindingsLocked, onSave, onCancel }: WidgetEditorProps) {
   const { form, canSave, save } = useWidgetEditor(cell, store, actions, onSave);
 
   return (
@@ -52,7 +54,7 @@ export function WidgetEditor({ cell, store, actions, onSave, onCancel }: WidgetE
         </Typography.Paragraph>
         <Form layout="vertical" component="div">
           <Flex vertical gap="middle">
-            <WidgetForm form={form} />
+            <WidgetForm form={form} bindingsLocked={bindingsLocked} />
           </Flex>
         </Form>
       </div>

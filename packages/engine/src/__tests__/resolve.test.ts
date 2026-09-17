@@ -85,6 +85,34 @@ describe("resolvePage", () => {
     if (resolved.problem !== undefined) throw new Error("expected a plan");
     expect(resolved.view).toBe("default");
     expect(resolved.cells).toHaveLength(1);
+    // ...and never silently: the plan says why the user's view is not applied.
+    expect(resolved.overlayProblem).toMatch(/user view models ignored/);
+  });
+
+  it("regression: the layout engine's validation findings are warnings on the plan", () => {
+    const strict = {
+      ...listEngine,
+      name: "strict",
+      template: { parse: (raw: unknown) => raw },
+      validate: () => ["cell c1 has no tab"],
+    };
+    const resolved = plan({
+      layoutEngines: enginesWith(listEngine, strict),
+      viewModels: { pages: { demo: { default: { engine: "strict", cells: [cell()] } } }, widgets: templates },
+    });
+    if (resolved.problem !== undefined) throw new Error("expected a plan");
+    expect(resolved.warnings).toEqual(["cell c1 has no tab"]);
+    expect(resolved.cells[0]?.problem).toBeUndefined();
+  });
+
+  it("the page's own fallback is reported, and a user template overrides a base one of the same name", () => {
+    const fallback = plan({ userViewModels: { pages: { demo: { view: "gone" } } } });
+    expect(fallback.fallback).toEqual({ requested: "gone", used: "default" });
+    const overridden = plan({
+      userViewModels: { pages: { demo: { templates: { default: { engine: "list", cells: [] } } } } },
+    });
+    if (overridden.problem !== undefined) throw new Error("expected a plan");
+    expect(overridden.cells).toHaveLength(0);
   });
 
   it("applies a valid overlay: selected view and per-cell settings", () => {

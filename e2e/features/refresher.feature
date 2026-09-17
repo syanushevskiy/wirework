@@ -40,7 +40,7 @@ Feature: Refresher
   Scenario: Auto-refresh requests the page on every tick
     Given I open the "demo" page
     And I expand the "events" panel
-    When I set the refresh interval to 1 seconds
+    When I set the refresh interval to 1 second
     And I turn auto-refresh on
     Then the event log shows widget "antd-refresher" event "refresh" with payload '{"trigger":"interval"}'
     And the runs table row "123458" shows "Success" for "status.state"

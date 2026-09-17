@@ -35,7 +35,7 @@ interface WidgetDefinition<VM, TComponent, E extends WidgetEvents> {
 
 interface WidgetProps<VM, E extends WidgetEvents> {
   viewModel: VM;
-  store: Store;
+  store: ReadableStore;          // read + subscribe, no `set`
   emit: Emit<E>;                 // NEW — only declared names, typed payloads
 }
 ```
@@ -75,8 +75,12 @@ interface EventBus {
 
 `@wirework/events` provides `createEventBus()`: synchronous, listener
 errors isolated, subscription set snapshotted per emit, nested emits past
-`MAX_EMIT_DEPTH` throw `EventLoopError`. Hosts may substitute their own bus
-(a recording bus in tests), exactly like the store.
+`MAX_EMIT_DEPTH` throw `EventLoopError` — which, unlike a listener bug, is
+NOT isolated: it unwinds every level to the original emitter, so a
+branching loop stops at the first trip instead of running 2^depth emits.
+The guard sees synchronous re-emits only; a loop through the store and a
+re-render is outside the bus. Hosts may substitute their own bus (a
+recording bus in tests), exactly like the store.
 
 Fire-and-forget by design: no replay, no last value. Need the last value?
 That is state — write it to the store (see host example below).
@@ -113,7 +117,10 @@ works too (payload `unknown`); an empty filter matches everything.
   non-kebab-case event name, or with an event lacking a payload validator
   is rejected (`WidgetRegistrationError`).
 - **Emit**: undeclared name / invalid payload throw `WidgetEventError`.
-- **Boot**: nothing yet — view models do not reference events in v1.
+- **Boot and resolve** (the same `contractProblems`): reacting to an
+  undeclared event fails the widget's own schema; a required event without
+  a reaction, a `call` to an unregistered action and a `from` naming a field
+  the payload does not have are reported problems.
 
 ## Builder and playground
 
@@ -136,7 +143,7 @@ log, wireable by users. So:
 - widgets receive a `ReadableStore` (no `set`) — enforcement, not a cast;
 - an `EventDefinition` may be `required: true`: the event carries state,
   so boot validation and resolve report a cell whose view model binds no
-  reaction to it (`unboundRequirements`, the same check as required ports);
+  reaction to it (`contractProblems`, the same check as required ports);
 - the builder marks required events with `*` and gates Add on their
   reaction path, so the common case ("counter stores its value") is still
   one input field + one reaction field. For object payloads the `from`
@@ -208,11 +215,19 @@ A widget's view model may declare what its events DO, under the reserved
 on: { "row-selected": [{ set: "runs.selected", from: "id" }] }
 ```
 
-`reactionSchema = { set: storePath, from?: payloadPath, value?: literal }`.
-The only action is `set`: write `value` if given, else the payload field at
-`from`, else the whole payload. The team's explicit decision is to NOT grow
-this into a workflow engine by accretion — a second action needs a second
-design.
+`reactionSchema` is `{ set: storePath, from?: payloadPath, value?: literal }`
+(`from` and `value` are exclusive) or `{ call: actionName, with?: args }`.
+`set` writes `value` if given, else the payload field at `from`, else the
+whole payload; `call` runs a host action ("Listening and handling" above —
+the second verb got its own design, as the team required). The team's
+explicit decision is to NOT grow this into a workflow engine by accretion.
+
+Timing is part of the contract: the reactions of one event run in
+declaration order; synchronous ones run synchronously inside the emit (a
+controlled input's `set` must land in its change handler); an async action
+is awaited before the next reaction starts; a failure is logged and stops
+that chain; unbinding the page aborts chains in flight (the rest never
+starts, and the action's `signal` is aborted).
 
 - `eventBindingsSchema(events)` derives the `on` section from the events
   declaration (strict), so reacting to an undeclared event is rejected by
@@ -228,5 +243,6 @@ design.
 - Tested in e2e/features/events.feature (fixture reaction on the counter;
   builder-wired reaction on the runs table). The "reaction to an undeclared
   event is rejected at boot" case lives in `failurePathViewModels`
-  (@wirework/view-data-models-examples, cell `bad-reaction`) for engine
-  tests — it is no longer on a playground page.
+  (@wirework/view-data-models-examples, cell `bad-reaction`), resolved cell
+  by cell in packages/engine/src/__tests__/failure-path.test.ts — it is no
+  longer on a playground page.

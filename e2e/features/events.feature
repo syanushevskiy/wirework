@@ -15,7 +15,7 @@ Feature: Widget events
   Scenario: Clicking the counter emits a typed event from its cell
     Given I open the "demo" page
     And I expand the "events" panel
-    When I click the counter 1 times
+    When I click the counter 1 time
     Then the event log shows widget "antd-counter" event "incremented" with payload '{"value":1}'
     And the event log shows widget "antd-counter" event "incremented" from cell "counter-main"
 
@@ -56,8 +56,8 @@ Feature: Widget events
     And I set the "input" port "value" to "demo.b"
     And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
-    And I click the counter in cell "custom-2" 1 times
-    Then the event log has 1 entries
+    And I click the counter in cell "custom-2" 1 time
+    Then the event log has 1 entry
     And the event log shows widget "antd-counter" event "incremented" from cell "custom-2"
 
   Scenario: The event log can be cleared
@@ -111,6 +111,18 @@ Feature: Widget events
     When I go to page 5 of the pagination
     Then the runs table row "123478" shows "Success" for "status.state"
     And the runs table has 3 rows
+
+  Scenario: Editing the paginator on the shared page keeps its whole reaction chain
+    Given I open the "demo" page
+    When I disable the user overlay
+    And I edit the page
+    And I edit the cell "pagination-runs"
+    Then the reaction for "changed" keeps 2 more reactions
+    When I set the setting "size" to "small"
+    And I save the widget
+    And I save the page
+    And I go to page 2 of the pagination
+    Then the runs table row "123461" shows "Running" for "status.state"
 
   Scenario: A user wires a button to a host action in the builder
     Given I open the "builder" page

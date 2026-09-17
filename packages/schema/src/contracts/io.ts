@@ -57,8 +57,19 @@ export interface IoBindings {
   inputs: Record<string, StorePath>;
 }
 
-function sectionSchema(ports: Record<string, PortDefinition>) {
-  const shape: Record<string, z.ZodType> = {};
+/** A port's binding: a store path, optional when the port says `required: false`. */
+type PortBinding<P> = P extends { required: false } ? z.ZodOptional<typeof storePathSchema> : typeof storePathSchema;
+
+/**
+ * The `inputs` section's shape, one binding PER DECLARED PORT NAME — so a
+ * widget reading `viewModel.inputs.shedule` fails to compile instead of
+ * quietly reading nothing (the shape used to be `Record<string, ZodType>`,
+ * which typed every binding as `any`; team-tiger review, Vlad).
+ */
+export type InputBindingsShape<P extends Record<string, PortDefinition>> = { [K in keyof P]: PortBinding<P[K]> };
+
+function sectionSchema<P extends Record<string, PortDefinition>>(ports: P) {
+  const shape: Record<string, z.ZodTypeAny> = {};
   for (const [name, port] of Object.entries(ports)) {
     shape[name] = port.required === false ? storePathSchema.optional() : storePathSchema;
   }
@@ -66,18 +77,20 @@ function sectionSchema(ports: Record<string, PortDefinition>) {
   const object = z.object(shape).strict();
   // Port-less / all-optional sections may be omitted from templates entirely
   // (`.every` on no ports is already true).
-  return Object.values(ports).every((port) => port.required === false)
-    ? object.default({})
-    : object;
+  const section = Object.values(ports).every((port) => port.required === false) ? object.default({}) : object;
+  // The one cast: the loop above builds exactly InputBindingsShape<P>.
+  return section as unknown as z.ZodType<z.output<z.ZodObject<InputBindingsShape<P>, "strict">>>;
 }
 
 /**
  * Builds the `inputs` part of a widget's view-model schema from its IO
- * declaration. STRICT, and `.extend()`/`.merge()` keep it strict: a
- * misspelled setting must fail loudly, not be silently stripped.
+ * declaration. STRICT, and `.extend()` keeps it strict: a misspelled
+ * setting must fail loudly, not be silently stripped.
  */
-export function ioBindingsSchema(io: WidgetIO) {
-  return z.object({ inputs: sectionSchema(io.inputs) }).strict();
+export function ioBindingsSchema<IO extends WidgetIO>(io: IO) {
+  // Explicit type argument: `io.inputs` alone widens to the constraint's
+  // Record<string, PortDefinition>, which would lose the port names again.
+  return z.object({ inputs: sectionSchema<IO["inputs"]>(io.inputs) }).strict();
 }
 
 /** IO declaration for widgets with no store bindings. */

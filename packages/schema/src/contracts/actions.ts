@@ -16,6 +16,12 @@ export interface ActionContext {
   store: Store;
   /** The reaction's static `with` arguments (empty when absent). */
   args: Record<string, unknown>;
+  /**
+   * Aborted when the page that bound the reaction goes away. The rest of
+   * the chain never starts after that; a long-running action may check it
+   * (or hand it to `fetch`) to stop early.
+   */
+  signal: AbortSignal;
 }
 
 export interface ActionDefinition {
@@ -25,8 +31,9 @@ export interface ActionDefinition {
   description?: string;
   /**
    * Host code. May be async: the reactions of ONE event run in declaration
-   * order and each is awaited before the next starts
+   * order and an async action is awaited before the next starts
    * (doc/actions-design.md), so `[load, navigate]` navigates after the load.
+   * Synchronous reactions run synchronously, inside the emit.
    */
   handler: (context: ActionContext) => void | Promise<void>;
 }

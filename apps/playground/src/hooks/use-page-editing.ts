@@ -243,8 +243,10 @@ export function usePageEditing({
   const saveWidget = useCallback(
     (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => {
       if (cell.template === undefined) return;
-      const overrides = overridesOf(bindings, settings);
       const routing = target;
+      // The user overlay carries SETTINGS only: a user's view never rewires
+      // inputs or reactions (doc/layout-engines-design.md, "Where edits go").
+      const overrides = routing === "base" ? overridesOf(bindings, settings) : settings;
       const { model, template, key } = cell;
       const settingNames = settingFields(cell.definition.viewModel).map((field) => field.name);
       push((source) =>

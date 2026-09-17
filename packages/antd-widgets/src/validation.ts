@@ -17,10 +17,14 @@ export interface ValidationResult {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INTEGER = /^-?\d+$/;
 
+/**
+ * A web address: `new URL` alone accepts any `scheme:rest`, so
+ * "localhost:8080" or "mailto:x" would pass (team-tiger review, Sasha).
+ */
 function isUrl(value: string): boolean {
   try {
-    new URL(value);
-    return true;
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:") && url.hostname !== "";
   } catch {
     return false;
   }

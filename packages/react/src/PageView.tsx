@@ -4,8 +4,10 @@
  * A PURE renderer: all resolution (template selection, user overlay merge,
  * registry lookups, validation) happens in the framework-agnostic
  * `resolvePage`, memoized once per input change in `usePagePlan` — never per
- * cell per render. Every problem renders as a visible, test-addressable
- * placeholder instead of failing silently.
+ * cell per render, and not at all when the host passes the plan it already
+ * holds. Every problem renders as a visible, test-addressable placeholder
+ * instead of failing silently: page problems, an ignored user overlay, the
+ * layout engine's warnings, a crashing layout renderer.
  *
  * The engine plugin named by the template renders the layout; PageView
  * gives it the validated template, the resolved cells, a `renderCell`
@@ -25,6 +27,7 @@ import type { LayoutRendererProps } from "./layout";
 import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
 import { useReactions } from "./useReactions";
+import { LayoutErrorBoundary } from "./WidgetErrorBoundary";
 
 export interface PageViewProps {
   page: string;
@@ -35,9 +38,8 @@ export interface PageViewProps {
   /** Host actions that `call` reactions may invoke. */
   actions?: ActionRegistry;
   /**
-   * An already-resolved plan (from `usePagePlan`). Pass it when the host
-   * needs the plan too: without it the page is resolved twice per render
-   * and the host's plan is a different object from the rendered one.
+   * An already-resolved plan (from `usePagePlan`) for these same inputs.
+   * When given, PageView renders it and resolves nothing itself.
    */
   plan?: ResolvedPage;
   store: Store;
@@ -67,14 +69,10 @@ export function PageView({
   onRemoveCell,
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
-  // A host that already resolved the page (an editor) passes its plan in,
-  // so the same inputs are never resolved twice per render.
-  const resolved = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions });
-  const plan = providedPlan ?? resolved;
+  const plan = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions }, providedPlan);
   useReactions(bus, store, plan, actions);
   const { cells, cellById, renderCell, renderChrome } = usePageRenderers({
     plan,
-    page,
     store,
     bus,
     editable,
@@ -82,11 +80,20 @@ export function PageView({
     onRemoveCell,
   });
 
+  const overlayNote = plan.overlayProblem ? (
+    <div role="status" className="ww-page-note" data-testid="overlay-ignored">
+      Your personal view could not be applied, so the shared page is shown: {plan.overlayProblem}
+    </div>
+  ) : null;
+
   if (plan.problem !== undefined) {
     return (
-      <div role="alert" className="ww-page-problem" data-testid="page-problem">
-        {plan.problem}
-      </div>
+      <>
+        {overlayNote}
+        <div role="alert" className="ww-page-problem" data-testid="page-problem">
+          {plan.problem}
+        </div>
+      </>
     );
   }
 
@@ -107,20 +114,31 @@ export function PageView({
     <div
       className="ww-page"
       data-testid="page"
-      data-page={page}
+      data-page={plan.page}
       data-view={plan.view}
       data-engine={plan.engine}
       data-layout-mode={editable ? "edit" : "view"}
     >
-      <Renderer
-        template={plan.template}
-        cells={cells}
-        cellById={cellById}
-        editable={editable}
-        onChange={onLayoutChange}
-        renderCell={renderCell}
-        renderChrome={renderChrome}
-      />
+      {overlayNote}
+      {plan.warnings.length > 0 ? (
+        <ul role="status" className="ww-page-note" data-testid="page-warnings">
+          {plan.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+      {/* resetKey: a new template (fixed in the inspector, say) retries the renderer. */}
+      <LayoutErrorBoundary engine={plan.engine} resetKey={plan.template}>
+        <Renderer
+          template={plan.template}
+          cells={cells}
+          cellById={cellById}
+          editable={editable}
+          onChange={onLayoutChange}
+          renderCell={renderCell}
+          renderChrome={renderChrome}
+        />
+      </LayoutErrorBoundary>
     </div>
   );
 }

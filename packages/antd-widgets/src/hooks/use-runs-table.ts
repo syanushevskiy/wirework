@@ -7,8 +7,8 @@
  */
 import { useCallback, useMemo, type TdHTMLAttributes } from "react";
 import type { TableProps } from "antd";
-import type { Emit, ReadableStore, RunsData } from "@wirework/schema";
-import { useStorePath } from "@wirework/react";
+import { getPath, type Emit, type PortDefinition, type ReadableStore, type Run, type RunsData } from "@wirework/schema";
+import { usePort } from "@wirework/react";
 import type { RunsTableEvents } from "../widgets/antd-runs-table";
 
 export interface TableColumn {
@@ -25,37 +25,33 @@ export interface TableRow {
   values: string[];
 }
 
-function readProperty(row: unknown, property: string): string {
-  let current: unknown = row;
-  for (const segment of property.split(".")) {
-    // Own properties only — never the prototype chain.
-    if (current === null || typeof current !== "object" || !Object.hasOwn(current, segment)) return "";
-    current = (current as Record<string, unknown>)[segment];
-  }
-  return current === undefined || current === null ? "" : String(current);
-}
+/** A column's value as text; own properties only (the shared path rules). */
+const readProperty = (row: Run, property: string): string => String(getPath(row, property) ?? "");
+
+/** The runs in display order; an id without a row is skipped. */
+const orderedRuns = ({ order, byId }: RunsData): Run[] => order.flatMap((id) => byId[id] ?? []);
 
 export function useRunsTable(
   store: ReadableStore,
   emit: Emit<RunsTableEvents>,
   paths: { data: string; loading?: string },
-  defaults: { data: RunsData; loading: boolean },
+  ports: { data: PortDefinition<RunsData>; loading: PortDefinition<boolean> },
   columns: TableColumn[],
 ) {
-  const runs = useStorePath<RunsData>(store, paths.data) ?? defaults.data;
-  // Optional port; a live value is not validated, so only `true` spins.
-  const loading = (useStorePath<unknown>(store, paths.loading) ?? defaults.loading) === true;
+  // Validated by the ports: a malformed value shows the port's default
+  // (no rows) instead of crashing the table.
+  const runs = usePort(store, paths.data, ports.data);
+  const loading = usePort(store, paths.loading, ports.loading) === true;
 
-  const rows = useMemo(() => {
-    const order = runs?.order ?? [];
-    const result: TableRow[] = [];
-    for (const id of order) {
-      const row = runs?.byId?.[id];
-      if (!row) continue;
-      result.push({ key: id, id, values: columns.map((column) => readProperty(row, column.property)) });
-    }
-    return result;
-  }, [runs, columns]);
+  const rows = useMemo<TableRow[]>(
+    () =>
+      orderedRuns(runs ?? { order: [], byId: {} }).map((run) => ({
+        key: run.id,
+        id: run.id,
+        values: columns.map((column) => readProperty(run, column.property)),
+      })),
+    [runs, columns],
+  );
 
   const tableColumns = useMemo<TableProps<TableRow>["columns"]>(
     () =>

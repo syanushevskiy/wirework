@@ -1,25 +1,30 @@
-/** react-grid-layout engine styles — semantic classes only; themable via --ww-*. */
+/**
+ * react-grid-layout engine styles — semantic classes only; themable via --ww-*.
+ * Every rule is scoped under this engine's container: gridstack reuses the
+ * item/handle class names, and unscoped rules gave its cells a second edit
+ * outline and clipped their content (team-tiger review, Alexei and Katya).
+ */
 @import "react-grid-layout/css/styles.css";
 
 .ww-grid-container {
   width: 100%;
 }
 
-.ww-grid-item {
+.ww-grid-container .ww-grid-item {
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
 }
 
-.ww-grid-item > .ww-cell,
-.ww-grid-item > .ww-cell-problem {
+.ww-grid-container .ww-grid-item > .ww-cell,
+.ww-grid-container .ww-grid-item > .ww-cell-problem {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
-.ww-grid-handle {
+.ww-grid-container .ww-grid-handle {
   cursor: move;
   user-select: none;
   flex: 0 0 auto;
@@ -34,7 +39,7 @@
   border-radius: 0.25rem 0.25rem 0 0;
 }
 
-.ww-grid-handle-label {
+.ww-grid-container .ww-grid-handle-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -42,7 +47,7 @@
   white-space: nowrap;
 }
 
-.ww-page[data-layout-mode="edit"] .ww-grid-item {
+.ww-page[data-layout-mode="edit"] .ww-grid-container .ww-grid-item {
   outline: 1px dashed var(--ww-color-edit, #2563eb);
   border-radius: 0.25rem;
 }

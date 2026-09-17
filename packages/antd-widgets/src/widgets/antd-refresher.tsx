@@ -20,7 +20,7 @@ function AntdRefresher({ viewModel, store, emit }: ContractProps<typeof refreshe
     store,
     emit,
     { schedule: viewModel.inputs.schedule, busy: viewModel.inputs.busy },
-    refresherContract.io.inputs.schedule.default,
+    refresherContract.io.inputs,
   );
 
   return (

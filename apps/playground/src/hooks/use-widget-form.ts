@@ -6,6 +6,12 @@
  * the action registry) — optional unless the event is `required`, in which
  * case it gates submit exactly like a required port. `collect()` turns the drafts
  * into bindings + settings for the host to write into a template.
+ *
+ * The form edits the FIRST reaction of an event. Everything it does not
+ * show survives a save: the reactions after the first, and the `with` /
+ * `value` of the first while its target is unchanged — saving a widget
+ * must never silently shorten a chain (team-tiger review: the demo
+ * pagination lost its `runs/load-page` call).
  * ALL form logic lives here (guidelines: render-only components).
  */
 import { useCallback, useMemo, useState } from "react";
@@ -16,6 +22,7 @@ import {
   type EventBindings,
   type EventDefinition,
   type PortDefinition,
+  type Reaction,
   type SettingField,
   type Store,
   type WidgetBindings,
@@ -50,6 +57,8 @@ export interface EventField {
   from: string;
   /** `call`: action name (empty = no reaction). */
   call: string;
+  /** Reactions after the first: not editable here, kept on save. */
+  kept: number;
 }
 
 /** A setting with the user's draft value (string for text/number inputs). */
@@ -60,15 +69,23 @@ export interface SettingDraft extends SettingField {
 /** Widget settings collected by the form, already coerced to their kind. */
 export type WidgetSettings = Record<string, unknown>;
 
-type ReactionDraft = { kind: ReactionKind; set: string; from: string; call: string };
+export interface ReactionDraft {
+  kind: ReactionKind;
+  set: string;
+  /** Payload field; absent = the event's default (its primary or only field). */
+  from?: string;
+  call: string;
+}
 
 export interface WidgetFormValues {
   paths: Record<string, string>;
   reactions: Record<string, ReactionDraft>;
   settings: Record<string, string | boolean>;
+  /** The reactions as loaded; the form edits the first of each event and keeps the rest. */
+  loaded: EventBindings;
 }
 
-export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, settings: {} };
+export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, settings: {}, loaded: {} };
 
 const isBlank = (value: string | boolean | undefined): boolean =>
   value === undefined || (typeof value === "string" && value.trim() === "");
@@ -84,14 +101,14 @@ export function valuesFromViewModel(
       typeof path === "string" ? [[port, path] as [string, string]] : [],
     ),
   );
-  const on = (vm["on"] ?? {}) as EventBindings;
+  const loaded = (vm["on"] ?? {}) as EventBindings;
   const reactions = Object.fromEntries(
-    Object.entries(on).flatMap(([event, list]) => {
+    Object.entries(loaded).flatMap(([event, list]) => {
       const first = list?.[0];
       if (!first) return [];
       const draft: ReactionDraft =
         "call" in first
-          ? { kind: "call", set: "", from: "", call: first.call }
+          ? { kind: "call", set: "", call: first.call }
           : { kind: "set", set: first.set, from: first.from ?? "", call: "" };
       return [[event, draft]];
     }),
@@ -103,7 +120,24 @@ export function valuesFromViewModel(
       return [[field.name, field.kind === "boolean" ? value === true : String(value)]];
     }),
   );
-  return { paths, reactions, settings };
+  return { paths, reactions, settings, loaded };
+}
+
+/**
+ * The first reaction as the form now describes it. What the form does not
+ * show (`with` of a call, `value` of a set) is kept while the user left the
+ * reaction's target alone; undefined when the user cleared it.
+ */
+function editedReaction(event: EventField, original: Reaction | undefined): Reaction | undefined {
+  if (event.kind === "call") {
+    if (event.call === "") return undefined;
+    return original && "call" in original && original.call === event.call ? original : { call: event.call };
+  }
+  const set = event.set.trim();
+  if (set === "") return undefined;
+  const from = event.from.trim();
+  if (original && "set" in original && original.set === set && (original.from ?? "") === from) return original;
+  return from === "" ? { set } : { set, from };
 }
 
 export function useWidgetForm(
@@ -115,6 +149,7 @@ export function useWidgetForm(
   const [paths, setPaths] = useState(initial.paths);
   const [reactions, setReactions] = useState(initial.reactions);
   const [settingValues, setSettingValues] = useState(initial.settings);
+  const [loaded, setLoaded] = useState(initial.loaded);
 
   const fields = useMemo<PortField[]>(
     () =>
@@ -142,8 +177,9 @@ export function useWidgetForm(
 
   /**
    * Events the widget declares, each with its reaction draft. `from`
-   * defaults to the payload's ONLY field: writing a `{ value }` object into
-   * a number-typed path is the classic wiring trap.
+   * defaults to the event's primary field, else the payload's ONLY field —
+   * and stays so until the user picks another: writing a `{ value }` object
+   * into a number-typed path is the classic wiring trap.
    */
   const actionList = useMemo(
     () => actions.list().map(({ name, description }) => ({ name, description })),
@@ -163,18 +199,20 @@ export function useWidgetForm(
             actions: actionList,
             kind: draft?.kind ?? "set",
             set: draft?.set ?? "",
-            from: draft?.from ?? event.primary ?? (fields?.length === 1 ? fields[0]! : ""),
+            from: draft?.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : ""),
             call: draft?.call ?? "",
+            kept: Math.max(0, (loaded[name]?.length ?? 0) - 1),
           };
         },
       ),
-    [definition, reactions, actionList],
+    [definition, reactions, actionList, loaded],
   );
 
   const reset = useCallback(() => {
     setPaths({});
     setReactions({});
     setSettingValues({});
+    setLoaded({});
   }, []);
 
   const setPortPath = useCallback((name: string, value: string) => {
@@ -185,12 +223,16 @@ export function useWidgetForm(
     setSettingValues((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  const setReaction = useCallback((event: string, field: keyof ReactionDraft, value: string) => {
-    setReactions((prev) => ({
-      ...prev,
-      [event]: { kind: "set", set: "", from: "", call: "", ...prev[event], [field]: value },
-    }));
-  }, []);
+  const setReaction = useCallback(
+    <K extends keyof ReactionDraft>(event: string, field: K, value: NonNullable<ReactionDraft[K]>) => {
+      setReactions((prev) => ({
+        ...prev,
+        // No `from` in the starting draft: absent keeps the event's default.
+        [event]: { kind: "set", set: "", call: "", ...prev[event], [field]: value },
+      }));
+    },
+    [],
+  );
 
   /**
    * Autocomplete source for an input port: existing store paths whose
@@ -210,26 +252,25 @@ export function useWidgetForm(
     fields.every((field) => !field.required || field.value.trim() !== "") &&
     events.every(
       (event) =>
-        !event.required || (event.kind === "call" ? event.call !== "" : event.set.trim() !== ""),
+        !event.required ||
+        event.kept > 0 ||
+        (event.kind === "call" ? event.call !== "" : event.set.trim() !== ""),
     ) &&
     settings.every((setting) => !setting.required || !isBlank(settingValues[setting.name]));
 
   /** Drafts -> bindings + settings. Blank settings are omitted so defaults apply. */
   const collect = useCallback((): { bindings: WidgetBindings; settings: WidgetSettings } => {
-    const bindings: WidgetBindings = { inputs: {}, on: {} };
-    for (const field of fields) {
-      const value = field.value.trim();
-      if (value !== "") bindings.inputs[field.name] = value;
-    }
-    for (const event of events) {
-      if (event.kind === "call") {
-        if (event.call !== "") bindings.on[event.name] = [{ call: event.call }];
-        continue;
-      }
-      const set = event.set.trim();
-      const from = event.from.trim();
-      if (set !== "") bindings.on[event.name] = [from === "" ? { set } : { set, from }];
-    }
+    const inputs = Object.fromEntries(
+      fields.flatMap((field) => (field.value.trim() === "" ? [] : [[field.name, field.value.trim()]])),
+    );
+    const on: EventBindings = Object.fromEntries(
+      events.flatMap((event) => {
+        const [original, ...rest] = loaded[event.name] ?? [];
+        const edited = editedReaction(event, original);
+        const list = edited ? [edited, ...rest] : rest;
+        return list.length > 0 ? [[event.name, list]] : [];
+      }),
+    );
     const collected: WidgetSettings = Object.fromEntries(
       settings.flatMap((setting) => {
         const raw = settingValues[setting.name];
@@ -237,8 +278,8 @@ export function useWidgetForm(
         return [[setting.name, setting.kind === "number" ? Number(raw) : raw] as const];
       }),
     );
-    return { bindings, settings: collected };
-  }, [fields, events, settings, settingValues]);
+    return { bindings: { inputs, on }, settings: collected };
+  }, [fields, events, settings, settingValues, loaded]);
 
   return {
     definition,

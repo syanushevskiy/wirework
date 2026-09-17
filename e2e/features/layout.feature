@@ -53,7 +53,7 @@ Feature: Layout engines
   Scenario: A resized cell is saved (demo page: into the user's own template)
     Given I open the "demo" page
     When I edit the page
-    And I widen the cell "echo-counter" by 1 columns
+    And I widen the cell "echo-counter" by 1 column
     Then the cell "echo-counter" is placed at x 6 y 1 w 4 h 2
     When I save the page
     Then the cell "echo-counter" is placed at x 6 y 1 w 4 h 2
@@ -106,13 +106,13 @@ Feature: Layout engines
     Then the page layout uses the "flexlayout" engine
     And the engine is locked as "flexlayout"
     When I select the tab "custom-1"
-    And I click the counter 1 times
+    And I click the counter 1 time
     Then the echo widget at "demo.f" shows "1"
     And the page has 2 cells
     When I edit the page
     And I remove the cell "custom-2"
-    Then there are at least 1 pending changes
-    And the page has 1 cells
+    Then there are at least 1 pending change
+    And the page has 1 cell
     When I save the page
-    Then the page has 1 cells
+    Then the page has 1 cell
     And the state JSON does not contain '"custom-2"'

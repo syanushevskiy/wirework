@@ -4,22 +4,24 @@
  * `changed` (a new schedule for the reaction to store) and `refresh`.
  */
 import { useCallback, useEffect, useEffectEvent } from "react";
-import type { Emit, ReadableStore } from "@wirework/schema";
-import { useStorePath } from "@wirework/react";
-import { refreshScheduleSchema, type RefreshSchedule } from "@wirework/widget-contracts";
+import type { Emit, PortDefinition, ReadableStore } from "@wirework/schema";
+import { usePort } from "@wirework/react";
+import { REFRESH_INTERVAL, refreshScheduleSchema, type RefreshSchedule } from "@wirework/widget-contracts";
 import type { RefresherEvents } from "../widgets/antd-refresher";
 
 export function useRefresher(
   store: ReadableStore,
   emit: Emit<RefresherEvents>,
   paths: { schedule: string; busy?: string },
-  fallback: RefreshSchedule,
+  ports: { schedule: PortDefinition<RefreshSchedule>; busy: PortDefinition<boolean> },
 ) {
-  // A live store value is not validated; a broken schedule shows the default.
-  const parsed = refreshScheduleSchema.safeParse(useStorePath<unknown>(store, paths.schedule));
-  const { enabled, interval } = parsed.success ? parsed.data : fallback;
+  // Validated by the contract's port: a broken schedule shows the default.
+  const { enabled, interval } = usePort(store, paths.schedule, ports.schedule) ?? {
+    enabled: false,
+    interval: REFRESH_INTERVAL.default,
+  };
   // The busy port is optional: unbound means never busy.
-  const busy = useStorePath<unknown>(store, paths.busy) === true;
+  const busy = usePort(store, paths.busy, ports.busy) === true;
 
   // Reads the latest `busy` without restarting the timer when it flips. A
   // busy or hidden page skips the tick: no pile-up, no background polling.
@@ -44,8 +46,8 @@ export function useRefresher(
   // Mid-typing values (empty, 0, 2.5) are not a schedule: keep the stored one.
   const changeInterval = useCallback(
     (next: number | null) => {
-      if (!refreshScheduleSchema.shape.interval.safeParse(next).success) return;
-      emit("changed", { enabled, interval: next as number });
+      const parsed = refreshScheduleSchema.shape.interval.safeParse(next);
+      if (parsed.success) emit("changed", { enabled, interval: parsed.data });
     },
     [emit, enabled],
   );

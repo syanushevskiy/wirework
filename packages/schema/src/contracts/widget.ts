@@ -4,8 +4,9 @@
  * A widget is a registration envelope: identity, typed input ports, typed
  * events, view-model validator, and an OPAQUE component slot. The engine never
  * touches the component; a framework adapter (e.g. @wirework/react) narrows
- * the `TComponent` type and knows how to render it. Widget packages depend
- * on this package plus their framework adapter — never on engine or store.
+ * the `TComponent` type and knows how to render it. Widget CODE imports this
+ * package plus its framework adapter — never engine, store or bus
+ * internals (the adapter itself uses them to render and preview).
  */
 import type { Emit, WidgetEvents } from "./events";
 import type { WidgetIO } from "./io";
@@ -66,7 +67,8 @@ export interface WidgetDefinition<
   description?: string;
   /**
    * The contract kind this widget implements ("label", "button", ...),
-   * set by `implementContract`. Tooling groups and swaps by it.
+   * set by `implementContract`. Tooling groups and searches by it; a registry
+   * created with the contracts checks the kind is registered and matches.
    */
   kind?: string;
   /** Sample data for a live palette preview; without it the palette tries `{}`. */

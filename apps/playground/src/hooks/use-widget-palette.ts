@@ -83,5 +83,8 @@ export function useWidgetSearch(groups: WidgetGroup[]) {
     },
   };
 
-  return { query, setQuery, options, items, open: focused || query.trim() !== "", focusProps };
+  /** Every registered widget, matching or not (tests compare the catalog against it). */
+  const total = useMemo(() => groups.reduce((count, group) => count + group.widgets.length, 0), [groups]);
+
+  return { query, setQuery, options, items, total, open: focused || query.trim() !== "", focusProps };
 }

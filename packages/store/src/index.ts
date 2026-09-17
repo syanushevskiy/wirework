@@ -4,8 +4,10 @@
  * A path-addressed state tree with immutable updates and subscription
  * semantics compatible with React's `useSyncExternalStore`:
  *  - `get` returns referentially stable values while a subtree is unchanged,
- *  - `set` replaces containers only along the written path (arrays are cloned
- *    positionally; writing a non-numeric segment through an array throws),
+ *  - `set` replaces containers only along the written path; the path rules
+ *    (own properties, canonical array indices, which container a missing
+ *    step becomes, what throws) are @wirework/schema's `setPath`, shared
+ *    with the engine so the two can never disagree,
  *  - subscribers are notified when the written path is the subscribed path,
  *    one of its ancestors, or one of its descendants.
  *
@@ -17,7 +19,7 @@
  * must treat them as immutable. In-place mutation bypasses change detection.
  */
 import type { Store, Unsubscribe, Validator } from "@wirework/schema";
-import { FORBIDDEN_SEGMENTS, isConfigPath } from "@wirework/schema";
+import { checkedSegments, getPath, isConfigPath, setPath } from "@wirework/schema";
 
 type StateObject = Record<string, unknown>;
 
@@ -26,73 +28,12 @@ interface Subscription {
   listener: () => void;
 }
 
+/** Store paths are dot strings with no empty or prototype segment. */
 function splitPath(path: string): string[] {
   if (!path) {
     throw new Error("Store path must be a non-empty dot-separated string");
   }
-  const segments = path.split(".");
-  for (const segment of segments) {
-    if (segment === "" || FORBIDDEN_SEGMENTS.has(segment)) {
-      throw new Error(`Store path "${path}" contains a forbidden segment "${segment}"`);
-    }
-  }
-  return segments;
-}
-
-function getAtPath(root: unknown, segments: string[]): unknown {
-  let current: unknown = root;
-  for (const segment of segments) {
-    if (current === null || typeof current !== "object") return undefined;
-    // Own properties only — never read through the prototype chain.
-    if (!Object.hasOwn(current, segment)) return undefined;
-    current = (current as StateObject)[segment];
-  }
-  return current;
-}
-
-const isIndex = (segment: string): boolean => /^\d+$/.test(segment);
-
-/** Immutable update: clones containers along the path only. */
-function setAtPath(path: string, container: unknown, segments: string[], value: unknown): unknown {
-  const [head, ...rest] = segments;
-  if (head === undefined) return container;
-
-  if (Array.isArray(container)) {
-    if (!isIndex(head)) {
-      throw new Error(
-        `Cannot write segment "${head}" through an array — use a numeric index`,
-      );
-    }
-    const next = [...container];
-    const index = Number(head);
-    next[index] =
-      rest.length === 0 ? value : setAtPath(path, childContainer(path, head, next[index], rest), rest, value);
-    return next;
-  }
-
-  const base: StateObject = container === null || container === undefined ? {} : { ...(container as StateObject) };
-  base[head] =
-    rest.length === 0 ? value : setAtPath(path, childContainer(path, head, base[head], rest), rest, value);
-  return base;
-}
-
-/**
- * The existing child if it is a container, else a fresh one SHAPED BY THE
- * NEXT SEGMENT: a numeric segment means an array, so `set("rows.0.name", x)`
- * on empty state builds `[{ name: x }]`, not `{ "0": { name: x } }`.
- *
- * A PRIMITIVE child is a mistake: writing through it would silently destroy
- * the value already there, so it throws — as the array branch above does
- * for its own version of the same error.
- */
-function childContainer(path: string, key: string, child: unknown, rest: string[]): unknown {
-  if (child !== null && typeof child === "object") return child;
-  if (child !== undefined && child !== null) {
-    throw new Error(
-      `Cannot write "${path}": "${key}" holds a ${typeof child}, which writing through it would replace`,
-    );
-  }
-  return isIndex(rest[0] ?? "") ? [] : {};
+  return checkedSegments(path);
 }
 
 /** True when `a` equals `b`, or one is a dot-path prefix of the other.
@@ -124,18 +65,18 @@ export function createStore(initial: StateObject = {}): Store {
 
   const write = (path: string, value: unknown): void => {
     const segments = splitPath(path);
-    if (Object.is(getAtPath(state, segments), value)) return;
-    state = setAtPath(path, state, segments, value) as StateObject;
+    if (Object.is(getPath(state, segments), value)) return;
+    state = setPath(state, segments, value);
     notify(path);
   };
 
   return {
     get<T>(path: string): T | undefined {
-      return getAtPath(state, splitPath(path)) as T | undefined;
+      return getPath(state, splitPath(path)) as T | undefined;
     },
 
     getAs<T>(path: string, validator: Validator<T>): T | undefined {
-      const value = getAtPath(state, splitPath(path));
+      const value = getPath(state, splitPath(path));
       if (value === undefined) return undefined;
       try {
         return validator.parse(value);

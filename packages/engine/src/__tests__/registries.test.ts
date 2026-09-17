@@ -10,6 +10,7 @@ import {
   createContracts,
   createLayoutEngines,
   createRegistry,
+  layoutEngineProblems,
   RegistrationError,
 } from "../index";
 import { counter, listEngine, plain } from "./fixtures";
@@ -53,6 +54,65 @@ describe("widget registry", () => {
     expect(() => registry.register({ ...counter, events: undefined as never })).toThrow(/events declaration/);
     expect(() => registry.register({ ...counter, events: { "Not Kebab": { payload: z.string() } } })).toThrow(/kebab-case/);
     expect(() => registry.register({ ...counter, events: { ok: {} as never } })).toThrow(/payload validator/);
+  });
+
+  it("regression: every input port needs a value validator, and its default must pass it", () => {
+    const registry = createRegistry();
+    expect(() => registry.register({ ...counter, io: { inputs: { value: {} as never } } })).toThrow(
+      /port "value" has no value validator/,
+    );
+    expect(() =>
+      registry.register({ ...counter, io: { inputs: { value: { value: z.number().min(10), default: 5 } } } }),
+    ).toThrow(/default its own validator rejects/);
+  });
+
+  describe("with the contract registry", () => {
+    const badge = defineContract({
+      kind: "badge",
+      io: { inputs: {} },
+      events: NO_EVENTS,
+      settings: z.object({ text: z.string().default("") }),
+    });
+    const contracts = createContracts();
+    contracts.register(badge);
+    const implementation = { ...plain, type: "my-badge", kind: "badge", viewModel: badge.viewModel };
+
+    it("accepts an implementation of a registered contract", () => {
+      expect(() => createRegistry({ contracts }).register(implementation)).not.toThrow();
+    });
+
+    it("regression: rejects a kind nobody registered, and a kind whose events differ", () => {
+      const registry = createRegistry({ contracts });
+      expect(() => registry.register({ ...implementation, type: "x", kind: "button" })).toThrow(
+        /kind "button", which is not a registered contract/,
+      );
+      expect(() => registry.register({ ...implementation, type: "y", events: counter.events })).toThrow(
+        /ports or events differ/,
+      );
+    });
+  });
+});
+
+describe("layoutEngineProblems", () => {
+  it("passes a conformant engine", () => {
+    expect(layoutEngineProblems(listEngine)).toEqual([]);
+  });
+
+  it("names every broken promise", () => {
+    const mutating = {
+      ...listEngine,
+      name: "mutating",
+      removeCell: (template: { cells: { id: string }[] }) => {
+        template.cells.length = 0;
+        return template;
+      },
+    };
+    expect(layoutEngineProblems(mutating)).toEqual(
+      expect.arrayContaining([
+        "removeCell: mutated the template it was given",
+        "removeCell: an unknown id changed the cells",
+      ]),
+    );
   });
 });
 

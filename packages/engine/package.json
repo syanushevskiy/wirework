@@ -18,6 +18,8 @@
     "@wirework/events": "workspace:*",
     "@wirework/schema": "workspace:*",
     "@wirework/store": "workspace:*",
+    "@wirework/view-data-models-examples": "workspace:*",
+    "@wirework/widget-contracts": "workspace:*",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"

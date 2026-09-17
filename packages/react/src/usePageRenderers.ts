@@ -11,7 +11,6 @@ import { CellView } from "./CellView";
 
 export interface PageRenderersInput {
   plan: ResolvedPage;
-  page: string;
   store: Store;
   bus: EventBus;
   editable: boolean;
@@ -19,19 +18,14 @@ export interface PageRenderersInput {
   onRemoveCell?: (cellId: string) => void;
 }
 
-export function usePageRenderers({
-  plan,
-  page,
-  store,
-  bus,
-  editable,
-  onEditCell,
-  onRemoveCell,
-}: PageRenderersInput) {
+export function usePageRenderers({ plan, store, bus, editable, onEditCell, onRemoveCell }: PageRenderersInput) {
   const cells = useMemo<ResolvedCell[]>(() => (plan.problem === undefined ? plan.cells : []), [plan]);
   const byId = useMemo(() => new Map(cells.map((cell) => [cell.key, cell])), [cells]);
   const cellById = useCallback((id: string) => byId.get(id), [byId]);
 
+  // Events are stamped with the PLAN's page — the page reactions are bound
+  // to — never a separate prop that could name another page.
+  const { page } = plan;
   const renderCell = useCallback(
     (cell: ResolvedCell): ReactNode => createElement(CellView, { cell, page, store, bus }),
     [page, store, bus],

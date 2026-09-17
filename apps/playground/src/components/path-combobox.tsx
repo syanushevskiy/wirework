@@ -13,6 +13,7 @@ export interface PathComboboxProps {
   testId: string;
   value: string;
   placeholder?: string;
+  disabled?: boolean;
   /** Called when the field opens — returns the compatible existing paths. */
   suggestions: () => string[];
   onSelect: (path: string) => void;
@@ -23,6 +24,7 @@ export function PathCombobox({
   testId,
   value,
   placeholder = "select a store path…",
+  disabled = false,
   suggestions,
   onSelect,
 }: PathComboboxProps) {
@@ -34,6 +36,7 @@ export function PathCombobox({
       data-testid={testId}
       className="pg-field pg-mono"
       placeholder={placeholder}
+      disabled={disabled}
       value={value}
       options={options}
       // Every compatible path is in the DOM (no windowing): the list is

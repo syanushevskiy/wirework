@@ -42,11 +42,32 @@ describe("set", () => {
     expect(store.get("changed.value")).toBe(2);
   });
 
-  it("regression: a missing numeric segment builds an ARRAY, not a keyed object", () => {
+  it("regression: a missing container followed by index 0 starts a LIST", () => {
     const store = createStore({});
     store.set("rows.0.name", "first");
     expect(Array.isArray(store.get("rows"))).toBe(true);
     expect(store.get("rows")).toEqual([{ name: "first" }]);
+  });
+
+  it("regression: a missing container followed by a numeric id is a MAP, not a sparse array", () => {
+    const store = createStore({ runs: {} });
+    store.set("runs.byId.123456.name", "Nightly");
+    expect(Array.isArray(store.get("runs.byId"))).toBe(false);
+    expect(store.get("runs.byId")).toEqual({ "123456": { name: "Nightly" } });
+  });
+
+  it("regression: an array is addressed by canonical index only", () => {
+    const store = createStore({ rows: ["a", "b"] });
+    expect(store.get("rows.1")).toBe("b");
+    expect(store.get("rows.01")).toBeUndefined();
+    expect(store.get("rows.length")).toBeUndefined();
+    expect(() => store.set("rows.01", "x")).toThrow(/numeric index/);
+  });
+
+  it("regression: never reads a missing child through the prototype chain", () => {
+    const store = createStore({});
+    store.set("toString.x", 1);
+    expect(store.get("toString")).toEqual({ x: 1 });
   });
 
   it("writes through an existing array by index", () => {

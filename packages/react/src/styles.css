@@ -76,3 +76,13 @@
   padding: var(--ww-gap, 0.5rem);
   border-radius: 0.25rem;
 }
+
+/* The page renders, but not exactly as configured (ignored overlay, engine warnings). */
+.ww-page-note {
+  margin: 0;
+  border: 1px solid var(--ww-color-note, #b45309);
+  color: var(--ww-color-note, #b45309);
+  padding: var(--ww-gap, 0.5rem) calc(var(--ww-gap, 0.5rem) * 3);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}

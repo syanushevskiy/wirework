@@ -1,15 +1,19 @@
 /**
- * Per-cell error boundary: a widget that throws during render is isolated to
- * its own cell — the rest of the page keeps working (team-tiger UX/QA ask).
- * A changed `resetKey` (e.g. a re-resolved view model) clears the error so a
- * fixed configuration can recover without a full remount.
+ * Error boundaries. A widget that throws during render is isolated to its
+ * own cell — the rest of the page keeps working (team-tiger UX/QA ask); a
+ * layout renderer that throws (a malformed model from the inspector or a
+ * saved overlay) is isolated to the page, so the host app and its tools
+ * stay usable (team-tiger review, Ren). A changed `resetKey` (e.g. a
+ * re-resolved view model or plan) clears the error so a fixed
+ * configuration can recover without a full remount.
  */
 import { Component, type ReactNode } from "react";
 
-interface Props {
-  widgetType: string;
+interface ErrorBoundaryProps {
   /** When this value changes, a previous crash state is cleared. */
   resetKey?: unknown;
+  /** What renders instead of the crashed subtree. */
+  fallback: (error: Error) => ReactNode;
   children: ReactNode;
 }
 
@@ -18,14 +22,14 @@ interface State {
   prevResetKey?: unknown;
 }
 
-export class WidgetErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   state: State = {};
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
   }
 
-  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+  static getDerivedStateFromProps(props: ErrorBoundaryProps, state: State): Partial<State> | null {
     if (!Object.is(props.resetKey, state.prevResetKey)) {
       return { error: undefined, prevResetKey: props.resetKey };
     }
@@ -33,19 +37,48 @@ export class WidgetErrorBoundary extends Component<Props, State> {
   }
 
   render(): ReactNode {
-    const { error } = this.state;
-    if (error) {
-      return (
-        <div
-          role="alert"
-          className="ww-widget-error"
-          data-testid="widget-error"
-          data-widget={this.props.widgetType}
-        >
-          Widget &quot;{this.props.widgetType}&quot; crashed: {error.message}
-        </div>
-      );
-    }
-    return this.props.children;
+    return this.state.error ? this.props.fallback(this.state.error) : this.props.children;
   }
+}
+
+export interface WidgetErrorBoundaryProps {
+  widgetType: string;
+  resetKey?: unknown;
+  children: ReactNode;
+}
+
+export function WidgetErrorBoundary({ widgetType, resetKey, children }: WidgetErrorBoundaryProps) {
+  return (
+    <ErrorBoundary
+      resetKey={resetKey}
+      fallback={(error) => (
+        <div role="alert" className="ww-widget-error" data-testid="widget-error" data-widget={widgetType}>
+          Widget &quot;{widgetType}&quot; crashed: {error.message}
+        </div>
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+export interface LayoutErrorBoundaryProps {
+  engine: string;
+  resetKey?: unknown;
+  children: ReactNode;
+}
+
+export function LayoutErrorBoundary({ engine, resetKey, children }: LayoutErrorBoundaryProps) {
+  return (
+    <ErrorBoundary
+      resetKey={resetKey}
+      fallback={(error) => (
+        <div role="alert" className="ww-page-problem" data-testid="layout-error" data-engine={engine}>
+          Layout engine &quot;{engine}&quot; crashed: {error.message}
+        </div>
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
 }

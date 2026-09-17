@@ -1,9 +1,9 @@
 /**
  * ALL playground logic lives here (guidelines: components are render-only):
- * one-time boot (widget registry, layout-engine registry, store, bus,
- * rejection proof), live validation, the page/overlay UI state, runtime
- * widget addition, and the host-side event subscription example. Page
- * editing (session, widget edits, removal) lives in use-page-editing.
+ * the page/overlay UI state, live validation, runtime widget addition and
+ * the host-side event subscription example. One-time boot (registries,
+ * store, bus, rejection proof) is `boot.ts`; page editing (session, widget
+ * edits, removal) lives in use-page-editing.
  *
  * BOTH trees LIVE IN THE STORE — "viewModels" and "userViewModels" —
  * alongside the data models: one state-management tree. The state
@@ -17,107 +17,21 @@ import {
   type ViewModels,
   type WidgetBindings,
 } from "@wirework/schema";
-import {
-  createActions,
-  createContracts,
-  createLayoutEngines,
-  createRegistry,
-  resolveTemplate,
-  updatePageTemplate,
-  validateViewModels,
-} from "@wirework/engine";
-import { flexRowsEngine } from "@wirework/engine-flex-rows";
-import { flexLayoutEngine } from "@wirework/engine-flexlayout";
-import { gridstackEngine } from "@wirework/engine-gridstack";
-import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
-import { createEventBus } from "@wirework/events";
+import { resolveTemplate, updatePageTemplate, validateViewModels } from "@wirework/engine";
 import { useStorePath, useWidgetEvent } from "@wirework/react";
-import { createStore } from "@wirework/store";
 import {
-  seedData,
   userViewModels as fixtureUserViewModels,
   viewModels as fixtureViewModels,
 } from "@wirework/view-data-models-examples";
-import { standardContracts } from "@wirework/widget-contracts";
-import { antdRunsTable, antdWidgets, brokenWidgets } from "@wirework/antd-widgets";
-import { createRunsActions, RUNS_PAGE_SIZE } from "../actions/runs-actions";
-import { createRunsServer } from "../api/runs-server";
-import { statusBadgeContract } from "../contracts/status-badge";
-import { statusBadge } from "../widgets/status-badge";
+import { antdRunsTable } from "@wirework/antd-widgets";
+import { boot } from "../boot";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
 import type { WidgetSettings } from "./use-widget-form";
 
-export const PAGES = ["demo", "builder"] as const;
-export type PageName = (typeof PAGES)[number];
-
 /** The page whose edits are the USER's (saved in the overlay). */
-const USER_PAGE: PageName = "demo";
-
-function boot() {
-  // Contracts: the standard kinds plus this app's own; widgets implement them.
-  const contracts = createContracts();
-  for (const contract of standardContracts) contracts.register(contract);
-  contracts.register(statusBadgeContract);
-
-  const registry = createRegistry();
-  for (const widget of antdWidgets) registry.register(widget);
-  registry.register(statusBadge);
-
-  // Layout engines are plugins too: a page template names one.
-  const layoutEngines = createLayoutEngines();
-  layoutEngines.register(reactGridLayoutEngine);
-  layoutEngines.register(flexRowsEngine);
-  layoutEngines.register(gridstackEngine);
-  layoutEngines.register(flexLayoutEngine);
-
-  // Host ACTIONS: what a user may attach to an event beyond a store write
-  // (doc/widget-events-design.md, "Listening"). Business code lives here,
-  // named and described; the builder lists them.
-  const actions = createActions();
-  actions.register({
-    name: "reset-counter",
-    description: "Set demo.counter back to 0",
-    handler: ({ store }) => store.set("demo.counter", 0),
-  });
-  actions.register({
-    name: "clear-selected-run",
-    description: "Forget the selected run",
-    handler: ({ store }) => store.set("runs.selected", undefined),
-  });
-  actions.register({
-    name: "log-event",
-    description: "console.log the event (debugging)",
-    // eslint-disable-next-line no-console
-    handler: ({ event, args }) => console.log("[action log-event]", event, args),
-  });
-  // Server-side paging for the demo table: a fake server with real latency.
-  const runsServer = createRunsServer({ seed: seedData.runs.data, total: 23, latencyMs: 600 });
-  for (const action of createRunsActions(runsServer)) actions.register(action);
-
-  // Negative proof: every broken definition must be rejected loudly.
-  const rejections: string[] = [];
-  for (const [name, definition] of Object.entries(brokenWidgets)) {
-    try {
-      registry.register(definition);
-      rejections.push(`${name}: was ACCEPTED — registry guard is broken!`);
-    } catch (error) {
-      rejections.push(
-        `${name}: rejected (${error instanceof Error ? error.message : String(error)})`,
-      );
-    }
-  }
-
-  // One state tree: both view-model trees live next to the data models. The
-  // runs start as the first page the server rendered; paging requests more.
-  const store = createStore({
-    viewModels: fixtureViewModels,
-    userViewModels: fixtureUserViewModels,
-    ...seedData,
-    runs: { ...runsServer.pageOf({ page: 1, pageSize: RUNS_PAGE_SIZE }), loading: false },
-  });
-  const bus = createEventBus();
-  return { registry, contracts, layoutEngines, actions, store, bus, rejections };
-}
+const USER_PAGE = "demo";
+/** The page the widget builder adds to. */
+export const BUILDER_PAGE = "builder";
 
 /**
  * Next free builder cell id, derived from the STORE (not a counter): the
@@ -145,8 +59,11 @@ export function usePlayground() {
   const userViewModels =
     useStorePath<UserViewModels>(store, "userViewModels") ?? fixtureUserViewModels;
   const trees = useMemo(() => ({ viewModels, userViewModels }), [viewModels, userViewModels]);
-  const [page, setPage] = useState<PageName>("demo");
+  const [page, setPage] = useState<string>(USER_PAGE);
   const [withUserOverlay, setWithUserOverlay] = useState(true);
+
+  /** Navigation lists the pages the view models declare — a page added there is reachable. */
+  const pages = useMemo(() => Object.keys(viewModels.pages ?? {}), [viewModels]);
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
@@ -176,7 +93,7 @@ export function usePlayground() {
   });
 
   const selectPage = useCallback(
-    (name: PageName) => {
+    (name: string) => {
       editing.cancel();
       setPage(name);
     },
@@ -189,16 +106,16 @@ export function usePlayground() {
    * empty template. With cells in place the engine is locked — there is no
    * conversion between engines by decision.
    */
-  const builder = resolveTemplate(layoutEngines, viewModels.pages?.["builder"]?.["default"]);
+  const builder = resolveTemplate(layoutEngines, viewModels.pages?.[BUILDER_PAGE]?.["default"]);
   const builderEngineLocked =
     builder.problem !== undefined || builder.engine.cells(builder.template).length > 0;
   const setBuilderEngine = useCallback(
     (name: string) => {
       const engine = layoutEngines.get(name);
-      const current = resolveTemplate(layoutEngines, viewModels.pages?.["builder"]?.["default"]);
+      const current = resolveTemplate(layoutEngines, viewModels.pages?.[BUILDER_PAGE]?.["default"]);
       if (!engine || current.problem !== undefined || current.engine.cells(current.template).length > 0) return;
       editing.cancel();
-      store.setConfig("viewModels", updatePageTemplate(viewModels, "builder", "default", () => engine.empty()));
+      store.setConfig("viewModels", updatePageTemplate(viewModels, BUILDER_PAGE, "default", () => engine.empty()));
     },
     [layoutEngines, viewModels, store, editing.cancel],
   );
@@ -218,14 +135,14 @@ export function usePlayground() {
    * the user typed (widget defaults fill the rest), plus a cell appended by
    * the page's engine plugin. Written THROUGH THE STORE — the state
    * inspector shows it instantly and the engine treats it exactly like
-   * static configuration.
+   * static configuration. Not offered during a page edit session: the
+   * builder's Add is disabled then, so a session is never silently dropped.
    */
   const addWidget = useCallback(
     (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => {
-      editing.cancel();
       const prev = store.get<ViewModels>("viewModels");
       if (!prev) return;
-      const builder = resolveTemplate(layoutEngines, prev.pages?.["builder"]?.["default"]);
+      const builder = resolveTemplate(layoutEngines, prev.pages?.[BUILDER_PAGE]?.["default"]);
       // No builder template to append to (removed via the inspector): write
       // nothing rather than a dangling widget template nobody references.
       if (builder.problem !== undefined) return;
@@ -235,7 +152,7 @@ export function usePlayground() {
         ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
         ...settings,
       };
-      const withCell = updatePageTemplate(prev, "builder", "default", () =>
+      const withCell = updatePageTemplate(prev, BUILDER_PAGE, "default", () =>
         builder.engine.appendCell(builder.template, {
           id,
           widget: widgetType,
@@ -253,7 +170,7 @@ export function usePlayground() {
         },
       });
     },
-    [store, layoutEngines, editing.cancel],
+    [store, layoutEngines],
   );
 
   return {
@@ -268,6 +185,7 @@ export function usePlayground() {
     bus,
     report,
     rejections,
+    pages,
     page,
     selectPage,
     target,

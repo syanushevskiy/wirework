@@ -4,11 +4,13 @@
  * tests) boot from `viewModels`; `failurePathViewModels` is a separate,
  * deliberately broken tree for exercising the engine's failure modes
  * (problem placeholders, fallbacks, crash isolation, boot validation) —
- * not loaded by the playground.
+ * resolved cell by cell in the engine's unit tests, not loaded by the
+ * playground.
  *
  * Contract proof: depends on @wirework/schema ONLY — a view/data model is
  * plain data. Every cell carries a stable `id` (identity is never
- * positional). Pages use the default "react-grid-layout" engine.
+ * positional). The playground pages use the "react-grid-layout" engine;
+ * the failure-path page uses "flex-rows".
  */
 import type { RunsData, UserViewModels, ViewModels } from "@wirework/schema";
 
@@ -42,7 +44,7 @@ export const viewModels: ViewModels = {
       },
     },
     // Builder page: starts empty; widgets are added at runtime from the
-    // dropdown, wired by their IO ports and events.
+    // palette, wired by their IO ports and events.
     builder: {
       default: {
         engine: "react-grid-layout",

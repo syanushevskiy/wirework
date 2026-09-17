@@ -1,26 +1,17 @@
-/** Dot-path helpers for resolving view-model references and store tooling. */
-import { CONFIG_ROOTS, FORBIDDEN_SEGMENTS, isConfigPath, type ReadableStore, type Validator } from "@wirework/schema";
+/**
+ * Path tooling for view-model trees and store autocomplete. Reading and
+ * writing a path is @wirework/schema's (`getPath`, `setPath`, `deletePath`
+ * — one rule set shared with the store); re-exported here for hosts.
+ */
+import {
+  CONFIG_ROOTS,
+  FORBIDDEN_SEGMENTS,
+  isPlainObject,
+  type ReadableStore,
+  type Validator,
+} from "@wirework/schema";
 
-export function getPath(root: unknown, path: string): unknown {
-  let current: unknown = root;
-  for (const segment of path.split(".")) {
-    if (current === null || typeof current !== "object") return undefined;
-    if (FORBIDDEN_SEGMENTS.has(segment) || !Object.hasOwn(current, segment)) {
-      return undefined; // own properties only — never the prototype chain
-    }
-    current = (current as Record<string, unknown>)[segment];
-  }
-  return current;
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
-}
+export { deletePath, getPath, setPath } from "@wirework/schema";
 
 /**
  * Enumerate every dot path reachable in a state tree (branches AND leaves),
@@ -82,65 +73,7 @@ export function deepMerge(base: unknown, overlay: unknown): unknown {
   const result: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(overlay)) {
     if (FORBIDDEN_SEGMENTS.has(key)) continue; // no pollution via JSON overlays
-    result[key] = deepMerge(base[key], value);
+    result[key] = deepMerge(Object.hasOwn(base, key) ? base[key] : undefined, value);
   }
   return result;
 }
-
-/** Immutable delete of a dot path; missing paths return the same tree. */
-export function deletePath<T extends object>(root: T, path: string | readonly string[]): T {
-  const segments = segmentsOf(path);
-  const drop = (container: unknown, index: number): unknown => {
-    if (!isPlainObject(container)) return container;
-    const key = segments[index];
-    if (key === undefined || !Object.hasOwn(container, key)) return container;
-    if (index === segments.length - 1) {
-      const { [key]: _removed, ...rest } = container;
-      return rest;
-    }
-    return { ...container, [key]: drop(container[key], index + 1) };
-  };
-  return drop(root, 0) as T;
-}
-
-/**
- * Segments of a path. Pass an ARRAY when a segment may itself contain a dot
- * (template names, widget keys): joining first and splitting later writes
- * to the wrong branch and loses the edit.
- */
-function segmentsOf(path: string | readonly string[]): string[] {
-  return typeof path === "string" ? path.split(".") : [...path];
-}
-
-/**
- * Immutable write at a dot path (or explicit segments) into a view-model
- * tree: clones the containers along the path, creates missing ones, never
- * touches the prototype chain. Arrays ARE traversed by numeric segment and
- * stay arrays; a non-numeric segment through an array is refused.
- */
-export function setPath<T extends object>(root: T, path: string | readonly string[], value: unknown): T {
-  const segments = segmentsOf(path);
-  const shown = segments.join(".");
-  const assign = (container: unknown, index: number): unknown => {
-    const key = segments[index];
-    if (key === undefined || key === "" || FORBIDDEN_SEGMENTS.has(key)) {
-      throw new Error(`Refusing to write path "${shown}": bad segment ${JSON.stringify(key)}`);
-    }
-    const last = index === segments.length - 1;
-    if (Array.isArray(container)) {
-      if (!/^\d+$/.test(key)) {
-        throw new Error(`Refusing to write path "${shown}": segment "${key}" through an array needs a numeric index`);
-      }
-      const next = [...container];
-      next[Number(key)] = last ? value : assign(next[Number(key)], index + 1);
-      return next;
-    }
-    const base: Record<string, unknown> = isPlainObject(container) ? { ...container } : {};
-    base[key] = last ? value : assign(base[key], index + 1);
-    return base;
-  };
-  return assign(root, 0) as T;
-}
-
-/** True when a path addresses a configuration tree (re-exported for hosts). */
-export { isConfigPath };

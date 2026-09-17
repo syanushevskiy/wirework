@@ -35,8 +35,17 @@ describe("setPath", () => {
 
   it("refuses a non-numeric segment through an array, and bad segments", () => {
     expect(() => setPath({ cells: [] }, "cells.first", 1)).toThrow(/numeric index/);
-    expect(() => setPath({}, "a.__proto__", 1)).toThrow(/bad segment/);
-    expect(() => setPath({}, "a..b", 1)).toThrow(/bad segment/);
+    expect(() => setPath({}, "a.__proto__", 1)).toThrow(/forbidden segment/);
+    expect(() => setPath({}, "a..b", 1)).toThrow(/empty segment/);
+  });
+
+  it("regression: refuses to write through a primitive, exactly like the store", () => {
+    expect(() => setPath({ a: 5 }, "a.b", 1)).toThrow(/holds a number/);
+  });
+
+  it("regression: a missing container is a map for an id and a list only for index 0", () => {
+    expect(setPath({}, "byId.123456.name", "x")).toEqual({ byId: { "123456": { name: "x" } } });
+    expect(setPath({}, "rows.0", "x")).toEqual({ rows: ["x"] });
   });
 
   it("regression: accepts explicit segments so a name may contain a dot", () => {
@@ -46,10 +55,22 @@ describe("setPath", () => {
 });
 
 describe("deletePath", () => {
-  it("removes a leaf and leaves an unknown path alone", () => {
+  it("removes a leaf and returns the SAME tree for an unknown path", () => {
     expect(deletePath({ a: { b: 1, c: 2 } }, "a.b")).toEqual({ a: { c: 2 } });
     const tree = { a: 1 };
-    expect(deletePath(tree, "nope.here")).toEqual(tree);
+    expect(deletePath(tree, "nope.here")).toBe(tree);
+  });
+
+  it("regression: walks arrays like setPath does", () => {
+    expect(deletePath({ cells: [{ id: "a", x: 1 }] }, "cells.0.x")).toEqual({ cells: [{ id: "a" }] });
+    expect(deletePath({ cells: ["a", "b", "c"] }, "cells.1")).toEqual({ cells: ["a", "c"] });
+  });
+});
+
+describe("getPath", () => {
+  it("regression: accepts explicit segments so a template name may contain a dot", () => {
+    expect(getPath({ x: { "v1.0": 1 } }, ["x", "v1.0"])).toBe(1);
+    expect(getPath({ x: { "v1.0": 1 } }, "x.v1.0")).toBeUndefined();
   });
 });
 

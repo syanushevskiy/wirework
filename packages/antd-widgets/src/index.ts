@@ -2,11 +2,12 @@
  * @wirework/antd-widgets — widgets built on Ant Design, for the playground
  * and for testing the engine.
  *
- * Contract proof: this package depends on @wirework/schema, the
- * @wirework/react adapter, @wirework/widget-contracts and antd ONLY. If a
- * widget ever needs engine, store or bus internals, the widget contract
- * has leaked. No widget writes the store — every state change is an
- * emitted event plus a reaction. Label, button, input, pagination and
+ * Contract proof: widget code imports @wirework/schema, the @wirework/react
+ * adapter, @wirework/widget-contracts, zod and antd ONLY (the adapter itself
+ * uses the default store and bus for previews; widget code never touches
+ * them). If a widget ever needs engine, store or bus internals, the widget
+ * contract has leaked. No widget writes the store — every state change is
+ * an emitted event plus a reaction. Label, button, input, pagination and
  * refresher IMPLEMENT the standard contracts; the others are demo/domain
  * widgets.
  */
@@ -43,7 +44,7 @@ export type { RefresherEvents } from "./widgets/antd-refresher";
 export type { CounterEvents } from "./widgets/antd-counter";
 export type { RunsTableEvents } from "./widgets/antd-runs-table";
 
-/** Everything a host needs to register at once. */
+/** Every production widget, for a host to register at once. */
 export const antdWidgets: AnyWidgetDefinition[] = [
   antdLabel,
   antdEcho,
@@ -53,8 +54,14 @@ export const antdWidgets: AnyWidgetDefinition[] = [
   antdInput,
   antdPagination,
   antdRefresher,
-  antdCrash,
 ];
+
+/**
+ * Widgets that exist to TEST a host (a widget that always crashes, proving
+ * the error boundary). Register them only in playgrounds and test pages —
+ * never let them reach a real user's palette.
+ */
+export const antdTestWidgets: AnyWidgetDefinition[] = [antdCrash];
 
 /**
  * Deliberately INVALID definitions — for asserting that registration rejects

@@ -43,16 +43,21 @@ export function addTab(model: FlexLayoutModelJson, cellId: string): FlexLayoutMo
   return { ...model, layout: { ...layout, children: [...childrenOf(layout), tabset] } };
 }
 
-/** Remove the tab for `cellId`, keeping every tabset's `selected` in range. */
+/**
+ * Remove the tab for `cellId`. The tab the user had SELECTED stays
+ * selected: removing an earlier tab shifts the index down (it used to stay,
+ * silently showing the next tab — team-tiger review, Sasha); removing the
+ * selected tab itself selects its neighbour, kept in range.
+ */
 export function removeTab(model: FlexLayoutModelJson, cellId: string): FlexLayoutModelJson {
   const visit = (node: JsonNode): JsonNode => {
     if (!Array.isArray(node.children)) return node;
-    const children = childrenOf(node)
-      .filter((child) => !(child.type === "tab" && child.id === cellId))
-      .map(visit);
-    const selected =
-      typeof node.selected === "number" ? Math.min(node.selected, Math.max(0, children.length - 1)) : undefined;
-    return { ...node, children, ...(selected === undefined ? {} : { selected }) };
+    const before = childrenOf(node);
+    const removedAt = before.findIndex((child) => child.type === "tab" && child.id === cellId);
+    const children = before.filter((_, index) => index !== removedAt).map(visit);
+    if (typeof node.selected !== "number") return { ...node, children };
+    const shifted = removedAt !== -1 && removedAt < node.selected ? node.selected - 1 : node.selected;
+    return { ...node, children, selected: Math.min(shifted, Math.max(0, children.length - 1)) };
   };
   return { ...model, layout: visit(model.layout as JsonNode) };
 }

@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { action } from "storybook/actions";
 import type { AnyWidgetDefinition, WidgetProps } from "@wirework/schema";
 import { settingFields } from "@wirework/schema";
-import { bindReactions, createEmitter, readableStore, type ResolvedPagePlan } from "@wirework/engine";
+import { bindCellReactions, createEmitter, readableStore } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
 import { useStoreSnapshot, WidgetErrorBoundary } from "@wirework/react";
 import { createStore } from "@wirework/store";
@@ -68,24 +68,8 @@ export function WidgetStory({ definition, viewModel, seed = {} }: WidgetStoryPro
   // The story's own reactions (`on`) run exactly as on a page.
   useEffect(() => {
     if ("problem" in parsed) return undefined;
-    const plan: ResolvedPagePlan = {
-      page: "storybook",
-      view: "story",
-      engine: "story",
-      template: { engine: "story" },
-      cells: [
-        {
-          key: "story",
-          widget: definition.type,
-          model: "story",
-          template: "default",
-          definition,
-          viewModel: parsed.viewModel,
-        },
-      ],
-    };
-    return bindReactions(bus, store, plan);
-  }, [bus, store, definition, parsed]);
+    return bindCellReactions(bus, store, { page: "storybook", cell: "story", viewModel: parsed.viewModel });
+  }, [bus, store, parsed]);
 
   const readable = useMemo(() => readableStore(store), [store]);
   const Widget = definition.component as ComponentType<WidgetProps>;

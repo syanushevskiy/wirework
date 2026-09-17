@@ -22,7 +22,7 @@ Feature: Widget builder
     Then the page has 2 cells
     And I see a widget "antd-counter"
     And I see a widget "antd-echo"
-    When I click the counter 1 times
+    When I click the counter 1 time
     Then the echo widget at "demo.custom" shows "1"
 
   Scenario: A widget cannot be added until required ports and reactions are bound
@@ -63,7 +63,7 @@ Feature: Widget builder
     When I set the setting "text" to "Hello from the builder"
     Then the add widget button is enabled
     When I add the widget
-    Then the page has 1 cells
+    Then the page has 1 cell
     And the label reads "Hello from the builder"
 
   Scenario: A label can take its text from a store path
@@ -116,13 +116,33 @@ Feature: Widget builder
     When I choose the "antd-counter" widget
     Then the reaction for "incremented" takes "value" from the payload
 
+  Scenario: The payload field default survives typing the reaction's path
+    Given I open the "builder" page
+    When I choose the "antd-counter" widget
+    And I set the "input" port "value" to "demo.typed"
+    And I set the reaction for "incremented" to set "demo.typed"
+    Then the reaction for "incremented" takes "value" from the payload
+    When I add the widget
+    And I click the counter 1 time
+    Then the counter shows "(1)"
+
+  Scenario: Widgets cannot be added while a page edit is open
+    Given I open the "builder" page
+    When I choose the "antd-label" widget
+    And I set the setting "text" to "first"
+    Then the add widget button is enabled
+    When I edit the page
+    Then adding widgets waits for the page edit to end
+    When I cancel the page edit
+    Then the add widget button is enabled
+
   Scenario: A reaction writing the whole payload does not crash the counter
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.whole"
     And I set the reaction for "incremented" to set "demo.whole" from ""
     And I add the widget
-    And I click the counter 1 times
+    And I click the counter 1 time
     Then no widget has crashed
     And the counter shows '{"value":1}'
 
@@ -177,7 +197,7 @@ Feature: Widget builder
   Scenario: The palette shows a live preview of every registered widget
     Given I open the "builder" page
     When I open the widget palette
-    Then the palette shows 10 widget previews
+    Then the palette shows a preview of every registered widget
     And the preview of "antd-label" reads "Sample text"
     And the preview of "antd-counter" reads "Increment (3)"
     And the preview of "antd-runs-table" reads "Nightly"
@@ -189,28 +209,28 @@ Feature: Widget builder
     Given I open the "builder" page
     Then the widget catalog is hidden
     When I open the widget palette
-    Then the palette shows 10 widget previews
+    Then the palette shows a preview of every registered widget
     When I search the palette for "counter"
-    Then the palette shows 1 widget previews
+    Then the palette shows 1 widget preview
 
   Scenario: The palette is searched to find a widget
     Given I open the "builder" page
     When I open the widget palette
-    Then the palette shows 10 widget previews
+    Then the palette shows a preview of every registered widget
     When I search the palette for "table"
-    Then the palette shows 1 widget previews
+    Then the palette shows 1 widget preview
     And the preview of "antd-runs-table" reads "Nightly"
     When I search the palette for "nothing-like-this"
     Then the palette shows 0 widget previews
     And the palette reports no matches
     When I search the palette for ""
-    Then the palette shows 10 widget previews
+    Then the palette shows a preview of every registered widget
 
   Scenario: A widget is found through the search suggestions and added
     Given I open the "builder" page
     When I pick the widget suggestion "antd-button"
-    Then the palette shows 1 widget previews
+    Then the palette shows 1 widget preview
     When I choose the "antd-button" widget
     And I set the reaction for "clicked" to call "log-event"
     And I add the widget
-    Then the page has 1 cells
+    Then the page has 1 cell

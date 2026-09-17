@@ -2,23 +2,38 @@
  * Widget form fields — ONLY presentation (logic in use-widget-form). Shared
  * by the builder ("Add widget") and the editor ("Edit widget"): input
  * ports, primitive settings and per-event reactions (required for events
- * that carry state).
+ * that carry state). With `bindingsLocked` (a user's own view), ports and
+ * reactions are shown read-only: they belong to the shared page.
  */
-import { Checkbox, Flex, Form, Input, Select, Typography } from "antd";
+import { Alert, Checkbox, Flex, Form, Input, Select, Typography } from "antd";
 import { PathCombobox } from "./path-combobox";
+import type { ReactionKind, WidgetFormState } from "../hooks/use-widget-form";
 
 /** Select value standing for "the whole payload" (an option cannot be ""). */
 const WHOLE_PAYLOAD = "$payload";
 /** Select value standing for "use the widget's default" (an option cannot be ""). */
 const USE_DEFAULT = "$default";
-import type { WidgetFormState } from "../hooks/use-widget-form";
 
-export function WidgetForm({ form }: { form: WidgetFormState }) {
+export interface WidgetFormProps {
+  form: WidgetFormState;
+  /** Ports and reactions are read-only (the user overlay changes settings only). */
+  bindingsLocked?: boolean;
+}
+
+export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
   const { definition, fields, settings, events, setPortPath, setSetting, setReaction, suggestionsFor } = form;
   if (!definition) return null;
 
   return (
     <>
+      {bindingsLocked ? (
+        <Alert
+          type="info"
+          showIcon
+          data-testid="bindings-locked"
+          title="Your view changes settings only. Inputs and reactions belong to the shared page — turn the user overlay off to change them."
+        />
+      ) : null}
       {fields.map((field) => {
         const fieldId = `port-input-${field.name}`;
         return (
@@ -45,6 +60,7 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
             <PathCombobox
               id={fieldId}
               testId={fieldId}
+              disabled={bindingsLocked}
               value={field.value}
               suggestions={() => suggestionsFor(field)}
               onSelect={(path) => setPortPath(field.name, path)}
@@ -158,8 +174,9 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
                     id={`reaction-${event.name}-kind`}
                     data-testid={`reaction-${event.name}-kind`}
                     className="pg-field-narrow"
+                    disabled={bindingsLocked}
                     value={event.kind}
-                    onChange={(value: string) => setReaction(event.name, "kind", value)}
+                    onChange={(value: ReactionKind) => setReaction(event.name, "kind", value)}
                     options={[
                       { value: "set", label: "set store path" },
                       { value: "call", label: "call action", disabled: event.actions.length === 0 },
@@ -171,6 +188,7 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
                       data-testid={`reaction-${event.name}-call`}
                       className="pg-field"
                       placeholder="choose an action…"
+                      disabled={bindingsLocked}
                       value={event.call === "" ? undefined : event.call}
                       onChange={(value: string) => setReaction(event.name, "call", value)}
                       options={event.actions.map((action) => ({
@@ -185,6 +203,7 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
                         data-testid={`reaction-${event.name}-set`}
                         className="pg-field-narrow pg-mono"
                         placeholder="store.path"
+                        disabled={bindingsLocked}
                         value={event.set}
                         onChange={(change) => setReaction(event.name, "set", change.target.value)}
                       />
@@ -194,6 +213,7 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
                           id={`reaction-${event.name}-from`}
                           data-testid={`reaction-${event.name}-from`}
                           className="pg-field-narrow pg-mono"
+                          disabled={bindingsLocked}
                           value={event.from === "" ? WHOLE_PAYLOAD : event.from}
                           onChange={(value: string) =>
                             setReaction(event.name, "from", value === WHOLE_PAYLOAD ? "" : value)
@@ -209,6 +229,7 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
                           data-testid={`reaction-${event.name}-from`}
                           className="pg-field-narrow pg-mono"
                           placeholder="field (optional)"
+                          disabled={bindingsLocked}
                           value={event.from}
                           onChange={(change) => setReaction(event.name, "from", change.target.value)}
                         />
@@ -216,6 +237,11 @@ export function WidgetForm({ form }: { form: WidgetFormState }) {
                     </>
                   )}
                 </div>
+                {event.kept > 0 ? (
+                  <Typography.Text type="secondary" data-testid={`reaction-${event.name}-kept`}>
+                    then {event.kept} more reaction{event.kept === 1 ? "" : "s"}, kept as configured
+                  </Typography.Text>
+                ) : null}
               </Flex>
             ))}
           </Flex>

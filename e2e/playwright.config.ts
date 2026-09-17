@@ -1,14 +1,26 @@
 import { defineConfig, devices } from "@playwright/test";
-import { defineBddConfig } from "playwright-bdd";
+import { cucumberReporter, defineBddConfig } from "playwright-bdd";
 
 const testDir = defineBddConfig({
   features: "features/**/*.feature",
   steps: "steps/**/*.ts",
 });
 
+const ci = Boolean(process.env["CI"]);
+
 export default defineConfig({
   testDir,
-  reporter: [["list"]],
+  // CI: a stray `.only` fails the run, and one retry separates a flake
+  // (passes on retry, still reported) from a real failure.
+  forbidOnly: ci,
+  retries: ci ? 1 : 0,
+  reporter: [
+    [ci ? "line" : "list"],
+    // Reports a person can open — the scenario text with pass/fail per
+    // step (cucumber) and traces on failure (playwright). Never auto-opened.
+    cucumberReporter("html", { outputFile: "reports/cucumber/index.html" }),
+    ["html", { outputFolder: "reports/playwright", open: "never" }],
+  ],
   use: {
     // Own port: never collides with (or kills) a developer's `pnpm dev` on 5173.
     baseURL: "http://localhost:5174",

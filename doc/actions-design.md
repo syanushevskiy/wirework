@@ -108,5 +108,12 @@ names and parameters, validated by schema; parameters never contain code.
 | 2 | `@wirework/actions-core`; playground page + dialog state in the store; a wizard page in the fixtures; a static JSON endpoint for a `load-runs` demo; scenarios | 1–1.5 days |
 | 3 | "Writing an action" guide (factory pattern, unit-test recipe) | 0.5 day |
 
-Status: designed; phase 1 not started. Today's registry supports `name`,
-`description`, `handler`, and reactions run in order without awaiting.
+Status: phase 1 partly built. Built: namespaced names (`runs/load-page`),
+reactions running in declaration order with async actions awaited and a
+failure stopping its chain, synchronous reactions staying synchronous, an
+`AbortSignal` on the action context aborted when the page unbinds, a
+`call` to an unknown action reported at boot and resolve. Not built:
+`params` (so `with` is not validated and the builder cannot set it — the
+editor keeps an existing `with` untouched), `scope` / `for(page)`, the
+parameter form. Phases 2–3 not started; `http/get` is superseded by
+`source/refresh` in doc/refresher-design.md.

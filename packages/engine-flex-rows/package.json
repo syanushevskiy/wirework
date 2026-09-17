@@ -9,10 +9,10 @@
   },
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@wirework/engine": "workspace:*",
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
     "zod": "catalog:"
@@ -22,7 +22,9 @@
   },
   "devDependencies": {
     "@types/react": "catalog:",
+    "@wirework/engine": "workspace:*",
     "react": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

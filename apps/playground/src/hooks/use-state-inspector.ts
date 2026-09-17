@@ -9,6 +9,7 @@
  */
 import { useCallback, useState } from "react";
 import { userViewModelsSchema, viewModelsSchema, type Store } from "@wirework/schema";
+import { errorText, issuesText } from "@wirework/engine";
 import { useStoreSnapshot } from "@wirework/react";
 
 export function useStateInspector(store: Store) {
@@ -40,19 +41,13 @@ export function useStateInspector(store: Store) {
       ] as const) {
         if (root[key] === undefined) continue;
         const result = schema.safeParse(root[key]);
-        if (!result.success) {
-          throw new Error(
-            `${key}: ${result.error.issues
-              .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-              .join("; ")}`,
-          );
-        }
+        if (!result.success) throw new Error(`${key}: ${issuesText(result.error)}`);
       }
       store.replace(root);
       setDraft(null);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(errorText(cause));
     }
   }, [draft, store]);
 

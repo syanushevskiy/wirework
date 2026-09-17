@@ -7,8 +7,14 @@
  *  - one throwing listener never starves the rest (mirrors the store),
  *  - a listener may (un)subscribe during notification — the set is
  *    snapshotted per emit,
- *  - nested emits beyond MAX_DEPTH throw: a listener re-emitting in a loop
- *    is a bug, and it must fail loudly instead of hanging the page.
+ *  - nested emits beyond MAX_EMIT_DEPTH throw an EventLoopError that
+ *    unwinds EVERY level up to the original emitter: a listener re-emitting
+ *    in a loop is a bug, and it must fail loudly instead of hanging the page.
+ *    (It used to be caught and logged by the parent listener's isolation, so
+ *    a loop that branched ran ~2^32 emits first — team-tiger review.)
+ *
+ * This guard sees SYNCHRONOUS re-emits only. A loop through the store and a
+ * re-render (write → render → emit) is outside the bus.
  */
 import type {
   EventBus,
@@ -51,6 +57,8 @@ function notify({ filter, listener }: Subscription, event: WidgetEvent): void {
   try {
     listener(event);
   } catch (error) {
+    // Isolation is for listener BUGS; a detected loop must reach the emitter.
+    if (error instanceof EventLoopError) throw error;
     // eslint-disable-next-line no-console
     console.error(
       `Event listener for ${JSON.stringify(filter)} threw on "${event.widget}/${event.name}":`,

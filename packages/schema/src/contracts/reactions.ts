@@ -23,7 +23,11 @@ import { ACTION_NAME } from "./names";
 import type { WidgetEvents } from "./events";
 import { ioBindingsSchema, storePathSchema, type IoBindings, type WidgetIO } from "./io";
 
-/** strict: a misspelled key ("form" for "from") must fail, never be dropped. */
+/**
+ * strict: a misspelled key ("form" for "from") must fail, never be dropped —
+ * and `from` beside `value` is the same kind of mistake (`value` wins, so
+ * `from` would be silently ignored).
+ */
 export const setReactionSchema = z
   .object({
     /** Store path to write. */
@@ -33,7 +37,10 @@ export const setReactionSchema = z
     /** Literal to write instead of the payload. */
     value: z.unknown().optional(),
   })
-  .strict();
+  .strict()
+  .refine((reaction) => reaction.from === undefined || reaction.value === undefined, {
+    message: "a set reaction takes either `from` or `value`, not both",
+  });
 export type SetReaction = z.infer<typeof setReactionSchema>;
 
 export const callReactionSchema = z
@@ -52,17 +59,26 @@ export type Reaction = z.infer<typeof reactionSchema>;
 /** Event name -> reactions, as it appears under `on` in a view model. */
 export type EventBindings = Record<string, Reaction[]>;
 
+/** The `on` section's shape: an optional reaction list per DECLARED event name. */
+export type EventBindingsShape<E extends WidgetEvents> = {
+  [K in keyof E]: z.ZodOptional<z.ZodArray<typeof reactionSchema>>;
+};
+
 /** Builds the `on` part of a widget's view-model schema from its events. */
-export function eventBindingsSchema(events: WidgetEvents) {
-  const shape: Record<string, z.ZodType> = {};
+export function eventBindingsSchema<E extends WidgetEvents>(events: E) {
+  const shape: Record<string, z.ZodTypeAny> = {};
   for (const name of Object.keys(events)) {
     shape[name] = z.array(reactionSchema).optional();
   }
-  return z.object({ on: z.object(shape).strict().default({}) }).strict();
+  // The one cast: the loop above builds exactly EventBindingsShape<E>.
+  const on = z.object(shape).strict().default({}) as unknown as z.ZodType<
+    z.output<z.ZodObject<EventBindingsShape<E>, "strict">>
+  >;
+  return z.object({ on }).strict();
 }
 
 /** `inputs` + `on` in one go. Compose widget settings on top with `.extend()`. */
-export function widgetBindingsSchema(io: WidgetIO, events: WidgetEvents) {
+export function widgetBindingsSchema<IO extends WidgetIO, E extends WidgetEvents>(io: IO, events: E) {
   return ioBindingsSchema(io).merge(eventBindingsSchema(events));
 }
 

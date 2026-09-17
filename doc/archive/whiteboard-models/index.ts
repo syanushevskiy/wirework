@@ -1,4 +1,4 @@
-loo/**
+/**
  * Xsight widget models — transcribed from the design sketch (widgets.jpg).
  *
  *  - View Models      — how pages/panels are laid out and configured,

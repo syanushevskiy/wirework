@@ -1,7 +1,8 @@
 /**
  * The gridstack engine plugin — the third engine, written against the
  * plugin contract with NO change to schema, engine core or adapter:
- * template shape + the six operations + the renderer.
+ * template shape + the five operations, the optional `validate` and the
+ * renderer.
  */
 import type { CellBase } from "@wirework/schema";
 import { defineLayoutEngine } from "@wirework/react";

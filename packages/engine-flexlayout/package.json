@@ -9,10 +9,10 @@
   },
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@wirework/engine": "workspace:*",
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
     "flexlayout-react": "catalog:",
@@ -25,8 +25,10 @@
   "devDependencies": {
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@wirework/engine": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

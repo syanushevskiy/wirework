@@ -75,6 +75,48 @@ describe("bindReactions", () => {
     spy.mockRestore();
   });
 
+  it("regression: synchronous reactions run synchronously, even after a synchronous action", () => {
+    const actions = createActions();
+    actions.register({ name: "log-it", handler: () => undefined });
+    const { store, bus } = bind({ changed: [{ call: "log-it" }, { set: "demo.n", from: "value" }] }, actions);
+    emit(bus, { value: 4 });
+    // No await: a controlled widget reads its own write in the same tick.
+    expect(store.get("demo.n")).toBe(4);
+  });
+
+  it("regression: unbinding stops a chain waiting on an async action and aborts its signal", async () => {
+    let release: () => void = () => undefined;
+    let seen: AbortSignal | undefined;
+    const actions = createActions();
+    actions.register({
+      name: "runs/load",
+      handler: ({ signal }) => {
+        seen = signal;
+        return new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      },
+    });
+    const { store, bus, unbind } = bind({ changed: [{ call: "runs/load" }, { set: "demo.n", from: "value" }] }, actions);
+    emit(bus, { value: 7 });
+    unbind();
+    expect(seen?.aborted).toBe(true);
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.get("demo.n")).toBe(0);
+  });
+
+  it("a rejected async action stops its chain", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const actions = createActions();
+    actions.register({ name: "runs/load", handler: async () => Promise.reject(new Error("offline")) });
+    const { store, bus } = bind({ changed: [{ call: "runs/load" }, { set: "demo.n", from: "value" }] }, actions);
+    emit(bus, { value: 2 });
+    await vi.waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(store.get("demo.n")).toBe(0);
+    spy.mockRestore();
+  });
+
   it("hands the action the event, the store and its static args", () => {
     const handler = vi.fn();
     const actions = createActions();

@@ -73,6 +73,6 @@ export function createNamedRegistry<T>({
   };
 }
 
-/** Shared invariant helper: own-property record check. */
+/** Shared invariant helper: a non-null object (arrays included) — not a plain-object check. */
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object";

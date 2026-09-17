@@ -22,11 +22,9 @@ function AntdPagination({ viewModel, store, emit }: ContractProps<typeof paginat
       total: viewModel.inputs.total,
       pageSize: viewModel.inputs.pageSize,
     },
-    {
-      page: paginationContract.io.inputs.page.default,
-      total: paginationContract.io.inputs.total.default,
-      pageSize: viewModel.pageSize,
-    },
+    paginationContract.io.inputs,
+    // The page-size port is optional: without it the setting decides.
+    viewModel.pageSize,
   );
 
   return (
