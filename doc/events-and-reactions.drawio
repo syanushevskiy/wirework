@@ -1,0 +1,260 @@
+<mxfile host="drawio-plugin" modified="2026-09-20T19:41:30.405Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" version="22.1.22" etag="LuW44chBBDhqSzW2Nv5f" type="embed" pages="2">
+  <diagram id="events-flow" name="1 · Events: from a click to the store">
+    <mxGraphModel dx="1154" dy="729" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1660" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p1-title" value="How events work in Wirework — a widget emits an intent, subscribers decide what it means, reactions turn it into state" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="10" width="1580" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-rules" value="&lt;b&gt;Rules&lt;/b&gt;&lt;br&gt;• Widgets never write the store: every state change is an event plus a reaction.&lt;br&gt;• Events are fire-and-forget: no replay, no last value — state belongs in the store.&lt;br&gt;• Reactions never transform: &lt;i&gt;from&lt;/i&gt; selects, &lt;i&gt;value&lt;/i&gt; is a literal, &lt;i&gt;with&lt;/i&gt; is static. Logic is an action.&lt;br&gt;• Emit from a user handler or a timer — never from render or an effect body." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#ffffff;strokeColor=#999999;" parent="1" vertex="1">
+          <mxGeometry x="40" y="60" width="440" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-checks" value="&lt;b&gt;Checked at boot and on every resolve&lt;/b&gt; (the widget&#39;s schema + contractProblems)&lt;br&gt;• reacting to an event the widget does not declare&lt;br&gt;• a required event with no reaction&lt;br&gt;• a call to an action nobody registered&lt;br&gt;• a &lt;i&gt;from&lt;/i&gt; naming a payload field that does not exist&lt;br&gt;• a user overlay carrying &lt;i&gt;on&lt;/i&gt; or &lt;i&gt;inputs&lt;/i&gt; (personal views change settings only)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#ffffff;strokeColor=#999999;" parent="1" vertex="1">
+          <mxGeometry x="510" y="60" width="430" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-config" value="&lt;b&gt;View model — configuration, no code&lt;/b&gt; (widgets.demo.applicationsFilter.default)&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;inputs: { value: &quot;filters.applications&quot;, options: &quot;filters.applicationOptions&quot; },&lt;br&gt;on: { changed: [&lt;br&gt;&amp;nbsp;&amp;nbsp;{ set: &quot;filters.applications&quot;, from: &quot;value&quot; },&lt;br&gt;&amp;nbsp;&amp;nbsp;{ call: &quot;filters/sync-suites&quot; }&lt;br&gt;] }&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="980" y="60" width="640" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-widget" value="&lt;b&gt;1 · Widget&lt;/b&gt; (antd-multi-select, cell filter-applications)&lt;br&gt;&lt;br&gt;The user picks Billing. The widget only READS the store (a read-only view, no set) and EMITS its intent:&lt;br&gt;&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;emit(&quot;changed&quot;, { value: [&quot;billing&quot;] })&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="40" y="270" width="260" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-emitter" value="&lt;b&gt;2 · Cell emitter&lt;/b&gt; — createEmitter (engine), one per rendered cell&lt;br&gt;• the name must be one of the widget&#39;s declared events, else WidgetEventError&lt;br&gt;• the payload must pass the declared schema, else WidgetEventError&lt;br&gt;• stamps the source { page, cell } — a widget cannot forge it" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="340" y="270" width="280" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-bus" value="&lt;b&gt;3 · Event bus&lt;/b&gt; — createEventBus (@wirework/events)&lt;br&gt;• stamps seq and notifies every subscriber whose filter matches, in order, synchronously&lt;br&gt;• a listener that throws is logged; the others still run&lt;br&gt;• a re-emit loop deeper than 32 throws EventLoopError back to the emitter" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="660" y="270" width="280" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-interpreter" value="&lt;b&gt;4 · Reaction interpreter&lt;/b&gt; — bindReactions (engine), bound by PageView while the page is mounted&lt;br&gt;&lt;br&gt;One subscription per (page, cell, event) declared under &lt;i&gt;on&lt;/i&gt; in the cell&#39;s resolved view model. Unmounting the page aborts the chains still running." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="980" y="270" width="300" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-host" value="&lt;b&gt;Host listeners&lt;/b&gt; — app code nobody configures&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;useWidgetEvent(bus, eventFilter(antdTable, &quot;row-selected&quot;, { page, cell }), handler)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="980" y="480" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-log" value="&lt;b&gt;Event log&lt;/b&gt; (playground tooling) — an empty filter: sees every event" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=8;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="980" y="600" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-chain" value="&lt;b&gt;5 · The event&#39;s reactions, in declaration order&lt;/b&gt; (page 2)&lt;br&gt;• &lt;b&gt;set&lt;/b&gt; — write &lt;i&gt;value&lt;/i&gt; if given, else the payload field at &lt;i&gt;from&lt;/i&gt;, else the whole payload&lt;br&gt;• &lt;b&gt;call&lt;/b&gt; — run a host action with { event, store, args: with, signal }&lt;br&gt;Synchronous ones run at once; an async action is awaited before the next starts; a failure is logged and stops the chain." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="1320" y="270" width="300" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-actions" value="&lt;b&gt;6 · Host actions&lt;/b&gt; (ActionRegistry) — business logic in code, picked by name&lt;br&gt;&lt;br&gt;&lt;b&gt;filters/sync-suites&lt;/b&gt;: offer the chosen applications&#39; suites, drop chosen suites no longer offered&lt;br&gt;&lt;b&gt;runs/load-page&lt;/b&gt;: request a page from the server, write its rows and total" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="1320" y="720" width="300" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-store" value="&lt;b&gt;7 · Store&lt;/b&gt; (@wirework/store)&lt;br&gt;&lt;br&gt;set(path, value): an immutable update along the path; refuses viewModels / userViewModels (only editors write those).&lt;br&gt;Notifies the subscribers of the path, its ancestors and its descendants." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="980" y="720" width="300" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-rerender" value="&lt;b&gt;8 · Bound widgets re-render&lt;/b&gt;&lt;br&gt;&lt;br&gt;usePort / useStorePath (useSyncExternalStore) read the changed paths — e.g. Test suites now offers Billing&#39;s suites." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="40" y="720" width="260" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-legend-title" value="Legend" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="340" y="930" width="60" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-legend-widget" value="Widget — presentation" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+          <mxGeometry x="410" y="930" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-legend-engine" value="Engine and framework" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="630" y="930" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-legend-host" value="Host application — business code" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="850" y="930" width="240" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-legend-config" value="Configuration — no code" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="1110" y="930" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-legend-tooling" value="Tooling" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1330" y="930" width="120" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-emit" value="emit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-widget" target="p1-emitter" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-event" value="event" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-emitter" target="p1-bus" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-rx" value="match" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-bus" target="p1-interpreter" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-host" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.8;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-bus" target="p1-host" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="955" y="422" />
+              <mxPoint x="955" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1-e-log" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.95;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-bus" target="p1-log" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="967" y="450" />
+              <mxPoint x="967" y="630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1-e-declares" value="declares on" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=0.234;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p1-config" target="p1-interpreter" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-runs" value="runs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-interpreter" target="p1-chain" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-call" value="call" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p1-chain" target="p1-actions" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-set" value="set" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=0.833;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p1-chain" target="p1-store" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1380" y="700" />
+              <mxPoint x="1230" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1-e-action-writes" value="writes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-actions" target="p1-store" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-host-writes" value="store.set" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="p1-host" target="p1-store" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="530" />
+              <mxPoint x="1300" y="762" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1-e-notify" value="notifies the path, its ancestors and descendants" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p1-store" target="p1-rerender" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1-e-next" value="next interaction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="p1-rerender" target="p1-widget" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="reaction-chain" name="2 · Reactions: how one event&#39;s chain runs">
+    <mxGraphModel dx="2814" dy="729" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1660" pageHeight="1019" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p2-title" value="Reactions — how one event&#39;s chain runs (packages/engine/src/reactions.ts)" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="10" width="1580" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-start" value="An event arrives for its (page, cell, name)" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="160" y="60" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-next" value="Take the next reaction, in declaration order" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="160" y="160" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-any" value="Any left?" style="rhombus;whiteSpace=wrap;html=1;fontSize=12;fillColor=#ffffff;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="235" y="260" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-done" value="Chain done" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="520" y="275" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-bound" value="Page still mounted?&lt;br&gt;(signal not aborted)" style="rhombus;whiteSpace=wrap;html=1;fontSize=12;fillColor=#ffffff;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="210" y="390" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-stopped" value="Stop — the page went away; the rest of the chain never starts" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="520" y="415" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-verb" value="Verb?" style="rhombus;whiteSpace=wrap;html=1;fontSize=12;fillColor=#ffffff;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="235" y="540" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-set" value="&lt;b&gt;set&lt;/b&gt;&lt;br&gt;store.set(set, …) with &lt;i&gt;value&lt;/i&gt; if given, else the payload field at &lt;i&gt;from&lt;/i&gt;, else the whole payload.&lt;br&gt;A configuration path is refused." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="40" y="680" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-call" value="&lt;b&gt;call&lt;/b&gt;&lt;br&gt;actions.get(call).handler({ event, store, args: with ?? {}, signal })&lt;br&gt;An unknown action name throws." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="340" y="680" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-promise" value="Returned a Promise?" style="rhombus;whiteSpace=wrap;html=1;fontSize=12;fillColor=#ffffff;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="395" y="830" width="210" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-await" value="Await it: the next reaction starts when it resolves" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="680" y="845" width="290" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-fail" value="&lt;b&gt;Failure&lt;/b&gt; — a set or call that throws, or an action that rejects: logged with widget, event and cell, and the chain STOPS. Never thrown at the widget that emitted." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="680" y="680" width="290" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-examples-title" value="Timing, by example (the demo page)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="60" width="560" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-example-filters" value="&lt;b&gt;Dependent filters&lt;/b&gt; — Applications&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;on.changed: [&lt;br&gt;&amp;nbsp;&amp;nbsp;{ set: &quot;filters.applications&quot;, from: &quot;value&quot; },&lt;br&gt;&amp;nbsp;&amp;nbsp;{ call: &quot;filters/sync-suites&quot; }&lt;br&gt;]&lt;/font&gt;&lt;br&gt;Both are synchronous, so both writes land inside the same pick: Test suites re-renders with the new options, stale suites already dropped." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="100" width="560" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-example-paging" value="&lt;b&gt;Server paging&lt;/b&gt; — the paginator&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;on.changed: [&lt;br&gt;&amp;nbsp;&amp;nbsp;{ set: &quot;runs.page&quot;, from: &quot;page&quot; },&lt;br&gt;&amp;nbsp;&amp;nbsp;{ set: &quot;runs.pageSize&quot;, from: &quot;pageSize&quot; },&lt;br&gt;&amp;nbsp;&amp;nbsp;{ call: &quot;runs/load-page&quot; }&lt;br&gt;]&lt;/font&gt;&lt;br&gt;The two sets land at once (the pager moves); the action is async and awaited (about 600 ms) — a reaction after it would wait. Leaving the page during the load aborts its signal." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="290" width="560" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-example-input" value="&lt;b&gt;Controlled input&lt;/b&gt; — Your name&lt;br&gt;&lt;font face=&quot;monospace&quot;&gt;on.changed: [ { set: &quot;demo.name&quot;, from: &quot;value&quot; } ]&lt;/font&gt;&lt;br&gt;The write happens inside the keystroke&#39;s own handler, so the input shows the stored text immediately and the caret stays where the user typed." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="510" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-logic" value="&lt;b&gt;Where logic goes&lt;/b&gt;&lt;br&gt;Reactions never transform: &lt;i&gt;from&lt;/i&gt; selects a payload field, &lt;i&gt;value&lt;/i&gt; is a literal, &lt;i&gt;with&lt;/i&gt; is static. Anything that needs a computation — options that depend on another choice, a server request — is an ACTION with a name, written once in code." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;fontSize=12;fillColor=#ffffff;strokeColor=#999999;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="650" width="560" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-start" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-start" target="p2-next" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-any" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-next" target="p2-any" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-done" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-any" target="p2-done" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-bound" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-any" target="p2-bound" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-stopped" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-bound" target="p2-stopped" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-verb" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-bound" target="p2-verb" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-set" value="set" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-verb" target="p2-set" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p2-e-call" value="call" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-verb" target="p2-call" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="490" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p2-e-set-next" value="next, at once" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-set" target="p2-next" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="735" />
+              <mxPoint x="20" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p2-e-promise" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="p2-call" target="p2-promise" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-await" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-promise" target="p2-await" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-sync-next" value="no — next, at once (same tick)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-promise" target="p2-next" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="980" />
+              <mxPoint x="1010" y="980" />
+              <mxPoint x="1010" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p2-e-await-next" value="resolved — next" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-await" target="p2-next" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="885" />
+              <mxPoint x="1010" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p2-e-call-fail" value="throws" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="p2-call" target="p2-fail" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-e-await-fail" value="rejects" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="p2-await" target="p2-fail" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
