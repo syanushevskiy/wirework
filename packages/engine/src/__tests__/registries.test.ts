@@ -21,7 +21,7 @@ describe("shared registry guarantees", () => {
     registry.register(counter);
     registry.register(plain);
     expect(registry.get("counter")).toBe(counter);
-    expect(registry.types()).toEqual(["counter", "plain"]);
+    expect(registry.keys()).toEqual(["counter", "plain"]);
     expect(registry.list()).toHaveLength(2);
     expect(registry.get("nope")).toBeUndefined();
   });
@@ -120,7 +120,7 @@ describe("layout-engine registry", () => {
   it("requires a validator, every operation and a renderer", () => {
     const engines = createLayoutEngines();
     engines.register(listEngine);
-    expect(engines.names()).toEqual(["list"]);
+    expect(engines.keys()).toEqual(["list"]);
     expect(() => engines.register({ ...listEngine, name: "x", template: undefined as never })).toThrow(/template validator/);
     expect(() => engines.register({ ...listEngine, name: "y", appendCell: undefined as never })).toThrow(/"appendCell"/);
     expect(() => engines.register({ ...listEngine, name: "z", renderer: null })).toThrow(/renderer/);
@@ -132,7 +132,7 @@ describe("action registry", () => {
     const actions = createActions();
     actions.register({ name: "runs/load", handler: () => undefined });
     actions.register({ name: "reset-counter", handler: () => undefined });
-    expect(actions.names()).toEqual(["runs/load", "reset-counter"]);
+    expect(actions.keys()).toEqual(["runs/load", "reset-counter"]);
     expect(() => actions.register({ name: "a/b/c", handler: () => undefined })).toThrow(/not a valid identifier/);
     expect(() => actions.register({ name: "load", handler: undefined as never })).toThrow(/has no handler/);
   });
@@ -149,8 +149,19 @@ describe("contract registry", () => {
   it("registers a contract and lists its kind", () => {
     const contracts = createContracts();
     contracts.register(contract);
-    expect(contracts.kinds()).toEqual(["badge"]);
+    expect(contracts.keys()).toEqual(["badge"]);
     expect(contracts.get("badge")).toBe(contract);
+  });
+
+  it("holds a contract to the same declaration rules as a widget", () => {
+    const contracts = createContracts();
+    const badDefault = { value: { value: z.number().min(10), default: 5 } };
+    expect(() => contracts.register({ ...contract, kind: "d", io: { inputs: badDefault } })).toThrow(
+      /default its own validator rejects/,
+    );
+    expect(() => contracts.register({ ...contract, kind: "e", events: { "Not Kebab": { payload: z.string() } } })).toThrow(
+      /kebab-case/,
+    );
   });
 
   it("regression: rejects io or events that are null, not just missing", () => {

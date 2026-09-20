@@ -8,8 +8,7 @@
  *  - no operation mutates the template it was given (hosts REPLAY ops).
  * The registry checks that the operations exist; this checks what they do.
  * Returns the broken promises (empty = conformant), so every engine
- * package's unit tests run the same list (team-tiger review, Sasha: the
- * operations that write saved view models had no tests at all).
+ * package's unit tests run the same list.
  * `applyChange` payloads are engine-specific: each package tests its own.
  */
 import type { AnyLayoutEngine, CellBase, PageViewModel } from "@wirework/schema";

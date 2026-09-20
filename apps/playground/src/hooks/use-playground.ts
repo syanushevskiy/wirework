@@ -67,7 +67,7 @@ export function usePlayground() {
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
-    () => validateViewModels(registry, layoutEngines, viewModels, userViewModels, actions),
+    () => validateViewModels({ registry, layoutEngines, viewModels, userViewModels, actions }),
     [registry, layoutEngines, viewModels, userViewModels, actions],
   );
 
@@ -110,12 +110,12 @@ export function usePlayground() {
    */
   const builder = resolveTemplate(layoutEngines, viewModels.pages?.[BUILDER_PAGE]?.["default"]);
   const builderEngineLocked =
-    builder.problem !== undefined || builder.engine.cells(builder.template).length > 0;
+    builder.problem !== undefined || builder.cells.length > 0;
   const setBuilderEngine = useCallback(
     (name: string) => {
       const engine = layoutEngines.get(name);
       const current = resolveTemplate(layoutEngines, viewModels.pages?.[BUILDER_PAGE]?.["default"]);
-      if (!engine || current.problem !== undefined || current.engine.cells(current.template).length > 0) return;
+      if (!engine || current.problem !== undefined || current.cells.length > 0) return;
       editing.cancel();
       store.setConfig("viewModels", updatePageTemplate(viewModels, BUILDER_PAGE, "default", () => engine.empty()));
     },
@@ -148,7 +148,7 @@ export function usePlayground() {
       // No builder template to append to (removed via the inspector): write
       // nothing rather than a dangling widget template nobody references.
       if (builder.problem !== undefined) return;
-      const id = nextCustomId(prev, builder.engine.cells(builder.template).map((cell) => cell.id));
+      const id = nextCustomId(prev, builder.cells.map((cell) => cell.id));
       const template = {
         inputs: bindings.inputs,
         ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
@@ -180,7 +180,7 @@ export function usePlayground() {
     contracts,
     layoutEngines,
     actions,
-    engineNames: layoutEngines.names(),
+    engineNames: layoutEngines.keys(),
     builderEngineLocked,
     setBuilderEngine,
     store,

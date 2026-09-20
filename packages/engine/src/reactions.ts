@@ -5,11 +5,11 @@
  * `call` runs a host-registered action.
  *
  * ONE subscription per (cell, event), not per reaction: the reactions of an
- * event run in DECLARATION ORDER (team-tiger, Ren: order used to depend on
- * the bus iterating subscriptions in insertion order). Timing is explicit:
+ * event run in DECLARATION ORDER — a subscription per reaction would leave
+ * the order to how the bus happens to iterate. Timing is explicit:
  *  - synchronous reactions run synchronously, inside the emit — a
  *    controlled input's `set` must land in its change handler, or React
- *    restores the old text and the caret jumps (team-tiger review, Ren);
+ *    restores the old text and the caret jumps;
  *  - an async action is awaited before the next reaction starts, so
  *    `[ load, navigate ]` navigates after the load (doc/actions-design.md);
  *  - a failing reaction is logged and stops that event's chain; it never
@@ -20,17 +20,17 @@
  * Framework-agnostic: any adapter that renders a plan calls `bindReactions`
  * while the page is mounted.
  */
-import type {
-  EventBindings,
-  EventBus,
-  Reaction,
-  SetReaction,
-  Store,
-  Unsubscribe,
-  WidgetEvent,
+import {
+  getPath,
+  type EventBindings,
+  type EventBus,
+  type Reaction,
+  type SetReaction,
+  type Store,
+  type Unsubscribe,
+  type WidgetEvent,
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
-import { getPath } from "./paths";
 import type { ResolvedPage } from "./resolve";
 
 /** `value` literal wins, then the payload field at `from`, else the payload. */

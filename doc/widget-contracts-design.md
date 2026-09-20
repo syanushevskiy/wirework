@@ -49,7 +49,11 @@ card with its kind and searches by it.
 The widget registry, created with the contract registry
 (`createRegistry({ contracts })`), refuses a widget whose `kind` is not a
 registered contract, or whose ports or events differ from that contract's —
-so "implements button" is checked, not just a label.
+so "implements button" is checked, not just a label. Both registries hold
+their items to the same DECLARATION rules (a view-model validator, ports
+with a value validator and a default that passes it, kebab-case events with
+payload validators), so a broken contract is rejected when it registers,
+not when its first widget does.
 
 ## Standard kinds (`@wirework/widget-contracts`)
 

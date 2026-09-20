@@ -27,7 +27,7 @@ export function useWidgetBuilder(
   /** Registered widgets grouped by the contract kind they implement. */
   const widgetGroups = useMemo<WidgetGroup[]>(() => {
     const byKind = new Map<string, WidgetGroup["widgets"]>();
-    for (const type of registry.types()) {
+    for (const type of registry.keys()) {
       const definition = registry.get(type);
       if (!definition) continue;
       const kind = definition.kind ?? "other";

@@ -2,7 +2,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createEventBus } from "@wirework/events";
 import { createStore } from "@wirework/store";
-import { bindReactions, createActions, reactionValue, resolvePage, type ResolveInput } from "../index";
+import { bindReactions, createActions, resolvePage, type ResolveInput } from "../index";
+import { reactionValue } from "../reactions";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
 const emit = (bus: ReturnType<typeof createEventBus>, payload: unknown, cellId = "c1") =>

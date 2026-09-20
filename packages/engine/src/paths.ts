@@ -1,7 +1,7 @@
 /**
- * Path tooling for view-model trees and store autocomplete. Reading and
- * writing a path is @wirework/schema's (`getPath`, `setPath`, `deletePath`
- * — one rule set shared with the store); re-exported here for hosts.
+ * Path tooling on top of @wirework/schema's `getPath` / `setPath` /
+ * `deletePath` (the one rule set, shared with the store): path enumeration
+ * for autocomplete, and the overlay merge.
  */
 import {
   CONFIG_ROOTS,
@@ -10,8 +10,6 @@ import {
   type ReadableStore,
   type Validator,
 } from "@wirework/schema";
-
-export { deletePath, getPath, setPath } from "@wirework/schema";
 
 /**
  * Enumerate every dot path reachable in a state tree (branches AND leaves),

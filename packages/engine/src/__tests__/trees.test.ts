@@ -4,7 +4,6 @@ import type { UserViewModels, ViewModels } from "@wirework/schema";
 import {
   pageTemplates,
   removeUserCell,
-  removeWidgetModel,
   updatePageTemplate,
   updateUserCellSettings,
   updateUserPageTemplate,
@@ -66,7 +65,7 @@ describe("updateUserCellSettings / removeUserCell", () => {
   });
 });
 
-describe("updateWidgetTemplate / removeWidgetModel", () => {
+describe("updateWidgetTemplate", () => {
   it("regression: a template name with a dot is read AND written as one segment", () => {
     const next = updateWidgetTemplate(base, "widgets.demo.label", "v1.0", (current) => ({
       ...(current as object),
@@ -77,9 +76,5 @@ describe("updateWidgetTemplate / removeWidgetModel", () => {
       text: "edited",
       columns: [1],
     });
-  });
-
-  it("removes a whole template map", () => {
-    expect((removeWidgetModel(base, "widgets.demo.label").widgets["demo"] as object)).toEqual({});
   });
 });

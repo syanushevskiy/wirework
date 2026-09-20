@@ -42,8 +42,10 @@ The React adapter narrows the renderer slot (`ReactLayoutEngine`,
 
 The engine registry (`createLayoutEngines`) is as strict as the widget one.
 `resolveTemplate(engines, raw)` validates the core shape, finds the plugin,
-validates the template with it and runs the plugin's `validate` — shared by
-resolve, validation and editors, so they cannot disagree. A page whose
+validates the template with it, lists its `cells` (a plugin that throws
+there is a problem, not a crash) and runs the plugin's `validate` — shared
+by resolve, validation and editors, so they cannot disagree and no caller
+talks to a third-party plugin unguarded. A page whose
 engine is unknown or whose template the engine rejects renders a page
 problem; `validate` findings are errors at boot and WARNINGS on the render
 plan (`plan.warnings`, shown above the page). A renderer that throws is

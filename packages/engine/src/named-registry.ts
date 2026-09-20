@@ -1,8 +1,7 @@
 /**
  * ONE registry implementation behind all four extension points (widgets,
- * layout engines, actions, contracts). They were four hand-written copies
- * of the same twenty lines, with four error classes and five copies of the
- * name pattern (team-tiger: Alexei, Vlad, Katya).
+ * layout engines, actions, contracts): each is a `NamedRegistry` of its own
+ * item type, with one error class.
  *
  * Every registry is strict and LOUD: a unique, well-formed key plus the
  * invariants the extension point declares. Registration happens at boot,
@@ -72,7 +71,3 @@ export function createNamedRegistry<T>({
     list: () => [...items.values()],
   };
 }
-
-/** Shared invariant helper: a non-null object (arrays included) — not a plain-object check. */
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === "object";

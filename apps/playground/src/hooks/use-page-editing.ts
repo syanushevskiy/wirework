@@ -20,6 +20,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import {
+  deletePath,
   settingFields,
   type AnyLayoutEngine,
   type PageViewModel,
@@ -31,7 +32,6 @@ import {
 import {
   pageTemplates,
   removeUserCell,
-  removeWidgetModel,
   resolveTemplate,
   updatePageTemplate,
   updateUserCellSettings,
@@ -93,10 +93,7 @@ function isModelReferenced(
 ): boolean {
   return Object.values(pageTemplates(trees.viewModels, trees.userViewModels, page) ?? {}).some((raw) => {
     const resolution = resolveTemplate(layoutEngines, raw);
-    return (
-      resolution.problem === undefined &&
-      resolution.engine.cells(resolution.template).some((cell) => cell.model === model)
-    );
+    return resolution.problem === undefined && resolution.cells.some((cell) => cell.model === model);
   });
 }
 
@@ -231,8 +228,8 @@ export function usePageEditing({
           removed?.model.startsWith("widgets.custom.") &&
           !isModelReferenced(layoutEngines, next, page, removed.model)
         ) {
-          // A builder-owned template nobody references any more goes with it.
-          next = { ...next, viewModels: removeWidgetModel(next.viewModels, removed.model) };
+          // A builder-owned template map nobody references any more goes with it.
+          next = { ...next, viewModels: deletePath(next.viewModels, removed.model) };
         }
         return next;
       });

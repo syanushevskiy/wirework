@@ -7,28 +7,23 @@
  * plugins such as @wirework/engine-react-grid-layout. Data access goes
  * exclusively through the Store contract a host injects; events travel on
  * the EventBus a host injects.
+ *
+ * This is the PUBLIC surface: what hosts, adapters and plugins use. The
+ * engine's own building blocks (cell pipeline, template checks, path
+ * tooling) stay module-internal; its tests import them from their modules.
  */
-export { createRegistry, WidgetRegistrationError } from "./registry";
+export { RegistrationError } from "./named-registry";
+export type { NamedRegistry } from "./named-registry";
+export { createRegistry } from "./registry";
 export type { WidgetRegistry, WidgetRegistryOptions } from "./registry";
-export {
-  createLayoutEngines,
-  LayoutEngineRegistrationError,
-  resolveTemplate,
-} from "./layout-engines";
+export { createContracts } from "./contracts";
+export type { ContractRegistry } from "./contracts";
+export { createActions } from "./actions";
+export type { ActionRegistry } from "./actions";
+export { createLayoutEngines, resolveTemplate } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
 export { layoutEngineProblems } from "./layout-engine-checks";
-export {
-  checkOverlay,
-  checkTemplate,
-  contractProblems,
-  engineCells,
-  pickTemplate,
-  resolveCell,
-  resolvePage,
-  usableOverlay,
-} from "./resolve";
-export { errorText, issuesText } from "./messages";
-export { readableStore } from "./readable";
+export { resolvePage } from "./resolve";
 export type {
   CellProblem,
   FallbackNote,
@@ -41,21 +36,16 @@ export type {
   ResolveInput,
 } from "./resolve";
 export { validateViewModels } from "./validate";
-export type { ProblemSeverity, ValidationProblem, ValidationReport } from "./validate";
-export { createNamedRegistry, RegistrationError } from "./named-registry";
-export type { NamedRegistry, NamedRegistryOptions } from "./named-registry";
-export { collectPaths, compatibleStorePaths, deepMerge, deletePath, getPath, setPath } from "./paths";
+export type { ProblemSeverity, ValidateInput, ValidationProblem, ValidationReport } from "./validate";
 export { createEmitter, WidgetEventError } from "./emitter";
-export { createActions, ActionRegistrationError } from "./actions";
-export type { ActionRegistry } from "./actions";
-export { createContracts, ContractRegistrationError } from "./contracts";
-export type { ContractRegistry } from "./contracts";
-export { bindCellReactions, bindReactions, reactionValue } from "./reactions";
+export { readableStore } from "./readable";
+export { bindCellReactions, bindReactions } from "./reactions";
 export type { ReactionTarget } from "./reactions";
+export { compatibleStorePaths } from "./paths";
+export { errorText, issuesText } from "./messages";
 export {
   pageTemplates,
   removeUserCell,
-  removeWidgetModel,
   updatePageTemplate,
   updateUserCellSettings,
   updateUserPageTemplate,

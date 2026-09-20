@@ -1,7 +1,6 @@
 /**
  * How problems read — one place, so resolve, validation, registries and
- * hosts format caught errors and zod issues the same way (it was nine
- * inline copies; team-tiger review, Vlad and Katya).
+ * hosts format caught errors and zod issues the same way.
  */
 
 /** A caught value as message text. */

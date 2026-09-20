@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from "react";
 import type { AnyWidgetDefinition, WidgetPreviewSpec } from "@wirework/schema";
-import { createEmitter, readableStore } from "@wirework/engine";
+import { createEmitter, errorText, readableStore } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
 import { createStore } from "@wirework/store";
 
@@ -22,7 +22,7 @@ export function useWidgetPreview(definition: AnyWidgetDefinition, overrides?: Wi
     try {
       return { viewModel: definition.viewModel.parse(JSON.parse(templateKey)) };
     } catch (error) {
-      return { problem: error instanceof Error ? error.message : String(error) };
+      return { problem: errorText(error) };
     }
   }, [definition, templateKey]);
   const emit = useMemo(

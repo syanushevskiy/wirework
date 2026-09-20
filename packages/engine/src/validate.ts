@@ -1,30 +1,27 @@
 /**
- * Boot-time validation (team-tiger blocker): walk every page template — base
- * AND the user's own — validate each with its layout engine, then check
- * every cell.
+ * Boot-time validation: walk every page template — base AND the user's own
+ * — validate each with its layout engine, then check every cell.
  *
- * Cell checking is NOT re-implemented here: `resolveCell` is the single
- * pipeline and this pass maps its problems (team-tiger, Alexei — the two
- * used to disagree about a malformed overlay). What is added on top is what
+ * Cell checking is NOT re-implemented here: `resolveCells` is the single
+ * pipeline and this pass maps its problems. What is added on top is what
  * only a whole-tree walk can see: structural shape of both trees, EVERY
  * template a cell could pick (a user may select any of them later), user
  * views that do not exist, and overlay config nobody reads.
  *
  * Problems carry a SEVERITY: a fallback that engaged, or overlay config that
  * is simply dead, is a warning (the page renders as designed); an unknown
- * widget is an error. `ok` counts errors only (team-tiger, Dmitri).
+ * widget is an error. `ok` counts errors only.
  */
-import { getPath, isPlainObject, viewModelsSchema, type CellBase, type UserViewModels, type ViewModels } from "@wirework/schema";
-import type { ActionRegistry } from "./actions";
-import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
+import { viewModelsSchema, type CellBase } from "@wirework/schema";
+import { resolveTemplate } from "./layout-engines";
 import { issuesText } from "./messages";
 import type { WidgetRegistry } from "./registry";
 import {
   checkOverlay,
   checkTemplate,
-  engineCells,
   pickTemplate,
-  resolveCell,
+  resolveCells,
+  widgetTemplates,
   type CellProblem,
   type ResolveInput,
 } from "./resolve";
@@ -47,11 +44,16 @@ export interface ValidationReport {
   warnings: ValidationProblem[];
 }
 
+/** What `resolvePage` takes, minus the page: validation walks every page. */
+export type ValidateInput = Omit<ResolveInput, "page">;
+
+type Report = (location: string, message: string) => void;
+
 /** How a cell problem reads in a boot report. */
 function cellProblemMessage(problem: CellProblem, registry: WidgetRegistry): string {
   switch (problem.kind) {
     case "unknown-widget":
-      return `unknown widget "${problem.widget}" (registered: ${registry.types().join(", ") || "none"})`;
+      return `unknown widget "${problem.widget}" (registered: ${registry.keys().join(", ") || "none"})`;
     case "duplicate-cell-id":
       return `duplicate cell id "${problem.id}" — cell ids must be unique per page`;
     case "dangling-model-path":
@@ -65,18 +67,13 @@ function cellProblemMessage(problem: CellProblem, registry: WidgetRegistry): str
   }
 }
 
-export function validateViewModels(
-  registry: WidgetRegistry,
-  layoutEngines: LayoutEngineRegistry,
-  viewModels: ViewModels,
-  userViewModels?: UserViewModels,
-  actions?: ActionRegistry,
-): ValidationReport {
+export function validateViewModels(input: ValidateInput): ValidationReport {
+  const { viewModels, layoutEngines } = input;
   const problems: ValidationProblem[] = [];
-  const error = (location: string, message: string): void => {
+  const error: Report = (location, message) => {
     problems.push({ location, message, severity: "error" });
   };
-  const warn = (location: string, message: string): void => {
+  const warn: Report = (location, message) => {
     problems.push({ location, message, severity: "warning" });
   };
 
@@ -86,7 +83,7 @@ export function validateViewModels(
     error("viewModels", `invalid view models: ${issuesText(baseShape.error)}`);
     return report(problems);
   }
-  const { overlay, problem: overlayProblem } = checkOverlay(userViewModels);
+  const { overlay, problem: overlayProblem } = checkOverlay(input.userViewModels);
   if (overlayProblem !== undefined) error("userViewModels", `${overlayProblem} — the overlay is ignored entirely`);
 
   const pageNames = new Set([
@@ -112,21 +109,9 @@ export function validateViewModels(
         error(location, resolution.problem);
         continue;
       }
-      const { engine, template, warnings } = resolution;
       // At boot the engine's findings fail the check; at render they are warnings on the plan.
-      for (const message of warnings) error(location, message);
-
-      const listed = engineCells(engine, template);
-      if (listed.problem !== undefined) {
-        error(location, listed.problem);
-        continue;
-      }
-      validateCells(listed.cells, {
-        location,
-        input: { viewModels, userViewModels: overlay, page: pageName, registry, layoutEngines, actions },
-        error,
-        warn,
-      });
+      for (const message of resolution.warnings) error(location, message);
+      validateCells(resolution.cells, location, { ...input, userViewModels: overlay, page: pageName }, error, warn);
     }
 
     // User-selected page views must exist among base + user templates.
@@ -149,37 +134,32 @@ export function validateViewModels(
   return report(problems);
 }
 
-interface CellContext {
-  location: string;
-  input: ResolveInput;
-  error: (location: string, message: string) => void;
-  warn: (location: string, message: string) => void;
-}
-
 /** Every cell of one template, through the SAME pipeline the renderer uses. */
-function validateCells(cells: readonly CellBase[], { location, input, error, warn }: CellContext): void {
+function validateCells(
+  cells: readonly CellBase[],
+  location: string,
+  input: ResolveInput,
+  error: Report,
+  warn: Report,
+): void {
   const { page, registry, userViewModels: overlay } = input;
-  const seen = new Set<string>();
 
-  cells.forEach((cell, index) => {
-    const cellLocation = `${location} cell[${index}] (#${cell.id})`;
-    const repeated = seen.has(cell.id);
-    seen.add(cell.id);
-
-    const resolved = resolveCell(cell, input, repeated);
+  resolveCells(cells, input).forEach((resolved, index) => {
+    const cellLocation = `${location} cell[${index}] (#${resolved.key})`;
     if (resolved.problem) {
       error(cellLocation, cellProblemMessage(resolved.problem, registry));
     }
     if (resolved.fallback) {
       warn(
         cellLocation,
-        `template "${resolved.fallback.requested}" missing at "${cell.model}" — falling back to "${resolved.fallback.used}"`,
+        `template "${resolved.fallback.requested}" missing at "${resolved.model}" — falling back to "${resolved.fallback.used}"`,
       );
     }
 
-    const templateMap = widgetTemplates(input.viewModels, cell.model);
-    if (templateMap === undefined || resolved.definition === undefined || repeated) return;
-    const userWidget = overlay?.pages?.[page]?.cells?.[cell.id];
+    // A repeated id was reported above; its templates belong to the first cell.
+    const templateMap = widgetTemplates(input.viewModels, resolved.model);
+    if (!templateMap || !resolved.definition || resolved.problem?.kind === "duplicate-cell-id") return;
+    const userWidget = overlay?.pages?.[page]?.cells?.[resolved.key];
 
     // The templates this cell does not show today: a user may select any of them.
     for (const [name, template] of Object.entries(templateMap)) {
@@ -193,15 +173,10 @@ function validateCells(cells: readonly CellBase[], { location, input, error, war
     // User settings for templates that do not exist are dead config.
     for (const settingsKey of Object.keys(userWidget?.settings ?? {})) {
       if (!Object.hasOwn(templateMap, settingsKey)) {
-        warn(cellLocation, `user settings reference unknown template "${settingsKey}" at "${cell.model}"`);
+        warn(cellLocation, `user settings reference unknown template "${settingsKey}" at "${resolved.model}"`);
       }
     }
   });
-}
-
-function widgetTemplates(viewModels: ViewModels, model: string): Record<string, unknown> | undefined {
-  const templates = getPath(viewModels, model);
-  return isPlainObject(templates) ? templates : undefined;
 }
 
 function report(problems: ValidationProblem[]): ValidationReport {

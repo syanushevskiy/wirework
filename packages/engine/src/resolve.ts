@@ -10,13 +10,15 @@
  * the core) plus every cell resolved by id; the engine's renderer places
  * them (doc/layout-engines-design.md).
  *
- * Fallback chain per cell template (team-tiger QA requirement):
+ * Fallback chain per cell template:
  *   user-selected view -> cell's `template` -> "default" -> problem.
  * A fallback that engages is REPORTED on the resolved cell/page, never
  * silent — and so is a user overlay that had to be ignored, and the layout
  * engine's own validation warnings.
  */
 import {
+  getPath,
+  isPlainObject,
   userViewModelsSchema,
   validatorKeys,
   type AnyWidgetDefinition,
@@ -29,7 +31,7 @@ import {
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { errorText, issuesText } from "./messages";
-import { deepMerge, getPath } from "./paths";
+import { deepMerge } from "./paths";
 import type { WidgetRegistry } from "./registry";
 import { pageTemplates } from "./trees";
 
@@ -76,7 +78,7 @@ export interface ResolvedCellProblem extends ResolvedCellBase {
 
 /**
  * Discriminated on `problem`: `if (cell.problem)` narrows to the failed
- * case, and the healthy case needs no cast (team-tiger, Vlad).
+ * case, and the healthy case needs no cast.
  */
 export type ResolvedCell = ResolvedCellOk | ResolvedCellProblem;
 
@@ -112,7 +114,7 @@ export interface ResolveInput {
   viewModels: ViewModels;
   /**
    * The user overlay. `resolvePage` checks it once (`checkOverlay`); a
-   * direct `resolveCell` caller passes an already checked one.
+   * direct `resolveCells` caller passes an already checked one.
    */
   userViewModels?: UserViewModels;
   page: string;
@@ -120,21 +122,6 @@ export interface ResolveInput {
   layoutEngines: LayoutEngineRegistry;
   /** When given, reactions calling an unregistered action are a cell problem. */
   actions?: ActionRegistry;
-}
-
-/**
- * The cells of a template, or a problem when the engine plugin throws:
- * a third-party engine must not take the page down with a raw TypeError.
- */
-export function engineCells(
-  engine: { name: string; cells: (template: PageViewModel) => CellBase[] },
-  template: PageViewModel,
-): { cells: CellBase[]; problem?: undefined } | { cells?: undefined; problem: string } {
-  try {
-    return { cells: engine.cells(template) };
-  } catch (error) {
-    return { problem: `layout engine "${engine.name}" failed to list cells: ${errorText(error)}` };
-  }
 }
 
 /**
@@ -149,9 +136,13 @@ export function checkOverlay(
   return parsed.success ? { overlay: parsed.data } : { problem: `user view models ignored: ${issuesText(parsed.error)}` };
 }
 
-/** The user overlay, or undefined when it is structurally invalid. */
-export function usableOverlay(userViewModels: UserViewModels | undefined): UserViewModels | undefined {
-  return checkOverlay(userViewModels).overlay;
+/**
+ * The template map a cell's `model` path points at, or undefined when the
+ * path holds no plain object. ONE rule for render and boot validation.
+ */
+export function widgetTemplates(viewModels: ViewModels, model: string): Record<string, unknown> | undefined {
+  const templates = getPath(viewModels, model);
+  return isPlainObject(templates) ? templates : undefined;
 }
 
 /**
@@ -223,7 +214,7 @@ export function contractProblems(
   if (unreactedEvents.length > 0) parts.push(`required events without a reaction: ${unreactedEvents.join(", ")}`);
   if (unknownActions.length > 0) {
     parts.push(
-      `reactions call unknown actions: ${unknownActions.join(", ")} (registered: ${actions?.names().join(", ") || "none"})`,
+      `reactions call unknown actions: ${unknownActions.join(", ")} (registered: ${actions?.keys().join(", ") || "none"})`,
     );
   }
   if (unknownFields.length > 0) parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
@@ -254,10 +245,8 @@ export function checkTemplate(
 /**
  * One cell of a page: registry lookup, template selection (with the user's
  * overlay), validation by the widget's own schema and the contract check.
- * The SINGLE cell pipeline — boot validation maps its problems rather than
- * repeating it (team-tiger, Alexei).
  */
-export function resolveCell(cell: CellBase, input: ResolveInput, duplicate = false): ResolvedCell {
+function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): ResolvedCell {
   const { viewModels, userViewModels, page, registry, actions } = input;
   const base = { key: cell.id, widget: cell.widget, model: cell.model } as const;
 
@@ -269,11 +258,10 @@ export function resolveCell(cell: CellBase, input: ResolveInput, duplicate = fal
     return { ...base, definition, problem: { kind: "duplicate-cell-id", id: cell.id } };
   }
 
-  const templates = getPath(viewModels, cell.model);
-  if (templates === null || typeof templates !== "object") {
+  const templateMap = widgetTemplates(viewModels, cell.model);
+  if (!templateMap) {
     return { ...base, definition, problem: { kind: "dangling-model-path", path: cell.model } };
   }
-  const templateMap = templates as Record<string, unknown>;
 
   // Per-CELL customisation (two cells of one widget type stay independent).
   const userWidget = userViewModels?.pages?.[page]?.cells?.[cell.id];
@@ -298,11 +286,25 @@ export function resolveCell(cell: CellBase, input: ResolveInput, duplicate = fal
   return { ...base, definition, template: picked.name, fallback: picked.fallback, viewModel: checked.viewModel };
 }
 
+/**
+ * Every cell of one template, in order — the SINGLE cell pipeline: the
+ * renderer uses the result, boot validation maps its problems. The first
+ * cell of a repeated id resolves; the later ones are `duplicate-cell-id`
+ * problems, so one emit can never fire another cell's reactions.
+ */
+export function resolveCells(cells: readonly CellBase[], input: ResolveInput): ResolvedCell[] {
+  const seen = new Set<string>();
+  return cells.map((cell) => {
+    const repeated = seen.has(cell.id);
+    seen.add(cell.id);
+    return resolveCell(cell, input, repeated);
+  });
+}
+
 export function resolvePage(input: ResolveInput): ResolvedPage {
   const { viewModels, page, layoutEngines } = input;
-  // Checked ONCE per page (it used to be re-parsed for every cell). A
-  // broken overlay is ignored here exactly as boot validation ignores it —
-  // and the plan says so.
+  // Checked once per page. A broken overlay is ignored here exactly as boot
+  // validation ignores it — and the plan says so.
   const { overlay: userViewModels, problem: overlayProblem } = checkOverlay(input.userViewModels);
   const notes = overlayProblem === undefined ? {} : { overlayProblem };
 
@@ -319,34 +321,23 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
     return { page, view, problem: `Page "${page}" has no template "${view}"`, ...notes };
   }
 
-  const failed = (problem: string): ResolvedPageProblem => ({
-    page,
-    view: picked.name,
-    problem: `Page "${page}" template "${picked.name}": ${problem}`,
-    ...notes,
-  });
   const resolution = resolveTemplate(layoutEngines, templates[picked.name]);
-  if (resolution.problem !== undefined) return failed(resolution.problem);
-  const { engine, template, warnings } = resolution;
-  const listed = engineCells(engine, template);
-  if (listed.problem !== undefined) return failed(listed.problem);
-
-  // First cell of a repeated id renders; the later ones are problems, so
-  // one emit can never fire another cell's reactions.
-  const seen = new Set<string>();
-  const cellInput = { ...input, userViewModels };
+  if (resolution.problem !== undefined) {
+    return {
+      page,
+      view: picked.name,
+      problem: `Page "${page}" template "${picked.name}": ${resolution.problem}`,
+      ...notes,
+    };
+  }
   return {
     page,
     view: picked.name,
     fallback: picked.fallback,
     ...notes,
-    engine: engine.name,
-    template,
-    warnings,
-    cells: listed.cells.map((cell) => {
-      const repeated = seen.has(cell.id);
-      seen.add(cell.id);
-      return resolveCell(cell, cellInput, repeated);
-    }),
+    engine: resolution.engine.name,
+    template: resolution.template,
+    warnings: resolution.warnings,
+    cells: resolveCells(resolution.cells, { ...input, userViewModels }),
   };
 }

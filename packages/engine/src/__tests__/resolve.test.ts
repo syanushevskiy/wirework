@@ -3,7 +3,8 @@
  * invariants that used to hold only by convention.
  */
 import { describe, expect, it } from "vitest";
-import { createActions, pickTemplate, resolvePage, type ResolveInput } from "../index";
+import { createActions, resolvePage, type ResolveInput } from "../index";
+import { pickTemplate } from "../resolve";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
 const templates = { counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] } } } };
@@ -69,6 +70,12 @@ describe("resolvePage", () => {
     expect(kinds({ viewModels: page([cell()], { counter: { default: { inputs: { value: "demo.n" } } } }) })).toEqual([
       "unmet-contract",
     ]);
+  });
+
+  it("a model path holding anything but a plain object is dangling — the same rule as boot validation", () => {
+    const resolved = plan({ viewModels: page([cell()], { counter: [templates.counter.default] }) });
+    if (resolved.problem !== undefined) throw new Error("expected a plan");
+    expect(resolved.cells[0]?.problem?.kind).toBe("dangling-model-path");
   });
 
   it("regression: a repeated cell id is a problem, not a second live cell", () => {

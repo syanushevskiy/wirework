@@ -1,11 +1,10 @@
 /**
- * View-model tree surgery shared by resolve, validation, builders and
- * editors. Nothing here knows any layout engine: templates are opaque
- * values, engines change them (doc/layout-engines-design.md).
+ * View-model tree surgery shared by resolve, builders and editors. Nothing
+ * here knows any layout engine: templates are opaque values, engines change
+ * them (doc/layout-engines-design.md).
  * Every function is pure and returns a NEW tree.
  */
-import type { PageViewModel, UserViewModels, ViewModels } from "@wirework/schema";
-import { deletePath, getPath, setPath } from "./paths";
+import { getPath, setPath, type PageViewModel, type UserViewModels, type ViewModels } from "@wirework/schema";
 
 /**
  * Page templates as the user sees them: base templates with the user's own
@@ -44,8 +43,7 @@ export function updatePageTemplate(
  * `name` as the page view. The edit applies to what the user SEES: the
  * user's template while it is the selected view (an earlier edit of the
  * session may have just created it), otherwise a fresh copy of `shown` —
- * never placements merged into an own template that is not on screen
- * (team-tiger review, Alexei).
+ * never placements merged into an own template that is not on screen.
  */
 export function updateUserPageTemplate(
   userViewModels: UserViewModels,
@@ -104,16 +102,11 @@ export function removeUserCell(userViewModels: UserViewModels, page: string, cel
   return { ...userViewModels, pages: { ...userViewModels.pages, [page]: { ...userPage, cells } } };
 }
 
-/** Drop a whole widget template map (`model` dot path) from the BASE tree. */
-export function removeWidgetModel(viewModels: ViewModels, model: string): ViewModels {
-  return deletePath(viewModels, model);
-}
-
 /**
  * Replace one widget template (`model` dot path + template name) in the
  * BASE tree. The template name is passed as its OWN segment: a name
- * containing a dot must not be split into a nested branch (that silently
- * lost the edit — team-tiger, Katya).
+ * containing a dot must not be split into a nested branch, which would
+ * silently lose the edit.
  */
 export function updateWidgetTemplate(
   viewModels: ViewModels,

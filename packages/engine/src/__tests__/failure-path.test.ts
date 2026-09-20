@@ -95,8 +95,8 @@ describe("failurePathViewModels", () => {
   });
 
   it("boot validation reports every broken cell, with the fallback as a warning", () => {
-    const { registry, layoutEngines, actions } = input();
-    const report = validateViewModels(registry, layoutEngines, failurePathViewModels, undefined, actions);
+    // The same input the renderer gets (its `page` is simply not read).
+    const report = validateViewModels(input());
     expect(report.ok).toBe(false);
     const cells = (severity: "error" | "warning") =>
       report.problems.filter((problem) => problem.severity === severity).map((problem) => /#([\w-]+)/.exec(problem.location)?.[1]);

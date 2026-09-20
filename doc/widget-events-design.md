@@ -118,7 +118,7 @@ works too (payload `unknown`); an empty filter matches everything.
 
 - **Registration**: a definition without an `events` object, with a
   non-kebab-case event name, or with an event lacking a payload validator
-  is rejected (`WidgetRegistrationError`).
+  is rejected (`RegistrationError`, the one error class of every registry).
 - **Emit**: undeclared name / invalid payload throw `WidgetEventError`.
 - **Boot and resolve** (the same `contractProblems`): reacting to an
   undeclared event fails the widget's own schema; a required event without

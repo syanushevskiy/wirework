@@ -13,6 +13,7 @@ import type {
   EventSource,
   WidgetEvents,
 } from "@wirework/schema";
+import { errorText } from "./messages";
 
 export class WidgetEventError extends Error {
   constructor(
@@ -49,7 +50,7 @@ export function createEmitter(
       valid = declared.payload.parse(payload);
     } catch (error) {
       throw new WidgetEventError(
-        `Widget "${widget}" event "${name}" payload rejected: ${error instanceof Error ? error.message : String(error)}`,
+        `Widget "${widget}" event "${name}" payload rejected: ${errorText(error)}`,
         widget,
         name,
       );

@@ -8,7 +8,13 @@ const registry = () => registryWith(counter, plain);
 const engines = () => enginesWith(listEngine);
 
 const check = (viewModels: unknown, userViewModels?: unknown, actions = createActions()): ValidationReport =>
-  validateViewModels(registry(), engines(), viewModels as never, userViewModels as never, actions);
+  validateViewModels({
+    registry: registry(),
+    layoutEngines: engines(),
+    viewModels: viewModels as never,
+    userViewModels: userViewModels as never,
+    actions,
+  });
 
 const messages = (report: ValidationReport, severity: "error" | "warning") =>
   report.problems.filter((problem) => problem.severity === severity).map((problem) => problem.message);

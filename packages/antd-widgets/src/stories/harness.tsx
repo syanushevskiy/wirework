@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { action } from "storybook/actions";
 import type { AnyWidgetDefinition, WidgetProps } from "@wirework/schema";
 import { settingFields } from "@wirework/schema";
-import { bindCellReactions, createEmitter, readableStore } from "@wirework/engine";
+import { bindCellReactions, createEmitter, errorText, readableStore } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
 import { useStoreSnapshot, WidgetErrorBoundary } from "@wirework/react";
 import { createStore } from "@wirework/store";
@@ -50,7 +50,7 @@ export function WidgetStory({ definition, viewModel, seed = {} }: WidgetStoryPro
     try {
       return { viewModel: definition.viewModel.parse(viewModel) as unknown };
     } catch (error) {
-      return { problem: error instanceof Error ? error.message : String(error) };
+      return { problem: errorText(error) };
     }
   }, [definition, viewModel]);
 
