@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@wirework/schema": "workspace:*"
+    "@wirework/schema": "workspace:*",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@wirework/schema": "workspace:*",

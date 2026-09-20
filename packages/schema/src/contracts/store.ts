@@ -29,10 +29,12 @@ export interface ReadableStore {
   getAs<T>(path: string, validator: Validator<T>): T | undefined;
 
   /**
-   * Listen for changes affecting `path` (the path itself, an ancestor, or a
-   * descendant). The empty path "" subscribes to the ROOT — every change.
-   * The listener signature is compatible with React's `useSyncExternalStore`
-   * subscribe contract.
+   * Listen for changes of the value at `path` — caused by a write to the
+   * path itself, to a descendant, or to an ancestor. The empty path ""
+   * subscribes to the ROOT — every change. A store must never miss a
+   * change; it MAY call the listener when the value turned out the same
+   * (the default store does not). The listener signature is compatible
+   * with React's `useSyncExternalStore` subscribe contract.
    */
   subscribe(path: string, listener: () => void): Unsubscribe;
 
@@ -47,7 +49,7 @@ export interface ReadableStore {
 export interface Store extends ReadableStore {
   /**
    * Replace the value at a DATA path (immutable update along the path).
-   * Subscribers of the path, its ancestors and its descendants are notified.
+   * Subscribers whose value it changes are notified (see `subscribe`).
    * Refuses configuration paths (`viewModels`, `userViewModels`): a page
    * must not be able to rewrite its own description through a reaction.
    */
@@ -60,8 +62,8 @@ export interface Store extends ReadableStore {
   setConfig(path: string, value: unknown): void;
 
   /**
-   * Replace the ENTIRE state tree (state inspectors / imports). Notifies
-   * every subscriber.
+   * Replace the ENTIRE state tree (state inspectors / imports). Subscribers
+   * whose value changed are notified, as for any other write.
    */
   replace(next: Record<string, unknown>): void;
 }

@@ -1,32 +1,38 @@
 /**
- * @wirework/store — default implementation of the Store contract.
+ * @wirework/store — default implementation of the Store contract, on Zustand.
  *
- * A path-addressed state tree with immutable updates and subscription
- * semantics compatible with React's `useSyncExternalStore`:
- *  - `get` returns referentially stable values while a subtree is unchanged,
- *  - `set` replaces containers only along the written path; the path rules
+ * Zustand's vanilla store (no React) holds the state tree and the listener
+ * set. This file adds what Wirework's configuration model needs on top:
+ *  - PATH addressing: `get` / `set` take the dot paths the view models name.
+ *    `set` replaces containers only along the written path; the path rules
  *    (own properties, canonical array indices, which container a missing
  *    step becomes, what throws) are @wirework/schema's `setPath`, shared
  *    with the engine so the two can never disagree,
- *  - subscribers are notified when the written path is the subscribed path,
- *    one of its ancestors, or one of its descendants.
+ *  - PATH subscriptions: a subscriber is called when the value AT ITS PATH
+ *    changed identity. Because updates are immutable along the written
+ *    path, that is a write to the path itself, to a descendant, or to an
+ *    ancestor that changes what the path holds — and nothing else. It is
+ *    the contract React's `useSyncExternalStore` expects,
+ *  - the configuration guard: `set` writes DATA; the configuration trees
+ *    (`viewModels`, `userViewModels`) are writable only through `setConfig`,
+ *    so a reaction can never rewrite the page that declares it.
  *
- * `set` writes DATA; the configuration trees (`viewModels`,
- * `userViewModels`) are writable only through `setConfig`, so a reaction
- * can never rewrite the page that declares it (team-tiger blocker).
+ * Notifications are derived from the STATE, never from which method wrote
+ * it — so a state that changes underneath (devtools time travel, `persist`
+ * rehydration) reaches the same subscribers. `fromZustand` is that seam: a
+ * host builds the Zustand store with the middleware it wants and wraps it.
  *
  * NOTE: values returned by `get` are live references by convention — callers
  * must treat them as immutable. In-place mutation bypasses change detection.
  */
+import { createStore as createZustandStore, type StoreApi } from "zustand/vanilla";
 import type { Store, Unsubscribe, Validator } from "@wirework/schema";
 import { checkedSegments, getPath, isConfigPath, setPath } from "@wirework/schema";
 
 type StateObject = Record<string, unknown>;
 
-interface Subscription {
-  path: string;
-  listener: () => void;
-}
+/** A Zustand store holding the state tree — plain, or wrapped in middleware. */
+export type StateApi = Pick<StoreApi<StateObject>, "getState" | "setState" | "subscribe">;
 
 /** Store paths are dot strings with no empty or prototype segment. */
 function splitPath(path: string): string[] {
@@ -36,47 +42,22 @@ function splitPath(path: string): string[] {
   return checkedSegments(path);
 }
 
-/** True when `a` equals `b`, or one is a dot-path prefix of the other.
- *  The empty subscribed path is the root — affected by every change. */
-function pathsAffect(changed: string, subscribed: string): boolean {
-  if (subscribed === "" || changed === subscribed) return true;
-  return (
-    changed.startsWith(subscribed + ".") || subscribed.startsWith(changed + ".")
-  );
-}
-
-export function createStore(initial: StateObject = {}): Store {
-  let state: StateObject = { ...initial };
-  const subscriptions = new Set<Subscription>();
-
-  const notify = (changed: string): void => {
-    // Snapshot the set: a listener may unsubscribe/subscribe during notify;
-    // one throwing listener must not starve the rest.
-    for (const sub of [...subscriptions]) {
-      if (!pathsAffect(changed, sub.path)) continue;
-      try {
-        sub.listener();
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error(`Store listener for "${sub.path}" threw:`, error);
-      }
-    }
-  };
-
+/** The Store contract over a Zustand store the caller created. */
+export function fromZustand(api: StateApi): Store {
   const write = (path: string, value: unknown): void => {
     const segments = splitPath(path);
+    const state = api.getState();
     if (Object.is(getPath(state, segments), value)) return;
-    state = setPath(state, segments, value);
-    notify(path);
+    api.setState(setPath(state, segments, value), true);
   };
 
   return {
     get<T>(path: string): T | undefined {
-      return getPath(state, splitPath(path)) as T | undefined;
+      return getPath(api.getState(), splitPath(path)) as T | undefined;
     },
 
     getAs<T>(path: string, validator: Validator<T>): T | undefined {
-      const value = getPath(state, splitPath(path));
+      const value = getPath(api.getState(), splitPath(path));
       if (value === undefined) return undefined;
       try {
         return validator.parse(value);
@@ -100,26 +81,36 @@ export function createStore(initial: StateObject = {}): Store {
 
     subscribe(path: string, listener: () => void): Unsubscribe {
       // "" subscribes to the root; any other path must be valid.
-      if (path !== "") splitPath(path);
-      const sub: Subscription = { path, listener };
-      subscriptions.add(sub);
-      return () => subscriptions.delete(sub);
+      const segments = path === "" ? [] : splitPath(path);
+      // Read the CURRENT state, not the one Zustand hands the listener: a
+      // listener that writes re-enters the notification, and the outer round
+      // must not announce the same change a second time.
+      const read = (): unknown => getPath(api.getState(), segments);
+      let seen = read();
+      return api.subscribe(() => {
+        const next = read();
+        if (Object.is(next, seen)) return;
+        seen = next;
+        // Zustand stops at the first throwing listener; one must not starve the rest.
+        try {
+          listener();
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`Store listener for "${path}" threw:`, error);
+        }
+      });
     },
 
     snapshot(): Record<string, unknown> {
-      return state;
+      return api.getState();
     },
 
     replace(next: Record<string, unknown>): void {
-      state = { ...next };
-      for (const sub of [...subscriptions]) {
-        try {
-          sub.listener();
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error(`Store listener for "${sub.path}" threw:`, error);
-        }
-      }
+      api.setState({ ...next }, true);
     },
   };
+}
+
+export function createStore(initial: StateObject = {}): Store {
+  return fromZustand(createZustandStore<StateObject>()(() => ({ ...initial })));
 }

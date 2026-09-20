@@ -4,7 +4,9 @@
  * Every "regression" case below is a bug this suite was written to catch.
  */
 import { describe, expect, it, vi } from "vitest";
-import { createStore } from "../index";
+import { createStore as createZustandStore } from "zustand/vanilla";
+import { subscribeWithSelector } from "zustand/middleware";
+import { createStore, fromZustand } from "../index";
 import { z } from "zod";
 
 describe("get", () => {
@@ -159,16 +161,79 @@ describe("subscribe", () => {
     expect(() => store.set("a", 2)).not.toThrow();
     expect(second).toHaveBeenCalledOnce();
   });
+
+  it("stays quiet when a rewritten ancestor holds the same value at the path", () => {
+    const store = createStore({ a: { b: { c: 1 } } });
+    const ancestor = vi.fn();
+    const descendant = vi.fn();
+    store.subscribe("a.b", ancestor);
+    store.subscribe("a.b.c", descendant);
+    store.set("a.b", { c: 1 });
+    expect(ancestor).toHaveBeenCalledOnce();
+    expect(descendant).not.toHaveBeenCalled();
+  });
+
+  it("announces a change once when a listener writes during notification", () => {
+    const store = createStore({ a: 1, b: 0 });
+    const onB = vi.fn();
+    store.subscribe("a", () => store.set("b", 1));
+    store.subscribe("b", onB);
+    store.set("a", 2);
+    expect(store.get("b")).toBe(1);
+    expect(onB).toHaveBeenCalledOnce();
+  });
 });
 
 describe("replace", () => {
-  it("swaps the whole tree and notifies everyone", () => {
-    const store = createStore({ a: 1 });
-    const listener = vi.fn();
-    store.subscribe("somewhere.else", listener);
-    store.replace({ b: 2 });
+  it("swaps the whole tree and notifies the subscribers whose value changed", () => {
+    const store = createStore({ a: 1, kept: 5 });
+    const root = vi.fn();
+    const gone = vi.fn();
+    const arrived = vi.fn();
+    const kept = vi.fn();
+    store.subscribe("", root);
+    store.subscribe("a", gone);
+    store.subscribe("b", arrived);
+    store.subscribe("kept", kept);
+    store.replace({ b: 2, kept: 5 });
     expect(store.get("a")).toBeUndefined();
     expect(store.get("b")).toBe(2);
-    expect(listener).toHaveBeenCalledOnce();
+    expect(root).toHaveBeenCalledOnce();
+    expect(gone).toHaveBeenCalledOnce();
+    expect(arrived).toHaveBeenCalledOnce();
+    expect(kept).not.toHaveBeenCalled();
+  });
+});
+
+describe("fromZustand", () => {
+  it("writes into the Zustand store the host created", () => {
+    const api = createZustandStore<Record<string, unknown>>()(() => ({ a: { b: 1 } }));
+    const store = fromZustand(api);
+    store.set("a.b", 2);
+    expect(api.getState()).toEqual({ a: { b: 2 } });
+    expect(store.snapshot()).toBe(api.getState());
+  });
+
+  it("hears a state changed underneath it (time travel, rehydration)", () => {
+    const api = createZustandStore<Record<string, unknown>>()(() => ({ a: { b: 1 }, other: 1 }));
+    const store = fromZustand(api);
+    const changed = vi.fn();
+    const untouched = vi.fn();
+    store.subscribe("a.b", changed);
+    store.subscribe("other", untouched);
+    api.setState({ a: { b: 2 }, other: 1 }, true);
+    expect(store.get("a.b")).toBe(2);
+    expect(changed).toHaveBeenCalledOnce();
+    expect(untouched).not.toHaveBeenCalled();
+  });
+
+  it("works through middleware", () => {
+    const api = createZustandStore<Record<string, unknown>>()(subscribeWithSelector<Record<string, unknown>>(() => ({ n: 1 })));
+    const store = fromZustand(api);
+    const selected = vi.fn();
+    api.subscribe((state) => state["n"], selected);
+    store.set("n", 2);
+    expect(selected).toHaveBeenCalledWith(2, 1);
+    expect(() => store.set("viewModels.pages", {})).toThrow(/setConfig/);
   });
 });
