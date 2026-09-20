@@ -8,7 +8,11 @@ same every N seconds. The author should configure where the table fetches
 from (URL, how to fetch) and which table a refresher refreshes, without a
 developer writing code per table.
 
-Today the demo does it with code: the table reads its rows from `runs.data`, and the
+Today the demo does it with code: the demo page's store starts WITHOUT any
+runs, and opening the page makes the first request (host code, the manual
+precursor of "loading on open" below), so the state inspector shows
+`runs.loading` first and the rows only when the fake server answers.
+The table reads its rows from `runs.data`, and the
 refresher and the pagination `call: "runs/load-page"`, a host action that
 knows the URL. It works, but every new table costs a developer an action,
 and the URL lives in code, not in the page.
@@ -270,5 +274,5 @@ is mounted.
 | 1 | `viewModels.sources` schema, `http-json` kind, adapter registry, runner (latest-wins, abort, status), `source/refresh`, on-open loading in `PageView`, boot validation; needs actions phase 1 (`params`) for `with.source` | 2 days |
 | 2 | Demo migration: `/api/runs` Vite middleware over the fake server, demo on `sources.runs`, `runs/load-page` removed, error and clock-driven scenarios | 1 day |
 | 3 | Builder: "Fetch from URL…" on data ports, source select for `source/refresh` | 1.5 days |
-| 4 | Refresher `updatedAt` port ("Updated 12:03:05"), table `error` port, per-user schedule persisted in the overlay | 1 day |
+| 4 | Refresher `updatedAt` port ("Updated 12:03:05"), table `error` port, per-user schedule remembered as persisted DATA — never in the overlay, which carries settings only (doc/builder-user-needs.md, W31) | 1 day |
 | later | `refetchOn` (Ren's monitored risk), parallel multi-source refresh, websocket kind | — |
