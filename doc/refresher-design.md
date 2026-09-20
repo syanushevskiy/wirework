@@ -8,7 +8,7 @@ same every N seconds. The author should configure where the table fetches
 from (URL, how to fetch) and which table a refresher refreshes, without a
 developer writing code per table.
 
-Today the demo does it with code: the runs table reads `runs.data`, and the
+Today the demo does it with code: the table reads its rows from `runs.data`, and the
 refresher and the pagination `call: "runs/load-page"`, a host action that
 knows the URL. It works, but every new table costs a developer an action,
 and the URL lives in code, not in the page.
@@ -112,7 +112,7 @@ data shaping, plain statements for the concurrency control.
 ## Decision
 
 1. **The table never fetches.** It still binds store paths. "The table has
-   a URL" means its `data` port is bound to a named DATA SOURCE that holds
+   a URL" means its `rows` port is bound to a named DATA SOURCE that holds
    the URL and fetch details, and the builder creates that source when the
    author sets a URL on the port (Alexei, Ren, Katya).
 2. **Sources are named and live in the base view models**
@@ -165,7 +165,7 @@ sources: {
       auth: "api",                                     // optional, host-registered
       timeoutMs: 10000,
     },
-    adapter: "runs-page",   // optional: body -> { items: RunsData, total, page }
+    adapter: "runs-page",   // optional: body -> { items: Run[], total, page }
     load: "on-open",        // default; "manual" = only source/refresh
   },
 },
@@ -176,7 +176,7 @@ The demo page, after migration:
 ```ts
 table: {
   default: {
-    inputs: { data: "sources.runs.data.items", loading: "sources.runs.status.loading" },
+    inputs: { rows: "sources.runs.data.items", loading: "sources.runs.status.loading" },
     columns: [/* … */],
   },
 },
@@ -210,7 +210,7 @@ const sourceKinds = createSourceKinds();
 sourceKinds.register(httpJsonSource({ allowedOrigins: [location.origin], auth: { api: bearerFromSession } }));
 
 const adapters = createAdapters();
-adapters.register({ name: "runs-page", description: "API page -> RunsData + total", adapt: toRunsPage });
+adapters.register({ name: "runs-page", description: "API page -> rows + total", adapt: toRunsPage });
 
 const runner = createSourceRunner({ store, kinds: sourceKinds, adapters });
 for (const action of createSourceActions(runner)) actions.register(action);   // source/refresh
@@ -221,7 +221,7 @@ is mounted.
 
 ## How an author wires it (builder)
 
-1. Add a runs table. On its `data` port choose **Fetch from URL…**, then
+1. Add a table. On its `rows` port choose **Fetch from URL…**, then
    fill in the URL, method, query parameters (each a store path or a
    literal), an adapter from a list, and the load policy. The builder writes
    `sources.<cell-id>` (renamable) and binds `data` (and `loading`, when

@@ -3,7 +3,7 @@
  * port's own validator: an unbound port, an empty path or a value the
  * validator rejects all give the port's declared default. One hook instead
  * of a hand-written "read, check, fall back" per widget (team-tiger review:
- * seven copies, and the one without a check crashed the runs table on a
+ * seven copies, and the one without a check crashed the table on a
  * malformed value from the inspector).
  *
  * Widgets that deliberately SHOW a malformed value (an echo, a text input

@@ -70,6 +70,26 @@ so "implements button" is checked, not just a label.
   `refresh { trigger }`; implementations tick only while enabled and skip a
   tick while busy or hidden (doc/refresher-design.md).
 
+The basics every UI library has, chosen and ordered in
+doc/widget-catalog.md:
+
+- `select` — controlled: `value` port (default "" = nothing chosen),
+  optional `options` port falling back to the `options` setting, required
+  `changed { value }`; a combobox named by `label`, clearing emits "".
+- `multi-select` — like `select` with a string-array `value` (default []),
+  required `changed { value }` carrying every chosen value; a chosen value
+  no longer on offer is shown as it is (pruning it is the job of whoever
+  changed the options — see the demo's dependent filters,
+  doc/widget-catalog.md).
+- `tag` — optional `text` port, `text` + `tone` settings (`default`, `info`,
+  `success`, `warning`, `danger`); an empty bound value shows the static text.
+- `checkbox` — controlled: `checked` port (default false), required
+  `changed { checked }`; role=checkbox named by `label`.
+- `progress` — `percent` port shown clamped to 0–100, `label`, `tone`,
+  `showValue`; role=progressbar named by `label`.
+- `alert` — optional `title` port, `title` / `description` / `tone`
+  (`info`, `success`, `warning`, `danger`) / `showIcon`; role=alert.
+
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and
 checked by conformance stories.
@@ -99,6 +119,6 @@ contracts.
 
 ## Not contracts
 
-`echo`, `counter`, `crash` and the runs table are demo/domain widgets; they
+`echo`, `counter` and `crash` are demo/test widgets; they
 stay plain `defineWidget` definitions. A kind is extracted when a second
 implementation or a concrete consumer needs it (Ren's rule).

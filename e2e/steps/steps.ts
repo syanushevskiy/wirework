@@ -223,22 +223,27 @@ When("I click the counter {int} time(s)", async ({ page }, times: number) => {
   }
 });
 
-Then("the runs table has {int} row(s)", async ({ page }, count: number) => {
-  await expect(live(page).getByTestId("runs-row")).toHaveCount(count);
+/** A table row on the live page, found by its row key (the rowKey property's value). */
+const tableRow = (page: Page, key: string) =>
+  live(page).locator(`[data-testid="table-row"][data-row-key="${key}"]`);
+
+Then("the table has {int} row(s)", async ({ page }, count: number) => {
+  await expect(live(page).getByTestId("table-row")).toHaveCount(count);
 });
 
 Then(
-  "the runs table row {string} shows {string} for {string}",
-  async ({ page }, runId: string, value: string, property: string) => {
-    const cell = page
-      .locator(`[data-testid="page"] [data-testid="runs-row"][data-run-id="${runId}"]`)
-      .locator(`td[data-property="${property}"]`);
-    await expect(cell).toHaveText(value);
+  "the table row {string} shows {string} for {string}",
+  async ({ page }, key: string, value: string, property: string) => {
+    await expect(tableRow(page, key).locator(`td[data-property="${property}"]`)).toHaveText(value);
   },
 );
 
-Then("the runs table is not loading", async ({ page }) => {
-  await expect(live(page).getByTestId("antd-runs-table")).toHaveAttribute("data-loading", "false");
+Then("the table is not loading", async ({ page }) => {
+  await expect(live(page).getByTestId("antd-table")).toHaveAttribute("data-loading", "false");
+});
+
+Then("the table has a column {string}", async ({ page }, title: string) => {
+  await expect(live(page).getByTestId("antd-table").getByRole("columnheader", { name: title })).toBeVisible();
 });
 
 When("I go to page {int} of the pagination", async ({ page }, number: number) => {
@@ -248,6 +253,78 @@ When("I go to page {int} of the pagination", async ({ page }, number: number) =>
 
 Then("the pagination shows page {int}", async ({ page }, number: number) => {
   await expect(live(page).getByTestId("antd-pagination")).toHaveAttribute("data-page", String(number));
+});
+
+/* ---------------------------- basic widgets ---------------------------- */
+
+When("I choose {string} in the select", async ({ page }, label: string) => {
+  await live(page).getByTestId("antd-select").getByRole("combobox").click();
+  await option(page, label).click();
+});
+
+Then("the select holds {string}", async ({ page }, value: string) => {
+  await expect(live(page).getByTestId("antd-select")).toHaveAttribute("data-value", value);
+});
+
+Then("the tag reads {string}", async ({ page }, text: string) => {
+  await expect(live(page).getByTestId("antd-tag")).toHaveText(text);
+});
+
+When("I tick the checkbox", async ({ page }) => {
+  await live(page).getByTestId("antd-checkbox").getByRole("checkbox").check();
+});
+
+When("I untick the checkbox", async ({ page }) => {
+  await live(page).getByTestId("antd-checkbox").getByRole("checkbox").uncheck();
+});
+
+Then("the checkbox is checked", async ({ page }) => {
+  await expect(live(page).getByTestId("antd-checkbox")).toHaveAttribute("data-checked", "true");
+});
+
+Then("the checkbox is unchecked", async ({ page }) => {
+  await expect(live(page).getByTestId("antd-checkbox")).toHaveAttribute("data-checked", "false");
+});
+
+Then("the progress shows {int} percent", async ({ page }, percent: number) => {
+  await expect(live(page).getByTestId("antd-progress")).toHaveAttribute("data-percent", String(percent));
+});
+
+Then("the alert reads {string} as a {string}", async ({ page }, text: string, tone: string) => {
+  const alert = live(page).getByTestId("antd-alert");
+  await expect(alert).toHaveAttribute("role", "alert");
+  await expect(alert).toHaveAttribute("data-tone", tone);
+  await expect(alert).toContainText(text);
+});
+
+/** A multi-select on the live page, found by its visible label. */
+const multiSelect = (page: Page, label: string) =>
+  live(page).locator(`[data-testid="antd-multi-select"][data-label="${label}"]`);
+
+/** Picking a chosen option again unpicks it; the dropdown is closed afterwards. */
+async function toggleInMultiSelect(page: Page, label: string, optionLabel: string) {
+  await multiSelect(page, label).getByRole("combobox").click();
+  await option(page, optionLabel).click();
+  await page.keyboard.press("Escape");
+  await expect(dropdown(page)).toHaveCount(0);
+}
+
+When("I pick {string} in the {string} multi-select", async ({ page }, optionLabel: string, label: string) => {
+  await toggleInMultiSelect(page, label, optionLabel);
+});
+
+When("I unpick {string} in the {string} multi-select", async ({ page }, optionLabel: string, label: string) => {
+  await toggleInMultiSelect(page, label, optionLabel);
+});
+
+/** Values as a plain list: "billing, search" ("" = nothing chosen). */
+Then("the {string} multi-select holds {string}", async ({ page }, label: string, values: string) => {
+  await expect(multiSelect(page, label)).toHaveAttribute("data-values", values.split(", ").join(","));
+});
+
+/** Option labels as shown: "Billing smoke, Billing regression" ("" = nothing on offer). */
+Then("the {string} multi-select offers {string}", async ({ page }, label: string, options: string) => {
+  await expect(multiSelect(page, label)).toHaveAttribute("data-options", options);
 });
 
 /* ------------------------------ refresher ------------------------------ */
@@ -394,6 +471,14 @@ Then(
 );
 
 Then(
+  "the event log shows widget {string} event {string} with {string} in its payload",
+  async ({ page }, widget: string, event: string, fragment: string) => {
+    // Newest first, like the exact-payload step; for payloads too long to spell out.
+    await expect(eventRows(page, widget, event).first().getByTestId("event-log-payload")).toContainText(fragment);
+  },
+);
+
+Then(
   "the event log shows widget {string} event {string} from cell {string}",
   async ({ page }, widget: string, event: string, cell: string) => {
     await expect(eventRows(page, widget, event).first()).toHaveAttribute("data-cell", cell);
@@ -404,8 +489,8 @@ When("I clear the event log", async ({ page }) => {
   await page.getByTestId("event-log-clear").click();
 });
 
-When("I click the runs table row {string}", async ({ page }, runId: string) => {
-  await page.locator(`[data-testid="page"] [data-testid="runs-row"][data-run-id="${runId}"]`).click();
+When("I click the table row {string}", async ({ page }, key: string) => {
+  await tableRow(page, key).click();
 });
 
 When(

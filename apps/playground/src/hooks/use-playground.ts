@@ -23,7 +23,7 @@ import {
   userViewModels as fixtureUserViewModels,
   viewModels as fixtureViewModels,
 } from "@wirework/view-data-models-examples";
-import { antdRunsTable } from "@wirework/antd-widgets";
+import { antdTable } from "@wirework/antd-widgets";
 import { boot } from "../boot";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
 import type { WidgetSettings } from "./use-widget-form";
@@ -72,12 +72,14 @@ export function usePlayground() {
   );
 
   /**
-   * Host-side subscription example: a row action is an INTENT on the bus;
+   * Host-side subscription example: a row click is an INTENT on the bus;
    * the host turns it into STATE ("runs.selected") that any widget can
    * display. The payload is typed by the widget's declaration — no cast.
+   * Scoped to the demo's runs table: the table is generic, and a table
+   * added in the builder must not change the selected run.
    */
-  useWidgetEvent(bus, eventFilter(antdRunsTable, "row-selected"), (event) =>
-    store.set("runs.selected", event.payload.id),
+  useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "demo", cell: "table-main" }), (event) =>
+    store.set("runs.selected", event.payload.key),
   );
 
   const target: EditTarget = page === USER_PAGE && withUserOverlay ? "user" : "base";

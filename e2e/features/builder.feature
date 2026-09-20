@@ -70,7 +70,7 @@ Feature: Widget builder
     Given I open the "builder" page
     When I choose the "antd-label" widget
     And I set the setting "text" to "fallback text"
-    And I set the "input" port "text" to "runs.data.byId.123456.name"
+    And I set the "input" port "text" to "runs.data.0.name"
     And I add the widget
     Then the label reads "E2E Run # 98765"
 
@@ -181,7 +181,7 @@ Feature: Widget builder
   Scenario: An app-defined contract and its widget register like the standard ones
     Given I open the "builder" page
     When I choose the "status-badge" widget
-    And I set the "input" port "state" to "runs.data.byId.123456.status.state"
+    And I set the "input" port "state" to "runs.data.0.status.state"
     And I set the setting "prefix" to "Run: "
     And I add the widget
     Then the status badge reads "Run: Failed"
@@ -200,7 +200,7 @@ Feature: Widget builder
     Then the palette shows a preview of every registered widget
     And the preview of "antd-label" reads "Sample text"
     And the preview of "antd-counter" reads "Increment (3)"
-    And the preview of "antd-runs-table" reads "Nightly"
+    And the preview of "antd-table" reads "Nightly"
     And the preview of "status-badge" reads "Run: Success"
     And the preview of "antd-crash" reads "crashed"
     And the preview of "antd-refresher" reads "Auto-refresh every"
@@ -219,7 +219,7 @@ Feature: Widget builder
     Then the palette shows a preview of every registered widget
     When I search the palette for "table"
     Then the palette shows 1 widget preview
-    And the preview of "antd-runs-table" reads "Nightly"
+    And the preview of "antd-table" reads "Nightly"
     When I search the palette for "nothing-like-this"
     Then the palette shows 0 widget previews
     And the palette reports no matches

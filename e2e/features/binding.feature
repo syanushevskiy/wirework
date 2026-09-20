@@ -15,9 +15,10 @@ Feature: Store binding
     When I click the counter 2 times
     Then the echo widget at "demo" shows '{"counter":2}'
 
-  Scenario: The runs table renders rows from the store by stable id
+  Scenario: The table renders the runs from the store, keyed by their id
     Given I open the "demo" page
-    Then the runs table has 5 rows
-    And the runs table row "123456" shows "Failed" for "status.state"
-    And the runs table row "123457" shows "Success" for "status.state"
-    And the runs table row "123460" shows "Failed" for "status.state"
+    Then the table has 5 rows
+    And the table has a column "Reference"
+    And the table row "123456" shows "Failed" for "status.state"
+    And the table row "123457" shows "Success" for "status.state"
+    And the table row "123460" shows "Failed" for "status.state"

@@ -8,7 +8,7 @@
  * Time passes on the server: every request moves each unfinished run one
  * step (queued → running → finished), so a refresh visibly brings news.
  */
-import type { Run, RunsData } from "@wirework/schema";
+import type { Run } from "@wirework/view-data-models-examples";
 
 export interface RunsPageQuery {
   /** 1-based. */
@@ -18,7 +18,8 @@ export interface RunsPageQuery {
 
 /** One page as the server answers it. */
 export interface RunsPage {
-  data: RunsData;
+  /** This page's runs, in order — the rows a table shows. */
+  data: Run[];
   /** All rows on the server, not just this page. */
   total: number;
   /** The page actually served: clamped to the last one. */
@@ -52,11 +53,8 @@ function advance(run: Run): Run {
 }
 
 /** Seeded rows first, then generated ones continuing the id sequence. */
-function buildRows(seed: RunsData, total: number): Run[] {
-  const rows = seed.order.flatMap((id) => {
-    const row = seed.byId[id];
-    return row ? [row] : [];
-  });
+function buildRows(seed: readonly Run[], total: number): Run[] {
+  const rows = [...seed];
   const seeded = rows.length;
   const lastId = Math.max(0, ...rows.map((row) => Number(row.id) || 0));
   for (let index = seeded; index < total; index += 1) {
@@ -71,18 +69,14 @@ function buildRows(seed: RunsData, total: number): Run[] {
   return rows;
 }
 
-export function createRunsServer(options: { seed: RunsData; total: number; latencyMs: number }): RunsServer {
+export function createRunsServer(options: { seed: readonly Run[]; total: number; latencyMs: number }): RunsServer {
   let rows = buildRows(options.seed, options.total);
 
   const pageOf = ({ page, pageSize }: RunsPageQuery): RunsPage => {
     const lastPage = Math.max(1, Math.ceil(rows.length / pageSize));
     const served = Math.min(Math.max(1, page), lastPage);
-    const slice = rows.slice((served - 1) * pageSize, served * pageSize);
     return {
-      data: {
-        order: slice.map((row) => row.id),
-        byId: Object.fromEntries(slice.map((row) => [row.id, row])),
-      },
+      data: rows.slice((served - 1) * pageSize, served * pageSize),
       total: rows.length,
       page: served,
       pageSize,

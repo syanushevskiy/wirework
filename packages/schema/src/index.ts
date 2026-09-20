@@ -15,5 +15,4 @@ export * from "./contracts/settings";
 export * from "./contracts/layout-engine";
 export * from "./models/view-models";
 export * from "./models/user-view-models";
-export * from "./models/data-models";
 export * from "./paths";

@@ -25,8 +25,10 @@ import {
 } from "@wirework/view-data-models-examples";
 import { standardContracts } from "@wirework/widget-contracts";
 import { antdTestWidgets, antdWidgets, brokenWidgets } from "@wirework/antd-widgets";
+import { createFilterActions } from "./actions/filter-actions";
 import { createRunsActions, RUNS_PAGE_SIZE } from "./actions/runs-actions";
 import { createRunsServer } from "./api/runs-server";
+import { applicationOptions, suiteOptionsFor } from "./api/suites-catalog";
 import { statusBadgeContract } from "./contracts/status-badge";
 import { statusBadge } from "./widgets/status-badge";
 
@@ -73,6 +75,8 @@ export function boot() {
   // Server-side paging for the demo table: a fake server with real latency.
   const runsServer = createRunsServer({ seed: seedData.runs.data, total: 23, latencyMs: 600 });
   for (const action of createRunsActions(runsServer)) actions.register(action);
+  // Dependent filters: the suites on offer follow the applications chosen.
+  for (const action of createFilterActions(suiteOptionsFor)) actions.register(action);
 
   // Negative proof: every broken definition must be rejected loudly.
   const rejections = Object.entries(brokenWidgets).map(([name, definition]) => {
@@ -91,6 +95,8 @@ export function boot() {
     userViewModels: fixtureUserViewModels,
     ...seedData,
     runs: { ...runsServer.pageOf({ page: 1, pageSize: RUNS_PAGE_SIZE }), loading: false },
+    // Nothing chosen yet, so no suites on offer.
+    filters: { applicationOptions: applicationOptions(), applications: [], suiteOptions: [], suites: [] },
   });
   const bus = createEventBus();
   return { registry, contracts, layoutEngines, actions, store, bus, rejections };

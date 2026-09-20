@@ -14,19 +14,19 @@ Feature: Refresher
   Scenario: Refresh requests the page on screen again
     Given I open the "demo" page
     And I expand the "events" panel
-    Then the runs table row "123458" shows "Running" for "status.state"
+    Then the table row "123458" shows "Running" for "status.state"
     When I click Refresh
     Then the event log shows widget "antd-refresher" event "refresh" with payload '{"trigger":"manual"}'
-    And the runs table row "123458" shows "Success" for "status.state"
-    And the runs table is not loading
+    And the table row "123458" shows "Success" for "status.state"
+    And the table is not loading
 
   Scenario: Refresh keeps the page the user is on
     Given I open the "demo" page
     When I go to page 2 of the pagination
-    Then the runs table row "123461" shows "Running" for "status.state"
-    And the runs table is not loading
+    Then the table row "123461" shows "Running" for "status.state"
+    And the table is not loading
     When I click Refresh
-    Then the runs table row "123461" shows "Failed" for "status.state"
+    Then the table row "123461" shows "Failed" for "status.state"
     And the pagination shows page 2
 
   Scenario: The schedule is state in the store, written by the reaction
@@ -43,6 +43,6 @@ Feature: Refresher
     When I set the refresh interval to 1 second
     And I turn auto-refresh on
     Then the event log shows widget "antd-refresher" event "refresh" with payload '{"trigger":"interval"}'
-    And the runs table row "123458" shows "Success" for "status.state"
+    And the table row "123458" shows "Success" for "status.state"
     When I turn auto-refresh off
     Then auto-refresh is off

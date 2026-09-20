@@ -7,6 +7,11 @@
   color: var(--ant-color-primary, #1677ff);
 }
 
-.ww-runs-table .ant-table-row {
+.ww-table .ant-table-row {
   cursor: pointer;
+}
+
+/* A select fills its cell, like an input does. */
+.ww-select {
+  width: 100%;
 }

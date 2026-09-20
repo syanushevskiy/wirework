@@ -30,17 +30,17 @@ Feature: Widget events
     Given I open the "demo" page
     And I expand the "events" panel
     Then the echo widget at "runs.selected" shows "∅"
-    When I click the runs table row "123456"
-    Then the event log shows widget "antd-runs-table" event "row-selected" with payload '{"id":"123456"}'
+    When I click the table row "123456"
+    Then the event log shows widget "antd-table" event "row-selected" with '"key":"123456"' in its payload
     And the echo widget at "runs.selected" shows '"123456"'
-    When I click the runs table row "123457"
+    When I click the table row "123457"
     Then the echo widget at "runs.selected" shows '"123457"'
 
   Scenario: The builder lists the events a widget emits
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     Then the widget events list includes "incremented"
-    When I choose the "antd-runs-table" widget
+    When I choose the "antd-table" widget
     Then the widget events list includes "row-selected"
     When I choose the "antd-label" widget
     Then the widget emits no events
@@ -76,15 +76,15 @@ Feature: Widget events
 
   Scenario: A user wires an event to a store path in the builder
     Given I open the "builder" page
-    When I choose the "antd-runs-table" widget
-    And I set the "input" port "data" to "runs.data"
-    And I set the reaction for "row-selected" to set "runs.picked" from "id"
+    When I choose the "antd-table" widget
+    And I set the "input" port "rows" to "runs.data"
+    And I set the reaction for "row-selected" to set "runs.picked" from "key"
     And I add the widget
     And I choose the "antd-echo" widget
     And I set the "input" port "value" to "runs.picked"
     And I add the widget
     Then the echo widget at "runs.picked" shows "∅"
-    When I click the runs table row "123457"
+    When I click the table row "123457"
     Then the echo widget at "runs.picked" shows '"123457"'
 
   Scenario: A button click runs a host action wired in the view model
@@ -100,17 +100,17 @@ Feature: Widget events
     Given I open the "demo" page
     And I expand the "events" panel
     Then the pagination shows page 1
-    And the runs table has 5 rows
+    And the table has 5 rows
     When I go to page 2 of the pagination
     Then the event log shows widget "antd-pagination" event "changed" with payload '{"page":2,"pageSize":5}'
     And the pagination shows page 2
     # Every request moves unfinished runs one step: queued → running → finished.
-    And the runs table row "123461" shows "Running" for "status.state"
-    And the runs table has 5 rows
-    And the runs table is not loading
+    And the table row "123461" shows "Running" for "status.state"
+    And the table has 5 rows
+    And the table is not loading
     When I go to page 5 of the pagination
-    Then the runs table row "123478" shows "Success" for "status.state"
-    And the runs table has 3 rows
+    Then the table row "123478" shows "Success" for "status.state"
+    And the table has 3 rows
 
   Scenario: Editing the paginator on the shared page keeps its whole reaction chain
     Given I open the "demo" page
@@ -122,7 +122,7 @@ Feature: Widget events
     And I save the widget
     And I save the page
     And I go to page 2 of the pagination
-    Then the runs table row "123461" shows "Running" for "status.state"
+    Then the table row "123461" shows "Running" for "status.state"
 
   Scenario: A user wires a button to a host action in the builder
     Given I open the "builder" page

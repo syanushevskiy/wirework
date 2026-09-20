@@ -1,5 +1,8 @@
 # Widget events — typed signals widgets emit
 
+Diagrams: doc/events-and-reactions.drawio (1: from a click to the store,
+2: how one event's reaction chain runs).
+
 ## Motivation
 
 Widgets already exchange STATE through the store (doc/widget-io-design.md).
@@ -102,8 +105,8 @@ never from effects (StrictMode double-fires them).
 Host code:
 
 ```ts
-useWidgetEvent(bus, eventFilter(antdRunsTable, "row-selected"), (event) =>
-  store.set("runs.selected", event.payload.id),   // payload typed, no cast
+useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "demo", cell: "table-main" }), (event) =>
+  store.set("runs.selected", event.payload.key),  // payload typed, no cast
 );
 ```
 
@@ -130,7 +133,7 @@ works too (payload `unknown`); an empty filter matches everything.
   last 50 events newest first, each row carrying `data-widget`,
   `data-event`, `data-cell` and the payload JSON — visible to people,
   addressable to Gherkin scenarios (e2e/features/events.feature).
-- Host example: `row-selected` from the runs table is turned into
+- Host example: `row-selected` from the demo's table is turned into
   `runs.selected` in the store; an echo cell displays it.
 
 ## Outputs replaced by events (built)
@@ -212,7 +215,7 @@ A widget's view model may declare what its events DO, under the reserved
 `on` key next to `inputs`:
 
 ```ts
-on: { "row-selected": [{ set: "runs.selected", from: "id" }] }
+on: { "row-selected": [{ set: "runs.selected", from: "key" }] }
 ```
 
 `reactionSchema` is `{ set: storePath, from?: payloadPath, value?: literal }`
@@ -241,7 +244,7 @@ starts, and the action's `signal` is aborted).
   the user-level subscription: no code, saved in the view model, visible in
   the state inspector.
 - Tested in e2e/features/events.feature (fixture reaction on the counter;
-  builder-wired reaction on the runs table). The "reaction to an undeclared
+  builder-wired reaction on a table). The "reaction to an undeclared
   event is rejected at boot" case lives in `failurePathViewModels`
   (@wirework/view-data-models-examples, cell `bad-reaction`), resolved cell
   by cell in packages/engine/src/__tests__/failure-path.test.ts — it is no

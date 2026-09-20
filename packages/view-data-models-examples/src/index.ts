@@ -12,7 +12,7 @@
  * positional). The playground pages use the "react-grid-layout" engine;
  * the failure-path page uses "flex-rows".
  */
-import type { RunsData, UserViewModels, ViewModels } from "@wirework/schema";
+import type { UserViewModels, ViewModels } from "@wirework/schema";
 
 export const viewModels: ViewModels = {
   pages: {
@@ -29,7 +29,7 @@ export const viewModels: ViewModels = {
           // Refresh by hand or on a timer: `refresh` CALLS the same host
           // action the pagination uses (doc/refresher-design.md).
           { id: "refresher-runs", widget: "antd-refresher", model: "widgets.demo.runsRefresher", template: "default", x: 0, y: 3, w: 9, h: 1 },
-          { id: "table-main", widget: "antd-runs-table", model: "widgets.demo.table", template: "default", x: 0, y: 4, w: 9, h: 5 },
+          { id: "table-main", widget: "antd-table", model: "widgets.demo.table", template: "default", x: 0, y: 4, w: 9, h: 5 },
           // Server-side paging: a page change CALLS a host action that
           // requests the rows and writes them to the table's path.
           { id: "pagination-runs", widget: "antd-pagination", model: "widgets.demo.runsPagination", template: "default", x: 0, y: 9, w: 9, h: 1 },
@@ -38,6 +38,10 @@ export const viewModels: ViewModels = {
           { id: "echo-selected-run", widget: "antd-echo", model: "widgets.demo.echoSelectedRun", template: "default", x: 9, y: 3, w: 3, h: 2 },
           // A click is an INTENT: the reaction calls a host action by name.
           { id: "button-reset", widget: "antd-button", model: "widgets.demo.resetButton", template: "default", x: 9, y: 5, w: 3, h: 2 },
+          // Dependent filters: the suites on offer follow the applications
+          // chosen — a reaction CALLS the host action that computes them.
+          { id: "filter-applications", widget: "antd-multi-select", model: "widgets.demo.applicationsFilter", template: "default", x: 9, y: 7, w: 3, h: 2 },
+          { id: "filter-suites", widget: "antd-multi-select", model: "widgets.demo.suitesFilter", template: "default", x: 9, y: 9, w: 3, h: 2 },
           // A controlled input: text lives at demo.name, written by the reaction.
           { id: "input-name", widget: "antd-input", model: "widgets.demo.nameInput", template: "default", x: 0, y: 10, w: 6, h: 2 },
         ],
@@ -108,6 +112,27 @@ export const viewModels: ViewModels = {
           },
         },
       },
+      applicationsFilter: {
+        default: {
+          inputs: { value: "filters.applications", options: "filters.applicationOptions" },
+          // In order: store the choice, THEN recompute what the suites filter
+          // offers (and drop chosen suites of applications no longer chosen).
+          on: {
+            changed: [{ set: "filters.applications", from: "value" }, { call: "filters/sync-suites" }],
+          },
+          label: "Applications",
+          placeholder: "choose applications",
+        },
+      },
+      suitesFilter: {
+        default: {
+          // Its options are WRITTEN by filters/sync-suites, not configured here.
+          inputs: { value: "filters.suites", options: "filters.suiteOptions" },
+          on: { changed: [{ set: "filters.suites", from: "value" }] },
+          label: "Test suites",
+          placeholder: "choose applications first",
+        },
+      },
       runsRefresher: {
         default: {
           // The schedule { enabled, interval } lives at runs.autoRefresh;
@@ -122,12 +147,14 @@ export const viewModels: ViewModels = {
       },
       table: {
         default: {
-          inputs: { data: "runs.data", loading: "runs.loading" },
+          // A generic table: the rows are the runs at runs.data, keyed by
+          // their `id` (the default rowKey); the columns pick what to show.
+          inputs: { rows: "runs.data", loading: "runs.loading" },
           columns: [
-            { name: "#", property: "id" },
-            { name: "Name", property: "name" },
-            { name: "Reference", property: "reference" },
-            { name: "Status", property: "status.state" },
+            { title: "#", property: "id" },
+            { title: "Name", property: "name" },
+            { title: "Reference", property: "reference" },
+            { title: "Status", property: "status.state" },
           ],
         },
       },
@@ -235,56 +262,75 @@ export const userViewModels: UserViewModels = {
   },
 };
 
-/** Seed data — rows keyed by stable run id, order separate. */
-export const seedData: { demo: { counter: number }; runs: { data: RunsData } } = {
+/**
+ * The example domain: a test run. Plain data — no widget knows this shape;
+ * the demo's generic table shows runs through its configured columns, and
+ * identifies each row by its `id`.
+ */
+export interface RunStatus {
+  state: "Success" | "Failed" | (string & {});
+  message: string;
+}
+
+export interface Run {
+  /** Stable identity — the table's row key (never the row's position). */
+  id: string;
+  name: string;
+  reference: string;
+  inbound: string;
+  status: RunStatus;
+}
+
+/** Seed data — the runs are a plain array of rows, each keyed by its stable id. */
+export const seedData: {
+  demo: { counter: number };
+  runs: { data: Run[] };
+} = {
   demo: { counter: 0 },
   runs: {
-    data: {
-      order: ["123456", "123457", "123458", "123459", "123460", "123461"],
-      byId: {
-        "123456": {
-          id: "123456",
-          name: "E2E Run # 98765",
-          reference: "REF55456735",
-          inbound: "IND539363",
-          status: { state: "Failed", message: "ERROR ..." },
-        },
-        "123457": {
-          id: "123457",
-          name: "E2E Run # 98766",
-          reference: "REF59456736",
-          inbound: "IND557328",
-          status: { state: "Success", message: "Finished" },
-        },
-        "123458": {
-          id: "123458",
-          name: "E2E Run # 98767",
-          reference: "REF59456737",
-          inbound: "IND557329",
-          status: { state: "Running", message: "Step 3 of 7" },
-        },
-        "123459": {
-          id: "123459",
-          name: "Nightly regression",
-          reference: "REF59456738",
-          inbound: "IND557330",
-          status: { state: "Success", message: "Finished" },
-        },
-        "123460": {
-          id: "123460",
-          name: "Smoke suite",
-          reference: "REF59456739",
-          inbound: "IND557331",
-          status: { state: "Failed", message: "2 assertions failed" },
-        },
-        "123461": {
-          id: "123461",
-          name: "Migration check",
-          reference: "REF59456740",
-          inbound: "IND557332",
-          status: { state: "Queued", message: "Waiting for a runner" },
-        },
+    data: [
+      {
+        id: "123456",
+        name: "E2E Run # 98765",
+        reference: "REF55456735",
+        inbound: "IND539363",
+        status: { state: "Failed", message: "ERROR ..." },
       },
-    },
+      {
+        id: "123457",
+        name: "E2E Run # 98766",
+        reference: "REF59456736",
+        inbound: "IND557328",
+        status: { state: "Success", message: "Finished" },
+      },
+      {
+        id: "123458",
+        name: "E2E Run # 98767",
+        reference: "REF59456737",
+        inbound: "IND557329",
+        status: { state: "Running", message: "Step 3 of 7" },
+      },
+      {
+        id: "123459",
+        name: "Nightly regression",
+        reference: "REF59456738",
+        inbound: "IND557330",
+        status: { state: "Success", message: "Finished" },
+      },
+      {
+        id: "123460",
+        name: "Smoke suite",
+        reference: "REF59456739",
+        inbound: "IND557331",
+        status: { state: "Failed", message: "2 assertions failed" },
+      },
+      {
+        id: "123461",
+        name: "Migration check",
+        reference: "REF59456740",
+        inbound: "IND557332",
+        status: { state: "Queued", message: "Waiting for a runner" },
+      },
+    ],
   },
 };

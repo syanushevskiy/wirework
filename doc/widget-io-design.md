@@ -127,7 +127,8 @@ off the zod validator:
 
 ## Contracts
 
-Label, button, input, pagination and refresher implement the standard CONTRACTS
+Label, button, input, pagination, refresher, select, multi-select, tag,
+checkbox, progress, alert and table implement the standard CONTRACTS
 (doc/widget-contracts-design.md): their ports, events and settings are
 declared once in `@wirework/widget-contracts` and reused by every
 implementation.
@@ -137,7 +138,7 @@ implementation.
 | widget            | inputs                       | events (reaction required?)     |
 | ----------------- | ---------------------------- | ------------------------------- |
 | antd-counter     | `value: number`              | `incremented { value }` — YES   |
-| antd-runs-table  | `data: RunsData`, `loading?: boolean` | `row-selected { id }` — no |
+| antd-table       | `rows: object[]`, `loading?: boolean` | `row-selected { key, row }` — no |
 | antd-echo        | `value: unknown`             | —                               |
 | antd-label       | `text?: string` (optional)   | —                               |
 | antd-crash       | —                            | —                               |

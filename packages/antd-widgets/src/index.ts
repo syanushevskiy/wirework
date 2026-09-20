@@ -7,32 +7,45 @@
  * uses the default store and bus for previews; widget code never touches
  * them). If a widget ever needs engine, store or bus internals, the widget
  * contract has leaked. No widget writes the store — every state change is
- * an emitted event plus a reaction. Label, button, input, pagination and
- * refresher IMPLEMENT the standard contracts; the others are demo/domain
+ * an emitted event plus a reaction. Label, button, input, pagination,
+ * refresher, select, multi-select, tag, checkbox, progress, alert and table
+ * IMPLEMENT the standard contracts; counter, echo and crash are demo/test
  * widgets.
  */
 import { z } from "zod";
 import type { AnyWidgetDefinition } from "@wirework/schema";
+import { antdAlert } from "./widgets/antd-alert";
 import { antdButton } from "./widgets/antd-button";
+import { antdCheckbox } from "./widgets/antd-checkbox";
 import { antdCounter } from "./widgets/antd-counter";
 import { antdCrash } from "./widgets/antd-crash";
 import { antdEcho } from "./widgets/antd-echo";
 import { antdInput } from "./widgets/antd-input";
 import { antdLabel } from "./widgets/antd-label";
+import { antdMultiSelect } from "./widgets/antd-multi-select";
 import { antdPagination } from "./widgets/antd-pagination";
+import { antdProgress } from "./widgets/antd-progress";
 import { antdRefresher } from "./widgets/antd-refresher";
-import { antdRunsTable } from "./widgets/antd-runs-table";
+import { antdSelect } from "./widgets/antd-select";
+import { antdTable } from "./widgets/antd-table";
+import { antdTag } from "./widgets/antd-tag";
 
 export {
+  antdAlert,
   antdButton,
+  antdCheckbox,
   antdCounter,
   antdCrash,
   antdEcho,
   antdInput,
   antdLabel,
+  antdMultiSelect,
   antdPagination,
+  antdProgress,
   antdRefresher,
-  antdRunsTable,
+  antdSelect,
+  antdTable,
+  antdTag,
 };
 export { validate } from "./validation";
 export type { ValidationRule, ValidationResult } from "./validation";
@@ -42,18 +55,27 @@ export type { InputEvents } from "./widgets/antd-input";
 export type { PaginationEvents } from "./widgets/antd-pagination";
 export type { RefresherEvents } from "./widgets/antd-refresher";
 export type { CounterEvents } from "./widgets/antd-counter";
-export type { RunsTableEvents } from "./widgets/antd-runs-table";
+export type { TableEvents } from "./widgets/antd-table";
+export type { SelectEvents } from "./widgets/antd-select";
+export type { CheckboxEvents } from "./widgets/antd-checkbox";
+export type { MultiSelectEvents } from "./widgets/antd-multi-select";
 
 /** Every production widget, for a host to register at once. */
 export const antdWidgets: AnyWidgetDefinition[] = [
   antdLabel,
   antdEcho,
   antdCounter,
-  antdRunsTable,
+  antdTable,
   antdButton,
   antdInput,
   antdPagination,
   antdRefresher,
+  antdSelect,
+  antdTag,
+  antdCheckbox,
+  antdProgress,
+  antdAlert,
+  antdMultiSelect,
 ];
 
 /**
