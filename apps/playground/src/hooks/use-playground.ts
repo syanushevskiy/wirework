@@ -1,16 +1,19 @@
 /**
  * ALL playground logic lives here (guidelines: components are render-only):
- * the page/overlay UI state, live validation, runtime widget addition and
- * the host-side event subscription example. One-time boot (registries,
- * store, bus, rejection proof) is `boot.ts`; page editing (session, widget
- * edits, removal) lives in use-page-editing.
+ * the page visit and overlay UI state, live validation, runtime widget
+ * addition and the host-side event subscription example. One-time boot
+ * (registries, pages, rejection proof) is `boot.ts`; page editing (session,
+ * widget edits, removal) lives in use-page-editing.
  *
- * BOTH trees LIVE IN THE STORE — "viewModels" and "userViewModels" —
- * alongside the data models: one state-management tree. The state
- * inspector edits it, widgets write into it (through reactions), editors
- * save into it, and the page re-renders reactively from it.
+ * Opening a page starts a VISIT: a fresh store and bus from that page's
+ * initial state (boot.ts), so the state inspector shows exactly what this
+ * page put there, step by step. BOTH trees LIVE IN THE STORE —
+ * "viewModels" and "userViewModels" — alongside the data: one
+ * state-management tree. The state inspector edits it, widgets write into
+ * it (through reactions), editors save into it, and the page re-renders
+ * reactively from it.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   eventFilter,
   type UserViewModels,
@@ -19,10 +22,6 @@ import {
 } from "@wirework/schema";
 import { resolveTemplate, updatePageTemplate, validateViewModels } from "@wirework/engine";
 import { useStorePath, useWidgetEvent } from "@wirework/react";
-import {
-  userViewModels as fixtureUserViewModels,
-  viewModels as fixtureViewModels,
-} from "@wirework/view-data-models-examples";
 import { antdTable } from "@wirework/antd-widgets";
 import { boot } from "../boot";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
@@ -32,6 +31,10 @@ import type { WidgetSettings } from "./use-widget-form";
 const USER_PAGE = "demo";
 /** The page the widget builder adds to. */
 export const BUILDER_PAGE = "builder";
+
+/** What a store without the trees means (the inspector can remove them): no pages, loudly. */
+const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
+const NO_USER_VIEW_MODELS: UserViewModels = {};
 
 /**
  * Next free builder cell id, derived from the STORE (not a counter): the
@@ -51,19 +54,20 @@ function nextCustomId(viewModels: ViewModels, cellIds: string[]): string {
 
 export function usePlayground() {
   // useState, not useMemo: React may discard memo caches, which would
-  // silently recreate the store and reset all runtime state.
-  const [{ registry, contracts, layoutEngines, actions, store, bus, rejections }] = useState(boot);
+  // silently recreate the registries and reset all runtime state.
+  const [{ registry, contracts, layoutEngines, actions, rejections, pageNames, openPage }] = useState(boot);
+  const [visit, setVisit] = useState(() => openPage(USER_PAGE));
+  const { page, store, bus } = visit;
+  // The page's opening (the demo's first server request) is a side effect:
+  // it belongs here, not in the initializer above. `start` runs once per visit.
+  useEffect(() => visit.start(), [visit]);
+
   // Reactive: inspector edits, addWidget, editors and saved sessions all go
   // through the store.
-  const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? fixtureViewModels;
-  const userViewModels =
-    useStorePath<UserViewModels>(store, "userViewModels") ?? fixtureUserViewModels;
+  const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? NO_VIEW_MODELS;
+  const userViewModels = useStorePath<UserViewModels>(store, "userViewModels") ?? NO_USER_VIEW_MODELS;
   const trees = useMemo(() => ({ viewModels, userViewModels }), [viewModels, userViewModels]);
-  const [page, setPage] = useState<string>(USER_PAGE);
   const [withUserOverlay, setWithUserOverlay] = useState(true);
-
-  /** Navigation lists the pages the view models declare — a page added there is reachable. */
-  const pages = useMemo(() => Object.keys(viewModels.pages ?? {}), [viewModels]);
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
@@ -94,12 +98,17 @@ export function usePlayground() {
     trees,
   });
 
+  /**
+   * Opening a page — the current one included — starts a new visit: a fresh
+   * store from the page's initial state. The visit is created HERE, in the
+   * event handler, never inside a state updater (StrictMode runs those twice).
+   */
   const selectPage = useCallback(
     (name: string) => {
       editing.cancel();
-      setPage(name);
+      setVisit(openPage(name));
     },
-    [editing.cancel],
+    [editing.cancel, openPage],
   );
 
   /**
@@ -187,8 +196,10 @@ export function usePlayground() {
     bus,
     report,
     rejections,
-    pages,
+    pages: pageNames,
     page,
+    /** Changes with every visit: a key for what must start over with the store. */
+    visitId: visit.id,
     selectPage,
     target,
     withUserOverlay,

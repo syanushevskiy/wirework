@@ -4,6 +4,8 @@
  * Subscribes to EVERYTHING on the bus (empty filter) and keeps the last
  * `limit` events, newest first. Events are otherwise invisible — this is
  * what makes them observable to people and addressable to e2e (QA ask).
+ * A new bus (a new page visit) starts an empty log; the panel itself stays
+ * as the user left it.
  */
 import { useCallback, useState } from "react";
 import type { EventBus, WidgetEvent } from "@wirework/schema";
@@ -28,13 +30,16 @@ const toLogged = (event: WidgetEvent): LoggedEvent => ({
 });
 
 export function useEventLog(bus: EventBus, limit = 50) {
-  const [events, setEvents] = useState<LoggedEvent[]>([]);
+  const [log, setLog] = useState<{ bus: EventBus; events: LoggedEvent[] }>({ bus, events: [] });
+  // Another bus: its events are another story. (Resetting state during
+  // render is React's way to follow a prop without an effect.)
+  if (log.bus !== bus) setLog({ bus, events: [] });
 
   useWidgetEvent(bus, {}, (event) =>
-    setEvents((prev) => [toLogged(event), ...prev].slice(0, limit)),
+    setLog((prev) => (prev.bus === bus ? { bus, events: [toLogged(event), ...prev.events].slice(0, limit) } : prev)),
   );
 
-  const clear = useCallback(() => setEvents([]), []);
+  const clear = useCallback(() => setLog((prev) => ({ ...prev, events: [] })), []);
 
-  return { events, clear };
+  return { events: log.bus === bus ? log.events : [], clear };
 }

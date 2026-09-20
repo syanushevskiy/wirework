@@ -1,11 +1,12 @@
 /**
  * @wirework/view-data-models-examples — example view models, user overlays
- * and seed data modelled on the Xsight sketch. Hosts (the playground,
- * tests) boot from `viewModels`; `failurePathViewModels` is a separate,
- * deliberately broken tree for exercising the engine's failure modes
- * (problem placeholders, fallbacks, crash isolation, boot validation) —
- * resolved cell by cell in the engine's unit tests, not loaded by the
- * playground.
+ * and data modelled on the Xsight sketch, ONE SET PER PAGE: a host (the
+ * playground) starts every visit of a page from that page's own
+ * configuration and initial data, so nothing of another page is in the
+ * store. `failurePathViewModels` is a separate, deliberately broken tree
+ * for exercising the engine's failure modes (problem placeholders,
+ * fallbacks, crash isolation, boot validation) — resolved cell by cell in
+ * the engine's unit tests, not loaded by the playground.
  *
  * Contract proof: depends on @wirework/schema ONLY — a view/data model is
  * plain data. Every cell carries a stable `id` (identity is never
@@ -14,7 +15,18 @@
  */
 import type { UserViewModels, ViewModels } from "@wirework/schema";
 
-export const viewModels: ViewModels = {
+/**
+ * Builder page: starts EMPTY — no cells, no widget templates, no data.
+ * Widgets are added at runtime from the palette, wired by their IO ports
+ * and events; the store fills up only with what they write.
+ */
+export const builderViewModels: ViewModels = {
+  pages: { builder: { default: { engine: "react-grid-layout", cells: [] } } },
+  widgets: {},
+};
+
+/** Demo page: the runs dashboard. */
+export const demoViewModels: ViewModels = {
   pages: {
     demo: {
       default: {
@@ -45,14 +57,6 @@ export const viewModels: ViewModels = {
           // A controlled input: text lives at demo.name, written by the reaction.
           { id: "input-name", widget: "antd-input", model: "widgets.demo.nameInput", template: "default", x: 0, y: 10, w: 6, h: 2 },
         ],
-      },
-    },
-    // Builder page: starts empty; widgets are added at runtime from the
-    // palette, wired by their IO ports and events.
-    builder: {
-      default: {
-        engine: "react-grid-layout",
-        cells: [],
       },
     },
   },
@@ -246,8 +250,8 @@ export const failurePathViewModels: ViewModels = {
   },
 };
 
-/** User overlay: proves per-CELL template selection + settings merge on top. */
-export const userViewModels: UserViewModels = {
+/** The demo page's user overlay: proves per-CELL template selection + settings merge on top. */
+export const demoUserViewModels: UserViewModels = {
   pages: {
     demo: {
       cells: {
@@ -281,56 +285,57 @@ export interface Run {
   status: RunStatus;
 }
 
-/** Seed data — the runs are a plain array of rows, each keyed by its stable id. */
-export const seedData: {
-  demo: { counter: number };
-  runs: { data: Run[] };
-} = {
-  demo: { counter: 0 },
-  runs: {
-    data: [
-      {
-        id: "123456",
-        name: "E2E Run # 98765",
-        reference: "REF55456735",
-        inbound: "IND539363",
-        status: { state: "Failed", message: "ERROR ..." },
-      },
-      {
-        id: "123457",
-        name: "E2E Run # 98766",
-        reference: "REF59456736",
-        inbound: "IND557328",
-        status: { state: "Success", message: "Finished" },
-      },
-      {
-        id: "123458",
-        name: "E2E Run # 98767",
-        reference: "REF59456737",
-        inbound: "IND557329",
-        status: { state: "Running", message: "Step 3 of 7" },
-      },
-      {
-        id: "123459",
-        name: "Nightly regression",
-        reference: "REF59456738",
-        inbound: "IND557330",
-        status: { state: "Success", message: "Finished" },
-      },
-      {
-        id: "123460",
-        name: "Smoke suite",
-        reference: "REF59456739",
-        inbound: "IND557331",
-        status: { state: "Failed", message: "2 assertions failed" },
-      },
-      {
-        id: "123461",
-        name: "Migration check",
-        reference: "REF59456740",
-        inbound: "IND557332",
-        status: { state: "Queued", message: "Waiting for a runner" },
-      },
-    ],
+/**
+ * The DATA the demo page's store starts with. The runs are deliberately NOT
+ * here: they reach the store only when the (fake) server answers.
+ */
+export const demoData: { demo: { counter: number } } = { demo: { counter: 0 } };
+
+/**
+ * What a fake runs SERVER starts with — server-side data, never put into a
+ * store directly. Plain rows, each keyed by its stable id.
+ */
+export const sampleRuns: Run[] = [
+  {
+    id: "123456",
+    name: "E2E Run # 98765",
+    reference: "REF55456735",
+    inbound: "IND539363",
+    status: { state: "Failed", message: "ERROR ..." },
   },
-};
+  {
+    id: "123457",
+    name: "E2E Run # 98766",
+    reference: "REF59456736",
+    inbound: "IND557328",
+    status: { state: "Success", message: "Finished" },
+  },
+  {
+    id: "123458",
+    name: "E2E Run # 98767",
+    reference: "REF59456737",
+    inbound: "IND557329",
+    status: { state: "Running", message: "Step 3 of 7" },
+  },
+  {
+    id: "123459",
+    name: "Nightly regression",
+    reference: "REF59456738",
+    inbound: "IND557330",
+    status: { state: "Success", message: "Finished" },
+  },
+  {
+    id: "123460",
+    name: "Smoke suite",
+    reference: "REF59456739",
+    inbound: "IND557331",
+    status: { state: "Failed", message: "2 assertions failed" },
+  },
+  {
+    id: "123461",
+    name: "Migration check",
+    reference: "REF59456740",
+    inbound: "IND557332",
+    status: { state: "Queued", message: "Waiting for a runner" },
+  },
+];

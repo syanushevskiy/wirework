@@ -76,16 +76,20 @@ Feature: Widget events
 
   Scenario: A user wires an event to a store path in the builder
     Given I open the "builder" page
+    And the store holds at "sample.runs":
+      """
+      [{ "id": "123456", "name": "E2E Run # 98765" }, { "id": "123457", "name": "E2E Run # 98766" }]
+      """
     When I choose the "antd-table" widget
-    And I set the "input" port "rows" to "runs.data"
-    And I set the reaction for "row-selected" to set "runs.picked" from "key"
+    And I set the "input" port "rows" to "sample.runs"
+    And I set the reaction for "row-selected" to set "sample.picked" from "key"
     And I add the widget
     And I choose the "antd-echo" widget
-    And I set the "input" port "value" to "runs.picked"
+    And I set the "input" port "value" to "sample.picked"
     And I add the widget
-    Then the echo widget at "runs.picked" shows "∅"
+    Then the echo widget at "sample.picked" shows "∅"
     When I click the table row "123457"
-    Then the echo widget at "runs.picked" shows '"123457"'
+    Then the echo widget at "sample.picked" shows '"123457"'
 
   Scenario: A button click runs a host action wired in the view model
     Given I open the "demo" page

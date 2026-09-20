@@ -36,19 +36,27 @@ Feature: Widget builder
 
   Scenario: Input autocomplete offers only type-compatible existing paths
     Given I open the "builder" page
+    And the store holds at "sample":
+      """
+      { "count": 3, "rows": [{ "id": "1" }] }
+      """
     When I choose the "antd-counter" widget
     And I open the "input" port "value" suggestions
-    Then the path suggestions include "demo.counter"
-    And the path suggestions do not include "runs.data"
+    Then the path suggestions include "sample.count"
+    And the path suggestions do not include "sample.rows"
 
   Scenario: An input port can be bound from the suggestions
     Given I open the "builder" page
+    And the store holds at "sample":
+      """
+      { "count": 3, "rows": [{ "id": "1" }] }
+      """
     When I choose the "antd-echo" widget
     And I open the "input" port "value" suggestions
-    Then the path suggestions include "runs.data"
-    When I set the "input" port "value" to "demo.counter"
+    Then the path suggestions include "sample.rows"
+    When I set the "input" port "value" to "sample.count"
     And I add the widget
-    Then the echo widget at "demo.counter" shows "0"
+    Then the echo widget at "sample.count" shows "3"
 
   Scenario: Widget settings are offered with their defaults
     Given I open the "builder" page
@@ -68,9 +76,13 @@ Feature: Widget builder
 
   Scenario: A label can take its text from a store path
     Given I open the "builder" page
+    And the store holds at "sample.runs":
+      """
+      [{ "id": "123456", "name": "E2E Run # 98765" }]
+      """
     When I choose the "antd-label" widget
     And I set the setting "text" to "fallback text"
-    And I set the "input" port "text" to "runs.data.0.name"
+    And I set the "input" port "text" to "sample.runs.0.name"
     And I add the widget
     Then the label reads "E2E Run # 98765"
 
@@ -180,8 +192,12 @@ Feature: Widget builder
 
   Scenario: An app-defined contract and its widget register like the standard ones
     Given I open the "builder" page
+    And the store holds at "sample.run":
+      """
+      { "id": "123456", "status": { "state": "Failed" } }
+      """
     When I choose the "status-badge" widget
-    And I set the "input" port "state" to "runs.data.0.status.state"
+    And I set the "input" port "state" to "sample.run.status.state"
     And I set the setting "prefix" to "Run: "
     And I add the widget
     Then the status badge reads "Run: Failed"

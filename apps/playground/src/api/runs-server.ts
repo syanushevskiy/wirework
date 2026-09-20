@@ -1,12 +1,14 @@
 /**
  * Fake runs SERVER for the demo page: an in-memory table behind a simulated
- * network round trip, so paging behaves like a real request (latency,
- * responses that arrive after the user has moved on). The first rows are
- * the seeded runs; the rest are generated deterministically, so e2e can
- * assert what any page holds.
+ * network round trip, so loading and paging behave like real requests
+ * (latency, responses that arrive after the user has moved on). The first
+ * rows are the sample runs; the rest are generated deterministically, so
+ * e2e can assert what any page holds.
  *
- * Time passes on the server: every request moves each unfinished run one
- * step (queued → running → finished), so a refresh visibly brings news.
+ * Time passes on the server BETWEEN requests: after every answer, each
+ * unfinished run moves one step (queued → running → finished), so the next
+ * refresh visibly brings news. `reset()` starts over — the playground calls
+ * it when the demo page opens, so every visit replays the same sequence.
  */
 import type { Run } from "@wirework/view-data-models-examples";
 
@@ -28,10 +30,10 @@ export interface RunsPage {
 }
 
 export interface RunsServer {
-  /** Synchronous read: the page the server rendered into the initial state. */
-  pageOf(query: RunsPageQuery): RunsPage;
   /** The request: resolves with the page after the simulated latency. */
   fetchPage(query: RunsPageQuery): Promise<RunsPage>;
+  /** Back to the initial runs. Requests still in flight no longer move time. */
+  reset(): void;
 }
 
 const SUCCESS: Run["status"] = { state: "Success", message: "Finished" };
@@ -63,7 +65,7 @@ function buildRows(seed: readonly Run[], total: number): Run[] {
       name: `E2E Run # ${98765 + index}`,
       reference: `REF${59456735 + index}`,
       inbound: `IND${557327 + index}`,
-      status: STATUSES[index % STATUSES.length]!,
+      status: STATUSES[index % STATUSES.length] ?? QUEUED,
     });
   }
   return rows;
@@ -71,6 +73,8 @@ function buildRows(seed: readonly Run[], total: number): Run[] {
 
 export function createRunsServer(options: { seed: readonly Run[]; total: number; latencyMs: number }): RunsServer {
   let rows = buildRows(options.seed, options.total);
+  /** Bumped by `reset`: an answer from before a reset must not move the new timeline. */
+  let epoch = 0;
 
   const pageOf = ({ page, pageSize }: RunsPageQuery): RunsPage => {
     const lastPage = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -84,13 +88,18 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
   };
 
   return {
-    pageOf,
     fetchPage: (query) =>
-      new Promise((resolve) =>
+      new Promise((resolve) => {
+        const started = epoch;
         setTimeout(() => {
-          rows = rows.map(advance);
-          resolve(pageOf(query));
-        }, options.latencyMs),
-      ),
+          const answer = pageOf(query);
+          if (started === epoch) rows = rows.map(advance);
+          resolve(answer);
+        }, options.latencyMs);
+      }),
+    reset: () => {
+      epoch += 1;
+      rows = buildRows(options.seed, options.total);
+    },
   };
 }

@@ -45,7 +45,8 @@ This project runs Claude Code in auto mode with reads outside the working direct
 - Never use interactive flags: `--ui`, `--debug`, `--headed`, or `npx playwright show-report`. They block the session. Reports are written to `e2e/reports/` (cucumber HTML, Playwright HTML) for people to open.
 - When a test fails, read the error output, the `.feature` file and `steps.ts` with the Read tool. Do not write ad-hoc scripts to inspect results.
 - After changing test steps, rerun only the affected feature files first, then the full suite.
-- Scenarios assert fixture facts: adding a cell to the demo page changes "the page has N cells" in `layout.feature` and `overlay.feature`; the fake runs server moves unfinished runs one step per request, so a scenario's expected statuses depend on how many requests it made.
+- Scenarios assert fixture facts: adding a cell to the demo page changes "the page has N cells" in `layout.feature` and `overlay.feature`; the fake runs server moves unfinished runs one step after every answer (and starts over when the demo page opens), so a scenario's expected statuses depend on how many requests it made.
+- Every page visit starts from that page's initial state (`apps/playground/src/boot.ts`): the builder's store has NO data, and the demo's table is empty until the fake server answers (~600 ms). A builder scenario that needs data seeds it itself with the doc-string step `the store holds at "<path>":`; `I switch to the "<page>" page` changes page without a reload.
 
 ## Where things are
 

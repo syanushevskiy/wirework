@@ -29,6 +29,7 @@ export function App() {
     rejections,
     pages,
     page,
+    visitId,
     selectPage,
     target,
     withUserOverlay,
@@ -58,7 +59,8 @@ export function App() {
       {/* Left: state tree (editable) + collapsed diagnostics. Right: the live app. */}
       <div className="pg-columns">
         <div className="pg-side">
-          <StateInspector store={store} />
+          {/* A new visit is a new store: an unapplied draft of the old one goes with it. */}
+          <StateInspector key={visitId} store={store} />
           <EventLog bus={bus} />
           <CollapsibleCard
             id="validation"
@@ -125,6 +127,9 @@ export function App() {
             >
               user overlay
             </Checkbox>
+            <Typography.Text type="secondary" data-testid="visit-note">
+              opening a page starts it from its initial state
+            </Typography.Text>
           </Flex>
 
           {/* Page toolbar: engine of the shown template, the edit session, the edit target. */}
@@ -177,6 +182,7 @@ export function App() {
 
           {page === BUILDER_PAGE ? (
             <WidgetBuilder
+              key={visitId}
               registry={registry}
               contracts={contracts}
               store={store}

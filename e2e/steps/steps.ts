@@ -10,6 +10,17 @@ Given("I open the {string} page", async ({ page }, name: string) => {
   await page.getByTestId(`nav-${name}`).click();
 });
 
+/** No reload: the same app, another page — which starts from its own initial state. */
+When("I switch to the {string} page", async ({ page }, name: string) => {
+  await page.getByTestId(`nav-${name}`).click();
+  await expect(page.getByTestId("page")).toHaveAttribute("data-page", name);
+});
+
+/** Longer than the fake server's latency: for asserting that something did NOT arrive. */
+When("the server has had time to answer", async ({ page }) => {
+  await page.waitForTimeout(900);
+});
+
 When("I disable the user overlay", async ({ page }) => {
   await page.getByTestId("toggle-user-overlay").uncheck();
 });
@@ -242,6 +253,10 @@ Then("the table is not loading", async ({ page }) => {
   await expect(live(page).getByTestId("antd-table")).toHaveAttribute("data-loading", "false");
 });
 
+Then("the table is loading", async ({ page }) => {
+  await expect(live(page).getByTestId("antd-table")).toHaveAttribute("data-loading", "true");
+});
+
 Then("the table has a column {string}", async ({ page }, title: string) => {
   await expect(live(page).getByTestId("antd-table").getByRole("columnheader", { name: title })).toBeVisible();
 });
@@ -377,18 +392,31 @@ Then("the label tone is {string}", async ({ page }, tone: string) => {
 
 /* --------------------------- state inspector --------------------------- */
 
+/** Set one path in the inspector's JSON (creating missing parents) and apply it. */
 async function editStateJson(page: Page, path: string, value: unknown): Promise<void> {
   const editor = page.getByTestId("state-editor");
   const state = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
   const segments = path.split(".");
   let cursor: Record<string, unknown> = state;
   for (const segment of segments.slice(0, -1)) {
+    cursor[segment] ??= {};
     cursor = cursor[segment] as Record<string, unknown>;
   }
   cursor[segments[segments.length - 1]!] = value;
   await editor.fill(JSON.stringify(state, null, 2));
   await page.getByTestId("state-apply").click();
+  await expect(page.getByTestId("state-mode")).toHaveText("live");
 }
+
+/**
+ * Data for a scenario, put into the store the way a person would: through
+ * the state inspector. A page starts without other pages' data (the builder
+ * with none at all), so a scenario that needs rows says which — as JSON in
+ * the step's doc string.
+ */
+Given("the store holds at {string}:", async ({ page }, path: string, json: string) => {
+  await editStateJson(page, path, JSON.parse(json));
+});
 
 Then("the state JSON contains {string}", async ({ page }, fragment: string) => {
   await expect

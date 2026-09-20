@@ -5,34 +5,49 @@ Feature: Generic table
   configured, or — when none are — one per field of the first row. A click
   on a row emits the row's key and the row itself.
 
-  Scenario: A table added without columns shows one column per field
+  Background:
     Given I open the "builder" page
+    And the store holds at "sample.runs":
+      """
+      [
+        { "id": "123456", "name": "E2E Run # 98765", "reference": "REF55456735", "status": { "state": "Failed" } },
+        { "id": "123457", "name": "E2E Run # 98766", "reference": "REF59456736", "status": { "state": "Success" } },
+        { "id": "123458", "name": "E2E Run # 98767", "reference": "REF59456737", "status": { "state": "Running" } }
+      ]
+      """
+
+  Scenario: A table added without columns shows one column per field
     When I choose the "antd-table" widget
-    And I set the "input" port "rows" to "runs.data"
+    And I set the "input" port "rows" to "sample.runs"
     And I add the widget
-    Then the table has 5 rows
+    Then the table has 3 rows
     And the table has a column "name"
     And the table has a column "reference"
     And the table row "123457" shows "E2E Run # 98766" for "name"
 
   Scenario: Any rows from the store, keyed by a chosen property
-    Given I open the "builder" page
+    Given the store holds at "sample.applications":
+      """
+      [
+        { "value": "billing", "label": "Billing" },
+        { "value": "search", "label": "Search" }
+      ]
+      """
     When I choose the "antd-table" widget
-    And I set the "input" port "rows" to "filters.applicationOptions"
+    And I set the "input" port "rows" to "sample.applications"
     And I set the setting "rowKey" to "value"
     And I add the widget
-    Then the table has 3 rows
+    Then the table has 2 rows
     And the table has a column "label"
     And the table row "search" shows "Search" for "label"
 
   Scenario: A row click can store any field of the row
-    Given I open the "builder" page
     When I choose the "antd-table" widget
-    And I set the "input" port "rows" to "runs.data"
-    And I set the reaction for "row-selected" to set "runs.pickedName" from "row"
+    And I set the "input" port "rows" to "sample.runs"
+    And I set the reaction for "row-selected" to set "sample.picked" from "row"
     And I add the widget
     And I choose the "antd-echo" widget
-    And I set the "input" port "value" to "runs.pickedName.name"
+    And I set the "input" port "value" to "sample.picked.name"
     And I add the widget
     When I click the table row "123458"
-    Then the echo widget at "runs.pickedName.name" shows '"E2E Run # 98767"'
+    Then the echo widget at "sample.picked.name" shows '"E2E Run # 98767"'
