@@ -15,6 +15,8 @@ export { PageView } from "./PageView";
 export type { PageViewProps } from "./PageView";
 export { WidgetPreview } from "./WidgetPreview";
 export type { WidgetPreviewProps } from "./WidgetPreview";
+export { useAfterMount } from "./useAfterMount";
+export { usePageLoad } from "./usePageLoad";
 export { usePagePlan } from "./usePagePlan";
 export { usePort } from "./usePort";
 export { useReactions } from "./useReactions";

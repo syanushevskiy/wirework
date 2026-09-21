@@ -27,6 +27,14 @@ export interface PortDefinition<T = unknown> {
    * port without a default renders an explicit empty state instead.
    */
   default?: T;
+  /**
+   * The last segment of a GENERATED path for this port, when it should not
+   * be the port's own name (a builder suggests `<page>.<widget>.<port>`).
+   * A table reads `rows`, but loaders put rows at `<…>.data`: suggesting
+   * `builder.table.data` lets a loader pointed at `builder.table` fill the
+   * table with nothing retyped. One path segment: no dots.
+   */
+  suggestedName?: string;
 }
 
 export interface WidgetIO {

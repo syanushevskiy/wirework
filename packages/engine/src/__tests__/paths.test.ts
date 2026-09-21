@@ -5,7 +5,14 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createStore } from "@wirework/store";
-import { collectPaths, compatibleStorePaths, deepMerge } from "../paths";
+import {
+  boundPaths,
+  collectPaths,
+  compatibleStorePaths,
+  deepMerge,
+  suggestedInputPaths,
+  widgetPathName,
+} from "../paths";
 
 describe("deepMerge", () => {
   it("merges plain objects recursively and replaces everything else", () => {
@@ -37,6 +44,79 @@ describe("collectPaths", () => {
     expect(paths).toContain("ok");
     expect(paths.some((path) => path.includes(" ") || path.includes("with.dot"))).toBe(false);
     expect(paths.length).toBeLessThan(100);
+  });
+});
+
+describe("generated paths", () => {
+  const refresher = { kind: "refresher", type: "antd-refresher", io: { inputs: { schedule: {}, busy: {} } } };
+
+  it("names a widget by its contract kind, else by its type without the vendor word, in camelCase", () => {
+    expect(widgetPathName({ kind: "refresher", type: "antd-refresher" })).toBe("refresher");
+    expect(widgetPathName({ kind: "multi-select", type: "antd-multi-select" })).toBe("multiSelect");
+    expect(widgetPathName({ type: "antd-counter" })).toBe("counter");
+    expect(widgetPathName({ type: "gauge" })).toBe("gauge");
+  });
+
+  it("suggests <page>.<name>.<port> for EVERY input port, existing in the store or not", () => {
+    expect(suggestedInputPaths("builder", refresher, [])).toEqual({
+      schedule: "builder.refresher.schedule",
+      busy: "builder.refresher.busy",
+    });
+  });
+
+  it("ends a path in the port's suggestedName when it declares one: a table's rows live at .data", () => {
+    const table = {
+      kind: "table",
+      type: "antd-table",
+      io: { inputs: { rows: { suggestedName: "data" }, loading: {}, columns: {} } },
+    };
+    expect(suggestedInputPaths("builder", table, [])).toEqual({
+      rows: "builder.table.data",
+      loading: "builder.table.loading",
+      columns: "builder.table.columns",
+    });
+    // Taken is still decided by the widget's root, whatever the last segment is called.
+    expect(suggestedInputPaths("builder", table, ["builder.table.data"])["rows"]).toBe("builder.table2.data");
+  });
+
+  it("numbers the next instance: the first name no bound path lives under", () => {
+    expect(suggestedInputPaths("builder", refresher, ["builder.refresher.schedule"])["schedule"]).toBe(
+      "builder.refresher2.schedule",
+    );
+    expect(
+      suggestedInputPaths("builder", refresher, ["builder.refresher.busy", "builder.refresher2.schedule"])["schedule"],
+    ).toBe("builder.refresher3.schedule");
+    // Another page's, and a longer name's, paths do not take the name.
+    expect(
+      suggestedInputPaths("builder", refresher, ["demo.refresher.schedule", "builder.refresherX.schedule"])["schedule"],
+    ).toBe("builder.refresher.schedule");
+  });
+
+  it("frees a name when the widget that used it is gone", () => {
+    expect(suggestedInputPaths("builder", refresher, ["builder.refresher2.schedule"])["schedule"]).toBe(
+      "builder.refresher.schedule",
+    );
+  });
+
+  it("reads what is bound from the view models: inputs and the targets of set reactions", () => {
+    const bound = boundPaths({
+      widgets: {
+        custom: {
+          "custom-1": {
+            default: {
+              inputs: { schedule: "builder.refresher.schedule" },
+              on: {
+                changed: [{ set: "builder.refresher.schedule" }],
+                refresh: [{ call: "table-view/load", with: { into: "jobs" } }, { set: "builder.refreshed", value: true }],
+              },
+              label: "not a path",
+            },
+          },
+        },
+      },
+    });
+    expect(bound.sort()).toEqual(["builder.refreshed", "builder.refresher.schedule", "builder.refresher.schedule"]);
+    expect(boundPaths(undefined)).toEqual([]);
   });
 });
 

@@ -28,6 +28,10 @@ function portsProblem(inputs: Record<string, unknown>): string | undefined {
   for (const [name, raw] of Object.entries(inputs)) {
     const port = raw as Partial<PortDefinition> | null;
     if (typeof port?.value?.parse !== "function") return `input port "${name}" has no value validator`;
+    // It becomes the last segment of a generated path: a dot would nest it, a blank would end the path early.
+    if (port.suggestedName !== undefined && !/^[^.\s]+$/.test(String(port.suggestedName))) {
+      return `input port "${name}" has a suggestedName that is not one path segment: ${JSON.stringify(port.suggestedName)}`;
+    }
     if (port.default === undefined) continue;
     try {
       port.value.parse(port.default);

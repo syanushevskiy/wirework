@@ -15,6 +15,7 @@
 import { viewModelsSchema, type CellBase } from "@wirework/schema";
 import { resolveTemplate } from "./layout-engines";
 import { issuesText } from "./messages";
+import { checkPageReactions } from "./page-events";
 import type { WidgetRegistry } from "./registry";
 import {
   checkOverlay,
@@ -122,6 +123,17 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
         `user-selected page view "${userPageView}" does not exist — will fall back to "default"`,
       );
     }
+  }
+
+  // The pages' own reactions (what to load when a page opens): the same
+  // check the renderer runs, where it only warns and ignores them.
+  for (const pageName of Object.keys(viewModels.on ?? {})) {
+    if (!Object.hasOwn(viewModels.pages ?? {}, pageName)) {
+      error(`on.${pageName}`, `reactions for unknown page "${pageName}"`);
+      continue;
+    }
+    const { problem } = checkPageReactions(viewModels, pageName, input.actions);
+    if (problem !== undefined) error(`on.${pageName}`, problem);
   }
 
   for (const [userPageName, userPage] of Object.entries(overlay?.pages ?? {})) {

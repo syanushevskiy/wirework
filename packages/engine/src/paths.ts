@@ -1,7 +1,7 @@
 /**
  * Path tooling on top of @wirework/schema's `getPath` / `setPath` /
  * `deletePath` (the one rule set, shared with the store): path enumeration
- * for autocomplete, and the overlay merge.
+ * for autocomplete, generated paths for a builder, and the overlay merge.
  */
 import {
   CONFIG_ROOTS,
@@ -59,6 +59,78 @@ export function compatibleStorePaths(
       return false;
     }
   });
+}
+
+/**
+ * The name a widget gets in GENERATED paths: its contract kind — else its
+ * type without the first word, a vendor prefix ("antd-counter" -> "counter")
+ * — in camelCase ("multi-select" -> "multiSelect"), so it reads as one
+ * path segment.
+ */
+export function widgetPathName(definition: { kind?: string | undefined; type: string }): string {
+  const words = (definition.kind ?? definition.type).split("-").filter(Boolean);
+  const named = definition.kind === undefined && words.length > 1 ? words.slice(1) : words;
+  return named.map((word, index) => (index === 0 ? word : `${word.charAt(0).toUpperCase()}${word.slice(1)}`)).join("");
+}
+
+/**
+ * Every store path the view models already BIND: the `inputs` of every
+ * widget template and the targets of its `set` reactions. What a builder
+ * needs to know to generate a path nobody uses yet.
+ */
+export function boundPaths(viewModels: { widgets?: unknown } | undefined): string[] {
+  const paths: string[] = [];
+  const walk = (node: unknown, depth: number): void => {
+    if (!isPlainObject(node) || depth > 8) return;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === "inputs" && isPlainObject(value)) {
+        paths.push(...Object.values(value).filter((path): path is string => typeof path === "string"));
+      } else if (key === "on" && isPlainObject(value)) {
+        for (const reactions of Object.values(value)) {
+          for (const reaction of Array.isArray(reactions) ? reactions : []) {
+            const target = (reaction as { set?: unknown } | null)?.set;
+            if (typeof target === "string") paths.push(target);
+          }
+        }
+      } else {
+        walk(value, depth + 1);
+      }
+    }
+  };
+  walk(viewModels?.widgets, 0);
+  return paths;
+}
+
+/**
+ * GENERATED store paths for a widget a builder is about to place
+ * (doc/builder-user-needs.md, W12): `<page>.<name>.<port>` for EVERY input
+ * port, so nobody has to type a path to get started — a builder offers them
+ * as defaults the user can change. `<name>` is the widget's path name,
+ * numbered from the second instance on (`refresher`, `refresher2`, …): the
+ * first under which no path in `taken` lives. `<port>` is the port's name,
+ * unless the port declares a `suggestedName` — a table's `rows` port is
+ * suggested `<…>.data`, where loaders put rows. A generated path need not
+ * exist in the store: a binding may name state a reaction will write.
+ */
+export function suggestedInputPaths(
+  page: string,
+  definition: { kind?: string | undefined; type: string; io: { inputs: Record<string, unknown> } },
+  taken: Iterable<string>,
+): Record<string, string> {
+  const used = [...taken];
+  const base = widgetPathName(definition);
+  const isFree = (name: string): boolean => {
+    const root = `${page}.${name}`;
+    return !used.some((path) => path === root || path.startsWith(`${root}.`));
+  };
+  let name = base;
+  for (let instance = 2; !isFree(name); instance += 1) name = `${base}${instance}`;
+  return Object.fromEntries(
+    Object.entries(definition.io.inputs).map(([port, declared]) => {
+      const suggested = (declared as { suggestedName?: unknown } | null)?.suggestedName;
+      return [port, `${page}.${name}.${typeof suggested === "string" && suggested !== "" ? suggested : port}`];
+    }),
+  );
 }
 
 /**

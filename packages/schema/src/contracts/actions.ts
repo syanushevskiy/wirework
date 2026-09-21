@@ -10,6 +10,7 @@
  */
 import type { WidgetEvent } from "./events";
 import type { Store } from "./store";
+import type { Validator } from "./widget";
 
 export interface ActionContext {
   event: WidgetEvent;
@@ -29,6 +30,14 @@ export interface ActionDefinition {
   name: string;
   /** Shown by builders next to the name. */
   description?: string;
+  /**
+   * What a reaction's `with` may hold (doc/actions-design.md). A builder
+   * renders one field per parameter (`settingFields`, like widget
+   * settings), boot validation and page resolution check every `with`
+   * against it, and the handler receives the PARSED arguments (defaults
+   * applied). Without it, `with` reaches the handler unchecked.
+   */
+  params?: Validator<Record<string, unknown>>;
   /**
    * Host code. May be async: the reactions of ONE event run in declaration
    * order and an async action is awaited before the next starts

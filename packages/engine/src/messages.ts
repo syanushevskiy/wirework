@@ -13,3 +13,9 @@ interface IssueList {
 /** A zod error's issues on one line: "path: message; path: message". */
 export const issuesText = (error: IssueList): string =>
   error.issues.map((issue) => `${issue.path.map(String).join(".") || "(root)"}: ${issue.message}`).join("; ");
+
+/** A caught validation failure on one line: a zod error by its issues, anything else by its message. */
+export const problemText = (cause: unknown): string => {
+  const issues = (cause as Partial<IssueList> | null)?.issues;
+  return Array.isArray(issues) ? issuesText({ issues }) : errorText(cause);
+};

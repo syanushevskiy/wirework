@@ -41,8 +41,10 @@ export { createEmitter, WidgetEventError } from "./emitter";
 export { readableStore } from "./readable";
 export { bindCellReactions, bindReactions } from "./reactions";
 export type { ReactionTarget } from "./reactions";
-export { compatibleStorePaths } from "./paths";
-export { errorText, issuesText } from "./messages";
+export { checkPageReactions, emitPageLoad } from "./page-events";
+export type { PageReactions } from "./page-events";
+export { boundPaths, compatibleStorePaths, suggestedInputPaths } from "./paths";
+export { errorText, issuesText, problemText } from "./messages";
 export {
   pageTemplates,
   removeUserCell,

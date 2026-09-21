@@ -12,6 +12,7 @@
  * widget's own Validator at registration/boot (see contracts/widget.ts).
  */
 import { z } from "zod";
+import { pageBindingsSchema, type PageBindings } from "../contracts/page-events";
 
 /** Fields every cell has, whatever the engine: identity + widget binding. */
 export const cellBaseSchema = z.object({
@@ -48,14 +49,20 @@ export type Templates<T> = Record<string, T>;
  * `pages`: page -> template -> layout (engine-owned shape).
  * `widgets`: free-form tree of widget view-model templates; leaves are
  * validated by the owning widget's Validator, not here.
+ * `on`: page -> the PAGE's own reactions (contracts/page-events.ts), e.g.
+ * what to load when the page opens. Beside the templates, not inside one:
+ * they hold for every template of the page, and a user's copy of a template
+ * never carries reactions.
  */
 export interface ViewModels {
   pages: Record<string, Templates<PageViewModel>>;
   widgets: Record<string, unknown>;
+  on?: Record<string, PageBindings> | undefined;
 }
 
 // `satisfies`, not an annotation: the annotation would erase `.shape`/`.extend`.
 export const viewModelsSchema = z.object({
   pages: z.record(z.string(), z.record(z.string(), pageViewModelSchema)),
   widgets: z.record(z.string(), z.unknown()),
+  on: z.record(z.string(), pageBindingsSchema).optional(),
 }) satisfies z.ZodType<ViewModels>;

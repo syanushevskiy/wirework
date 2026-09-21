@@ -25,6 +25,25 @@ describe("validateViewModels", () => {
     expect(report).toMatchObject({ ok: true, problems: [], errors: [], warnings: [] });
   });
 
+  it("checks the pages' own reactions: a healthy one passes, a wrong one is an ERROR at boot", () => {
+    const actions = createActions();
+    actions.register({ name: "overview/load", handler: () => undefined });
+    const withOn = (on: unknown) => ({ ...page([cell()], templates), on });
+
+    expect(check(withOn({ demo: { load: [{ call: "overview/load" }] } }), undefined, actions).ok).toBe(true);
+
+    const unknownAction = check(withOn({ demo: { load: [{ call: "nobody" }] } }), undefined, actions);
+    expect(unknownAction.errors.map((problem) => problem.location)).toEqual(["on.demo"]);
+    expect(messages(unknownAction, "error")[0]).toMatch(/calls unknown action "nobody"/);
+
+    const unknownPage = check(withOn({ ghost: { load: [{ call: "overview/load" }] } }), undefined, actions);
+    expect(messages(unknownPage, "error")[0]).toMatch(/reactions for unknown page "ghost"/);
+
+    // An event pages do not have fails the SHAPE of the tree: nothing else is walked.
+    const unknownEvent = check(withOn({ demo: { opened: [{ call: "overview/load" }] } }), undefined, actions);
+    expect(messages(unknownEvent, "error")[0]).toMatch(/invalid view models/);
+  });
+
   it("regression: shape-checks the base tree instead of walking garbage", () => {
     const report = check({ pages: "abc", widgets: {} });
     expect(report.ok).toBe(false);

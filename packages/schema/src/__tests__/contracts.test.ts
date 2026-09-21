@@ -141,3 +141,27 @@ describe("eventFilter", () => {
     expect(eventFilter(definition, "changed", { cell: "c1" })).toMatchObject({ cell: "c1" });
   });
 });
+
+describe("settingFields with json", () => {
+  const params = z.object({
+    url: z.string().optional().describe("Where the API lives"),
+    into: z.string(),
+    pageSize: z.number().optional(),
+    columns: z.record(z.string(), z.object({ hidden: z.boolean().optional() })).optional(),
+  });
+
+  it("leaves non-primitive fields out by default, as for widget settings", () => {
+    expect(settingFields(params).map((field) => field.name)).toEqual(["url", "into", "pageSize"]);
+  });
+
+  it("offers them as json on request, for an action's parameters", () => {
+    const fields = settingFields(params, { json: true });
+    expect(fields.map((field) => [field.name, field.kind, field.required])).toEqual([
+      ["url", "text", false],
+      ["into", "text", true],
+      ["pageSize", "number", false],
+      ["columns", "json", false],
+    ]);
+    expect(fields[0]?.description).toBe("Where the API lives");
+  });
+});

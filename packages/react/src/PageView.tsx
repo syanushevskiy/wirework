@@ -14,8 +14,9 @@
  * callback (widget in its error boundary with a cell-scoped `emit` and a
  * read-only store) and, in edit mode, a `renderChrome` callback with the
  * Edit/Remove actions the engine places wherever its library allows
- * (doc/layout-engines-design.md). The plan's declared reactions stay
- * subscribed while mounted (doc/widget-events-design.md).
+ * (doc/layout-engines-design.md). The plan's declared reactions — the
+ * cells' and the page's own — stay subscribed while mounted, and the page's
+ * `load` event fires once per opening (doc/widget-events-design.md).
  *
  * NOTE: registries are treated as immutable after mount — register all
  * widgets and engines BEFORE rendering.
@@ -24,6 +25,7 @@ import type { ComponentType } from "react";
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
 import type { ActionRegistry, LayoutEngineRegistry, ResolvedPage, WidgetRegistry } from "@wirework/engine";
 import type { LayoutRendererProps } from "./layout";
+import { usePageLoad } from "./usePageLoad";
 import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
 import { useReactions } from "./useReactions";
@@ -51,6 +53,14 @@ export interface PageViewProps {
   /** Edit-mode chrome actions; a button renders only when its callback is given. */
   onEditCell?: (cellId: string) => void;
   onRemoveCell?: (cellId: string) => void;
+  /**
+   * Change it to LOAD THE PAGE AGAIN — for a host that changed the page
+   * while it is open (an editor after Add or Save): the page's `load` event
+   * fires again and the cells mount afresh, so widgets that ask for their
+   * data when they appear (a table's `load`) ask again, now by the NEW
+   * configuration. The store is untouched.
+   */
+  reloadKey?: string | number;
 }
 
 export function PageView({
@@ -67,10 +77,13 @@ export function PageView({
   onLayoutChange,
   onEditCell,
   onRemoveCell,
+  reloadKey,
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
   const plan = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions }, providedPlan);
   useReactions(bus, store, plan, actions);
+  // The page's own `load` event: what `viewModels.on.<page>.load` declares runs once per opening.
+  usePageLoad(bus, store, page, reloadKey);
   const { cells, cellById, renderCell, renderChrome } = usePageRenderers({
     plan,
     store,
@@ -130,6 +143,8 @@ export function PageView({
       {/* resetKey: a new template (fixed in the inspector, say) retries the renderer. */}
       <LayoutErrorBoundary engine={plan.engine} resetKey={plan.template}>
         <Renderer
+          // A new key mounts every cell afresh: "the page loads again" (see `reloadKey`).
+          key={reloadKey}
           template={plan.template}
           cells={cells}
           cellById={cellById}

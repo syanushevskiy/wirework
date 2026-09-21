@@ -1,8 +1,9 @@
 /** The reaction interpreter: what a user's `on` section actually does. */
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { createEventBus } from "@wirework/events";
 import { createStore } from "@wirework/store";
-import { bindReactions, createActions, resolvePage, type ResolveInput } from "../index";
+import { bindReactions, createActions, emitPageLoad, resolvePage, type ResolveInput } from "../index";
 import { reactionValue } from "../reactions";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
@@ -139,5 +140,114 @@ describe("bindReactions", () => {
       layoutEngines: enginesWith(listEngine),
     });
     expect(() => bindReactions(bus, store, plan)()).not.toThrow();
+  });
+});
+
+describe("page reactions", () => {
+  /** A page with its own reactions next to the templates: viewModels.on.<page>. */
+  const bindPage = (on: unknown, actions = createActions()) => {
+    const store = createStore({});
+    const bus = createEventBus();
+    const input: ResolveInput = {
+      viewModels: { ...page([], {}), on: { demo: on } } as ResolveInput["viewModels"],
+      page: "demo",
+      registry: registryWith(counter, plain),
+      layoutEngines: enginesWith(listEngine),
+      actions,
+    };
+    const plan = resolvePage(input);
+    const unbind = bindReactions(bus, store, plan, actions);
+    return { store, bus, plan, unbind };
+  };
+
+  it("run when the page loads: in order, an async action awaited", async () => {
+    const actions = createActions();
+    actions.register({
+      name: "load",
+      handler: async ({ store: target, args }) => {
+        await Promise.resolve();
+        target.set("loaded", args["url"]);
+      },
+    });
+    const { store, bus } = bindPage(
+      { load: [{ set: "opened", from: "page" }, { call: "load", with: { url: "/api/x" } }, { set: "after", value: true }] },
+      actions,
+    );
+    emitPageLoad(bus, "demo");
+    expect(store.get("opened")).toBe("demo");
+    expect(store.get("after")).toBeUndefined();
+    await vi.waitFor(() => expect(store.get("after")).toBe(true));
+    expect(store.get("loaded")).toBe("/api/x");
+  });
+
+  it("belong to their page: another page's load, and a cell's event, do not run them", () => {
+    const { store, bus } = bindPage({ load: [{ set: "opened", value: true }] });
+    emitPageLoad(bus, "other");
+    bus.emit({ widget: "counter", name: "load", payload: {}, source: { page: "demo", cell: "c1" } });
+    expect(store.get("opened")).toBeUndefined();
+  });
+
+  it("stop with the page: nothing runs after unbind", () => {
+    const { store, bus, unbind } = bindPage({ load: [{ set: "opened", value: true }] });
+    unbind();
+    emitPageLoad(bus, "demo");
+    expect(store.get("opened")).toBeUndefined();
+  });
+
+  it("are ignored as a whole, loudly, when one is wrong — the page still renders", () => {
+    for (const on of [
+      { loaded: [{ set: "x" }] },
+      { load: [{ call: "nobody-registered" }] },
+      { load: [{ set: "x", from: "nope" }] },
+    ]) {
+      const { store, bus, plan } = bindPage(on);
+      expect(plan.problem).toBeUndefined();
+      expect(plan.on).toEqual({});
+      expect(plan.problem === undefined ? plan.warnings.join(" ") : "").toContain("page reactions ignored");
+      emitPageLoad(bus, "demo");
+      expect(store.get("x")).toBeUndefined();
+    }
+  });
+
+  it("check an action's arguments like a cell's reaction does", () => {
+    const actions = createActions();
+    actions.register({ name: "table/load", params: z.object({ into: z.string() }).strict(), handler: vi.fn() });
+    const { plan } = bindPage({ load: [{ call: "table/load" }] }, actions);
+    expect(plan.problem === undefined ? plan.warnings.join(" ") : "").toContain("into: Required");
+  });
+});
+
+describe("action parameters", () => {
+  const withParams = (handler: (args: Record<string, unknown>) => void) => {
+    const actions = createActions();
+    actions.register({
+      name: "table/load",
+      params: z.object({ into: z.string().min(1), pageSize: z.number().int().default(50) }).strict(),
+      handler: ({ args }) => handler(args),
+    });
+    return actions;
+  };
+
+  it("hands the handler the PARSED arguments, defaults applied", () => {
+    const seen = vi.fn();
+    const { bus } = bind({ changed: [{ call: "table/load", with: { into: "jobs" } }] }, withParams(seen));
+    emit(bus, { value: 1 });
+    expect(seen).toHaveBeenCalledWith({ into: "jobs", pageSize: 50 });
+  });
+
+  it("reports a `with` that does not fit as a problem of the cell, and never calls the handler", () => {
+    const seen = vi.fn();
+    const { plan, bus } = bind({ changed: [{ call: "table/load" }] }, withParams(seen));
+    const cells = plan.problem === undefined ? plan.cells : [];
+    expect(cells[0]?.problem).toMatchObject({ kind: "unmet-contract" });
+    expect(JSON.stringify(cells[0]?.problem)).toContain('Action \\"table/load\\" got invalid arguments — into: Required');
+    emit(bus, { value: 1 });
+    expect(seen).not.toHaveBeenCalled();
+  });
+
+  it("refuses arguments the action does not know", () => {
+    const { plan } = bind({ changed: [{ call: "table/load", with: { into: "jobs", colums: {} } }] }, withParams(vi.fn()));
+    const cells = plan.problem === undefined ? plan.cells : [];
+    expect(JSON.stringify(cells[0]?.problem)).toContain("colums");
   });
 });

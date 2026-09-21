@@ -66,6 +66,16 @@ describe("widget registry", () => {
     ).toThrow(/default its own validator rejects/);
   });
 
+  it("a port's suggestedName is ONE path segment: it ends a generated path", () => {
+    const registry = createRegistry();
+    expect(() =>
+      registry.register({ ...counter, io: { inputs: { value: { value: z.number(), suggestedName: "deep.data" } } } }),
+    ).toThrow(/suggestedName that is not one path segment/);
+    expect(() =>
+      registry.register({ ...counter, io: { inputs: { value: { value: z.number(), suggestedName: "data" } } } }),
+    ).not.toThrow();
+  });
+
   describe("with the contract registry", () => {
     const badge = defineContract({
       kind: "badge",

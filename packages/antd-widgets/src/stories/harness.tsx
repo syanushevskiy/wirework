@@ -6,13 +6,16 @@
  *  - the view model's own reactions bound, so a counter increments and an
  *    input stores its text exactly as on a page,
  *  - the per-cell error boundary, so a crashing widget shows the placeholder,
- *  - a live readout of the store underneath.
+ *  - a live readout of the store underneath,
+ *  - optionally DRIVEN store values (`data` / `onData`) and a cell width —
+ *    what the playground story (playground.tsx) puts controls on.
  * `storyArgTypes` turns a widget's primitive settings into controls, the
- * same introspection the builder uses.
+ * same introspection the builder uses; `playground` goes all the way:
+ * every setting, every input port's data, the cell.
  *
  * Dev-only: story code may depend on engine/store/events; widget code never does.
  */
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { action } from "storybook/actions";
 import type { AnyWidgetDefinition, WidgetProps } from "@wirework/schema";
 import { settingFields } from "@wirework/schema";
@@ -27,7 +30,25 @@ export interface WidgetStoryProps {
   viewModel: Record<string, unknown>;
   /** Initial store state the inputs read from. */
   seed?: Record<string, unknown>;
+  /**
+   * Store values DRIVEN from outside (a playground's data controls): path ->
+   * value, written into the store whenever they change.
+   */
+  data?: Record<string, unknown>;
+  /**
+   * Called when the store holds something else at one of the `data` paths —
+   * the widget's own reaction wrote it (a click, a keystroke) — so controls
+   * can follow what the widget did.
+   */
+  onData?: (path: string, value: unknown) => void;
+  /** Width of the cell the widget sits in, px; the full canvas when absent. */
+  cellWidth?: number;
+  /** Show the live store readout underneath. Default true. */
+  showStore?: boolean;
 }
+
+/** Same data, whatever the object identity: controls hand over fresh objects on every change. */
+const sameValue = (a: unknown, b: unknown): boolean => Object.is(a, b) || JSON.stringify(a) === JSON.stringify(b);
 
 function StoreReadout({ snapshot }: { snapshot: Record<string, unknown> }) {
   return (
@@ -42,9 +63,47 @@ function StoryStore({ store }: { store: ReturnType<typeof createStore> }) {
   return <StoreReadout snapshot={snapshot} />;
 }
 
-export function WidgetStory({ definition, viewModel, seed = {} }: WidgetStoryProps) {
+export function WidgetStory({
+  definition,
+  viewModel,
+  seed = {},
+  data,
+  onData,
+  cellWidth,
+  showStore = true,
+}: WidgetStoryProps) {
   // One store + bus per mounted story (re-mount with `key` to re-seed).
   const [{ store, bus }] = useState(() => ({ store: createStore(seed), bus: createEventBus() }));
+
+  // What is driven RIGHT NOW — kept first, so the write below already sees it:
+  // a value the controls just set must not be reported back to them.
+  const latest = useRef({ data, onData });
+  useEffect(() => {
+    latest.current = { data, onData };
+  });
+
+  // Controls -> store: a driven value that differs from the store's is written.
+  // (Story code may write the store; widget code never does.)
+  useEffect(() => {
+    for (const [path, value] of Object.entries(data ?? {})) {
+      if (!sameValue(store.get(path), value)) store.set(path, value);
+    }
+  }, [store, data]);
+
+  // Store -> controls: the widget's own reaction changed a driven value.
+  const drivenPaths = Object.keys(data ?? {}).join("\n");
+  useEffect(() => {
+    const stops = drivenPaths
+      .split("\n")
+      .filter(Boolean)
+      .map((path) =>
+        store.subscribe(path, () => {
+          const value = store.get(path);
+          if (!sameValue(value, latest.current.data?.[path])) latest.current.onData?.(path, value);
+        }),
+      );
+    return () => stops.forEach((stop) => stop());
+  }, [store, drivenPaths]);
 
   const parsed = useMemo(() => {
     try {
@@ -81,18 +140,19 @@ export function WidgetStory({ definition, viewModel, seed = {} }: WidgetStoryPro
           Invalid view model: {parsed.problem}
         </div>
       ) : (
-        <div className="ww-cell">
+        // A widget lives in a CELL of some width: narrow it to see how it copes.
+        <div className="ww-cell" style={cellWidth === undefined ? undefined : { width: cellWidth, maxWidth: "100%" }}>
           <WidgetErrorBoundary widgetType={definition.type}>
             <Widget viewModel={parsed.viewModel} store={readable} emit={emit} />
           </WidgetErrorBoundary>
         </div>
       )}
-      <StoryStore store={store} />
+      {showStore ? <StoryStore store={store} /> : null}
     </div>
   );
 }
 
-type ArgType = { control: "text" | "number" | "boolean" | "select"; options?: string[]; description?: string };
+type ArgType = { control: "text" | "number" | "boolean" | "select" | "object"; options?: string[]; description?: string };
 
 /** Controls for a widget's primitive settings — the builder's introspection, reused. */
 export function storyArgTypes(definition: AnyWidgetDefinition): Record<string, ArgType> {
@@ -100,7 +160,8 @@ export function storyArgTypes(definition: AnyWidgetDefinition): Record<string, A
     settingFields(definition.viewModel).map((field) => [
       field.name,
       {
-        control: field.kind,
+        // "json" only comes on request (action parameters); Storybook edits it as an object.
+        control: field.kind === "json" ? "object" : field.kind,
         ...(field.options ? { options: field.options } : {}),
         ...(field.description ? { description: field.description } : {}),
       },

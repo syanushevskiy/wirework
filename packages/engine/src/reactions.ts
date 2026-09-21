@@ -22,6 +22,8 @@
  */
 import {
   getPath,
+  pageEventSource,
+  type ActionDefinition,
   type EventBindings,
   type EventBus,
   type Reaction,
@@ -31,6 +33,7 @@ import {
   type WidgetEvent,
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
+import { problemText } from "./messages";
 import type { ResolvedPage } from "./resolve";
 
 /** `value` literal wins, then the payload field at `from`, else the payload. */
@@ -52,6 +55,20 @@ const bindingsOf = (viewModel: unknown): EventBindings =>
 const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   typeof (value as PromiseLike<unknown> | null | undefined)?.then === "function";
 
+/**
+ * What the handler gets as `args`: the reaction's `with`, PARSED by the
+ * action's declared parameters when it has any (defaults applied, unknown
+ * or missing arguments refused) — untouched otherwise.
+ */
+export function actionArguments(action: ActionDefinition, given: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!action.params) return given ?? {};
+  try {
+    return action.params.parse(given ?? {});
+  } catch (error) {
+    throw new Error(`Action "${action.name}" got invalid arguments — ${problemText(error)}`);
+  }
+}
+
 /** One reaction. Returns the action's promise when it is async. */
 function run(
   reaction: Reaction,
@@ -66,7 +83,7 @@ function run(
       // Boot validation reports this; at runtime it must not take the page down.
       throw new Error(`Reaction calls unknown action "${reaction.call}"`);
     }
-    return action.handler({ event, store, args: reaction.with ?? {}, signal });
+    return action.handler({ event, store, args: actionArguments(action, reaction.with), signal });
   }
   if ("set" in reaction) {
     store.set(reaction.set, reactionValue(reaction, event.payload));
@@ -137,7 +154,12 @@ export function bindCellReactions(
   };
 }
 
-/** Subscribe every declared reaction of the plan; returns ONE unsubscribe. */
+/**
+ * Subscribe every declared reaction of the plan — its cells' and the PAGE's
+ * own (`plan.on`, e.g. what to load when the page opens); returns ONE
+ * unsubscribe. A page's events come from the page with the empty cell id
+ * (`pageEventSource`), so they bind exactly like a cell's.
+ */
 export function bindReactions(
   bus: EventBus,
   store: Store,
@@ -145,8 +167,12 @@ export function bindReactions(
   actions?: ActionRegistry,
 ): Unsubscribe {
   const cells = plan.problem === undefined ? plan.cells : [];
-  const unsubscribes = cells.map((cell) =>
-    bindCellReactions(bus, store, { page: plan.page, cell: cell.key, viewModel: cell.viewModel }, actions),
-  );
+  const page = pageEventSource(plan.page);
+  const unsubscribes = [
+    bindCellReactions(bus, store, { ...page, viewModel: { on: plan.on } }, actions),
+    ...cells.map((cell) =>
+      bindCellReactions(bus, store, { page: plan.page, cell: cell.key, viewModel: cell.viewModel }, actions),
+    ),
+  ];
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 }

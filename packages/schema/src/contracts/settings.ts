@@ -18,7 +18,8 @@ import type { Validator } from "./widget";
 /** View-model keys that are bindings, never settings. */
 export const RESERVED_VIEW_MODEL_KEYS = new Set(["inputs", "on"]);
 
-export type SettingKind = "text" | "number" | "boolean" | "select";
+/** "json": anything that is not a primitive (an object, a list) — only on request, see `settingFields`. */
+export type SettingKind = "text" | "number" | "boolean" | "select" | "json";
 
 export interface SettingField {
   name: string;
@@ -94,14 +95,19 @@ export function validatorKeys(validator: Validator<unknown>): string[] | undefin
   return Object.keys(shape as Record<string, unknown>);
 }
 
-/** Primitive top-level settings of a widget's view-model validator. */
-export function settingFields(validator: Validator<unknown>): SettingField[] {
+/**
+ * Top-level fields of an object validator a builder can ask for: a widget's
+ * view-model settings, an action's parameters. Primitive ones only — unless
+ * `json` is set: then everything else (objects, lists) comes as kind "json",
+ * for a form that lets the user type JSON (an action's column overrides).
+ */
+export function settingFields(validator: Validator<unknown>, options: { json?: boolean } = {}): SettingField[] {
   const shape = (validator as { shape?: unknown }).shape;
   if (shape === null || typeof shape !== "object") return [];
   return Object.entries(shape as Record<string, unknown>).flatMap(([name, schema]) => {
     if (RESERVED_VIEW_MODEL_KEYS.has(name) || !(schema instanceof z.ZodType)) return [];
     const { inner, optional, hasDefault, defaultValue, description } = unwrap(schema);
-    const kind = kindOf(inner);
+    const kind = kindOf(inner) ?? (options.json === true ? "json" : undefined);
     if (!kind) return [];
     return [
       {

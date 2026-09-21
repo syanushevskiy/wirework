@@ -23,6 +23,7 @@ import {
   validatorKeys,
   type AnyWidgetDefinition,
   type CellBase,
+  type EventBindings,
   type PageViewModel,
   type UserViewModels,
   type ViewModels,
@@ -31,7 +32,9 @@ import {
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { errorText, issuesText } from "./messages";
+import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
+import { actionArguments } from "./reactions";
 import type { WidgetRegistry } from "./registry";
 import { pageTemplates } from "./trees";
 
@@ -91,6 +94,12 @@ interface ResolvedPageBase {
   fallback?: FallbackNote;
   /** Set when a user overlay was given but is invalid, so the page ignores ALL of it. */
   overlayProblem?: string;
+  /**
+   * The PAGE's own reactions (`viewModels.on.<page>`, e.g. what to load when
+   * it opens), checked: empty when there are none or they are ignored —
+   * then a warning on the plan says why (page-events.ts).
+   */
+  on: EventBindings;
 }
 
 /** A renderable page: engine name, its validated template, cells by id. */
@@ -195,6 +204,22 @@ export function contractProblems(
       : reactions.flatMap(({ reaction }) =>
           typeof reaction?.call === "string" && !actions.get(reaction.call) ? [reaction.call] : [],
         );
+  // An action that declares parameters gets its `with` checked here, so a
+  // missing or mistyped argument is a problem on the page — not an error in
+  // the console the first time somebody clicks.
+  const invalidArguments =
+    actions === undefined
+      ? []
+      : reactions.flatMap(({ reaction }) => {
+          const action = typeof reaction?.call === "string" ? actions.get(reaction.call) : undefined;
+          if (!action?.params) return [];
+          try {
+            actionArguments(action, (reaction as { with?: Record<string, unknown> }).with);
+            return [];
+          } catch (error) {
+            return [errorText(error)];
+          }
+        });
   const unknownFields = reactions.flatMap(({ event, reaction }) => {
     const fields = events[event] ? validatorKeys(events[event].payload) : undefined;
     const head = typeof reaction?.from === "string" ? reaction.from.split(".")[0] : undefined;
@@ -217,6 +242,7 @@ export function contractProblems(
       `reactions call unknown actions: ${unknownActions.join(", ")} (registered: ${actions?.keys().join(", ") || "none"})`,
     );
   }
+  if (invalidArguments.length > 0) parts.push(`reactions call actions wrongly: ${invalidArguments.join("; ")}`);
   if (unknownFields.length > 0) parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
   return parts.length > 0 ? parts.join("; ") : undefined;
 }
@@ -306,7 +332,9 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
   // Checked once per page. A broken overlay is ignored here exactly as boot
   // validation ignores it — and the plan says so.
   const { overlay: userViewModels, problem: overlayProblem } = checkOverlay(input.userViewModels);
-  const notes = overlayProblem === undefined ? {} : { overlayProblem };
+  // The page's own reactions belong to the BASE view models only: a user's view never carries any.
+  const pageReactions = checkPageReactions(viewModels, page, input.actions);
+  const notes = { on: pageReactions.on, ...(overlayProblem === undefined ? {} : { overlayProblem }) };
 
   // Base templates with the user's own layered on top.
   const templates = pageTemplates(viewModels, userViewModels, page);
@@ -337,7 +365,7 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
     ...notes,
     engine: resolution.engine.name,
     template: resolution.template,
-    warnings: resolution.warnings,
+    warnings: [...resolution.warnings, ...(pageReactions.problem === undefined ? [] : [pageReactions.problem])],
     cells: resolveCells(resolution.cells, { ...input, userViewModels }),
   };
 }
