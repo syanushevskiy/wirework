@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "columnDefinitions": [
+      {
+        "id": "job_id",
+        "headerName": "Job ID",
+        "type": "numeric(p, s)",
+        "description": null,
+        "filterValues": null,
+        "isFilterable": true,
+        "isHidden": false,
+        "isSortable": true
+      },
+      {
+        "id": "host_name",
+        "headerName": "Host",
+        "type": "varchar(l)",
+        "description": null,
+        "filterValues": [
+          "DEHOSTQA401118",
+          null,
+          "local",
+          "invalidCredentials",
+          "DEHOSTQD401877",
+          "FRNODEKP2XT5"
+        ],
+        "isFilterable": true,
+        "isHidden": false,
+        "isSortable": true
+      },
+      {
+        "id": "state",
+        "headerName": "State",
+        "type": "varchar(l)",
+        "description": null
+      },
+      {
+        "id": "service",
+        "headerName": "Service",
+        "type": "varchar(l)",
+        "description": null
+      },
+      {
+        "id": "build",
+        "headerName": "Build",
+        "type": "varchar(l)",
+        "description": null
+      },
+      {
+        "id": "trace_port",
+        "headerName": "Trace port",
+        "type": "numeric(p, s)",
+        "description": null
+      },
+      {
+        "id": "failure_detail",
+        "headerName": "Failure Detail",
+        "type": "clob",
+        "description": null,
+        "filterValues": null
+      },
+      {
+        "id": "auto_restart",
+        "headerName": "Auto Restart",
+        "type": "boolean",
+        "description": null,
+        "filterValues": null
+      },
+      {
+        "id": "created_at",
+        "headerName": "Created At",
+        "type": "timestamp(p) with time zone"
+      },
+      {
+        "id": "modified_at",
+        "headerName": "Modified At",
+        "type": null
+      },
+      {
+        "id": "output_path",
+        "headerName": "Output Path",
+        "type": null
+      },
+      {
+        "id": "total",
+        "headerName": "Total",
+        "type": "bigint"
+      }
+    ],
+    "enableFilter": true,
+    "enableSorting": true
+  },
+  "totalRecords": 36
+}

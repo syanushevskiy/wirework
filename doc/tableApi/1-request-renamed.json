@@ -1,0 +1,25 @@
+{
+  "dataFilter": {
+    "filterBetween": {},
+    "filterEqual": {},
+    "filterIn": {
+      "state": [
+        "STARTING",
+        "INITIALIZING",
+        "RUNNING",
+        "UNRESPONSIVE",
+        "STOPPING",
+        "OVERLOADED"
+      ]
+    },
+    "filterLike": {},
+    "filterTimeDiffGt": {},
+    "limit": 50,
+    "offset": 0,
+    "orderBy": {
+      "job_id": "DESC"
+    }
+  },
+  "metadata": false,
+  "totalRecords": true
+}
