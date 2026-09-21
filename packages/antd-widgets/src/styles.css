@@ -15,3 +15,10 @@
 .ww-select {
   width: 100%;
 }
+
+/* Filters side by side, each wide enough for a couple of chosen values. */
+.ww-filter-bar-filter {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  max-width: 20rem;
+}

@@ -8,7 +8,7 @@
  * them). If a widget ever needs engine, store or bus internals, the widget
  * contract has leaked. No widget writes the store — every state change is
  * an emitted event plus a reaction. Label, button, input, pagination,
- * refresher, select, multi-select, tag, checkbox, progress, alert and table
+ * refresher, select, multi-select, filter-bar, tag, checkbox, progress, alert and table
  * IMPLEMENT the standard contracts; counter, echo and crash are demo/test
  * widgets.
  */
@@ -20,6 +20,7 @@ import { antdCheckbox } from "./widgets/antd-checkbox";
 import { antdCounter } from "./widgets/antd-counter";
 import { antdCrash } from "./widgets/antd-crash";
 import { antdEcho } from "./widgets/antd-echo";
+import { antdFilterBar } from "./widgets/antd-filter-bar";
 import { antdInput } from "./widgets/antd-input";
 import { antdLabel } from "./widgets/antd-label";
 import { antdMultiSelect } from "./widgets/antd-multi-select";
@@ -37,6 +38,7 @@ export {
   antdCounter,
   antdCrash,
   antdEcho,
+  antdFilterBar,
   antdInput,
   antdLabel,
   antdMultiSelect,
@@ -59,11 +61,13 @@ export type { TableEvents } from "./widgets/antd-table";
 export type { SelectEvents } from "./widgets/antd-select";
 export type { CheckboxEvents } from "./widgets/antd-checkbox";
 export type { MultiSelectEvents } from "./widgets/antd-multi-select";
+export type { FilterBarEvents } from "./widgets/antd-filter-bar";
 
 /** Every production widget, for a host to register at once. */
 export const antdWidgets: AnyWidgetDefinition[] = [
   antdLabel,
   antdEcho,
+  antdFilterBar,
   antdCounter,
   antdTable,
   antdButton,

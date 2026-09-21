@@ -8,7 +8,7 @@
 import { useCallback, useMemo, type TdHTMLAttributes } from "react";
 import type { TableProps } from "antd";
 import { getPath, type Emit, type PortDefinition, type ReadableStore } from "@wirework/schema";
-import { usePort } from "@wirework/react";
+import { useAfterMount, usePort } from "@wirework/react";
 import type { TableColumn, TableRow } from "@wirework/widget-contracts";
 import type { TableEvents } from "../widgets/antd-table";
 
@@ -36,22 +36,34 @@ function keyOf(row: TableRow, rowKey: string, index: number): string {
 export function useTable(
   store: ReadableStore,
   emit: Emit<TableEvents>,
-  paths: { rows: string; loading?: string },
-  ports: { rows: PortDefinition<TableRow[]>; loading: PortDefinition<boolean> },
+  paths: { rows: string; loading?: string; columns?: string },
+  ports: {
+    rows: PortDefinition<TableRow[]>;
+    loading: PortDefinition<boolean>;
+    columns: PortDefinition<TableColumn[]>;
+  },
   settings: { columns: TableColumn[]; rowKey: string },
 ) {
+  // The table appeared: `load`, once — the reaction calls whatever fetches its
+  // data. After the mount, so the page has bound its reactions (useAfterMount).
+  useAfterMount(() => emit("load", {}));
+
   // Validated by the contract's ports: a malformed value shows no rows, never a crash.
   const rows = usePort(store, paths.rows, ports.rows) ?? NO_ROWS;
   const loading = usePort(store, paths.loading, ports.loading) === true;
+  // A bound columns port wins (a table the server describes); a missing,
+  // empty or malformed one shows the setting's.
+  const boundColumns = usePort(store, paths.columns, ports.columns);
+  const configured = boundColumns !== undefined && boundColumns.length > 0 ? boundColumns : settings.columns;
 
-  // Without configured columns, the first row's fields — recomputed only when those change.
+  // Without any columns, the first row's fields — recomputed only when those change.
   const firstRowFields = Object.keys(rows[0] ?? {}).join("\n");
   const columns = useMemo<TableColumn[]>(
     () =>
-      settings.columns.length > 0
-        ? settings.columns
+      configured.length > 0
+        ? configured
         : firstRowFields.split("\n").filter(Boolean).map((field) => ({ title: field, property: field })),
-    [settings.columns, firstRowFields],
+    [configured, firstRowFields],
   );
 
   const renderedRows = useMemo<RenderedRow[]>(

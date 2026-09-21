@@ -19,7 +19,7 @@ function AntdTable({ viewModel, store, emit }: ContractProps<typeof tableContrac
   const { columns, rows, loading, rowProps } = useTable(
     store,
     emit,
-    { rows: viewModel.inputs.rows, loading: viewModel.inputs.loading },
+    { rows: viewModel.inputs.rows, loading: viewModel.inputs.loading, columns: viewModel.inputs.columns },
     tableContract.io.inputs,
     { columns: viewModel.columns, rowKey: viewModel.rowKey },
   );
