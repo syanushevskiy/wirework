@@ -5,13 +5,16 @@
  * (registries, pages, rejection proof) is `boot.ts`; page editing (session,
  * widget edits, removal) lives in use-page-editing.
  *
- * Opening a page starts a VISIT: a fresh store and bus from that page's
- * initial state (boot.ts), so the state inspector shows exactly what this
- * page put there, step by step. BOTH trees LIVE IN THE STORE —
+ * The hook serves ONE page visit, which the router's loader opened
+ * (router.tsx, boot.ts): the visit's store and bus, from that page's
+ * initial state, so the state inspector shows exactly what this page put
+ * there, step by step. The component using it is keyed by the visit, so
+ * all state here starts over with it. BOTH trees LIVE IN THE STORE —
  * "viewModels" and "userViewModels" — alongside the data: one
- * state-management tree. The state inspector edits it, widgets write into
- * it (through reactions), editors save into it, and the page re-renders
- * reactively from it.
+ * state-management tree (for a demo page, the application's global state
+ * layered under the visit's own; doc/playground-design.md). The state
+ * inspector edits it, widgets write into it (through reactions), editors
+ * save into it, and the page re-renders reactively from it.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -23,12 +26,10 @@ import {
 import { resolveTemplate, updatePageTemplate, validateViewModels } from "@wirework/engine";
 import { useStorePath, useWidgetEvent } from "@wirework/react";
 import { antdTable } from "@wirework/antd-widgets";
-import { boot } from "../boot";
+import type { PageVisit, Playground } from "../boot";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
 import type { WidgetSettings } from "./use-widget-form";
 
-/** The page the playground opens with. */
-const START_PAGE = "demo";
 /** The page the widget builder adds to. */
 export const BUILDER_PAGE = "builder";
 
@@ -52,14 +53,12 @@ function nextCustomId(viewModels: ViewModels, cellIds: string[]): string {
   return `custom-${Math.max(0, ...numbers(customTemplates), ...numbers(cellIds)) + 1}`;
 }
 
-export function usePlayground() {
-  // useState, not useMemo: React may discard memo caches, which would
-  // silently recreate the registries and reset all runtime state.
-  const [{ registry, contracts, layoutEngines, actions, rejections, pageNames, openPage }] = useState(boot);
-  const [visit, setVisit] = useState(() => openPage(START_PAGE));
+export function usePlayground(playground: Playground, visit: PageVisit) {
+  const { registry, contracts, layoutEngines, actions, rejections } = playground;
   const { page, store, bus } = visit;
-  // The page's opening (the demo's first server request) is a side effect:
-  // it belongs here, not in the initializer above. `start` runs once per visit.
+  // The page's opening (the first server request, the application's session
+  // request) is a side effect: it belongs here, not in the router's loader
+  // that created the visit. `start` runs once per visit.
   useEffect(() => visit.start(), [visit]);
 
   // Reactive: inspector edits, addWidget, editors and saved sessions all go
@@ -96,10 +95,10 @@ export function usePlayground() {
    * Host-side subscription example: a row click is an INTENT on the bus;
    * the host turns it into STATE ("runs.selected") that any widget can
    * display. The payload is typed by the widget's declaration — no cast.
-   * Scoped to the demo's runs table: the table is generic, and a table
+   * Scoped to the runs page's table: the table is generic, and a table
    * added in the builder must not change the selected run.
    */
-  useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "demo", cell: "table-main" }), (event) =>
+  useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "runs", cell: "table-main" }), (event) =>
     store.set("runs.selected", event.payload.key),
   );
 
@@ -117,20 +116,11 @@ export function usePlayground() {
   });
 
   /**
-   * Opening a page — the current one included — starts a new visit: a fresh
-   * store from the page's initial state, and the overlay as that page starts
-   * it. The visit is created HERE, in the event handler, never inside a
-   * state updater (StrictMode runs those twice).
+   * GLOBAL state at work: what the user may do arrived with the session
+   * (app.permissions). Only an explicit `false` forbids — the builder has no
+   * global state, and the demo's is still on its way when a page first shows.
    */
-  const selectPage = useCallback(
-    (name: string) => {
-      editing.cancel();
-      const next = openPage(name);
-      setVisit(next);
-      setOverlayWanted(next.userOverlayOnOpen);
-    },
-    [editing.cancel, openPage],
-  );
+  const canEditPages = useStorePath<boolean>(store, "app.permissions.editPages") !== false;
 
   /**
    * The builder's engine is a free choice UNTIL the first widget is placed:
@@ -173,6 +163,16 @@ export function usePlayground() {
       : undefined;
 
   /**
+   * The page changed under the user's hands — a widget ADDED, a page edit
+   * SAVED — so it LOADS AGAIN (`PageView`'s `reloadKey`): the page's `load`
+   * event and its widgets' fire by the NEW configuration. A table whose load
+   * reaction got another URL, page size or metadata flag shows it at once,
+   * not after a reload of the browser. The store is untouched.
+   */
+  const [reloadKey, setReloadKey] = useState(0);
+  const loadAgain = useCallback(() => setReloadKey((loads) => loads + 1), []);
+
+  /**
    * Add a widget to the builder page: a fresh BASE view-model template
    * holding the bindings (input paths + event reactions) and the settings
    * the user typed (widget defaults fill the rest), plus a cell appended by
@@ -211,9 +211,16 @@ export function usePlayground() {
           custom: { ...customTemplates, [id]: { default: template } },
         },
       });
+      loadAgain();
     },
-    [store, layoutEngines],
+    [store, layoutEngines, loadAgain],
   );
+
+  /** Save page: commit the session, then the page loads again — by what was just saved. */
+  const save = useCallback(() => {
+    editing.save();
+    loadAgain();
+  }, [editing.save, loadAgain]);
 
   return {
     registry,
@@ -227,11 +234,8 @@ export function usePlayground() {
     bus,
     report,
     rejections,
-    pages: pageNames,
     page,
-    /** Changes with every visit: a key for what must start over with the store. */
-    visitId: visit.id,
-    selectPage,
+    canEditPages,
     target,
     withUserOverlay,
     userOverlayAvailable,
@@ -239,5 +243,8 @@ export function usePlayground() {
     addLocked,
     addWidget,
     ...editing,
+    // After the spread: Save also loads the page again.
+    save,
+    reloadKey,
   };
 }

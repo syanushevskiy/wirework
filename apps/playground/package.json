@@ -20,11 +20,13 @@
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
     "@wirework/store": "workspace:*",
+    "@wirework/table-view": "workspace:*",
     "@wirework/view-data-models-examples": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
     "antd": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-router": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

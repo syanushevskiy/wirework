@@ -1,28 +1,29 @@
 /**
  * Widget palette — ONLY presentation (search and press logic in
- * use-widget-palette). A search box with autocomplete on top; the matching
- * widgets appear below it as cards WHILE THE SEARCH IS IN USE (focused, or
- * holding a query), each card a live, non-interactive preview with the
+ * use-widget-palette). A search box with autocomplete on top, and a "Show
+ * widgets" button for the whole list without typing; the matching widgets
+ * appear below as cards WHILE THE SEARCH IS IN USE (focused, or holding a
+ * query) or the list was asked for, each card a live, non-interactive preview with the
  * contract kind, the type and the description, flowing into as many
  * columns as the panel is wide (doc/widget-previews-design.md).
  */
 import type { ReactNode } from "react";
-import { AutoComplete, Card, Flex, Tag, Typography } from "antd";
+import { AutoComplete, Button, Card, Flex, Tag, Typography } from "antd";
 import { WidgetPreview } from "@wirework/react";
-import { usePalettePress, useWidgetSearch } from "../hooks/use-widget-palette";
-import type { WidgetGroup } from "../hooks/use-widget-builder";
+import { usePalettePress, type WidgetSearch } from "../hooks/use-widget-palette";
 
 export interface WidgetPaletteProps {
-  groups: WidgetGroup[];
+  /** The search and "Show widgets" state — owned by the builder, which starts it over after an add. */
+  search: WidgetSearch;
   selected: string;
   onSelect: (type: string) => void;
   /** Rendered next to the search box (the host's "Add widget"). */
   action?: ReactNode;
 }
 
-export function WidgetPalette({ groups, selected, onSelect, action }: WidgetPaletteProps) {
+export function WidgetPalette({ search, selected, onSelect, action }: WidgetPaletteProps) {
   const press = usePalettePress(onSelect);
-  const { query, setQuery, options, items, total, open, focusProps } = useWidgetSearch(groups);
+  const { query, setQuery, options, items, total, open, focusProps, toggleBrowsing } = search;
 
   return (
     <div
@@ -44,6 +45,18 @@ export function WidgetPalette({ groups, selected, onSelect, action }: WidgetPale
           options={options}
           onChange={(value: string) => setQuery(value ?? "")}
         />
+        {/* The whole list without typing anything; pressed again it hides it. */}
+        <Button
+          size="small"
+          data-testid="widget-browse"
+          // Its focus must not open the catalog by itself (use-widget-palette).
+          data-palette-toggle
+          aria-expanded={open}
+          aria-controls="widget-catalog"
+          onClick={toggleBrowsing}
+        >
+          {open ? "Hide widgets" : "Show widgets"}
+        </Button>
         {action}
       </Flex>
 
@@ -52,7 +65,7 @@ export function WidgetPalette({ groups, selected, onSelect, action }: WidgetPale
           No widget matches “{query}”.
         </Typography.Text>
       ) : (
-        <div className="pg-palette-cards">
+        <div className="pg-palette-cards" id="widget-catalog">
           {items.map(({ type, description, definition, kind }) => (
             <Card
               key={type}

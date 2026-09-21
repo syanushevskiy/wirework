@@ -4,7 +4,10 @@
  *    (Enter/Space), which a plain clickable card would not,
  *  - the search filters the catalog by what the user typed — matched
  *    against the widget's type, its description and the contract kind it
- *    implements — and the same matches feed the autocomplete suggestions.
+ *    implements — and the same matches feed the autocomplete suggestions,
+ *  - the catalog also opens WITHOUT typing ("Show widgets"), and the search
+ *    starts over (`clear`) once a widget has been added. The builder hook
+ *    owns this state (use-widget-builder), because "added" is its moment.
  */
 import { useCallback, useMemo, useState, type FocusEvent, type KeyboardEvent } from "react";
 import type { AnyWidgetDefinition } from "@wirework/schema";
@@ -36,6 +39,8 @@ export function useWidgetSearch(groups: WidgetGroup[]) {
   const [query, setQuery] = useState("");
   /** The catalog is a PICKER: it opens with the search and closes after it. */
   const [focused, setFocused] = useState(false);
+  /** Opened with the "Show widgets" button: the whole list, nothing typed. Stays until hidden or a widget is picked. */
+  const [browsing, setBrowsing] = useState(false);
 
   /** Groups keep their order; a group with no match disappears entirely. */
   const matching = useMemo(() => {
@@ -76,7 +81,12 @@ export function useWidgetSearch(groups: WidgetGroup[]) {
    * the click lands.
    */
   const focusProps = {
-    onFocus: () => setFocused(true),
+    // The "Show widgets" button is a TOGGLE: if its own focus opened the
+    // catalog, the click that follows would find it open and close it again.
+    onFocus: (event: FocusEvent<HTMLDivElement>) => {
+      if (event.target instanceof Element && event.target.closest("[data-palette-toggle]")) return;
+      setFocused(true);
+    },
     onBlur: (event: FocusEvent<HTMLDivElement>) => {
       if (event.currentTarget.contains(event.relatedTarget)) return;
       setFocused(false);
@@ -86,5 +96,33 @@ export function useWidgetSearch(groups: WidgetGroup[]) {
   /** Every registered widget, matching or not (tests compare the catalog against it). */
   const total = useMemo(() => groups.reduce((count, group) => count + group.widgets.length, 0), [groups]);
 
-  return { query, setQuery, options, items, total, open: focused || query.trim() !== "", focusProps };
+  const open = browsing || focused || query.trim() !== "";
+
+  /**
+   * Back to the start: nothing typed, the catalog closed. After a widget was
+   * ADDED the search must not still hold the last query — and for hiding the
+   * list, which a query or the focus would otherwise keep open.
+   */
+  const clear = useCallback(() => {
+    setQuery("");
+    setBrowsing(false);
+    setFocused(false);
+  }, []);
+
+  /** The "Show widgets" button: the whole list without typing; pressed again it hides it. */
+  const toggleBrowsing = useCallback(() => {
+    if (open) clear();
+    else setBrowsing(true);
+  }, [open, clear]);
+
+  /**
+   * A widget was picked: browsing is over. The catalog stays while the
+   * picked card has the focus (it shows as pressed) and closes when the user
+   * moves on to the form — exactly like the search.
+   */
+  const picked = useCallback(() => setBrowsing(false), []);
+
+  return { query, setQuery, options, items, total, open, focusProps, clear, toggleBrowsing, picked };
 }
+
+export type WidgetSearch = ReturnType<typeof useWidgetSearch>;

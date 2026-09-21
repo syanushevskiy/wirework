@@ -6,8 +6,15 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { AnyWidgetDefinition, Store, WidgetBindings } from "@wirework/schema";
-import type { ActionRegistry, ContractRegistry, WidgetRegistry } from "@wirework/engine";
+import {
+  boundPaths,
+  suggestedInputPaths,
+  type ActionRegistry,
+  type ContractRegistry,
+  type WidgetRegistry,
+} from "@wirework/engine";
 import { useWidgetForm, type WidgetSettings } from "./use-widget-form";
+import { useWidgetSearch } from "./use-widget-palette";
 
 export interface WidgetGroup {
   /** Contract kind, or "other" for widgets implementing none. */
@@ -21,6 +28,8 @@ export function useWidgetBuilder(
   contracts: ContractRegistry,
   store: Store,
   actions: ActionRegistry,
+  /** The page widgets are added to: the first segment of every generated path. */
+  page: string,
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void,
 ) {
   const [widgetType, setWidgetType] = useState<string>("");
@@ -43,22 +52,39 @@ export function useWidgetBuilder(
   }, [registry, contracts]);
   const definition = widgetType ? registry.get(widgetType) : undefined;
   const form = useWidgetForm(definition, store, actions);
+  /** The palette's search and "Show widgets" state lives HERE: adding a widget starts it over. */
+  const search = useWidgetSearch(widgetGroups);
 
+  /**
+   * Choosing a widget fills its input ports with GENERATED paths —
+   * `<page>.<widget name>.<port>`, numbered from the second instance on
+   * (`builder.refresher.schedule`, then `builder.refresher2.schedule`) —
+   * so nobody types the same structure again and again. They are defaults:
+   * the user changes any of them, e.g. to read existing data. What is taken
+   * is read from the view models at this moment, so a removed widget frees
+   * its name.
+   */
   const selectWidget = useCallback(
     (type: string) => {
       setWidgetType(type);
-      form.reset();
+      search.picked();
+      const chosen = registry.get(type);
+      form.reset(
+        chosen ? suggestedInputPaths(page, chosen, boundPaths(store.get<{ widgets?: unknown }>("viewModels"))) : {},
+      );
     },
-    [form.reset],
+    [form.reset, search.picked, registry, store, page],
   );
 
+  /** After an add everything starts over: no widget chosen, an empty form, an EMPTY search, the list closed. */
   const add = useCallback(() => {
     if (!definition) return;
     const { bindings, settings } = form.collect();
     onAdd(definition.type, bindings, settings);
     setWidgetType("");
     form.reset();
-  }, [definition, form.collect, form.reset, onAdd]);
+    search.clear();
+  }, [definition, form.collect, form.reset, search.clear, onAdd]);
 
-  return { widgetGroups, widgetType, selectWidget, form, canAdd: form.valid, add };
+  return { widgetGroups, widgetType, selectWidget, form, search, canAdd: form.valid, add };
 }

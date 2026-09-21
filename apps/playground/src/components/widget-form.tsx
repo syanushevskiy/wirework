@@ -21,7 +21,8 @@ export interface WidgetFormProps {
 }
 
 export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
-  const { definition, fields, settings, events, setPortPath, setSetting, setReaction, suggestionsFor } = form;
+  const { definition, fields, settings, events, setPortPath, setSetting, setReaction, setReactionParam, suggestionsFor } =
+    form;
   if (!definition) return null;
 
   return (
@@ -54,6 +55,14 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                 ) : null}
               </>
             }
+            // A builder starts every port from a generated path; say so while it is untouched.
+            extra={
+              field.suggested !== undefined && field.value === field.suggested ? (
+                <span data-testid={`${fieldId}-suggested`}>
+                  suggested path — keep it, change it, or pick existing data from the list
+                </span>
+              ) : undefined
+            }
           >
             {/* Inputs read EXISTING data: autocomplete offers current
                 store paths compatible with the port's declared type. */}
@@ -62,6 +71,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
               testId={fieldId}
               disabled={bindingsLocked}
               value={field.value}
+              suggested={field.suggested}
               suggestions={() => suggestionsFor(field)}
               onSelect={(path) => setPortPath(field.name, path)}
             />
@@ -237,6 +247,98 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     </>
                   )}
                 </div>
+                {/* What the chosen action asks for: one field per declared
+                    parameter (objects and lists as JSON), saved as `with`. */}
+                {event.kind === "call" && event.params.length > 0 ? (
+                  <Flex vertical gap="small" className="pg-params" data-testid={`reaction-${event.name}-params`}>
+                    {event.params.map((param) => {
+                      const fieldId = `reaction-${event.name}-param-${param.name}`;
+                      return (
+                        <Form.Item
+                          key={param.name}
+                          htmlFor={fieldId}
+                          validateStatus={param.error ? "error" : undefined}
+                          help={param.error}
+                          label={
+                            <>
+                              {param.name}
+                              {param.required ? " *" : ""}
+                              {param.description ? (
+                                <Typography.Text type="secondary">&nbsp;— {param.description}</Typography.Text>
+                              ) : null}
+                            </>
+                          }
+                        >
+                          {param.kind === "boolean" ? (
+                            /* A yes/no the action may also be left to decide: the dash is
+                               "not set". A click goes not set -> yes -> no -> not set (a
+                               required or defaulted one only toggles). */
+                            <Checkbox
+                              id={fieldId}
+                              data-testid={fieldId}
+                              data-state={param.unset ? "unset" : param.value === true ? "yes" : "no"}
+                              disabled={bindingsLocked}
+                              indeterminate={param.unset && !param.required}
+                              checked={param.value === true}
+                              onChange={() =>
+                                setReactionParam(
+                                  event.name,
+                                  param.name,
+                                  param.unset ? true : param.value === true ? false : param.required ? true : undefined,
+                                )
+                              }
+                            >
+                              <Typography.Text type="secondary">
+                                {param.unset ? "not set — the action decides" : param.value === true ? "yes" : "no"}
+                              </Typography.Text>
+                            </Checkbox>
+                          ) : param.kind === "select" ? (
+                            <Select
+                              id={fieldId}
+                              data-testid={fieldId}
+                              className="pg-field"
+                              placeholder="choose…"
+                              allowClear
+                              disabled={bindingsLocked}
+                              value={typeof param.value === "string" && param.value !== "" ? param.value : undefined}
+                              onChange={(value: string | undefined) => setReactionParam(event.name, param.name, value ?? "")}
+                              options={(param.options ?? []).map((option) => ({ value: option, label: option }))}
+                            />
+                          ) : param.kind === "json" ? (
+                            <Input.TextArea
+                              id={fieldId}
+                              data-testid={fieldId}
+                              className="pg-mono"
+                              autoSize={{ minRows: 1, maxRows: 8 }}
+                              placeholder="JSON (optional)"
+                              disabled={bindingsLocked}
+                              value={typeof param.value === "string" ? param.value : ""}
+                              onChange={(change) => setReactionParam(event.name, param.name, change.target.value)}
+                            />
+                          ) : (
+                            <Input
+                              id={fieldId}
+                              data-testid={fieldId}
+                              type={param.kind === "number" ? "number" : "text"}
+                              className="pg-field"
+                              placeholder={
+                                param.defaultValue === undefined ? undefined : `default: ${String(param.defaultValue)}`
+                              }
+                              disabled={bindingsLocked}
+                              value={typeof param.value === "string" ? param.value : ""}
+                              onChange={(change) => setReactionParam(event.name, param.name, change.target.value)}
+                            />
+                          )}
+                        </Form.Item>
+                      );
+                    })}
+                    {event.argumentsError ? (
+                      <Typography.Text type="danger" data-testid={`reaction-${event.name}-params-error`}>
+                        {event.argumentsError}
+                      </Typography.Text>
+                    ) : null}
+                  </Flex>
+                ) : null}
                 {event.kept > 0 ? (
                   <Typography.Text type="secondary" data-testid={`reaction-${event.name}-kept`}>
                     then {event.kept} more reaction{event.kept === 1 ? "" : "s"}, kept as configured

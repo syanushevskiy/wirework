@@ -2,15 +2,25 @@
  * One-time boot of the playground host: every registry (contracts, widgets,
  * layout engines, actions), the negative proof that broken widget
  * definitions are rejected, and the PAGES — each with the state a visit
- * starts from. Plain code, no React: `usePlayground` calls it exactly once.
+ * starts from. Plain code, no React and no router: the router calls
+ * `openPage` from its loaders and hands the actions a Navigator.
  *
- * A page VISIT gets its own store and event bus (`openPage`), created from
- * the page's initial state: that page's configuration and the little data
- * it starts with — nothing of any other page, and no server data. Whatever
- * else appears in the store got there through a visible step: a widget's
- * reaction, a host action, a server answer. A request still in flight when
- * the user leaves resolves into the visit's own store, which nobody shows
- * any more.
+ * Two kinds of state (doc/playground-design.md):
+ *  - The demo APPLICATION's state outlives its pages: the configuration
+ *    (`viewModels`, `userViewModels`) and the GLOBAL data at `app` — who the
+ *    user is, what they may do, their settings, lists every page needs. It
+ *    lives in one store for as long as the user stays in the application,
+ *    and starts over when they come back from the builder (or reload).
+ *  - A page VISIT gets its own store and event bus, created from the page's
+ *    initial state: the little data it starts with and the `route` the
+ *    router matched — nothing of any other page, and no server data.
+ *    Whatever else appears got there through a visible step: a widget's
+ *    reaction, a host action, a server answer. A request still in flight
+ *    when the user leaves resolves into the visit's own store, which nobody
+ *    shows any more.
+ * `layerStores` puts the two behind ONE tree, so a view model binds
+ * "app.user.name" exactly like "runs.data". The builder is a single page
+ * with a plain store of its own and no global state.
  */
 import {
   createActions,
@@ -23,31 +33,57 @@ import { flexRowsEngine } from "@wirework/engine-flex-rows";
 import { flexLayoutEngine } from "@wirework/engine-flexlayout";
 import { gridstackEngine } from "@wirework/engine-gridstack";
 import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
+import { z } from "zod";
 import { createEventBus } from "@wirework/events";
 import type { EventBus, Store } from "@wirework/schema";
-import { createStore } from "@wirework/store";
+import { createStore, layerStores } from "@wirework/store";
+import { createTableViewActions } from "@wirework/table-view";
 import {
   builderViewModels,
-  demoData,
+  demoAppState,
+  demoPageData,
   demoUserViewModels,
   demoViewModels,
   sampleRuns,
+  type DemoPage,
 } from "@wirework/view-data-models-examples";
 import { standardContracts } from "@wirework/widget-contracts";
 import { antdTestWidgets, antdWidgets, brokenWidgets } from "@wirework/antd-widgets";
 import { createFilterActions } from "./actions/filter-actions";
-import { createRunsActions, createRunsLoader } from "./actions/runs-actions";
+import { createNavActions, type Navigator } from "./actions/nav-actions";
+import { createOverviewLoader, createRunLoader, createRunsActions } from "./actions/runs-actions";
+import { createSessionLoader } from "./actions/session-loader";
 import { createRunsServer } from "./api/runs-server";
-import { applicationOptions, suiteOptionsFor } from "./api/suites-catalog";
+import { createSessionApi } from "./api/session-api";
+import { suiteOptionsFor } from "./api/suites-catalog";
+import { RUNS_VIEW_URL, createFakeTransport } from "./api/transport";
 import { statusBadgeContract } from "./contracts/status-badge";
 import { statusBadge } from "./widgets/status-badge";
 
+/** The user's page-size setting is a select's value: text. */
+const pageSizeSetting = z.coerce.number().int().min(1);
+
+/** The roots of the demo application's store that outlive a page visit. */
+export const APP_ROOTS = ["app", "viewModels", "userViewModels"] as const;
+
+/** What the router matched: put at `route` in a demo page's store, so widgets can bind to it. */
+export interface RouteInfo {
+  path: string;
+  params: Record<string, string>;
+}
+
 interface PlaygroundPage {
-  /** The state tree a visit starts from: this page's configuration and initial data. */
-  initialState(): Record<string, unknown>;
+  /** The state tree a visit's OWN store starts from. */
+  initialState(route: RouteInfo): Record<string, unknown>;
   /** Whether a visit starts with the user overlay applied (the visitor can toggle it). */
   userOverlayOnOpen: boolean;
-  /** Host code of the page's opening, run once per visit (e.g. the first server request). */
+  /**
+   * Host code of the page's opening, run once per visit — BEFORE the page's
+   * `load` event and its widgets' (they fire in a later task): what only
+   * this application knows, e.g. seeding the page from the user's settings.
+   * What a page LOADS is configuration: `viewModels.on.<page>.load`, or a
+   * table's own `load` reaction.
+   */
   onOpen?(store: Store): void;
 }
 
@@ -64,7 +100,15 @@ export interface PageVisit {
   start(): void;
 }
 
-export function boot() {
+/** The demo application while the user is in it: its long-lived store, loaded once. */
+interface AppSession {
+  shared: Store;
+  start(): void;
+}
+
+export type Playground = ReturnType<typeof boot>;
+
+export function boot({ navigator }: { navigator: Navigator }) {
   // Contracts: the standard kinds plus this app's own; widgets implement them.
   const contracts = createContracts();
   for (const contract of standardContracts) contracts.register(contract);
@@ -104,12 +148,27 @@ export function boot() {
     // eslint-disable-next-line no-console
     handler: ({ event, args }) => console.log("[action log-event]", event, args),
   });
-  // Server-side data for the demo table: a fake server with real latency.
+  // Server-side data for the demo: a fake server with real latency.
   const runsServer = createRunsServer({ seed: sampleRuns, total: 23, latencyMs: 600 });
-  const loadRunsPage = createRunsLoader(runsServer);
-  for (const action of createRunsActions(loadRunsPage)) actions.register(action);
+  const loadSession = createSessionLoader(createSessionApi({ latencyMs: 300 }));
+  // What the pages' own `load` reactions call (viewModels.on.<page>): the
+  // overview's numbers, one run — plus opening the selected run.
+  for (const action of createRunsActions({
+    loadRun: createRunLoader(runsServer),
+    loadOverview: createOverviewLoader(runsServer),
+    navigator,
+  })) {
+    actions.register(action);
+  }
+  // Tables the SERVER describes (doc/table-view-design.md): one generic
+  // action, the URL comes from the page. The playground's "network" is the
+  // fake server; a real host passes `fetchTransport` instead.
+  const transport = createFakeTransport({ [RUNS_VIEW_URL]: (request) => runsServer.fetchView(request) });
+  for (const action of createTableViewActions({ transport })) actions.register(action);
   // Dependent filters: the suites on offer follow the applications chosen.
   for (const action of createFilterActions(suiteOptionsFor)) actions.register(action);
+  // Navigation: the host owns the router, pages only name where to go.
+  for (const action of createNavActions(navigator)) actions.register(action);
 
   // Negative proof: every broken definition must be rejected loudly.
   const rejections = Object.entries(brokenWidgets).map(([name, definition]) => {
@@ -121,40 +180,67 @@ export function boot() {
     }
   });
 
-  // One state tree per page: both view-model trees live next to the data.
-  const pages: Record<string, PlaygroundPage> = {
-    demo: {
-      initialState: () => ({
-        viewModels: demoViewModels,
-        userViewModels: demoUserViewModels,
-        ...demoData,
-        // Nothing chosen yet, so no suites on offer.
-        filters: { applicationOptions: applicationOptions(), applications: [], suiteOptions: [], suites: [] },
-        // No `runs`: the table is empty until the server answers.
-      }),
-      // The demo is a finished page seen by its user: personal view applied.
-      userOverlayOnOpen: true,
-      // The first request, exactly the one the pagination and the refresher
-      // make later — against a server that starts over with every visit.
-      onOpen: (store) => {
+  /** A page of the demo application: its own data plus what the router matched. */
+  const demoPage = (name: DemoPage, onOpen?: (store: Store) => void): PlaygroundPage => ({
+    initialState: (route) => ({ ...demoPageData[name], route }),
+    // The demo is a finished application seen by its user: personal view applied.
+    userOverlayOnOpen: true,
+    ...(onOpen ? { onOpen } : {}),
+  });
+
+  const demoPages: Record<DemoPage, PlaygroundPage> = {
+    // Its numbers are loaded by the PAGE's `load` reaction (viewModels.on.overview).
+    overview: demoPage("overview"),
+    // The list is loaded by the TABLE's `load` reaction — the URL is
+    // configuration, not code. Here is only what this application knows:
+    // the server starts over with every visit of the list, so a visit
+    // always replays the same sequence, and the user's SETTINGS (global
+    // state) decide the page size and how the refresher starts.
+    runs: demoPage("runs", (store) => {
+      runsServer.reset();
+      const pageSize = store.getAs("app.settings.pageSize", pageSizeSetting);
+      if (pageSize !== undefined) store.set("runs.pageSize", pageSize);
+      if (store.get("app.settings.autoRefresh") === true) {
+        store.set("runs.autoRefresh", { enabled: true, interval: 5 });
+      }
+    }),
+    // The run is loaded by the PAGE's `load` reaction (viewModels.on.run);
+    // which run: the router's parameter, at route.params.runId.
+    run: demoPage("run"),
+    settings: demoPage("settings"),
+  };
+
+  // Configuration of an empty page and NO data: the store fills up only
+  // with what the added widgets write. Building is work on the SHARED
+  // page, so the overlay starts off; the visitor turns it on to personalise.
+  const builderPage: PlaygroundPage = {
+    initialState: () => ({ viewModels: builderViewModels, userViewModels: {} }),
+    userOverlayOnOpen: false,
+  };
+
+  let demoSession: AppSession | undefined;
+  const openDemoSession = (): AppSession => {
+    // The configuration and the settings; the user, the permissions and the
+    // lists arrive with the session request.
+    const shared = createStore({
+      viewModels: demoViewModels,
+      userViewModels: demoUserViewModels,
+      ...demoAppState,
+    });
+    let started = false;
+    return {
+      shared,
+      start: () => {
+        if (started) return;
+        started = true;
         runsServer.reset();
-        void loadRunsPage(store);
+        void loadSession(shared);
       },
-    },
-    // Configuration of an empty page and NO data: the store fills up only
-    // with what the added widgets write. Building is work on the SHARED
-    // page, so the overlay starts off; the visitor turns it on to personalise.
-    builder: {
-      initialState: () => ({ viewModels: builderViewModels, userViewModels: {} }),
-      userOverlayOnOpen: false,
-    },
+    };
   };
 
   let visits = 0;
-  const openPage = (name: string): PageVisit => {
-    const page = pages[name];
-    if (!page) throw new Error(`Unknown playground page "${name}" (pages: ${Object.keys(pages).join(", ")})`);
-    const store = createStore(page.initialState());
+  const visitOf = (name: string, page: PlaygroundPage, store: Store, session?: AppSession): PageVisit => {
     let started = false;
     return {
       id: (visits += 1),
@@ -165,10 +251,29 @@ export function boot() {
       start: () => {
         if (started) return;
         started = true;
+        session?.start();
         page.onOpen?.(store);
       },
     };
   };
 
-  return { registry, contracts, layoutEngines, actions, rejections, pageNames: Object.keys(pages), openPage };
+  /** A visit of a demo page: its own store under the application's long-lived one. */
+  const openDemoPage = (name: DemoPage, route: RouteInfo): PageVisit => {
+    const session = (demoSession ??= openDemoSession());
+    const page = demoPages[name];
+    const store = layerStores({
+      page: createStore(page.initialState(route)),
+      shared: session.shared,
+      sharedRoots: APP_ROOTS,
+    });
+    return visitOf(name, page, store, session);
+  };
+
+  /** A visit of the builder. Leaving the demo application ends its session: it starts over next time. */
+  const openBuilder = (route: RouteInfo): PageVisit => {
+    demoSession = undefined;
+    return visitOf("builder", builderPage, createStore(builderPage.initialState(route)));
+  };
+
+  return { registry, contracts, layoutEngines, actions, rejections, openDemoPage, openBuilder };
 }

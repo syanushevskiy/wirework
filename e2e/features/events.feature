@@ -6,28 +6,30 @@ Feature: Widget events
   type, event name, source cell and validated payload. The playground's
   event log subscribes to everything so events are visible and testable.
 
-  Scenario: The event log starts empty and collapsed
-    Given I open the "demo" page
+  Scenario: The event log starts collapsed, with the page's own load event
+    Given I open the "overview" page
     Then the "events" panel is collapsed
     When I expand the "events" panel
-    Then the event log is empty
+    Then the event log has 1 entry
+    And the event log shows widget "page" event "load" with payload '{"page":"overview"}'
 
   Scenario: Clicking the counter emits a typed event from its cell
-    Given I open the "demo" page
+    Given I open the "overview" page
     And I expand the "events" panel
     When I click the counter 1 time
     Then the event log shows widget "antd-counter" event "incremented" with payload '{"value":1}'
     And the event log shows widget "antd-counter" event "incremented" from cell "counter-main"
 
   Scenario: Every emit is logged, newest first
-    Given I open the "demo" page
+    Given I open the "overview" page
     And I expand the "events" panel
     When I click the counter 3 times
-    Then the event log has 3 entries
+    # The page's own load event, then the three clicks.
+    Then the event log has 4 entries
     And the event log shows widget "antd-counter" event "incremented" with payload '{"value":3}'
 
   Scenario: The host subscribes to an event and turns it into state
-    Given I open the "demo" page
+    Given I open the "runs" page
     And I expand the "events" panel
     Then the echo widget at "runs.selected" shows "∅"
     When I click the table row "123456"
@@ -57,18 +59,19 @@ Feature: Widget events
     And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
     And I click the counter in cell "custom-2" 1 time
-    Then the event log has 1 entry
+    # The builder page's own load event — when it opened, and again after each Add — then the click.
+    Then the event log has 4 entries
     And the event log shows widget "antd-counter" event "incremented" from cell "custom-2"
 
   Scenario: The event log can be cleared
-    Given I open the "demo" page
+    Given I open the "overview" page
     And I expand the "events" panel
     When I click the counter 2 times
     And I clear the event log
     Then the event log is empty
 
   Scenario: The counter's own write is a declared reaction, not widget code
-    Given I open the "demo" page
+    Given I open the "overview" page
     Then the state JSON contains '"set": "demo.counter"'
     And the echo widget at "demo.counter" shows "0"
     When I click the counter 2 times
@@ -92,7 +95,7 @@ Feature: Widget events
     Then the echo widget at "sample.picked" shows '"123457"'
 
   Scenario: A button click runs a host action wired in the view model
-    Given I open the "demo" page
+    Given I open the "overview" page
     And I expand the "events" panel
     When I click the counter 2 times
     Then the echo widget at "demo.counter" shows "2"
@@ -101,7 +104,7 @@ Feature: Widget events
     And the echo widget at "demo.counter" shows "0"
 
   Scenario: A page change requests that page from the server through a host action
-    Given I open the "demo" page
+    Given I open the "runs" page
     And I expand the "events" panel
     Then the pagination shows page 1
     And the table has 5 rows
@@ -109,15 +112,15 @@ Feature: Widget events
     Then the event log shows widget "antd-pagination" event "changed" with payload '{"page":2,"pageSize":5}'
     And the pagination shows page 2
     # Every request moves unfinished runs one step: queued → running → finished.
-    And the table row "123461" shows "Running" for "status.state"
+    And the table row "123461" shows "Running" for "state"
     And the table has 5 rows
     And the table is not loading
     When I go to page 5 of the pagination
-    Then the table row "123478" shows "Success" for "status.state"
+    Then the table row "123478" shows "Success" for "state"
     And the table has 3 rows
 
   Scenario: Editing the paginator on the shared page keeps its whole reaction chain
-    Given I open the "demo" page
+    Given I open the "runs" page
     When I disable the user overlay
     And I edit the page
     And I edit the cell "pagination-runs"
@@ -126,7 +129,11 @@ Feature: Widget events
     And I save the widget
     And I save the page
     And I go to page 2 of the pagination
-    Then the table row "123461" shows "Running" for "status.state"
+    # Saving loads the page again — one more request of the list — so this is
+    # the third: the queued run has run by now, and failed. The chain still
+    # works: the page change requested that page.
+    Then the pagination shows page 2
+    And the table row "123461" shows "Failed" for "state"
 
   Scenario: A user wires a button to a host action in the builder
     Given I open the "builder" page
@@ -143,9 +150,9 @@ Feature: Widget events
     When I click the button "Reset"
     Then the counter shows "0"
 
-  Scenario: The demo input is required and stores its text through a reaction
-    Given I open the "demo" page
+  Scenario: The settings input is required and stores its text in global state through a reaction
+    Given I open the "settings" page
     Then the input is invalid with "required"
     When I type "Sergey" into the input
     Then the input is valid
-    And the state JSON contains '"name": "Sergey"'
+    And the state JSON contains '"displayName": "Sergey"'

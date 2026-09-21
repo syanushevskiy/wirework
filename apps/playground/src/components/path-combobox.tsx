@@ -14,6 +14,8 @@ export interface PathComboboxProps {
   value: string;
   placeholder?: string;
   disabled?: boolean;
+  /** The generated path the field started from; while it is untouched, every compatible path is listed. */
+  suggested?: string | undefined;
   /** Called when the field opens — returns the compatible existing paths. */
   suggestions: () => string[];
   onSelect: (path: string) => void;
@@ -25,10 +27,11 @@ export function PathCombobox({
   value,
   placeholder = "select a store path…",
   disabled = false,
+  suggested,
   suggestions,
   onSelect,
 }: PathComboboxProps) {
-  const { options, load } = usePathCombobox(value, suggestions);
+  const { options, load } = usePathCombobox(value, suggestions, suggested);
 
   return (
     <AutoComplete

@@ -16,17 +16,20 @@ export interface WidgetBuilderProps {
   contracts: ContractRegistry;
   store: Store;
   actions: ActionRegistry;
+  /** The page widgets are added to — where the input ports' suggested paths start. */
+  page: string;
   /** Why Add is not offered right now (an open page edit, a user's own view); undefined when it is. */
   addLocked: string | undefined;
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void;
 }
 
-export function WidgetBuilder({ registry, contracts, store, actions, addLocked, onAdd }: WidgetBuilderProps) {
-  const { widgetGroups, widgetType, selectWidget, form, canAdd, add } = useWidgetBuilder(
+export function WidgetBuilder({ registry, contracts, store, actions, page, addLocked, onAdd }: WidgetBuilderProps) {
+  const { widgetType, selectWidget, form, search, canAdd, add } = useWidgetBuilder(
     registry,
     contracts,
     store,
     actions,
+    page,
     onAdd,
   );
 
@@ -36,7 +39,7 @@ export function WidgetBuilder({ registry, contracts, store, actions, addLocked, 
         <Flex vertical gap="small">
           {/* Search, then "Add", then the catalog: the whole flow in one column. */}
           <WidgetPalette
-            groups={widgetGroups}
+            search={search}
             selected={widgetType}
             onSelect={selectWidget}
             action={

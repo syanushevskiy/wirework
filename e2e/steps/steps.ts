@@ -5,15 +5,43 @@ const { Given, When, Then } = createBdd();
 
 /* ---------------------------- navigation ---------------------------- */
 
+/** Where each page of the menu lives (apps/playground/src/routes.ts). */
+const PAGE_PATHS: Record<string, string> = {
+  overview: "/demo",
+  runs: "/demo/runs",
+  settings: "/demo/settings",
+  builder: "/builder",
+};
+
+/** A fresh load of the page's own address: the application starts over, nothing of another page ran. */
 Given("I open the {string} page", async ({ page }, name: string) => {
-  await page.goto("/");
-  await page.getByTestId(`nav-${name}`).click();
+  const path = PAGE_PATHS[name];
+  if (path === undefined) throw new Error(`Unknown page "${name}" (pages: ${Object.keys(PAGE_PATHS).join(", ")})`);
+  await page.goto(path);
+  await expect(page.getByTestId("page")).toHaveAttribute("data-page", name);
 });
 
-/** No reload: the same app, another page — which starts from its own initial state. */
+/** A fresh load of an address that is not in the menu, e.g. "/demo/runs/123456". */
+Given("I open the address {string}", async ({ page }, path: string) => {
+  await page.goto(path);
+});
+
+/** No reload: the menu — the page's own data starts over, the application's global state stays. */
 When("I switch to the {string} page", async ({ page }, name: string) => {
   await page.getByTestId(`nav-${name}`).click();
   await expect(page.getByTestId("page")).toHaveAttribute("data-page", name);
+});
+
+Then("the {string} page is shown", async ({ page }, name: string) => {
+  await expect(page.getByTestId("page")).toHaveAttribute("data-page", name);
+});
+
+Then("the address is {string}", async ({ page }, path: string) => {
+  await expect(page).toHaveURL((url) => url.pathname === path);
+});
+
+When("I go back in the browser", async ({ page }) => {
+  await page.goBack();
 });
 
 /** Longer than the fake server's latency: for asserting that something did NOT arrive. */
@@ -122,6 +150,36 @@ When("I pick the widget suggestion {string}", async ({ page }, widget: string) =
   await option(page, widget).click();
 });
 
+/** The whole list with one click — nothing typed into the search. */
+When("I show the widget list", async ({ page }) => {
+  await page.getByTestId("widget-browse").click();
+  await expect(page.getByTestId("widget-palette")).toHaveAttribute("data-state", "open");
+});
+
+When("I hide the widget list", async ({ page }) => {
+  await page.getByTestId("widget-browse").click();
+  await expect(page.getByTestId("widget-palette")).toHaveAttribute("data-state", "closed");
+});
+
+/** A card of the list that is already showing: the search box is never touched. */
+When("I pick the widget card {string}", async ({ page }, widget: string) => {
+  const card = page.locator(`[data-testid="widget-card"][data-widget="${widget}"]`);
+  await card.click();
+  await expect(card).toHaveAttribute("aria-pressed", "true");
+});
+
+Then("the widget search is empty", async ({ page }) => {
+  await expect(paletteSearch(page)).toHaveValue("");
+});
+
+Then("the widget search holds {string}", async ({ page }, query: string) => {
+  await expect(paletteSearch(page)).toHaveValue(query);
+});
+
+Then("the widget list button reads {string}", async ({ page }, label: string) => {
+  await expect(page.getByTestId("widget-browse")).toHaveText(label);
+});
+
 Then("the widget catalog is hidden", async ({ page }) => {
   await expect(page.getByTestId("widget-palette")).toHaveAttribute("data-state", "closed");
   await expect(page.locator('[data-testid="widget-card"]')).toHaveCount(0);
@@ -170,6 +228,29 @@ When(
     }
   },
 );
+
+/** What an input port's field holds — a suggested path before anybody typed. */
+Then(
+  "the {string} port {string} holds {string}",
+  async ({ page }, section: string, port: string, path: string) => {
+    await expect(page.getByTestId(`port-${section}-${port}`).locator("input")).toHaveValue(path);
+  },
+);
+
+/** The field still shows the builder's own proposal, and says so. */
+Then("the {string} port {string} is marked as suggested", async ({ page }, section: string, port: string) => {
+  await expect(page.getByTestId(`port-${section}-${port}-suggested`)).toBeVisible();
+});
+
+Then("the {string} port {string} is not marked as suggested", async ({ page }, section: string, port: string) => {
+  await expect(page.getByTestId(`port-${section}-${port}-suggested`)).toHaveCount(0);
+});
+
+When("I clear the {string} port {string}", async ({ page }, section: string, port: string) => {
+  const query = page.getByTestId(`port-${section}-${port}`).locator("input");
+  await query.fill("");
+  await query.blur();
+});
 
 When(
   "I open the {string} port {string} suggestions",
@@ -357,6 +438,45 @@ Then("the {string} multi-select offers {string}", async ({ page }, label: string
   await expect(multiSelect(page, label)).toHaveAttribute("data-options", options);
 });
 
+/* ------------------------------ filter bar ------------------------------ */
+
+/** One filter of the filter bar, found by its visible label. */
+const barFilter = (page: Page, label: string) =>
+  live(page).locator(`[data-testid="filter-bar-filter"][data-label="${label}"]`);
+
+/** Picking a chosen option again unpicks it; the dropdown is closed afterwards. */
+When("I pick {string} in the {string} filter", async ({ page }, optionLabel: string, label: string) => {
+  await barFilter(page, label).getByRole("combobox").click();
+  await option(page, optionLabel).click();
+  await page.keyboard.press("Escape");
+});
+
+/** Filter labels in order: "Suite, Status" ("" = no filters). */
+Then("the filter bar offers the filters {string}", async ({ page }, labels: string) => {
+  const filters = live(page).getByTestId("filter-bar-filter");
+  await expect(filters).toHaveCount(labels === "" ? 0 : labels.split(", ").length);
+  for (const [index, label] of (labels === "" ? [] : labels.split(", ")).entries()) {
+    await expect(filters.nth(index)).toHaveAttribute("data-label", label);
+  }
+});
+
+Then("the {string} filter offers {string}", async ({ page }, label: string, options: string) => {
+  await expect(barFilter(page, label)).toHaveAttribute("data-options", options);
+});
+
+Then("the {string} filter holds {string}", async ({ page }, label: string, values: string) => {
+  await expect(barFilter(page, label)).toHaveAttribute("data-values", values.split(", ").join(","));
+});
+
+Then("the table has the columns {string}", async ({ page }, titles: string) => {
+  const headers = live(page).getByTestId("antd-table").getByRole("columnheader");
+  await expect(headers).toHaveText(titles.split(", "));
+});
+
+Then("the pagination counts {int} rows", async ({ page }, total: number) => {
+  await expect(live(page).getByTestId("antd-pagination")).toHaveAttribute("data-total", String(total));
+});
+
 /* ------------------------------ refresher ------------------------------ */
 
 const refresher = (page: Page) => live(page).getByTestId("antd-refresher");
@@ -393,6 +513,20 @@ Then("the label reads {string}", async ({ page }, text: string) => {
   await expect(live(page).getByTestId("antd-label").first()).toHaveText(text);
 });
 
+/** One cell's text — for pages that hold several widgets of a kind. */
+Then("the cell {string} reads {string}", async ({ page }, cell: string, text: string) => {
+  await expect(live(page).locator(`[data-testid="cell"][data-cell="${cell}"]`)).toHaveText(text);
+});
+
+Then("the page can be edited", async ({ page }) => {
+  await expect(page.getByTestId("page-edit")).toBeEnabled();
+});
+
+/** Global state at work: app.permissions.editPages is false. */
+Then("the page cannot be edited", async ({ page }) => {
+  await expect(page.getByTestId("page-edit")).toBeDisabled();
+});
+
 Then("the status badge reads {string}", async ({ page }, text: string) => {
   await expect(live(page).getByTestId("status-badge")).toHaveText(text);
 });
@@ -407,8 +541,12 @@ Then("the label tone is {string}", async ({ page }, tone: string) => {
 
 /* --------------------------- state inspector --------------------------- */
 
-/** Set one path in the inspector's JSON (creating missing parents) and apply it. */
-async function editStateJson(page: Page, path: string, value: unknown): Promise<void> {
+/**
+ * Set one path in the inspector's JSON (creating missing parents) and apply
+ * it. `accepted: false` is for an edit the inspector must REFUSE: it stays a
+ * draft, so there is no "live" to wait for.
+ */
+async function editStateJson(page: Page, path: string, value: unknown, accepted = true): Promise<void> {
   const editor = page.getByTestId("state-editor");
   const state = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
   const segments = path.split(".");
@@ -420,7 +558,7 @@ async function editStateJson(page: Page, path: string, value: unknown): Promise<
   cursor[segments[segments.length - 1]!] = value;
   await editor.fill(JSON.stringify(state, null, 2));
   await page.getByTestId("state-apply").click();
-  await expect(page.getByTestId("state-mode")).toHaveText("live");
+  if (accepted) await expect(page.getByTestId("state-mode")).toHaveText("live");
 }
 
 /**
@@ -431,6 +569,11 @@ async function editStateJson(page: Page, path: string, value: unknown): Promise<
  */
 Given("the store holds at {string}:", async ({ page }, path: string, json: string) => {
   await editStateJson(page, path, JSON.parse(json));
+});
+
+/** An edit the inspector is expected to refuse — follow it with "the state error is shown". */
+When("I try to put into the store at {string}:", async ({ page }, path: string, json: string) => {
+  await editStateJson(page, path, JSON.parse(json), false);
 });
 
 Then("the state JSON contains {string}", async ({ page }, fragment: string) => {
@@ -733,6 +876,41 @@ When(
   },
 );
 
+/** One declared parameter of the action an event's reaction calls (text, number or JSON). */
+When(
+  "I set the action parameter {string} for {string} to {string}",
+  async ({ page }, param: string, event: string, value: string) => {
+    await page.getByTestId(`reaction-${event}-param-${param}`).fill(value);
+  },
+);
+
+/**
+ * A yes/no parameter is a checkbox with THREE answers: every click moves it
+ * on — not set (the action decides) -> yes -> no -> not set.
+ */
+When("I click the action parameter {string} for {string}", async ({ page }, param: string, event: string) => {
+  await page.getByTestId(`reaction-${event}-param-${param}`).click();
+});
+
+/** "unset", "yes" or "no". */
+Then("the action parameter {string} for {string} is {string}", async ({ page }, param: string, event: string, state: string) => {
+  await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toHaveAttribute("data-state", state);
+});
+
+Then("the action parameters for {string} include {string}", async ({ page }, event: string, params: string) => {
+  for (const param of params.split(", ")) {
+    await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toBeVisible();
+  }
+});
+
+Then("the reaction for {string} asks for no action parameters", async ({ page }, event: string) => {
+  await expect(page.getByTestId(`reaction-${event}-params`)).toHaveCount(0);
+});
+
+Then("the action parameter {string} for {string} holds {string}", async ({ page }, param: string, event: string, value: string) => {
+  await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toHaveValue(value);
+});
+
 When("I click the button {string}", async ({ page }, label: string) => {
   await live(page).getByTestId("antd-button").filter({ hasText: label }).click();
 });
@@ -847,4 +1025,18 @@ Then("the widget editor is closed", async ({ page }) => {
 
 Then("the boot validation status is {string}", async ({ page }, text: string) => {
   await expect(page.getByTestId("validation-status")).toHaveText(text);
+});
+
+/** A line of the validation panel (expand it first). */
+Then("the validation report mentions {string}", async ({ page }, text: string) => {
+  await expect(page.getByTestId("validation-report")).toContainText(text);
+});
+
+/** Warnings shown above a page that renders, but not as designed. */
+Then("the page warns {string}", async ({ page }, text: string) => {
+  await expect(page.getByTestId("page-warnings")).toContainText(text);
+});
+
+Then("the page shows no warnings", async ({ page }) => {
+  await expect(page.getByTestId("page-warnings")).toHaveCount(0);
 });

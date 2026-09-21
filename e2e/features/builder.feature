@@ -28,11 +28,76 @@ Feature: Widget builder
   Scenario: A widget cannot be added until required ports and reactions are bound
     Given I open the "builder" page
     When I choose the "antd-counter" widget
-    Then the add widget button is disabled
-    When I set the "input" port "value" to "demo.custom"
+    # The port comes with a suggested path; the required reaction is still missing.
     Then the add widget button is disabled
     When I set the reaction for "incremented" to set "demo.custom" from "value"
     Then the add widget button is enabled
+    When I clear the "input" port "value"
+    Then the add widget button is disabled
+    When I set the "input" port "value" to "demo.custom"
+    Then the add widget button is enabled
+
+  Scenario: Input ports come with suggested paths: page, widget, port
+    Given I open the "builder" page
+    When I choose the "antd-refresher" widget
+    Then the "input" port "schedule" holds "builder.refresher.schedule"
+    And the "input" port "busy" holds "builder.refresher.busy"
+    And the "input" port "schedule" is marked as suggested
+    When I choose the "antd-multi-select" widget
+    Then the "input" port "value" holds "builder.multiSelect.value"
+    When I choose the "antd-counter" widget
+    Then the "input" port "value" holds "builder.counter.value"
+
+  Scenario: A table's rows are suggested at .data, where a loader puts them
+    Given I open the "builder" page
+    When I choose the "antd-table" widget
+    Then the "input" port "rows" holds "builder.table.data"
+    And the "input" port "columns" holds "builder.table.columns"
+    And the "input" port "loading" holds "builder.table.loading"
+
+  Scenario: A table on its suggested paths is filled by a loader pointed at it, nothing retyped
+    Given I open the "builder" page
+    When I choose the "antd-table" widget
+    And I set the reaction for "load" to call "table-view/load"
+    And I set the action parameter "url" for "load" to "/api/v1/view/runs"
+    And I set the action parameter "into" for "load" to "builder.table"
+    And I set the action parameter "pageSize" for "load" to "5"
+    And I add the widget
+    Then the table has 5 rows
+    And the table has the columns "#, Name, Reference, Inbound, Status"
+
+  Scenario: A suggested path can be changed, and is no suggestion any more
+    Given I open the "builder" page
+    When I choose the "antd-echo" widget
+    Then the "input" port "value" is marked as suggested
+    When I set the "input" port "value" to "my.own.path"
+    Then the "input" port "value" holds "my.own.path"
+    And the "input" port "value" is not marked as suggested
+
+  Scenario: A widget works on its suggested path, which did not exist before
+    Given I open the "builder" page
+    Then the state JSON does not contain '"counter"'
+    When I choose the "antd-counter" widget
+    And I set the reaction for "incremented" to set "builder.counter.value" from "value"
+    And I add the widget
+    And I click the counter 2 times
+    Then the counter shows "(2)"
+    And the state JSON contains '"value": 2'
+
+  Scenario: The next widget of a kind gets the next name, and a removed one frees its name
+    Given I open the "builder" page
+    When I choose the "antd-echo" widget
+    And I add the widget
+    And I choose the "antd-echo" widget
+    Then the "input" port "value" holds "builder.echo2.value"
+    When I add the widget
+    And I choose the "antd-echo" widget
+    Then the "input" port "value" holds "builder.echo3.value"
+    When I edit the page
+    And I remove the cell "custom-1"
+    And I save the page
+    And I choose the "antd-echo" widget
+    Then the "input" port "value" holds "builder.echo.value"
 
   Scenario: Input autocomplete offers only type-compatible existing paths
     Given I open the "builder" page
@@ -250,3 +315,41 @@ Feature: Widget builder
     And I set the reaction for "clicked" to call "log-event"
     And I add the widget
     Then the page has 1 cell
+
+  Scenario: The search is empty again after a widget is added
+    Given I open the "builder" page
+    When I pick the widget suggestion "antd-button"
+    Then the widget search holds "antd-button"
+    When I choose the "antd-button" widget
+    And I set the reaction for "clicked" to call "log-event"
+    And I add the widget
+    Then the page has 1 cell
+    And the widget search is empty
+    And the widget catalog is hidden
+
+  Scenario: The widget list opens with a button, and a widget is picked without typing
+    Given I open the "builder" page
+    Then the widget catalog is hidden
+    And the widget list button reads "Show widgets"
+    When I show the widget list
+    Then the palette shows a preview of every registered widget
+    And the widget list button reads "Hide widgets"
+    And the widget search is empty
+    When I pick the widget card "antd-label"
+    Then the builder shows a setting "text"
+    When I set the setting "text" to "Picked from the list"
+    And I add the widget
+    Then the label reads "Picked from the list"
+    And the widget search is empty
+    And the widget catalog is hidden
+
+  Scenario: The widget list button hides the list again, whatever opened it
+    Given I open the "builder" page
+    When I show the widget list
+    And I hide the widget list
+    Then the widget catalog is hidden
+    When I search the palette for "counter"
+    Then the palette shows 1 widget preview
+    When I hide the widget list
+    Then the widget catalog is hidden
+    And the widget search is empty

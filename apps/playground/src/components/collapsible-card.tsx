@@ -19,7 +19,7 @@ export interface CollapsibleCardProps {
 }
 
 export function CollapsibleCard({ id, title, summary, defaultOpen = false, children }: CollapsibleCardProps) {
-  const { open, toggle } = useDisclosure(defaultOpen);
+  const { open, toggle } = useDisclosure(id, defaultOpen);
 
   return (
     <div data-testid={`panel-${id}`} data-state={open ? "open" : "closed"}>

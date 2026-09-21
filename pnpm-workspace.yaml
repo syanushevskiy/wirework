@@ -21,6 +21,7 @@ catalog:
   flexlayout-react: ^0.11.0
   antd: ^6.6.4
   zustand: ^5.0.15
+  react-router: ^8.4.0
   # pinned: playwright-bdd 8.x does not support Playwright >= 1.60 ESM loader
   "@playwright/test": 1.55.0
   playwright-bdd: ^8.3.0

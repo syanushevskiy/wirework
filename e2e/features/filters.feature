@@ -6,7 +6,7 @@ Feature: Dependent multi-selects
   suites and drops chosen suites whose application is no longer chosen.
 
   Scenario: No suites are offered until an application is chosen
-    Given I open the "demo" page
+    Given I open the "runs" page
     Then I see a widget "antd-multi-select"
     And the "Test suites" multi-select offers ""
     When I pick "Billing" in the "Applications" multi-select
@@ -14,7 +14,7 @@ Feature: Dependent multi-selects
     And the "Test suites" multi-select offers "Billing smoke, Billing regression"
 
   Scenario: Every chosen application adds its suites to the offer
-    Given I open the "demo" page
+    Given I open the "runs" page
     When I pick "Billing" in the "Applications" multi-select
     And I pick "Search" in the "Applications" multi-select
     Then the "Applications" multi-select holds "billing, search"
@@ -22,7 +22,7 @@ Feature: Dependent multi-selects
     And the state JSON contains '"search-relevance"'
 
   Scenario: Removing an application drops the suites chosen from it
-    Given I open the "demo" page
+    Given I open the "runs" page
     When I pick "Billing" in the "Applications" multi-select
     And I pick "Search" in the "Applications" multi-select
     And I pick "Billing smoke" in the "Test suites" multi-select

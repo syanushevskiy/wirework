@@ -104,8 +104,8 @@ Feature: User overlay on the builder page
     Then the edit target is "user overlay"
     When I switch to the "builder" page
     Then the user overlay is not available
-    When I switch to the "demo" page
+    When I switch to the "overview" page
     Then the edit target is "user overlay"
     When I disable the user overlay
-    And I switch to the "demo" page
+    And I switch to the "overview" page
     Then the edit target is "user overlay"
