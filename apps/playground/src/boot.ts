@@ -45,6 +45,8 @@ import { statusBadge } from "./widgets/status-badge";
 interface PlaygroundPage {
   /** The state tree a visit starts from: this page's configuration and initial data. */
   initialState(): Record<string, unknown>;
+  /** Whether a visit starts with the user overlay applied (the visitor can toggle it). */
+  userOverlayOnOpen: boolean;
   /** Host code of the page's opening, run once per visit (e.g. the first server request). */
   onOpen?(store: Store): void;
 }
@@ -56,6 +58,8 @@ export interface PageVisit {
   page: string;
   store: Store;
   bus: EventBus;
+  /** The user overlay starts over with the visit too: on or off, as the page says. */
+  userOverlayOnOpen: boolean;
   /** Runs the page's `onOpen` — once, however often it is called (StrictMode mounts twice). */
   start(): void;
 }
@@ -128,6 +132,8 @@ export function boot() {
         filters: { applicationOptions: applicationOptions(), applications: [], suiteOptions: [], suites: [] },
         // No `runs`: the table is empty until the server answers.
       }),
+      // The demo is a finished page seen by its user: personal view applied.
+      userOverlayOnOpen: true,
       // The first request, exactly the one the pagination and the refresher
       // make later — against a server that starts over with every visit.
       onOpen: (store) => {
@@ -136,9 +142,11 @@ export function boot() {
       },
     },
     // Configuration of an empty page and NO data: the store fills up only
-    // with what the added widgets write.
+    // with what the added widgets write. Building is work on the SHARED
+    // page, so the overlay starts off; the visitor turns it on to personalise.
     builder: {
       initialState: () => ({ viewModels: builderViewModels, userViewModels: {} }),
+      userOverlayOnOpen: false,
     },
   };
 
@@ -153,6 +161,7 @@ export function boot() {
       page: name,
       store,
       bus: createEventBus(),
+      userOverlayOnOpen: page.userOverlayOnOpen,
       start: () => {
         if (started) return;
         started = true;

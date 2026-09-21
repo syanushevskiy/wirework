@@ -134,8 +134,9 @@ from the cell's resolved view model.
 
 The playground routes every op by an EDIT TARGET:
 
-- **user** (the demo page with the user overlay on): page-template ops
-  edit what the user SEES — the user's OWN template
+- **user** (a page with the user overlay on — the demo as it opens; the
+  builder once it holds a widget and the visitor turns the overlay on):
+  page-template ops edit what the user SEES — the user's OWN template
   (`userViewModels.pages.<page>.templates["my-own"]`, the sketch's "my own"
   pill) while it is the page `view`, otherwise a fresh copy of the shown
   template, selected as the view. Widget edits become per-cell SETTINGS
@@ -146,10 +147,18 @@ The playground routes every op by an EDIT TARGET:
   The base view models never change; turning the overlay off shows the
   original page and ends any session. An overlay that fails its schema is
   ignored as a whole, and the page says so (`plan.overlayProblem`).
-- **base** (everywhere else, e.g. the builder): ops rewrite the base view
-  models — the page template and the widget template at `cell.model`.
-  Removing a builder-owned cell also drops its template when nothing else
-  references it.
+- **base** (the overlay is off — how the builder opens): ops rewrite the
+  base view models — the page template and the widget template at
+  `cell.model`. Removing a builder-owned cell also drops its template when
+  nothing else references it (a user's own template counts).
+
+On the builder the overlay is UNAVAILABLE until the shared page holds a
+widget (an empty page has nothing to personalise), and a visit starts with
+it off: building is work on the shared page. ADDING a widget always changes
+the shared page, so Add waits while the overlay is on — the overlay carries
+settings, view and layout only. Known consequence: "my-own" is a COPY of
+the layout, so a widget added to the shared page afterwards does not show
+in it (doc/builder-user-needs.md, risk 3 "Personal views are copies").
 
 `pageTemplates(viewModels, userViewModels, page)` layers user templates over
 base ones (same name → user wins), and both resolve and boot validation use

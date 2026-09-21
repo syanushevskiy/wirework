@@ -47,6 +47,7 @@ This project runs Claude Code in auto mode with reads outside the working direct
 - After changing test steps, rerun only the affected feature files first, then the full suite.
 - Scenarios assert fixture facts: adding a cell to the demo page changes "the page has N cells" in `layout.feature` and `overlay.feature`; the fake runs server moves unfinished runs one step after every answer (and starts over when the demo page opens), so a scenario's expected statuses depend on how many requests it made.
 - Every page visit starts from that page's initial state (`apps/playground/src/boot.ts`): the builder's store has NO data, and the demo's table is empty until the fake server answers (~600 ms). A builder scenario that needs data seeds it itself with the doc-string step `the store holds at "<path>":`; `I switch to the "<page>" page` changes page without a reload.
+- The user overlay starts over with the visit too: ON for the demo, OFF for the builder, where it is unavailable until the page has a widget. With it on, the builder's Add is locked (widgets are added to the shared page).
 
 ## Where things are
 

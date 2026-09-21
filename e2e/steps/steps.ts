@@ -25,6 +25,21 @@ When("I disable the user overlay", async ({ page }) => {
   await page.getByTestId("toggle-user-overlay").uncheck();
 });
 
+When("I enable the user overlay", async ({ page }) => {
+  await page.getByTestId("toggle-user-overlay").check();
+});
+
+/** Nothing to personalise yet: the toggle is there, but off and out of reach. */
+Then("the user overlay is not available", async ({ page }) => {
+  await expect(page.getByTestId("toggle-user-overlay")).toBeDisabled();
+  await expect(page.getByTestId("toggle-user-overlay")).not.toBeChecked();
+});
+
+Then("the user overlay is available and off", async ({ page }) => {
+  await expect(page.getByTestId("toggle-user-overlay")).toBeEnabled();
+  await expect(page.getByTestId("toggle-user-overlay")).not.toBeChecked();
+});
+
 /* ------------------------------ builder ------------------------------ */
 
 /**
@@ -809,7 +824,12 @@ Then("the reaction for {string} keeps {int} more reaction(s)", async ({ page }, 
 
 Then("adding widgets waits for the page edit to end", async ({ page }) => {
   await expect(page.getByTestId("add-widget")).toBeDisabled();
-  await expect(page.getByTestId("add-widget-locked")).toBeVisible();
+  await expect(page.getByTestId("add-widget-locked")).toContainText("page edit");
+});
+
+Then("adding widgets waits for the user overlay to be turned off", async ({ page }) => {
+  await expect(page.getByTestId("add-widget")).toBeDisabled();
+  await expect(page.getByTestId("add-widget-locked")).toContainText("turn the user overlay off");
 });
 
 When("I save the widget", async ({ page }) => {

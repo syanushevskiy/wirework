@@ -16,8 +16,8 @@ export interface WidgetBuilderProps {
   contracts: ContractRegistry;
   store: Store;
   actions: ActionRegistry;
-  /** A page edit session is open: adding would drop it, so Add waits for Save or Cancel. */
-  addLocked: boolean;
+  /** Why Add is not offered right now (an open page edit, a user's own view); undefined when it is. */
+  addLocked: string | undefined;
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void;
 }
 
@@ -44,17 +44,17 @@ export function WidgetBuilder({ registry, contracts, store, actions, addLocked, 
                 type="primary"
                 size="small"
                 data-testid="add-widget"
-                disabled={!canAdd || addLocked}
-                title={addLocked ? "Save or cancel the page edit first" : undefined}
+                disabled={!canAdd || addLocked !== undefined}
+                title={addLocked}
                 onClick={add}
               >
                 Add widget
               </Button>
             }
           />
-          {addLocked ? (
+          {addLocked !== undefined ? (
             <Typography.Text type="secondary" data-testid="add-widget-locked">
-              Save or cancel the page edit to add widgets.
+              {addLocked}
             </Typography.Text>
           ) : null}
           {widgetType !== "" ? (

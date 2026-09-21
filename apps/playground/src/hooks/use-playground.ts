@@ -27,8 +27,8 @@ import { boot } from "../boot";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
 import type { WidgetSettings } from "./use-widget-form";
 
-/** The page whose edits are the USER's (saved in the overlay). */
-const USER_PAGE = "demo";
+/** The page the playground opens with. */
+const START_PAGE = "demo";
 /** The page the widget builder adds to. */
 export const BUILDER_PAGE = "builder";
 
@@ -56,7 +56,7 @@ export function usePlayground() {
   // useState, not useMemo: React may discard memo caches, which would
   // silently recreate the registries and reset all runtime state.
   const [{ registry, contracts, layoutEngines, actions, rejections, pageNames, openPage }] = useState(boot);
-  const [visit, setVisit] = useState(() => openPage(USER_PAGE));
+  const [visit, setVisit] = useState(() => openPage(START_PAGE));
   const { page, store, bus } = visit;
   // The page's opening (the demo's first server request) is a side effect:
   // it belongs here, not in the initializer above. `start` runs once per visit.
@@ -67,7 +67,24 @@ export function usePlayground() {
   const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? NO_VIEW_MODELS;
   const userViewModels = useStorePath<UserViewModels>(store, "userViewModels") ?? NO_USER_VIEW_MODELS;
   const trees = useMemo(() => ({ viewModels, userViewModels }), [viewModels, userViewModels]);
-  const [withUserOverlay, setWithUserOverlay] = useState(true);
+
+  /** The builder's SHARED template, as the store holds it — not an edit session's view of it. */
+  const builder = resolveTemplate(layoutEngines, viewModels.pages?.[BUILDER_PAGE]?.["default"]);
+
+  /**
+   * The user overlay. Every page has one, and a visit starts with it on or
+   * off as the page says (boot.ts). On the builder there is nothing to
+   * personalise until the shared page holds a widget: until then the
+   * overlay is unavailable — and off.
+   */
+  const [overlayWanted, setOverlayWanted] = useState(visit.userOverlayOnOpen);
+  const userOverlayAvailable =
+    page !== BUILDER_PAGE || (builder.problem === undefined && builder.cells.length > 0);
+  // The page was emptied under an overlay that was on (the inspector can):
+  // it goes OFF for good, rather than coming back by itself with the next
+  // widget — which would lock Add right after the first one.
+  if (overlayWanted && !userOverlayAvailable) setOverlayWanted(false);
+  const withUserOverlay = overlayWanted && userOverlayAvailable;
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
@@ -86,7 +103,8 @@ export function usePlayground() {
     store.set("runs.selected", event.payload.key),
   );
 
-  const target: EditTarget = page === USER_PAGE && withUserOverlay ? "user" : "base";
+  /** With the overlay on, edits are the USER's; without it they change the shared page. */
+  const target: EditTarget = withUserOverlay ? "user" : "base";
   const editing = usePageEditing({
     store,
     registry,
@@ -100,13 +118,16 @@ export function usePlayground() {
 
   /**
    * Opening a page — the current one included — starts a new visit: a fresh
-   * store from the page's initial state. The visit is created HERE, in the
-   * event handler, never inside a state updater (StrictMode runs those twice).
+   * store from the page's initial state, and the overlay as that page starts
+   * it. The visit is created HERE, in the event handler, never inside a
+   * state updater (StrictMode runs those twice).
    */
   const selectPage = useCallback(
     (name: string) => {
       editing.cancel();
-      setVisit(openPage(name));
+      const next = openPage(name);
+      setVisit(next);
+      setOverlayWanted(next.userOverlayOnOpen);
     },
     [editing.cancel, openPage],
   );
@@ -117,7 +138,6 @@ export function usePlayground() {
    * empty template. With cells in place the engine is locked — there is no
    * conversion between engines by decision.
    */
-  const builder = resolveTemplate(layoutEngines, viewModels.pages?.[BUILDER_PAGE]?.["default"]);
   const builderEngineLocked =
     builder.problem !== undefined || builder.cells.length > 0;
   const setBuilderEngine = useCallback(
@@ -135,10 +155,22 @@ export function usePlayground() {
   const toggleUserOverlay = useCallback(
     (checked: boolean) => {
       editing.cancel();
-      setWithUserOverlay(checked);
+      setOverlayWanted(checked);
     },
     [editing.cancel],
   );
+
+  /**
+   * Why the builder's Add is not offered right now, if it is not. Adding
+   * always changes the SHARED page: an open edit session would be silently
+   * dropped by it, and a user's own view is no place for a new widget (the
+   * overlay carries settings, view and layout only).
+   */
+  const addLocked = editing.editing
+    ? "Save or cancel the page edit to add widgets."
+    : target === "user"
+      ? "Adding a widget changes the shared page — turn the user overlay off to add one."
+      : undefined;
 
   /**
    * Add a widget to the builder page: a fresh BASE view-model template
@@ -146,8 +178,7 @@ export function usePlayground() {
    * the user typed (widget defaults fill the rest), plus a cell appended by
    * the page's engine plugin. Written THROUGH THE STORE — the state
    * inspector shows it instantly and the engine treats it exactly like
-   * static configuration. Not offered during a page edit session: the
-   * builder's Add is disabled then, so a session is never silently dropped.
+   * static configuration. Not offered while `addLocked` says why not.
    */
   const addWidget = useCallback(
     (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => {
@@ -203,7 +234,9 @@ export function usePlayground() {
     selectPage,
     target,
     withUserOverlay,
+    userOverlayAvailable,
     setWithUserOverlay: toggleUserOverlay,
+    addLocked,
     addWidget,
     ...editing,
   };

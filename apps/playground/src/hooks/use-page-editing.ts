@@ -9,11 +9,13 @@
  * that replayed result, Cancel drops the ops. Nothing is written until Save.
  *
  * Edit target (doc/layout-engines-design.md, "Where edits go"):
- *  - "user": the demo tab with the user overlay on. Page-template ops copy
- *    the shown template into the user's OWN template (USER_PAGE_TEMPLATE)
- *    and edit that; widget edits become per-cell settings overlays. The
- *    base view models stay untouched.
- *  - "base": everywhere else (the builder). Ops rewrite the view models.
+ *  - "user": a page with the user overlay on — the demo as it opens, the
+ *    builder once it holds a widget and the visitor turns the overlay on.
+ *    Page-template ops copy the shown template into the user's OWN template
+ *    (USER_PAGE_TEMPLATE) and edit that; widget edits become per-cell
+ *    settings overlays. The base view models stay untouched.
+ *  - "base": the overlay is off (how the builder opens). Ops rewrite the
+ *    view models — the shared page.
  *
  * Engine ops never look inside a template: the registered plugin for the
  * template's engine applies the change, removes the cell, etc.

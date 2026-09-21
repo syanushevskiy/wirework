@@ -33,7 +33,9 @@ export function App() {
     selectPage,
     target,
     withUserOverlay,
+    userOverlayAvailable,
     setWithUserOverlay,
+    addLocked,
     addWidget,
     shownViewModels,
     shownUserViewModels,
@@ -120,9 +122,12 @@ export function App() {
                 {name}
               </Button>
             ))}
+            {/* On the builder there is nothing to personalise before the first widget. */}
             <Checkbox
               data-testid="toggle-user-overlay"
               checked={withUserOverlay}
+              disabled={!userOverlayAvailable}
+              title={userOverlayAvailable ? undefined : "Add a widget first — there is nothing to personalise yet"}
               onChange={(event) => setWithUserOverlay(event.target.checked)}
             >
               user overlay
@@ -187,7 +192,7 @@ export function App() {
               contracts={contracts}
               store={store}
               actions={actions}
-              addLocked={editing}
+              addLocked={addLocked}
               onAdd={addWidget}
             />
           ) : null}
