@@ -114,3 +114,5 @@ export function fromZustand(api: StateApi): Store {
 export function createStore(initial: StateObject = {}): Store {
   return fromZustand(createZustandStore<StateObject>()(() => ({ ...initial })));
 }
+
+export { layerStores, type StoreLayers } from "./layers";
