@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { antdLabel } from "../widgets/antd-label";
 import { labelConformance } from "./conformance";
 import { storyArgs, storyArgTypes, WidgetStory } from "./harness";
+import { playground } from "./playground";
 
 type Args = { text: string; tone: string };
 
@@ -14,6 +15,9 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** Text and tone as settings; the optional `text` port as a data control (it replaces the static text). */
+export const Playground: Story = playground(antdLabel);
 
 // The `label` contract's conformance set — the same for every implementation.
 const conformance = labelConformance(antdLabel);

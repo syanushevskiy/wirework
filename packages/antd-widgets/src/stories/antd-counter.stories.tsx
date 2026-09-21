@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { antdCounter } from "../widgets/antd-counter";
 import { storyArgs, storyArgTypes, WidgetStory } from "./harness";
+import { playground } from "./playground";
 
 type Args = { step: number; label: string; initial: number };
 
@@ -26,6 +27,9 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** Click it and the `value` control counts along; set the control and the counter shows it. */
+export const Playground: Story = playground(antdCounter, { hide: ["initial"] });
 
 export const Default: Story = {};
 

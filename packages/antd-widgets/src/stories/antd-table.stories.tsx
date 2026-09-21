@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { antdTable } from "../widgets/antd-table";
 import { WidgetStory } from "./harness";
+import { playground } from "./playground";
 
 const rows = [
   { id: "1", name: "Nightly", owner: { team: "Core" }, status: "Success" },
@@ -32,6 +33,24 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/**
+ * Rows, columns and `loading` are DATA: edit the rows, add a column, flip
+ * loading — what a host's loader would write. `columns` exists twice on
+ * purpose: the setting, and the port that wins over it when it holds columns.
+ */
+export const Playground: Story = playground(antdTable, {
+  seed: { demo: { rows } },
+  viewModel: {
+    inputs: { rows: "demo.rows" },
+    on: { "row-selected": [{ set: "demo.selected", from: "key" }] },
+    columns: [
+      { title: "Name", property: "name" },
+      { title: "Team", property: "owner.team" },
+      { title: "Status", property: "status" },
+    ],
+  },
+});
 
 export const ConfiguredColumns: Story = {
   play: async ({ canvas, userEvent }) => {
@@ -64,4 +83,23 @@ export const EmptyPath: Story = {
   render: () => (
     <WidgetStory key="empty" definition={antdTable} viewModel={{ inputs: { rows: "demo.missing" }, emptyText: "No runs yet" }} />
   ),
+};
+
+/** Columns from the STORE (a table the server describes): the port wins over the setting. */
+export const ColumnsFromTheStore: Story = {
+  render: () => (
+    <WidgetStory
+      key="bound-columns"
+      definition={antdTable}
+      seed={{ demo: { rows, columns: [{ title: "Run", property: "name" }, { title: "Result", property: "status" }] } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", columns: "demo.columns" },
+        columns: [{ title: "Ignored while the port holds columns", property: "id" }],
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("columnheader", { name: "Result" })).toBeVisible();
+    await expect(canvas.queryByRole("columnheader", { name: /Ignored/ })).toBeNull();
+  },
 };

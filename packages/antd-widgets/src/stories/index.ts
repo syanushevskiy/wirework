@@ -5,4 +5,7 @@
  */
 export { WidgetStory, storyArgs, storyArgTypes } from "./harness";
 export type { WidgetStoryProps } from "./harness";
+// One story with a control for every setting, every input port's data and the cell width.
+export { playground } from "./playground";
+export type { PlaygroundOptions } from "./playground";
 export { buttonConformance, inputConformance, labelConformance } from "./conformance";

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { antdRefresher } from "../widgets/antd-refresher";
 import { storyArgs, storyArgTypes, WidgetStory } from "./harness";
+import { playground } from "./playground";
 
 type Args = { label: string; buttonLabel: string };
 
@@ -30,6 +31,9 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** The schedule and `busy` are DATA: set busy and the button spins; toggle the widget and the schedule control follows. */
+export const Playground: Story = playground(antdRefresher);
 
 export const Default: Story = {};
 

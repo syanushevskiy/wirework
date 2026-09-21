@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { antdEcho } from "../widgets/antd-echo";
 import { storyArgs, storyArgTypes, WidgetStory } from "./harness";
+import { playground } from "./playground";
 
 type Args = { label?: string };
 
@@ -20,6 +21,9 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** The echoed value is an object control: put anything at the path and see how it prints. */
+export const Playground: Story = playground(antdEcho);
 
 export const Seeded: Story = {};
 

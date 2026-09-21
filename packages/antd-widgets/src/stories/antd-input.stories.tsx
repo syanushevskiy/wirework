@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { antdInput } from "../widgets/antd-input";
 import { inputConformance } from "./conformance";
 import { storyArgs, storyArgTypes, WidgetStory } from "./harness";
+import { playground } from "./playground";
 
 type Args = {
   label: string;
@@ -31,6 +32,9 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** Type into the field and the `value` control follows; every validation setting has a control. */
+export const Playground: Story = playground(antdInput);
 
 // The `input` contract's conformance set.
 const conformance = inputConformance(antdInput);
