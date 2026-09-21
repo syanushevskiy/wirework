@@ -105,7 +105,7 @@ never from effects (StrictMode double-fires them).
 Host code:
 
 ```ts
-useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "demo", cell: "table-main" }), (event) =>
+useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "runs", cell: "table-main" }), (event) =>
   store.set("runs.selected", event.payload.key),  // payload typed, no cast
 );
 ```
@@ -249,3 +249,73 @@ starts, and the action's `signal` is aborted).
   (@wirework/view-data-models-examples, cell `bad-reaction`), resolved cell
   by cell in packages/engine/src/__tests__/failure-path.test.ts — it is no
   longer on a playground page.
+
+## Page events and load events (built)
+
+Nothing used to happen when a page opened: the first request needed a
+click, or host code that knew the URL. Two events close that gap, and what
+they DO is a reaction like any other — typically the action that fetches
+the data.
+
+**A page emits `load`**, once per opening, after its reactions are bound.
+The page's own reactions live in the view models, BESIDE the templates:
+
+```ts
+viewModels: {
+  pages:   { overview: { default: { engine, cells } } },
+  on:      { overview: { load: [{ call: "overview/load" }] } },   // page -> event -> reactions
+  widgets: { … },
+}
+```
+
+- Not inside a page template: a template belongs to its layout engine, a
+  page may have several, and a user's own copy of one must never carry
+  reactions. Base view models only — the user overlay has no `on`.
+- `pageEvents` (`@wirework/schema`) declares them (today: `load`, payload
+  `{ page }`); `pageBindingsSchema` is strict, so `on: { opened: … }` is
+  refused. On the bus a page event has `widget: "page"` and comes from the
+  page with the EMPTY cell id, which no cell can have.
+- `checkPageReactions` is the one rule for render and boot: unknown action,
+  arguments that do not fit the action's `params`, a `from` naming a field
+  the payload lacks. Wrong reactions are ignored as a whole, loudly — a
+  warning on the plan (the page still renders), an error at boot.
+  `plan.on` holds what will run; `bindReactions` binds it like a cell's.
+- `usePageLoad` (adapter, inside `PageView`) emits it. `emitPageLoad` is
+  the engine call for other adapters: once per opening, AFTER `bindReactions`.
+
+**A table emits `load`**, once when it appears (`table` contract). The table
+still never fetches; its reaction does:
+
+```ts
+table: { default: {
+  inputs: { rows: "runs.data", columns: "runs.columns", loading: "runs.loading" },
+  on: { load: [{ call: "table-view/load", with: { url: "/api/v1/view/runs", into: "runs" } }] } } }
+```
+
+So a table added in the builder loads its data by itself. Use the page's
+`load` for what belongs to the page (its numbers, the record an address
+names), the table's for what belongs to that table.
+
+**Timing — why both are deferred.** Effects of one commit run children
+first and the page binds its reactions in an effect, so an emit from a mount
+effect's body would find nothing subscribed; and React's StrictMode mounts,
+unmounts and mounts again in one go. Both events therefore fire from a task
+scheduled by the mount effect and cleared by its cleanup (`useAfterMount`
+for widgets): once, for the binding that stays. A host's own opening code
+(the playground's `onOpen`: seeding the page from the user's settings) runs
+before them.
+
+**Loading again.** A host that CHANGES a page while it is open — an editor —
+says so by changing `PageView`'s `reloadKey`: the page's `load` fires again
+and the cells mount afresh, so every widget that asks for its data when it
+appears asks again, by the NEW configuration. The store is untouched. The
+playground does it after **Add widget** and after **Save page** (not after
+Cancel): a table whose load reaction got another URL, page size, columns or
+metadata flag shows the result at once. (`table-view/load` plays along: a
+page size declared anew applies, instead of the size the last answer left
+in the store.) Nothing re-fires by itself when the configuration changes —
+an inspector edit does not reload: the HOST decides when a page loads again.
+
+Both show in the event log (`page · load`, `antd-table · load`): the first
+step of every visit — and of every reload — is visible like all the others. Tested in
+e2e/features/load-events.feature and the engine's reactions tests.

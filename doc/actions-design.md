@@ -108,12 +108,20 @@ names and parameters, validated by schema; parameters never contain code.
 | 2 | `@wirework/actions-core`; playground page + dialog state in the store; a wizard page in the fixtures; a static JSON endpoint for a `load-runs` demo; scenarios | 1–1.5 days |
 | 3 | "Writing an action" guide (factory pattern, unit-test recipe) | 0.5 day |
 
-Status: phase 1 partly built. Built: namespaced names (`runs/load-page`),
+Status: phase 1 mostly built. Built: namespaced names (`table-view/load`),
 reactions running in declaration order with async actions awaited and a
 failure stopping its chain, synchronous reactions staying synchronous, an
 `AbortSignal` on the action context aborted when the page unbinds, a
-`call` to an unknown action reported at boot and resolve. Not built:
-`params` (so `with` is not validated and the builder cannot set it — the
-editor keeps an existing `with` untouched), `scope` / `for(page)`, the
-parameter form. Phases 2–3 not started; `http/get` is superseded by
+`call` to an unknown action reported at boot and resolve. Built too:
+`params` — an action declares what its `with` may hold; boot validation
+and page resolution report a `with` that does not fit as a problem of the
+cell ("reactions call actions wrongly: …"), the handler receives the PARSED
+arguments (defaults applied), and the builder's reaction form shows one
+field per parameter (`settingFields(params, { json: true })`: objects and
+lists are JSON fields), gates Add on the required ones and saves them as
+`with`. `table-view/load` is the first action with parameters. An action
+WITHOUT `params` behaves as before: `with` passes through unchecked and the
+editor keeps an existing one untouched. Not built: `scope` / `for(page)`,
+and a parameter that is a list of choices from the page (a "source"
+select). Phases 2–3 not started; `http/get` is superseded by
 `source/refresh` in doc/refresher-design.md.

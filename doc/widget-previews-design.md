@@ -35,9 +35,15 @@ application's own design system.
 
 ## Reuse
 
-The preview declaration is the natural default story for Storybook and a
-visual-regression target; the harness there stays the richer sandbox
-(reactions bound, store readout).
+The preview declaration IS the default story in Storybook: every widget's
+**Playground** story (`playground(definition)` in
+`@wirework/antd-widgets/stories`) starts from its preview's seed and wiring
+and puts a control on everything — every setting (lists and objects as
+object controls), the DATA at every input port (the controls write the
+store; when the widget's own reaction writes it, the control follows), and
+the width of the cell. The harness there stays the richer sandbox
+(reactions bound, store readout), and the preview is a visual-regression
+target.
 
 ## Phases
 
@@ -47,4 +53,4 @@ visual-regression target; the harness there stays the richer sandbox
 | 2 | Search and filtering; one compact kind-tagged grid | built |
 | 2b | Lazy rendering of cards as they scroll into view | not started |
 | 3 | Drag a card from the palette onto the grid (react-grid-layout / gridstack external drop) | not started |
-| 4 | Storybook default story from the preview declaration | not started |
+| 4 | Storybook default story from the preview declaration: the Playground story, one per widget | built |

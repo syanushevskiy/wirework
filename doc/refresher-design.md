@@ -8,14 +8,18 @@ same every N seconds. The author should configure where the table fetches
 from (URL, how to fetch) and which table a refresher refreshes, without a
 developer writing code per table.
 
-Today the demo does it with code: the demo page's store starts WITHOUT any
-runs, and opening the page makes the first request (host code, the manual
-precursor of "loading on open" below), so the state inspector shows
-`runs.loading` first and the rows only when the fake server answers.
-The table reads its rows from `runs.data`, and the
-refresher and the pagination `call: "runs/load-page"`, a host action that
-knows the URL. It works, but every new table costs a developer an action,
-and the URL lives in code, not in the page.
+Today the demo is half way there (`doc/table-view-design.md`): the runs
+page's store starts WITHOUT any runs, the TABLE declares the URL of its
+view API in its own `load` reaction — the table emits `load` once when it
+appears — and one generic action, `table-view/load`, requests it, so the
+state inspector shows `runs.loading` first and the rows only when the fake
+server answers. The table reads `runs.data`, and the refresher, the
+pagination and the filter bar `call: "table-view/load"` naming the view
+(`with: { into: "runs" }`). No action per table any more, and the URL lives
+in the page — for ONE API shape. "Loading on open" (decision 9 below)
+exists in its event form: a page's and a table's `load`
+(`widget-events-design.md`). The rest of this document is the general
+form: any request, and sources that are named.
 
 ## The refresher (built)
 
@@ -175,7 +179,7 @@ sources: {
 },
 ```
 
-The demo page, after migration:
+The runs page, after migration:
 
 ```ts
 table: {

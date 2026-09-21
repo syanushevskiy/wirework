@@ -112,8 +112,19 @@ contract, a conformance story set with interaction tests
 (`labelConformance`, `buttonConformance`, `inputConformance`). "Implements
 the contract" means those stories pass against your component. They query
 by accessible semantics (role, name, aria-invalid, alert), never by
-implementation test ids. A story file is the conformance set plus
-implementation-specific extras.
+implementation test ids. A story file is the **Playground** first, then the
+conformance set, then implementation-specific extras.
+
+The Playground (`playground(definition)`, same export) is generated from the
+declaration, so a new widget gets it with one line: controls for EVERY
+setting (grouped "Settings"; lists and objects as object controls, with the
+schema's descriptions and defaults), for the DATA at every input port
+(grouped "Inputs (store data)": the control writes the store, and follows
+when the widget's own reaction writes it), and for the cell width and the
+store readout ("Story"). It starts from the widget's `preview`
+(`widget-previews-design.md`); ports the preview leaves unbound get
+generated paths, so they have a control too. Events land in the Actions
+panel.
 
 Open gaps (team-tiger review, Sasha and Katya): nothing RUNS the play
 functions yet (no Storybook test runner in `pnpm test` or CI); pagination

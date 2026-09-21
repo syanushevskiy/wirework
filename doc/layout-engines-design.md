@@ -183,7 +183,7 @@ independent.
 ## Tested (e2e/features/layout.feature, overlay.feature, builder.feature)
 
 Grid rendering with placements, no handles or chrome outside edit mode,
-drag + save, drag + cancel, resize + save; on the demo page: widget edit,
+drag + save, drag + cancel, resize + save; on a demo page: widget edit,
 removal and layout edit in one session saved in the user overlay and gone
 when the overlay is off, cancel dropping everything, the overlay toggle
 ending a session; on the builder page: modify, remove and layout save

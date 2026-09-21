@@ -116,6 +116,19 @@ e2e/features/basic-widgets.feature adds and wires each one there.
   `title`, `description`, `tone` (`info`, `success`, `warning`, `danger`),
   `showIcon`. Implementations render role=alert.
 
+### Built out of order: `filter-bar`
+
+Requested directly, for tables the SERVER describes
+(`doc/table-view-design.md`): which filters there are is data, so a page
+cannot lay out one cell per filter.
+
+- **Contract** — `filters` port (`[{ id, label?, options }]`, default `[]`),
+  `value` port (`{ <filter id>: [values] }`, default `{}`), required
+  `changed { value }` carrying EVERYTHING chosen, filters with nothing
+  chosen left out; settings `placeholder`, `emptyText`.
+- The `table` contract gained an optional `columns` port for the same
+  reason: the port wins, the `columns` setting is the fallback.
+
 ### Built out of order: `multi-select`
 
 Requested directly, for filters that depend on each other.
@@ -126,7 +139,7 @@ Requested directly, for filters that depend on each other.
   `placeholder`, `options`, `collapseTags`. A chosen value no longer among
   the options is shown as it is: removing it is the job of whoever changed
   the options, not the widget's.
-- **Dependent filters (demo page)** — "Applications" and "Test suites". The
+- **Dependent filters (runs page)** — "Applications" and "Test suites". The
   suites on offer depend on the applications chosen, and that is LOGIC, so
   it is a host action, not a reaction (reactions never transform):
   Applications' `changed` runs `[{ set: "filters.applications", from:
