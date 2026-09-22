@@ -11,6 +11,16 @@
   cursor: pointer;
 }
 
+/* A link cell reads as a link; the row around it stays a row. */
+.ww-table__link {
+  color: var(--ant-color-link, var(--ant-color-primary, #1677ff));
+  text-decoration: none;
+}
+
+.ww-table__link:hover {
+  text-decoration: underline;
+}
+
 /* A select fills its cell, like an input does. */
 .ww-select {
   width: 100%;

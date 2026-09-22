@@ -28,7 +28,7 @@ import { antdPagination } from "./widgets/antd-pagination";
 import { antdProgress } from "./widgets/antd-progress";
 import { antdRefresher } from "./widgets/antd-refresher";
 import { antdSelect } from "./widgets/antd-select";
-import { antdTable } from "./widgets/antd-table";
+import { antdTable, createAntdTable, type AntdTableOptions } from "./widgets/antd-table";
 import { antdTag } from "./widgets/antd-tag";
 
 export {
@@ -48,7 +48,10 @@ export {
   antdSelect,
   antdTable,
   antdTag,
+  createAntdTable,
 };
+export type { AntdTableOptions };
+export type { TableCellProps, TableCellRenderer, TableCellRenderers } from "./hooks/use-table-cell";
 export { validate } from "./validation";
 export type { ValidationRule, ValidationResult } from "./validation";
 export { LABEL_TONES, VALIDATION_RULES } from "@wirework/widget-contracts";
@@ -63,24 +66,34 @@ export type { CheckboxEvents } from "./widgets/antd-checkbox";
 export type { MultiSelectEvents } from "./widgets/antd-multi-select";
 export type { FilterBarEvents } from "./widgets/antd-filter-bar";
 
-/** Every production widget, for a host to register at once. */
-export const antdWidgets: AnyWidgetDefinition[] = [
-  antdLabel,
-  antdEcho,
-  antdFilterBar,
-  antdCounter,
-  antdTable,
-  antdButton,
-  antdInput,
-  antdPagination,
-  antdRefresher,
-  antdSelect,
-  antdTag,
-  antdCheckbox,
-  antdProgress,
-  antdAlert,
-  antdMultiSelect,
-];
+export interface AntdWidgetsOptions {
+  /** Cell renderers the host's table offers by name (see createAntdTable). */
+  tableCells?: AntdTableOptions["cells"];
+}
+
+/** Every production widget, for a host to register at once — with the host's own table cells, if any. */
+export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyWidgetDefinition[] {
+  return [
+    antdLabel,
+    antdEcho,
+    antdFilterBar,
+    antdCounter,
+    tableCells === undefined ? antdTable : createAntdTable({ cells: tableCells }),
+    antdButton,
+    antdInput,
+    antdPagination,
+    antdRefresher,
+    antdSelect,
+    antdTag,
+    antdCheckbox,
+    antdProgress,
+    antdAlert,
+    antdMultiSelect,
+  ];
+}
+
+/** Every production widget as it comes, for a host without table cells of its own. */
+export const antdWidgets: AnyWidgetDefinition[] = createAntdWidgets();
 
 /**
  * Widgets that exist to TEST a host (a widget that always crashes, proving

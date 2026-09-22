@@ -1,13 +1,23 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Tag, Tooltip } from "antd";
 import { expect } from "storybook/test";
-import { antdTable } from "../widgets/antd-table";
+import { antdTable, createAntdTable } from "../widgets/antd-table";
+import type { TableCellProps } from "../hooks/use-table-cell";
 import { WidgetStory } from "./harness";
 import { playground } from "./playground";
 
 const rows = [
-  { id: "1", name: "Nightly", owner: { team: "Core" }, status: "Success" },
-  { id: "2", name: "Smoke", owner: { team: "Web" }, status: "Failed" },
-  { id: "3", name: "Regression", owner: { team: "Core" }, status: "Success" },
+  { id: "1", name: "Nightly", owner: { team: "Core" }, status: "Success", message: "" },
+  { id: "2", name: "Smoke", owner: { team: "Web" }, status: "Failed", message: "Timed out after 30 s" },
+  { id: "3", name: "Regression", owner: { team: "Core" }, status: "Success", message: "" },
+];
+
+/** Columns with CELLS: links to the run (slots select row properties) and a tag per status. */
+const cellColumns = [
+  { title: "#", property: "id", cell: { kind: "link", to: "/demo/runs/{id}" } },
+  { title: "Name", property: "name", cell: { kind: "link", to: "/demo/runs/{id}" } },
+  { title: "Team", property: "owner.team" },
+  { title: "Status", property: "status", cell: { kind: "tag", tones: { Success: "success", Failed: "danger" } } },
 ];
 
 const meta = {
@@ -43,12 +53,11 @@ export const Playground: Story = playground(antdTable, {
   seed: { demo: { rows } },
   viewModel: {
     inputs: { rows: "demo.rows" },
-    on: { "row-selected": [{ set: "demo.selected", from: "key" }] },
-    columns: [
-      { title: "Name", property: "name" },
-      { title: "Team", property: "owner.team" },
-      { title: "Status", property: "status" },
-    ],
+    on: {
+      "row-selected": [{ set: "demo.selected", from: "key" }],
+      "link-clicked": [{ set: "demo.followed", from: "href" }],
+    },
+    columns: cellColumns,
   },
 });
 
@@ -56,6 +65,66 @@ export const ConfiguredColumns: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByText("Smoke"));
     await expect(canvas.getByTestId("story-store")).toHaveTextContent('"selected": "2"');
+  },
+};
+
+/**
+ * Cells: `#` and Name are links to the run, Status a tag in a tone. A plain
+ * click on a link emits `link-clicked` with the address — and NOT
+ * `row-selected`: the store gets `followed`, never `selected`.
+ */
+export const Cells: Story = {
+  render: () => (
+    <WidgetStory
+      key="cells"
+      definition={antdTable}
+      seed={{ demo: { rows } }}
+      viewModel={{
+        inputs: { rows: "demo.rows" },
+        on: {
+          "row-selected": [{ set: "demo.selected", from: "key" }],
+          "link-clicked": [{ set: "demo.followed", from: "href" }],
+        },
+        columns: cellColumns,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const link = canvas.getByRole("link", { name: "Smoke" });
+    await expect(link).toHaveAttribute("href", "/demo/runs/2");
+    await expect(canvas.getByText("Failed")).toHaveAttribute("data-tone", "danger");
+    await userEvent.click(link);
+    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"followed": "/demo/runs/2"');
+    await expect(canvas.getByTestId("story-store")).not.toHaveTextContent("selected");
+  },
+};
+
+/** A renderer the HOST registers: the status tag with the failure's message in a tooltip — two row properties, which no predefined kind offers. */
+function StatusWithMessage({ text, row }: TableCellProps) {
+  const tag = <Tag color={text === "Failed" ? "error" : "success"}>{text}</Tag>;
+  return typeof row["message"] === "string" && row["message"] !== "" ? <Tooltip title={row["message"]}>{tag}</Tooltip> : tag;
+}
+
+/** Custom cells: the host's own table offers renderers by name; a column selects one. An unknown name shows the text. */
+export const CustomCell: Story = {
+  render: () => (
+    <WidgetStory
+      key="custom"
+      definition={createAntdTable({ cells: { "status-with-message": StatusWithMessage } })}
+      seed={{ demo: { rows } }}
+      viewModel={{
+        inputs: { rows: "demo.rows" },
+        columns: [
+          { title: "Name", property: "name" },
+          { title: "Status", property: "status", cell: { kind: "custom", name: "status-with-message" } },
+          { title: "Team", property: "owner.team", cell: { kind: "custom", name: "no-such-renderer" } },
+        ],
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Failed")).toBeVisible();
+    await expect(canvas.getAllByText("Core")[0]).toHaveAttribute("data-cell-problem", "unknown-renderer");
   },
 };
 
