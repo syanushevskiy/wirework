@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Tag, Tooltip } from "antd";
-import { expect } from "storybook/test";
+import { Button, Tag, Tooltip } from "antd";
+import { expect, within } from "storybook/test";
 import { antdTable, createAntdTable } from "../widgets/antd-table";
 import type { TableCellProps } from "../hooks/use-table-cell";
 import { WidgetStory } from "./harness";
@@ -105,26 +105,42 @@ function StatusWithMessage({ text, row }: TableCellProps) {
   return typeof row["message"] === "string" && row["message"] !== "" ? <Tooltip title={row["message"]}>{tag}</Tooltip> : tag;
 }
 
+/** A renderer that ACTS: a button next to the value. The button owns its click — the row is not selected by it. */
+function WithButton({ text }: TableCellProps) {
+  return (
+    <>
+      {text} <Button size="small">Copy</Button>
+    </>
+  );
+}
+
 /** Custom cells: the host's own table offers renderers by name; a column selects one. An unknown name shows the text. */
 export const CustomCell: Story = {
   render: () => (
     <WidgetStory
       key="custom"
-      definition={createAntdTable({ cells: { "status-with-message": StatusWithMessage } })}
+      definition={createAntdTable({ cells: { "status-with-message": StatusWithMessage, "with-button": WithButton } })}
       seed={{ demo: { rows } }}
       viewModel={{
         inputs: { rows: "demo.rows" },
+        on: { "row-selected": [{ set: "demo.selected", from: "key" }] },
         columns: [
           { title: "Name", property: "name" },
+          { title: "Id", property: "id", cell: { kind: "custom", name: "with-button" } },
           { title: "Status", property: "status", cell: { kind: "custom", name: "status-with-message" } },
           { title: "Team", property: "owner.team", cell: { kind: "custom", name: "no-such-renderer" } },
         ],
       }}
     />
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, userEvent }) => {
     await expect(canvas.getByText("Failed")).toBeVisible();
     await expect(canvas.getAllByText("Core")[0]).toHaveAttribute("data-cell-problem", "unknown-renderer");
+    // A button inside a cell owns its click: no row-selected.
+    await userEvent.click(within(canvas.getByText("Smoke").closest("tr") as HTMLElement).getByRole("button", { name: "Copy" }));
+    await expect(canvas.getByTestId("story-store")).not.toHaveTextContent("selected");
+    await userEvent.click(canvas.getByText("Smoke"));
+    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"selected": "2"');
   },
 };
 

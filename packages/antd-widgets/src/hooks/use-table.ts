@@ -5,7 +5,9 @@
  * property, each cell as its column's `cell` says (TableCell), and the row
  * props that turn a click into an intent: `row-selected` for the row, or
  * `link-clicked` for a plain click on a link cell — the ONE place a click
- * is decided, so a renderer the host registered needs nothing of its own.
+ * is decided, so a renderer the host registered needs nothing of its own:
+ * interactive content inside a cell (a link, a button, a form control)
+ * OWNS its click and never selects the row.
  */
 import { createElement, useCallback, useMemo, type MouseEvent, type TdHTMLAttributes } from "react";
 import type { TableProps } from "antd";
@@ -25,6 +27,9 @@ export interface RenderedRow {
 const NO_ROWS: TableRow[] = [];
 export const NO_CELLS: TableCellRenderers = {};
 
+/** Content inside a cell that owns its clicks: the row must not react to them. */
+const INTERACTIVE = "a[href], button, input, select, textarea, [role='button']";
+
 /** The row's own key, or its position when it has none (not stable — configure rowKey). */
 function keyOf(row: TableRow, rowKey: string, index: number): string {
   const key = getPath(row, rowKey);
@@ -32,18 +37,25 @@ function keyOf(row: TableRow, rowKey: string, index: number): string {
 }
 
 /**
- * The link a click landed on, if any: its address, the cell's property, and
- * whether the page should follow it — a plain left click on an address of
- * the application. Anything else on a link (a modifier, the middle button,
- * another origin) is left to the browser.
+ * What a click on a row landed on: the ROW itself, some interactive CONTROL
+ * inside a cell (its own business), or a LINK — with its address, the
+ * cell's property, and whether the page should follow it: a plain left
+ * click on an address of the application. Anything else on a link (a
+ * modifier, the middle button, another origin) is left to the browser.
  */
-function clickedLink(event: MouseEvent<HTMLElement>): { href: string; property: string; follow: boolean } | undefined {
-  const anchor = (event.target as Element).closest("a[href]");
-  if (anchor === null || !event.currentTarget.contains(anchor)) return undefined;
-  const href = anchor.getAttribute("href") ?? "";
-  const property = anchor.closest("[data-property]")?.getAttribute("data-property") ?? "";
+type Clicked =
+  | { on: "row" }
+  | { on: "control" }
+  | { on: "link"; href: string; property: string; follow: boolean };
+
+function clicked(event: MouseEvent<HTMLElement>): Clicked {
+  const control = (event.target as Element).closest(INTERACTIVE);
+  if (control === null || !event.currentTarget.contains(control)) return { on: "row" };
+  if (!control.matches("a[href]")) return { on: "control" };
+  const href = control.getAttribute("href") ?? "";
+  const property = control.closest("[data-property]")?.getAttribute("data-property") ?? "";
   const plain = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
-  return { href, property, follow: plain && appPathSchema.safeParse(href).success };
+  return { on: "link", href, property, follow: plain && appPathSchema.safeParse(href).success };
 }
 
 export function useTable(
@@ -103,12 +115,12 @@ export function useTable(
       "data-testid": "table-row",
       "data-row-key": rendered.key,
       onClick: (event) => {
-        const link = clickedLink(event);
-        if (link === undefined) {
+        const target = clicked(event);
+        if (target.on === "row") {
           emit("row-selected", { key: rendered.key, row: rendered.row });
-        } else if (link.follow) {
+        } else if (target.on === "link" && target.follow) {
           event.preventDefault();
-          emit("link-clicked", { href: link.href, key: rendered.key, property: link.property, row: rendered.row });
+          emit("link-clicked", { href: target.href, key: rendered.key, property: target.property, row: rendered.row });
         }
       },
     }),
