@@ -247,7 +247,13 @@ export const demoViewModels: ViewModels = {
           //  - the server shows `inbound` and offers a filter for it — not here;
           //  - the server offers no values for `name` — this page filters by
           //    three suites of its own choice;
-          //  - `message` stays hidden because the SERVER hides it.
+          //  - `message` stays hidden because the SERVER hides it;
+          //  - the server describes DATA, never looks: the `#` and Name cells
+          //    are links to the run (the `{id}` slot selects the row's id),
+          //    the Status cells tags in a tone per state — predefined kinds,
+          //    no code (a cell the host renders by name would be
+          //    `cell: { kind: "custom", name: "run-status" }`).
+          // A plain click on a link emits `link-clicked`; nav/follow goes there.
           // Every other reaction of the page only names the view: { into: "runs" }.
           on: {
             load: [
@@ -260,7 +266,14 @@ export const demoViewModels: ViewModels = {
                   // table. The page's other calls leave it out — rows only.
                   metadata: true,
                   pageSize: 5,
-                  columns: { inbound: { hidden: true } },
+                  columns: {
+                    inbound: { hidden: true },
+                    id: { cell: { kind: "link", to: "/demo/runs/{id}" } },
+                    name: { cell: { kind: "link", to: "/demo/runs/{id}" } },
+                    state: {
+                      cell: { kind: "tag", tones: { Success: "success", Failed: "danger", Running: "info", Queued: "default" } },
+                    },
+                  },
                   filters: {
                     inbound: false,
                     name: { label: "Suite", values: ["Nightly regression", "Smoke suite", "Migration check"] },
@@ -268,6 +281,7 @@ export const demoViewModels: ViewModels = {
                 },
               },
             ],
+            "link-clicked": [{ call: "nav/follow" }],
           },
         },
       },

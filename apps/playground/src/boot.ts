@@ -48,7 +48,7 @@ import {
   type DemoPage,
 } from "@wirework/view-data-models-examples";
 import { standardContracts } from "@wirework/widget-contracts";
-import { antdTestWidgets, antdWidgets, brokenWidgets } from "@wirework/antd-widgets";
+import { antdTestWidgets, brokenWidgets, createAntdWidgets } from "@wirework/antd-widgets";
 import { createFilterActions } from "./actions/filter-actions";
 import { createNavActions, type Navigator } from "./actions/nav-actions";
 import { createOverviewLoader, createRunLoader, createRunsActions } from "./actions/runs-actions";
@@ -58,6 +58,7 @@ import { createSessionApi } from "./api/session-api";
 import { suiteOptionsFor } from "./api/suites-catalog";
 import { RUNS_VIEW_URL, createFakeTransport } from "./api/transport";
 import { statusBadgeContract } from "./contracts/status-badge";
+import { RunStatusCell } from "./widgets/run-status-cell";
 import { statusBadge } from "./widgets/status-badge";
 
 /** The user's page-size setting is a select's value: text. */
@@ -115,8 +116,9 @@ export function boot({ navigator }: { navigator: Navigator }) {
   contracts.register(statusBadgeContract);
 
   // Given the contracts, a widget claiming a kind must really implement it.
+  // The table offers this app's own cell renderer by name (`cell: { kind: "custom", name: "run-status" }`).
   const registry = createRegistry({ contracts });
-  for (const widget of antdWidgets) registry.register(widget);
+  for (const widget of createAntdWidgets({ tableCells: { "run-status": RunStatusCell } })) registry.register(widget);
   registry.register(statusBadge);
   // A playground is a test bench: the always-crashing widget proves isolation.
   for (const widget of antdTestWidgets) registry.register(widget);

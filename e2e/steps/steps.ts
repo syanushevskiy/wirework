@@ -345,6 +345,48 @@ Then(
   },
 );
 
+/** A cell of a row on the live page, by its column's property. */
+const tableCell = (page: Page, key: string, property: string) =>
+  tableRow(page, key).locator(`td[data-property="${property}"]`);
+
+When("I click the link {string} in the table row {string}", async ({ page }, text: string, key: string) => {
+  await tableRow(page, key).getByRole("link", { name: text, exact: true }).click();
+});
+
+Then(
+  "the table row {string} links {string} to {string}",
+  async ({ page }, key: string, property: string, href: string) => {
+    await expect(tableCell(page, key, property).locator("a")).toHaveAttribute("href", href);
+  },
+);
+
+/** A tag cell: its text, and its tone (success is green, danger red, info blue, default grey). */
+Then(
+  "the table row {string} shows a {string} tag {string} for {string}",
+  async ({ page }, key: string, tone: string, text: string, property: string) => {
+    const tag = tableCell(page, key, property).locator("[data-tone]");
+    await expect(tag).toHaveText(text);
+    await expect(tag).toHaveAttribute("data-tone", tone);
+  },
+);
+
+/** The playground's own cell renderer ("run-status"): the state as a tag, the message behind it. */
+Then(
+  "the table row {string} shows the host's status {string} with the message {string}",
+  async ({ page }, key: string, text: string, message: string) => {
+    const status = tableRow(page, key).getByTestId("run-status");
+    await expect(status).toHaveText(text);
+    await expect(status).toHaveAttribute("data-message", message);
+  },
+);
+
+Then(
+  "the table row {string} shows {string} for {string} as plain text, no renderer having that name",
+  async ({ page }, key: string, text: string, property: string) => {
+    await expect(tableCell(page, key, property).locator('[data-cell-problem="unknown-renderer"]')).toHaveText(text);
+  },
+);
+
 Then("the table is not loading", async ({ page }) => {
   await expect(live(page).getByTestId("antd-table")).toHaveAttribute("data-loading", "false");
 });
@@ -676,7 +718,8 @@ When("I clear the event log", async ({ page }) => {
 });
 
 When("I click the table row {string}", async ({ page }, key: string) => {
-  await tableRow(page, key).click();
+  // The row's corner is cell padding — never a link a cell may hold.
+  await tableRow(page, key).click({ position: { x: 2, y: 2 } });
 });
 
 When(
