@@ -19,10 +19,10 @@ Feature: Demo application — routes and global state
 
   Scenario: The overview requests its own numbers when it opens
     Given I open the "overview" page
-    Then the alert reads "Loading the latest results…" as a "warning"
+    Then the state JSON does not contain '"stats"'
     When the server has had time to answer
-    Then the alert reads "6 of 23 runs failed, 6 still running" as a "warning"
-    And the progress shows 50 percent
+    Then the state JSON contains '"notice": "6 of 23 runs failed, 6 still running"'
+    And the state JSON contains '"passRate": 50'
 
   Scenario: A setting made on one page is seen on another
     Given I open the "settings" page
@@ -94,10 +94,10 @@ Feature: Demo application — routes and global state
     When I edit the page
     And I remove the cell "echo-demo"
     And I save the page
-    Then the page has 10 cells
+    Then the page has 7 cells
     When I switch to the "runs" page
     And I switch to the "overview" page
-    Then the page has 10 cells
+    Then the page has 7 cells
 
   Scenario: Coming back from the builder starts the application over
     Given I open the "settings" page

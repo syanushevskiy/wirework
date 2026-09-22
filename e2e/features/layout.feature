@@ -10,12 +10,11 @@ Feature: Layout engines
   Scenario: The overview page renders on the grid engine
     Given I open the "overview" page
     Then the page layout uses the "react-grid-layout" engine
-    And the page has 11 cells
+    And the page has 8 cells
     And I see a widget "antd-label"
     And I see a widget "antd-counter"
     And I see a widget "antd-echo"
-    And I see a widget "antd-progress"
-    And I see a widget "antd-alert"
+    And I see a widget "antd-button"
     And I see a widget "antd-tag"
     And the cell "counter-main" is placed at x 0 y 1 w 6 h 2
 

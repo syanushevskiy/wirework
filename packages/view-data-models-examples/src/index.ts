@@ -61,11 +61,6 @@ export const demoViewModels: ViewModels = {
           { id: "label-welcome", widget: "antd-label", model: "widgets.overview.welcome", template: "default", x: 3, y: 3, w: 6, h: 1 },
           { id: "tag-role", widget: "antd-tag", model: "widgets.overview.role", template: "default", x: 9, y: 3, w: 3, h: 1 },
           { id: "label-user", widget: "antd-label", model: "widgets.overview.user", template: "default", x: 3, y: 4, w: 6, h: 1 },
-          // This page's OWN data: requested when the page opens.
-          { id: "progress-pass-rate", widget: "antd-progress", model: "widgets.overview.passRate", template: "default", x: 0, y: 5, w: 6, h: 2 },
-          { id: "alert-results", widget: "antd-alert", model: "widgets.overview.results", template: "default", x: 6, y: 5, w: 6, h: 2 },
-          // Navigation is an action too: the host owns the router.
-          { id: "button-open-runs", widget: "antd-button", model: "widgets.overview.openRuns", template: "default", x: 0, y: 7, w: 3, h: 2 },
         ],
       },
     },
@@ -184,24 +179,6 @@ export const demoViewModels: ViewModels = {
       },
       role: {
         default: { inputs: { text: "app.user.role" }, text: "role", tone: "info" },
-      },
-      passRate: {
-        default: { inputs: { percent: "overview.stats.passRate" }, label: "Pass rate of finished runs", tone: "success" },
-      },
-      results: {
-        default: {
-          inputs: { title: "overview.stats.notice" },
-          title: "Loading the latest results…",
-          description: "Counted on the server when this page opens.",
-          tone: "warning",
-        },
-      },
-      openRuns: {
-        default: {
-          label: "Open runs",
-          // `with`: static arguments of the call — where to go.
-          on: { clicked: [{ call: "nav/go", with: { to: "/demo/runs" } }] },
-        },
       },
     },
     runs: {

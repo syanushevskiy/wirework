@@ -11,7 +11,7 @@ Feature: Load events — a page and a table ask for their data
     Given I open the "overview" page
     Then the state JSON contains '"call": "overview/load"'
     When the server has had time to answer
-    Then the alert reads "6 of 23 runs failed, 6 still running" as a "warning"
+    Then the state JSON contains '"notice": "6 of 23 runs failed, 6 still running"'
 
   Scenario: A page's load event fires once per opening
     Given I open the address "/demo/runs/123456"
