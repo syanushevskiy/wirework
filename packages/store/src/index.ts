@@ -21,6 +21,9 @@
  * it — so a state that changes underneath (devtools time travel, `persist`
  * rehydration) reaches the same subscribers. `fromZustand` is that seam: a
  * host builds the Zustand store with the middleware it wants and wraps it.
+ * Every write names itself for Zustand's `devtools` middleware ("set
+ * runs.page", "replace"), so a host that opts in sees WHICH path changed
+ * in the Redux DevTools action list, not a row of "anonymous".
  *
  * NOTE: values returned by `get` are live references by convention — callers
  * must treat them as immutable. In-place mutation bypasses change detection.
@@ -31,8 +34,14 @@ import { checkedSegments, getPath, isConfigPath, setPath } from "@wirework/schem
 
 type StateObject = Record<string, unknown>;
 
-/** A Zustand store holding the state tree — plain, or wrapped in middleware. */
-export type StateApi = Pick<StoreApi<StateObject>, "getState" | "setState" | "subscribe">;
+/**
+ * A Zustand store holding the state tree — plain, or wrapped in middleware.
+ * `setState` may take the action's NAME as a third argument (the `devtools`
+ * middleware shows it); a plain store ignores it.
+ */
+export type StateApi = Pick<StoreApi<StateObject>, "getState" | "subscribe"> & {
+  setState: (state: StateObject, replace: true, action?: string) => void;
+};
 
 /** Store paths are dot strings with no empty or prototype segment. */
 function splitPath(path: string): string[] {
@@ -48,7 +57,7 @@ export function fromZustand(api: StateApi): Store {
     const segments = splitPath(path);
     const state = api.getState();
     if (Object.is(getPath(state, segments), value)) return;
-    api.setState(setPath(state, segments, value), true);
+    api.setState(setPath(state, segments, value), true, `set ${path}`);
   };
 
   return {
@@ -106,7 +115,7 @@ export function fromZustand(api: StateApi): Store {
     },
 
     replace(next: Record<string, unknown>): void {
-      api.setState({ ...next }, true);
+      api.setState({ ...next }, true, "replace");
     },
   };
 }

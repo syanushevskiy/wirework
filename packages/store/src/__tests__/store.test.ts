@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createStore as createZustandStore } from "zustand/vanilla";
 import { subscribeWithSelector } from "zustand/middleware";
-import { createStore, fromZustand } from "../index";
+import { createStore, fromZustand, type StateApi } from "../index";
 import { z } from "zod";
 
 describe("get", () => {
@@ -235,5 +235,17 @@ describe("fromZustand", () => {
     store.set("n", 2);
     expect(selected).toHaveBeenCalledWith(2, 1);
     expect(() => store.set("viewModels.pages", {})).toThrow(/setConfig/);
+  });
+
+  it("names every write for the devtools middleware: the path it set, or replace", () => {
+    const zustand = createZustandStore<Record<string, unknown>>()(() => ({ a: 1 }));
+    // What a middleware like `devtools` sees: the state, replace, and the action's name.
+    const setState = vi.fn<StateApi["setState"]>((state, replace) => zustand.setState(state, replace));
+    const store = fromZustand({ getState: zustand.getState, subscribe: zustand.subscribe, setState });
+    store.set("a", 2);
+    store.setConfig("viewModels", {});
+    store.replace({ b: 1 });
+    expect(setState.mock.calls.map((call) => call[2])).toEqual(["set a", "set viewModels", "replace"]);
+    expect(setState.mock.calls.every((call) => call[1] === true)).toBe(true);
   });
 });
