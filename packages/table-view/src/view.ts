@@ -6,7 +6,7 @@
  * (reactions and configuration only select).
  */
 import { z } from "zod";
-import type { FilterDefinition, TableColumn } from "@wirework/widget-contracts";
+import { tableCellSchema, type FilterDefinition, type TableColumn } from "@wirework/widget-contracts";
 import type { SortDirection, TableMetadata, TableViewRequest } from "./api";
 
 const columnOverrideSchema = z
@@ -15,6 +15,8 @@ const columnOverrideSchema = z
     hidden: z.boolean().optional(),
     /** Header instead of the server's `headerName`. */
     title: z.string().optional(),
+    /** How the column's cells are shown (the table's predefined kinds, or a renderer the host registered). */
+    cell: tableCellSchema.optional(),
   })
   .strict();
 
@@ -37,11 +39,13 @@ export const tableViewSchema = z
   .object({
     /** Where the view table API of this table lives. */
     url: z.string().min(1).describe("Address of the table's view API, e.g. /api/v1/view/runs"),
-    /** Per column id: what to change about the server's column. */
+    /** Per column id: what to change about the server's column, and how to show its cells. */
     columns: z
       .record(z.string(), columnOverrideSchema)
       .optional()
-      .describe('Per column id: { "inbound": { "hidden": true }, "state": { "title": "Result" } }'),
+      .describe(
+        'Per column id: { "inbound": { "hidden": true }, "state": { "title": "Result", "cell": { "kind": "tag", "tones": { "Failed": "danger" } } }, "id": { "cell": { "kind": "link", "to": "/demo/runs/{id}" } } } — a link needs the table\'s reaction link-clicked → nav/follow',
+      ),
     /** Per column id: what to change about the server's filter. */
     filters: z
       .record(z.string(), filterOverrideSchema)
@@ -83,11 +87,16 @@ export const DEFAULT_PAGE_SIZE = 50;
 export function columnsOf(metadata: TableMetadata, view: Pick<TableView, "columns">): TableColumn[] {
   return metadata.columnDefinitions
     .filter((definition) => !(view.columns?.[definition.id]?.hidden ?? definition.isHidden === true))
-    .map((definition) => ({
-      title: view.columns?.[definition.id]?.title ?? definition.headerName ?? definition.id,
-      // The table reads a row by dot path; a column id is a plain field name.
-      property: definition.id,
-    }));
+    .map((definition) => {
+      const override = view.columns?.[definition.id];
+      return {
+        title: override?.title ?? definition.headerName ?? definition.id,
+        // The table reads a row by dot path; a column id is a plain field name.
+        property: definition.id,
+        // How the cells are shown is the page's word alone: the server describes data, not looks.
+        ...(override?.cell === undefined ? {} : { cell: override.cell }),
+      };
+    });
 }
 
 /** Values a filter can offer: text, without the server's null ("no value") and without repeats. */

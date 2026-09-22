@@ -59,6 +59,26 @@ describe("columnsOf", () => {
       { title: "bare", property: "bare" },
     ]);
   });
+
+  it("passes the page's cell through — how a column is shown is the page's word, the server describes data only", () => {
+    const columns = columnsOf(metadata, {
+      columns: {
+        job_id: { cell: { kind: "link", to: "/jobs/{job_id}" } },
+        state: { title: "Result", cell: { kind: "tag", tones: { FAILED: "danger" } } },
+      },
+    });
+    expect(columns.find((column) => column.property === "job_id")).toEqual({
+      title: "Job ID",
+      property: "job_id",
+      cell: { kind: "link", to: "/jobs/{job_id}" },
+    });
+    expect(columns.find((column) => column.property === "state")).toEqual({
+      title: "Result",
+      property: "state",
+      cell: { kind: "tag", tones: { FAILED: "danger" } },
+    });
+    expect(columns.find((column) => column.property === "host_name")).toEqual({ title: "Host", property: "host_name" });
+  });
 });
 
 describe("filtersOf", () => {
@@ -211,6 +231,13 @@ describe("the loader", () => {
     await expect(load(createStore({}), { into: "jobs" })).rejects.toThrow(/no table view is declared/);
     await expect(load(createStore({}), { url: "/x" })).rejects.toThrow(/into/);
     await expect(load(createStore({}), { url: "/x", into: "jobs", colums: {} })).rejects.toThrow(/table-view\/load/);
+    // A cell kind nobody defined, or a link to another origin, never reaches the table.
+    await expect(
+      load(createStore({}), { url: "/x", into: "jobs", columns: { a: { cell: { kind: "badge" } } } }),
+    ).rejects.toThrow(/columns\.a\.cell/);
+    await expect(
+      load(createStore({}), { url: "/x", into: "jobs", columns: { a: { cell: { kind: "link", to: "//evil.example" } } } }),
+    ).rejects.toThrow(/columns\.a\.cell\.to/);
   });
 
   it("keeps the last good rows when a request fails, and says what failed", async () => {
