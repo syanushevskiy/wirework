@@ -380,6 +380,21 @@ Then(
   },
 );
 
+/** The playground's "copy" renderer: the value next to a button that puts it on the clipboard. */
+When("I click Copy in the table row {string}", async ({ page }, key: string) => {
+  // Reading the clipboard back needs the browser's leave.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await tableRow(page, key).getByTestId("copy-cell").getByRole("button").click();
+});
+
+Then("the Copy button in the table row {string} reads {string}", async ({ page }, key: string, text: string) => {
+  await expect(tableRow(page, key).getByTestId("copy-cell").getByRole("button")).toHaveText(text);
+});
+
+Then("the clipboard holds {string}", async ({ page }, text: string) => {
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(text);
+});
+
 Then(
   "the table row {string} shows {string} for {string} as plain text, no renderer having that name",
   async ({ page }, key: string, text: string, property: string) => {

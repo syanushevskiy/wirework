@@ -45,6 +45,15 @@ Feature: Table cells — links to the run and statuses as tags
     Then the cell "echo-selected-run" reads 'Selected run:"123456"'
     And the address is "/demo/runs"
 
+  Scenario: A reference is copied with its button — a cell the host renders — and the row stays unselected
+    Given I open the "runs" page
+    Then the table row "123456" shows "REF55456735Copy" for "reference"
+    When I click Copy in the table row "123456"
+    Then the Copy button in the table row "123456" reads "Copied"
+    And the clipboard holds "REF55456735"
+    # The button owns its click: the row was not selected by it (∅ = nothing selected).
+    And the cell "echo-selected-run" reads "Selected run:∅"
+
   Scenario: Following a link does not select the row, and a tag shows the default tone for an unlisted value
     Given I open the "builder" page
     When I choose the "antd-table" widget

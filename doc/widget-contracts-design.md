@@ -101,7 +101,11 @@ The basics every UI library has:
   helpers `cellText`, `cellTone`, `cellHref` are shared and unit-tested.
   Implementations expose `data-row-key`, `data-property`, `data-cell` and a
   tag cell's `data-tone`, and decide clicks in ONE place: a plain click on
-  a link is `link-clicked`, never `row-selected`. The antd implementation is
+  a link is `link-clicked`, never `row-selected`; interactive content in a
+  cell (a link, a button, a form control) owns its click and never selects
+  the row — so a host renderer that ACTS (the playground's "copy" button)
+  needs nothing of its own. A renderer never touches the store; it may act
+  on the browser (the clipboard). The antd implementation is
   a factory, `createAntdTable({ cells })`, so a host adds renderers by name
   without a contract change (the levels of customizing a server-described
   table are in `packages/table-view/src/index.ts`).

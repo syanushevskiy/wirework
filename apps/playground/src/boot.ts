@@ -58,6 +58,7 @@ import { createSessionApi } from "./api/session-api";
 import { suiteOptionsFor } from "./api/suites-catalog";
 import { RUNS_VIEW_URL, createFakeTransport } from "./api/transport";
 import { statusBadgeContract } from "./contracts/status-badge";
+import { CopyCell } from "./widgets/copy-cell";
 import { RunStatusCell } from "./widgets/run-status-cell";
 import { statusBadge } from "./widgets/status-badge";
 
@@ -116,9 +117,11 @@ export function boot({ navigator }: { navigator: Navigator }) {
   contracts.register(statusBadgeContract);
 
   // Given the contracts, a widget claiming a kind must really implement it.
-  // The table offers this app's own cell renderer by name (`cell: { kind: "custom", name: "run-status" }`).
+  // The table offers this app's own cell renderers by name (`cell: { kind: "custom", name: "copy" }`).
   const registry = createRegistry({ contracts });
-  for (const widget of createAntdWidgets({ tableCells: { "run-status": RunStatusCell } })) registry.register(widget);
+  for (const widget of createAntdWidgets({ tableCells: { copy: CopyCell, "run-status": RunStatusCell } })) {
+    registry.register(widget);
+  }
   registry.register(statusBadge);
   // A playground is a test bench: the always-crashing widget proves isolation.
   for (const widget of antdTestWidgets) registry.register(widget);
