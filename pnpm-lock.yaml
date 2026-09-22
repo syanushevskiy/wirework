@@ -121,6 +121,9 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+      zustand:
+        specifier: 'catalog:'
+        version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.7.0(react@19.2.8))
     devDependencies:
       '@types/react':
         specifier: 'catalog:'

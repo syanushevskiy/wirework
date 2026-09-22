@@ -116,3 +116,12 @@ Feature: Demo application — routes and global state
       { "editPages": false }
       """
     Then the page cannot be edited
+
+  Scenario: Redux DevTools are off until a console command turns them on, and the choice survives a reload
+    Given I open the "overview" page
+    Then "wirework.devtools()" in the console answers "off"
+    When I run "wirework.devtools(true)" in the console
+    Then "wirework.devtools()" in the console answers "on"
+    And the label reads "WIREWORK PLAYGROUND!!!"
+    When I run "wirework.devtools(false)" in the console
+    Then "wirework.devtools()" in the console answers "off"

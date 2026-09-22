@@ -40,6 +40,19 @@ Then("the address is {string}", async ({ page }, path: string) => {
   await expect(page).toHaveURL((url) => url.pathname === path);
 });
 
+/** The browser console: `wirework.devtools(...)` — turning it on or off reloads the page. */
+When("I run {string} in the console", async ({ page }, command: string) => {
+  const reloads = /devtools\((true|false)\)/.test(command);
+  const reloaded = reloads ? page.waitForEvent("load") : Promise.resolve();
+  await page.evaluate(command);
+  await reloaded;
+  await expect(live(page)).toBeVisible();
+});
+
+Then("{string} in the console answers {string}", async ({ page }, command: string, answer: string) => {
+  expect(await page.evaluate(command)).toBe(answer);
+});
+
 When("I go back in the browser", async ({ page }) => {
   await page.goBack();
 });

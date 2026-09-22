@@ -36,7 +36,7 @@ import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
 import { z } from "zod";
 import { createEventBus } from "@wirework/events";
 import type { EventBus, Store } from "@wirework/schema";
-import { createStore, layerStores } from "@wirework/store";
+import { layerStores } from "@wirework/store";
 import { createTableViewActions } from "@wirework/table-view";
 import {
   builderViewModels,
@@ -58,6 +58,7 @@ import { createSessionApi } from "./api/session-api";
 import { suiteOptionsFor } from "./api/suites-catalog";
 import { RUNS_VIEW_URL, createFakeTransport } from "./api/transport";
 import { statusBadgeContract } from "./contracts/status-badge";
+import { createPlaygroundStore } from "./devtools";
 import { CopyCell } from "./widgets/copy-cell";
 import { RunStatusCell } from "./widgets/run-status-cell";
 import { statusBadge } from "./widgets/status-badge";
@@ -227,7 +228,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
   const openDemoSession = (): AppSession => {
     // The configuration and the settings; the user, the permissions and the
     // lists arrive with the session request.
-    const shared = createStore({
+    const shared = createPlaygroundStore("app", {
       viewModels: demoViewModels,
       userViewModels: demoUserViewModels,
       ...demoAppState,
@@ -267,7 +268,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
     const session = (demoSession ??= openDemoSession());
     const page = demoPages[name];
     const store = layerStores({
-      page: createStore(page.initialState(route)),
+      page: createPlaygroundStore(name, page.initialState(route)),
       shared: session.shared,
       sharedRoots: APP_ROOTS,
     });
@@ -277,7 +278,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
   /** A visit of the builder. Leaving the demo application ends its session: it starts over next time. */
   const openBuilder = (route: RouteInfo): PageVisit => {
     demoSession = undefined;
-    return visitOf("builder", builderPage, createStore(builderPage.initialState(route)));
+    return visitOf("builder", builderPage, createPlaygroundStore("builder", builderPage.initialState(route)));
   };
 
   return { registry, contracts, layoutEngines, actions, rejections, openDemoPage, openBuilder };

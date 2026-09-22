@@ -32,6 +32,7 @@ This project runs Claude Code in auto mode with reads outside the working direct
 | Everything CI runs | `pnpm check` |
 | Playground dev server | `pnpm dev` (port 5173, strict — fails if one is already running; the developer often has it open) |
 | Storybook | `pnpm storybook` (its play tests are not run by any script yet) |
+| Redux DevTools for every store (off by default) | in the browser console: `wirework.devtools(true)` — reloads and connects; `wirework.devtools(false)` turns it off (`apps/playground/src/devtools.ts`) |
 
 `pnpm test` runs unit tests, then e2e.
 
