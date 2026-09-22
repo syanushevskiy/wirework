@@ -121,7 +121,11 @@ field per parameter (`settingFields(params, { json: true })`: objects and
 lists are JSON fields), gates Add on the required ones and saves them as
 `with`. `table-view/load` is the first action with parameters. An action
 WITHOUT `params` behaves as before: `with` passes through unchecked and the
-editor keeps an existing one untouched. Not built: `scope` / `for(page)`,
+editor keeps an existing one untouched. The playground's navigation is two
+actions: `nav/go { to }` (a static address) and `nav/follow` (no
+parameters: it goes where the EVENT's `href` points — a table's
+`link-clicked`); both accept only an address of the application
+(`appPathSchema`: one leading `/`, never another origin). Not built: `scope` / `for(page)`,
 and a parameter that is a list of choices from the page (a "source"
 select). Phases 2–3 not started; `http/get` is superseded by
 `source/refresh` in doc/refresher-design.md.

@@ -93,6 +93,22 @@ doc/widget-catalog.md:
   `showValue`; role=progressbar named by `label`.
 - `alert` — optional `title` port, `title` / `description` / `tone`
   (`info`, `success`, `warning`, `danger`) / `showIcon`; role=alert.
+- `table` — `rows` port (array of objects, default [], suggested path name
+  `data`), optional `loading` and `columns` ports; settings `columns`
+  (`{ title, property, cell? }`), `rowKey`, `emptyText`; events `load` (once
+  when it appears), `row-selected { key, row }`, `link-clicked { href, key,
+  property, row }`. A column's `cell` is one of the CONTRACT's predefined
+  kinds (`table-cell.ts`: `text`, `tag { tones }`, `link { to }`, `custom
+  { name, params }`), so every implementation shows them the same; the
+  helpers `cellText`, `cellTone`, `cellHref` are shared and unit-tested.
+  Implementations expose `data-row-key`, `data-property`, `data-cell` and a
+  tag cell's `data-tone`, and decide clicks in ONE place: a plain click on
+  a link is `link-clicked`, never `row-selected`. The antd implementation is
+  a factory, `createAntdTable({ cells })`, so a host adds renderers by name
+  without a contract change (`doc/table-view-design.md`, "Customizing a
+  table").
+- `filter-bar` — `filters` port (`[{ id, label, options }]`, data the
+  server describes) and `value` port; required `changed { value }`.
 
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and

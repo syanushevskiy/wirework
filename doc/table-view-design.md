@@ -8,8 +8,12 @@
 | Demo: the runs list is a table view (`/api/v1/view/runs`, fake server) | built |
 | The table's `load` event: the first request needs no click and no host code | built |
 | The action's parameters in the builder (`params`, `actions-design.md`) | built |
+| Cells: predefined kinds (`text`, `tag`, `link`) selected per column; `link-clicked` + `nav/follow` | built |
+| Cells the host renders by name (`createAntdTable({ cells })`, `cell: { kind: "custom", name }`) | built |
 | Sorting from the table header (`orderBy`, `isSortable`) | not built |
 | Other filter groups in the UI (`filterLike`, `filterBetween`, …) | not built — declared only |
+| Cell defaults from the server's column `type` (boolean, timestamp, numeric) | not built — deferred, additive |
+| A column editor in the builder (hide, title, cell kind per server column) | not built — `builder-user-needs.md`, W7 |
 
 ## The API (`doc/tableApi/`)
 
@@ -52,7 +56,10 @@ with: {
   pageSize: 5,                          // until <into>.pageSize says otherwise
   columns: { inbound: { hidden: true }, // hide a column the server shows…
              message: { hidden: false },// …show one the server hides…
-             state:   { title: "Result" } },        // …rename one
+             state:   { title: "Result",           // …rename one…
+                        cell: { kind: "tag", tones: { Success: "success", Failed: "danger" } } },
+                                        // …show its cells as tags (see "Customizing a table")
+             id:      { cell: { kind: "link", to: "/demo/runs/{id}" } } },   // …or as links
   filters: { inbound: false,            // no filter for it, whatever the server offers
              name: { label: "Suite", values: ["Nightly regression", "Smoke suite"] } },
                                         // other values — also where the server offers none
@@ -81,7 +88,7 @@ with those three answers: a dash for "not set", then yes, then no.
 | Path | What | Bound by |
 |---|---|---|
 | `<into>.view` | the declaration (url and changes) | — (inspection) |
-| `<into>.columns` | `[{ title, property }]` | table `columns` port |
+| `<into>.columns` | `[{ title, property, cell? }]` | table `columns` port |
 | `<into>.filters` | `[{ id, label, options }]` | filter bar `filters` port |
 | `<into>.data` | the rows | table `rows` port |
 | `<into>.total` | all rows on the server | pagination `total` port |
@@ -109,7 +116,11 @@ table:     { default: { inputs: { rows: "runs.data", loading: "runs.loading", co
 
 - **Derivation is code.** `columnsOf`, `filtersOf` and `requestOf` are pure
   functions, unit-tested against the API's own examples; configuration only
-  selects (hide, rename, other values).
+  selects (hide, rename, other values, a cell kind).
+- **The server describes data, never looks.** How a column's cells are
+  shown is the page's word alone (`columns.<id>.cell`), passed through by
+  `columnsOf`; nothing in the metadata chooses a cell kind (defaults from
+  the column `type` are a deferred, additive step).
 - **Filters.** A column becomes a filter when the server gives it
   `filterValues` and neither the column (`isFilterable: false`) nor the
   table (`enableFilter: false`) forbids it. `null` among the values ("rows
@@ -136,6 +147,51 @@ belongs to the page rather than to one table.)
 What the host still does before that, in code, is what only the application
 knows: the playground seeds `runs.pageSize` and the refresher's schedule
 from the user's settings when the runs page opens.
+
+## Customizing a table — the ladder
+
+The columns arrive at runtime, so "customizing the table" is not editing a
+column list: it is saying, per server column id, what should be DIFFERENT
+— and that has levels, from nothing to code. Team decision (Team Tiger,
+2026-09-22); the guardrails are in "Rules" below and in
+`builder-user-needs.md` ("Rule conflicts", W8).
+
+| Level | What | Who | Where | What the edit view can change |
+|---|---|---|---|---|
+| 0 automatic | order, headers, hidden columns — from the server's metadata | nobody | — | nothing |
+| 1 predefined kinds | `text`; `tag` with `tones` (value → tone, exact match, `default` on a miss); `link` with `to` (an address pattern whose `{property}` slots select row values, URL-encoded) | the page author, no code and no deploy | the `columns` JSON of the `table-view/load` reaction (or a static table's `columns` setting) | nothing on a server-described table (`with` is never in the user overlay); a static table's `columns` setting, all of it |
+| 2 a renderer the host registers | `cell: { kind: "custom", name, params? }` | a developer writes the component and the host registers it at boot: `createAntdWidgets({ tableCells: { "run-status": RunStatusCell } })`; the author selects the name | host code + the same `cell` field | the name and its `params` — never what it renders |
+| 3 the host's own table | `implementContract(tableContract, { type: "runs-table", … })` | a developer | the host, as `status-badge` does | — |
+
+A renderer (`TableCellProps`) gets `value`, `text`, `row`, `column` and
+`params` — no store, no `emit`: it shows the row's data. A plain click on
+any `<a href="/…">` it renders is the table's `link-clicked` like a link
+cell's (the row decides clicks, once). A name nobody registered shows the
+text and marks the cell (`data-cell-problem`), with one console warning —
+the name cannot be checked at boot, since columns arrive at runtime.
+
+**The kind-admission rule.** A predefined kind's configuration holds
+literals and row-property selections only: no conditionals, comparisons,
+regexes, ranges, case folding, pipes, defaults or format logic — ever. A
+cell that needs two properties or a condition is level 2. `to` is not a
+template language: slots select, `encodeURIComponent` is the only
+processing, and the address must be the application's (one leading `/`,
+never another origin — `appPathSchema`, also what `nav/go` accepts).
+
+**Links and clicks.** A link cell is a real anchor, so a modifier or middle
+click opens a new tab and the address can be copied; a plain left click is
+turned into `link-clicked { href, key, property, row }` (never
+`row-selected`), and the page's reaction `{ call: "nav/follow" }` goes
+there. Without that reaction the link is inert on a plain click — the
+demo's table template has it; a builder hint for a link column without one
+is a follow-up. A slot with no value renders plain text, not a broken link.
+
+In the demo (`widgets.runs.table` in the fixtures) the `#` and Name cells
+link to `/demo/runs/{id}` and Status is a tag per state — level 1. The
+playground also registers one level-2 renderer, `run-status` (the state as
+a tag with the run's message in a tooltip — two row properties, which no
+predefined kind offers), shown in Storybook (`antd-table` → CustomCell) and
+in `e2e/features/table-cells.feature`.
 
 ## In the builder
 

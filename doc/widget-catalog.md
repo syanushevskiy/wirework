@@ -157,9 +157,18 @@ shape. A builder needs a table for any data, so it was replaced by a
 generic standard kind:
 
 - **Contract** — `rows` port (an array of objects, default `[]`), optional
-  `loading` port; settings `columns` (`{ title, property }`, the property a
-  dot path into the row), `rowKey` (default `"id"`), `emptyText`;
-  `row-selected { key, row }` (primary `key`), not required.
+  `loading` and `columns` ports; settings `columns` (`{ title, property,
+  cell? }`, the property a dot path into the row), `rowKey` (default
+  `"id"`), `emptyText`; events `load`, `row-selected { key, row }` (primary
+  `key`) and `link-clicked { href, key, property, row }` (primary `href`),
+  none required.
+- **Cells** — a column's `cell` picks how its values are shown: `text`,
+  `tag` (`tones`: value → tone, the tag widget's tones), `link` (`to`: an
+  address pattern with `{property}` slots), or `custom` (a renderer the
+  host registered by name — `createAntdTable({ cells })`). The
+  `link` cell covers what the sketch wanted from a link IN a table; a
+  standalone `link` widget (#23) is still "later". Rules and the ladder:
+  `doc/table-view-design.md`, "Customizing a table".
 - **Identity, not position** — each row is keyed by its `rowKey` property,
   so a re-fetched or re-sorted page keeps rows apart; a row without it
   falls back to its position.
@@ -169,7 +178,8 @@ generic standard kind:
 - **Domain types left the contracts package** — `Run` is example data
   (`@wirework/view-data-models-examples`), and runs are a plain array in
   the store (`runs.data`).
-- **Next for the table** — sorting and selection events, and data sources
+- **Next for the table** — sorting, row actions (`builder-user-needs.md`,
+  W8), cell defaults from a server column's `type`, and data sources
   (doc/refresher-design.md).
 
 ## Not cell widgets (yet)

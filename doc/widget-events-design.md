@@ -207,7 +207,13 @@ payload so a second reaction can store the message somewhere.
 Team decision (Ren's guardrail, unchanged): reactions never transform.
 `from` selects, `value` is a literal, `with` is static. The moment a
 handler needs logic, it is an action — host code with a name — not a
-config expression.
+config expression. The same line holds for a table's cell kinds
+(`table-view-design.md`, "Customizing a table"): a link cell's `to:
+"/demo/runs/{id}"` is a pattern whose slots SELECT row properties — what a
+route pattern already is — with URL-encoding as its only processing; no
+conditionals or formats ever enter a cell's configuration. A link's
+plain click is an event like any other (`link-clicked`, payload `href`),
+and going there is the host's `nav/follow`.
 
 ## Reactions — phase two (built)
 

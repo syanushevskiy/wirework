@@ -45,8 +45,8 @@ wants, a foundation (section 5) or a phase of an existing design doc.
 |---|---|---|---|---|---|---|
 | W5 | Point a table at our runs address ("Fetch from URL…") with no developer. *Done when* I paste an address and rows appear, no JSON touched. | Must | Not built — no data sources in any package (`refresher-design.md` phases 1–3) | as designed: named sources in the view models, a runner, `source/refresh`, loading on open, "Fetch from URL…" in the builder. **New concept: data source** | L | W13, W7 |
 | W6 | Pick data from a named list that shows sample values. *Done when* every data field is a picker and nothing is typed from memory. | Must | Partly, **weaker than it looks** — suggestions are bare path strings of values CURRENTLY in the store; a fresh builder page has no data, so it offers nothing; reaction targets get no suggestions at all | suggestions carry path, sample value and title, grouped by source | S–M | W5, Names |
-| W7 | Set table columns (title, order, hide) and dropdown options in a form. *Done when* I change columns without opening State. | Must | Not built — the form skips non-primitive settings (they do survive a save); columns and options are edited as JSON | a "list" setting kind for arrays of simple objects — covers table `columns` AND select `options`; a row editor; `hidden` on a column | M | — |
-| W8 | Make a column a link to the run; add row actions (the sketch's "repeat"). *Done when* clicking # opens that run. | Should | Not built — a column is `{ title, property }`, the table has one event | a column kind "link" that SELECTS a row property holding the URL; a `rowActions` list and a `row-action` event | M | W7, W13, W16 |
+| W7 | Set table columns (title, order, hide) and dropdown options in a form. *Done when* I change columns without opening State. | Must | Not built — the form skips non-primitive settings (they do survive a save); columns and options are edited as JSON. For a table the SERVER describes the editor must be per server column id (hide, title, cell kind and its tones or address) over the `columns` argument of `table-view/load` | a "list" setting kind for arrays of simple objects — covers table `columns` AND select `options`; a row editor; `hidden` on a column; a cell-kind picker | M | — |
+| W8 | Make a column a link to the run; add row actions (the sketch's "repeat"). *Done when* clicking # opens that run. | Should | **Links built** (`table-view-design.md`, "Customizing a table"): a column's `cell: { kind: "link", to: "/demo/runs/{id}" }`, the table's `link-clicked` event and `nav/follow`; clicking # or the name opens the run. Shipped before W7, knowingly: the cell is JSON in the reaction's `columns` until W7. Row actions not built | a `rowActions` list and a `row-action` event | S | W7 (the form), W13, W16 |
 | W9 | Sort by clicking a column header. *Done when* clicking "Status" reorders the rows. | Should | Not built | controlled like pagination: a `sort` port and a `sort-changed` event; the source's query reads it (the server sorts) | M | W5 |
 | W10 | See loading, "Updated 12:03:05" and a plain error while the last good rows stay. *Done when*, with the server off, a message appears and the rows remain. | Must | Partly — `loading` only; **a failed request writes nothing to the store** and reaches only the browser console | `refresher-design.md` phase 4: source status with error and updated-at, a table `error` port, a refresher `updatedAt` port | S–M | W5 |
 | W11 | Put a refresher by a table and choose "refresh: runs table", off by default. *Done when* I choose the table from a list that names it. | Must | Partly — off by default is built; the demo calls a developer-written action. Hazard: any author can pick `runs/load-page` on ANY page, because actions have no scope | `source/refresh`, whose `source` parameter renders as a select of the named sources | S | W5, W13 |
@@ -177,8 +177,18 @@ The words on the left are in the builder today.
   which paths persist, the user's document holds only values.
 - **W29 view pills vs "a reaction may not write configuration".** The view
   switcher is host chrome, not a widget bound to the user's view models.
-- **W8 link columns.** A link column SELECTS a row property that holds the
-  URL; building URLs is adapter code on the data source.
+- **W8 link columns.** Re-decided 2026-09-22 (Team Tiger): a link column's
+  `to` is an ADDRESS PATTERN whose `{property}` slots select row values,
+  URL-encoded — the same thing a route pattern (`/demo/runs/:runId`)
+  already is, not an expression. The earlier line ("a link column SELECTS
+  a row property that holds the URL") failed the want: the view API sends
+  no URL, so every link needed the server or a developer. Guardrail: slots
+  only select; no conditionals, defaults, pipes or query builders, ever;
+  the address must be the application's (`appPathSchema`). Selecting a
+  URL-holding property stays possible later as an additive `href` field.
+  Cell kinds generally: literals and selections only — anything else is a
+  renderer the host registers by name (`table-view-design.md`, "the
+  kind-admission rule").
 - **W24 persistence vs "every visit starts fresh".** The rule stays: the
   initial state becomes the LOADED configuration plus the declared persisted
   values.

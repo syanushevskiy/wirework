@@ -83,10 +83,19 @@ it; which diagnostics panels are open is remembered across visits.
   (`{ path, params }`) in the visit's initial state. The run page's loader
   code reads `route.params.runId`; a widget can bind to it like any path.
 - **Navigation out**: a page never touches the router. `nav/go` takes
-  `with: { to: "/demo/runs" }`; `runs/open-selected` reads `runs.selected`
-  and opens `/demo/runs/<id>`. Both get a `Navigator` — a host service, the
-  same factory pattern as the fake server (`actions-design.md`). This is
-  W16's navigator in its smallest form.
+  `with: { to: "/demo/runs" }`; `nav/follow` goes where the event's `href`
+  points (the runs table's `#` and Name cells are links to
+  `/demo/runs/{id}`, `table-view-design.md`, "Customizing a table");
+  `runs/open-selected` reads `runs.selected` and opens `/demo/runs/<id>`.
+  All get a `Navigator` — a host service, the same factory pattern as the
+  fake server (`actions-design.md`). This is W16's navigator in its
+  smallest form. Every address is checked to be the application's own.
+- **The host's own table cell**: boot registers the antd widgets with one
+  cell renderer of this app, `run-status` (`src/widgets/run-status-cell.tsx`
+  — the state as a tag with the run's message in a tooltip), through
+  `createAntdWidgets({ tableCells })`; a column selects it with
+  `cell: { kind: "custom", name: "run-status" }`. The demo's Status column
+  uses the predefined `tag` kind instead — the no-code way.
 
 ## Global state at work (what the demo shows)
 
