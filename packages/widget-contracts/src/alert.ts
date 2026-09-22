@@ -1,5 +1,5 @@
 /**
- * `alert` contract — a message with a severity (doc/widget-catalog.md, #5).
+ * `alert` contract — a message with a severity.
  * Display only. The text at the optional `title` port replaces the static
  * title; an empty value shows the static title. Implementations render
  * role=alert and expose the tone as `data-tone`.

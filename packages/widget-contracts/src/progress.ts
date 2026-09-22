@@ -1,5 +1,5 @@
 /**
- * `progress` contract — a percentage as a bar (doc/widget-catalog.md, #4).
+ * `progress` contract — a percentage as a bar.
  * Display only. The value at the `percent` port is shown clamped to 0–100
  * (a store may overshoot; the bar must not). Implementations render
  * role=progressbar named by `label`, and expose the shown value as

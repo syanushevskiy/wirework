@@ -72,10 +72,9 @@ not when its first widget does.
 - `refresher` — `schedule` port `{ enabled, interval }` (default off, 5 s),
   optional `busy` port, required `changed` (the whole schedule) and required
   `refresh { trigger }`; implementations tick only while enabled and skip a
-  tick while busy or hidden (doc/refresher-design.md).
+  tick while busy or hidden.
 
-The basics every UI library has, chosen and ordered in
-doc/widget-catalog.md:
+The basics every UI library has:
 
 - `select` — controlled: `value` port (default "" = nothing chosen),
   optional `options` port falling back to the `options` setting, required
@@ -83,8 +82,7 @@ doc/widget-catalog.md:
 - `multi-select` — like `select` with a string-array `value` (default []),
   required `changed { value }` carrying every chosen value; a chosen value
   no longer on offer is shown as it is (pruning it is the job of whoever
-  changed the options — see the demo's dependent filters,
-  doc/widget-catalog.md).
+  changed the options — the demo's dependent filters do it in an action).
 - `tag` — optional `text` port, `text` + `tone` settings (`default`, `info`,
   `success`, `warning`, `danger`); an empty bound value shows the static text.
 - `checkbox` — controlled: `checked` port (default false), required
@@ -105,8 +103,8 @@ doc/widget-catalog.md:
   tag cell's `data-tone`, and decide clicks in ONE place: a plain click on
   a link is `link-clicked`, never `row-selected`. The antd implementation is
   a factory, `createAntdTable({ cells })`, so a host adds renderers by name
-  without a contract change (`doc/table-view-design.md`, "Customizing a
-  table").
+  without a contract change (the levels of customizing a server-described
+  table are in `packages/table-view/src/index.ts`).
 - `filter-bar` — `filters` port (`[{ id, label, options }]`, data the
   server describes) and `value` port; required `changed { value }`.
 
@@ -137,8 +135,8 @@ setting (grouped "Settings"; lists and objects as object controls, with the
 schema's descriptions and defaults), for the DATA at every input port
 (grouped "Inputs (store data)": the control writes the store, and follows
 when the widget's own reaction writes it), and for the cell width and the
-store readout ("Story"). It starts from the widget's `preview`
-(`widget-previews-design.md`); ports the preview leaves unbound get
+store readout ("Story"). It starts from the widget's `preview` (the seed
+the palette renders it with); ports the preview leaves unbound get
 generated paths, so they have a control too. Events land in the Actions
 panel.
 

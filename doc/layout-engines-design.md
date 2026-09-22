@@ -158,7 +158,7 @@ it off: building is work on the shared page. ADDING a widget always changes
 the shared page, so Add waits while the overlay is on — the overlay carries
 settings, view and layout only. Known consequence: "my-own" is a COPY of
 the layout, so a widget added to the shared page afterwards does not show
-in it (doc/builder-user-needs.md, risk 3 "Personal views are copies").
+in it ("personal views are copies").
 
 `pageTemplates(viewModels, userViewModels, page)` layers user templates over
 base ones (same name → user wins), and both resolve and boot validation use

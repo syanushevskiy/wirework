@@ -102,8 +102,8 @@ export function boundPaths(viewModels: { widgets?: unknown } | undefined): strin
 }
 
 /**
- * GENERATED store paths for a widget a builder is about to place
- * (doc/builder-user-needs.md, W12): `<page>.<name>.<port>` for EVERY input
+ * GENERATED store paths for a widget a builder is about to place:
+ * `<page>.<name>.<port>` for EVERY input
  * port, so nobody has to type a path to get started — a builder offers them
  * as defaults the user can change. `<name>` is the widget's path name,
  * numbered from the second instance on (`refresher`, `refresher2`, …): the

@@ -70,13 +70,13 @@ export const demoViewModels: ViewModels = {
         engine: "react-grid-layout",
         cells: [
           // Refresh by hand or on a timer: `refresh` CALLS the same host
-          // action the pagination uses (doc/refresher-design.md).
+          // action the pagination uses.
           { id: "refresher-runs", widget: "antd-refresher", model: "widgets.runs.refresher", template: "default", x: 0, y: 0, w: 9, h: 1 },
           // The filters the SERVER offers for its table (and what this page
           // changed about them): nobody wrote them into this page.
           { id: "filters-runs", widget: "antd-filter-bar", model: "widgets.runs.filterBar", template: "default", x: 0, y: 1, w: 9, h: 2 },
           // A table the server DESCRIBES: no columns here, they come with
-          // the first answer (doc/table-view-design.md).
+          // the first answer (@wirework/table-view).
           { id: "table-main", widget: "antd-table", model: "widgets.runs.table", template: "default", x: 0, y: 3, w: 9, h: 5 },
           // Server-side paging: a page change re-requests the table view.
           { id: "pagination-runs", widget: "antd-pagination", model: "widgets.runs.pagination", template: "default", x: 0, y: 8, w: 9, h: 1 },
@@ -218,7 +218,7 @@ export const demoViewModels: ViewModels = {
           // default rowKey).
           inputs: { rows: "runs.data", loading: "runs.loading", columns: "runs.columns" },
           // When the table appears it asks for its data: `load` DECLARES the
-          // table view (doc/table-view-design.md). The URL is all the action
+          // table view (@wirework/table-view). The URL is all the action
           // needs; the rest is what THIS page wants different from the
           // server's description:
           //  - the server shows `inbound` and offers a filter for it — not here;

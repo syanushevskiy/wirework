@@ -5,7 +5,7 @@
  * starts from. Plain code, no React and no router: the router calls
  * `openPage` from its loaders and hands the actions a Navigator.
  *
- * Two kinds of state (doc/playground-design.md):
+ * Two kinds of state:
  *  - The demo APPLICATION's state outlives its pages: the configuration
  *    (`viewModels`, `userViewModels`) and the GLOBAL data at `app` — who the
  *    user is, what they may do, their settings, lists every page needs. It
@@ -162,7 +162,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
   })) {
     actions.register(action);
   }
-  // Tables the SERVER describes (doc/table-view-design.md): one generic
+  // Tables the SERVER describes (@wirework/table-view): one generic
   // action, the URL comes from the page. The playground's "network" is the
   // fake server; a real host passes `fetchTransport` instead.
   const transport = createFakeTransport({ [RUNS_VIEW_URL]: (request) => runsServer.fetchView(request) });

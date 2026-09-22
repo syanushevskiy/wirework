@@ -1,6 +1,6 @@
 /**
  * `tag` contract — short status text in a semantic tone: what libraries call
- * a badge, tag or chip (doc/widget-catalog.md, #2). Display only. The text
+ * a badge, tag or chip. Display only. The text
  * at the optional `text` port replaces the static text; an empty value shows
  * the static text. Implementations expose the tone as `data-tone` (never a
  * raw colour in configuration).

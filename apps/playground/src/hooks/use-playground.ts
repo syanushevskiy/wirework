@@ -12,7 +12,7 @@
  * all state here starts over with it. BOTH trees LIVE IN THE STORE —
  * "viewModels" and "userViewModels" — alongside the data: one
  * state-management tree (for a demo page, the application's global state
- * layered under the visit's own; doc/playground-design.md). The state
+ * layered under the visit's own — `layerStores` in boot.ts). The state
  * inspector edits it, widgets write into it (through reactions), editors
  * save into it, and the page re-renders reactively from it.
  */

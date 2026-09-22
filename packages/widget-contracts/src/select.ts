@@ -1,5 +1,5 @@
 /**
- * `select` contract — one choice from a dropdown (doc/widget-catalog.md, #1).
+ * `select` contract — one choice from a dropdown.
  *
  * CONTROLLED like `input`: the chosen value lives at the `value` port ("" =
  * nothing chosen); every pick EMITS `changed` and the required reaction

@@ -6,7 +6,7 @@
  * EMITS `changed` with the whole schedule and the required reaction writes
  * it back (one `set`, no `from`). A Refresh click, or a tick while
  * auto-refresh is on, EMITS `refresh`; the reaction decides WHAT is
- * refreshed — a `call` to a host action (doc/refresher-design.md).
+ * refreshed — a `call` to a host action.
  *
  * Implementations render a checkbox, a number field (seconds) and a
  * button. They tick only while enabled and restart on an interval change;

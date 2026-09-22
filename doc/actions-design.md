@@ -127,5 +127,5 @@ parameters: it goes where the EVENT's `href` points — a table's
 `link-clicked`); both accept only an address of the application
 (`appPathSchema`: one leading `/`, never another origin). Not built: `scope` / `for(page)`,
 and a parameter that is a list of choices from the page (a "source"
-select). Phases 2–3 not started; `http/get` is superseded by
-`source/refresh` in doc/refresher-design.md.
+select). Phases 2–3 not started; `http/get` is not planned —
+`table-view/load` (`@wirework/table-view`) is how a page fetches today.

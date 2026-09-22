@@ -1,6 +1,6 @@
 Feature: Basic widgets
   The five basic widgets every UI library has that the standard kinds were
-  missing (doc/widget-catalog.md): select, tag, checkbox, progress and
+  missing: select, tag, checkbox, progress and
   alert. Each is a standard contract with an antd implementation. An author
   adds them in the builder and wires them to the store, so what one widget
   writes another one shows.

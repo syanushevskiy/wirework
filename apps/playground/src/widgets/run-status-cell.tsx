@@ -1,7 +1,8 @@
 /**
- * A table cell the HOST renders (doc/table-view-design.md, "Customizing a
- * table", level 2): a run's state as a tag, with the failure's message in a
- * tooltip. Registered by name at boot — a column selects it with
+ * A table cell the HOST renders (`createAntdTable({ cells })`, for what no
+ * predefined cell kind of table-cell.ts in @wirework/widget-contracts can
+ * show): a run's state as a tag, with the failure's message in a tooltip.
+ * Registered by name at boot — a column selects it with
  * `cell: { kind: "custom", name: "run-status" }`; the page cannot change
  * what it shows. Render-only: logic in use-run-status-cell.
  */

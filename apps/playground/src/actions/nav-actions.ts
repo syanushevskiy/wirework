@@ -1,6 +1,5 @@
 /**
- * Navigation as ACTIONS (doc/builder-user-needs.md, W16): a page never
- * touches the router. A reaction names `nav/go` and where to go, or
+ * Navigation as ACTIONS: a page never touches the router. A reaction names `nav/go` and where to go, or
  * `nav/follow` to go where the event's link points; the HOST owns the
  * router and hands the actions a Navigator — the same factory pattern as
  * every other host service (doc/actions-design.md). Both only ever go to an

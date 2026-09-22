@@ -14,7 +14,7 @@ export { paginationContract, PAGINATION_SIZES } from "./pagination";
 export type { PaginationSize } from "./pagination";
 export { refresherContract, refreshScheduleSchema, REFRESH_INTERVAL, REFRESH_TRIGGERS } from "./refresher";
 export type { RefreshSchedule, RefreshTrigger } from "./refresher";
-// The basics every UI library has, in doc/widget-catalog.md's priority order.
+// The basics every UI library has.
 export { selectContract, choiceOptionSchema, choiceOptionsSchema } from "./select";
 export type { ChoiceOption } from "./select";
 export { tagContract, TAG_TONES } from "./tag";

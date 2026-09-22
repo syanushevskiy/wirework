@@ -320,7 +320,7 @@ export function useWidgetForm(
 
   /**
    * Start over — for another widget. `suggestedPaths` (a builder's generated
-   * defaults, doc/builder-user-needs.md W12) fill the port fields right away
+   * defaults, `suggestedInputPaths` in the engine) fill the port fields right away
    * and are remembered as suggestions, so the form can tell a path the user
    * chose from one it proposed.
    */

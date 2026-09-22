@@ -102,9 +102,10 @@ const viewModel = widgetBindingsSchema(io, events).extend({
 
 ## Builder flow (playground)
 
-1. The palette (doc/widget-previews-design.md) shows every registered
-   widget; selecting one reads `definition.io`, `definition.events` and the
-   settings off `definition.viewModel`.
+1. The palette (`WidgetPreview` in `@wirework/react`: every widget rendered
+   live, from its `preview` seed, in an isolated sandbox) shows every
+   registered widget; selecting one reads `definition.io`,
+   `definition.events` and the settings off `definition.viewModel`.
 2. The form renders one path field per input port (autocomplete), one
    reaction per event (path to set + payload field; mandatory when the
    event is `required`), and one field per primitive setting.

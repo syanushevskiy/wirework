@@ -14,7 +14,7 @@ const contracts = createContracts();
 for (const contract of standardContracts) contracts.register(contract);
 
 describe("standard contracts", () => {
-  it("have unique kinds, including the basics from doc/widget-catalog.md", () => {
+  it("have unique kinds, including the basics every UI library has", () => {
     expect(contracts.keys()).toEqual(
       expect.arrayContaining([
         "label",

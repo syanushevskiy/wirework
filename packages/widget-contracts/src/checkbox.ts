@@ -1,5 +1,5 @@
 /**
- * `checkbox` contract — a yes/no choice (doc/widget-catalog.md, #3).
+ * `checkbox` contract — a yes/no choice.
  *
  * CONTROLLED: whether it is checked lives at the `checked` port; every
  * change EMITS `changed` and the required reaction writes it back.

@@ -42,8 +42,8 @@ export interface WidgetProps<VM = unknown, E extends WidgetEvents = WidgetEvents
 }
 
 /**
- * Sample data for a catalog/palette preview (doc/widget-previews-design.md):
- * the widget is rendered live, in an isolated sandbox, with this.
+ * Sample data for a catalog/palette preview: the widget is rendered live,
+ * in an isolated sandbox, with this.
  */
 export interface WidgetPreviewSpec {
   /** Store state the preview's input ports read (e.g. `{ preview: { count: 3 } }`). */

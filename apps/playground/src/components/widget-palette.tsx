@@ -5,7 +5,7 @@
  * appear below as cards WHILE THE SEARCH IS IN USE (focused, or holding a
  * query) or the list was asked for, each card a live, non-interactive preview with the
  * contract kind, the type and the description, flowing into as many
- * columns as the panel is wide (doc/widget-previews-design.md).
+ * columns as the panel is wide.
  */
 import type { ReactNode } from "react";
 import { AutoComplete, Button, Card, Flex, Tag, Typography } from "antd";

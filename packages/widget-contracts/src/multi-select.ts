@@ -1,6 +1,5 @@
 /**
- * `multi-select` contract — several choices from a dropdown
- * (doc/widget-catalog.md, #11).
+ * `multi-select` contract — several choices from a dropdown.
  *
  * CONTROLLED like `select`: the chosen values live at the `value` port (an
  * array, default []); every change EMITS `changed` with ALL chosen values

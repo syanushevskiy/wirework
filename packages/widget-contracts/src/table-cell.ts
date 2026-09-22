@@ -1,7 +1,6 @@
 /**
- * How a table CELL is shown — the predefined kinds a column may select
- * (doc/table-view-design.md, "Customizing a table"). A kind's configuration
- * holds LITERALS and ROW-PROPERTY SELECTIONS only: no conditionals, no
+ * How a table CELL is shown — the predefined kinds a column may select. A
+ * kind's configuration holds LITERALS and ROW-PROPERTY SELECTIONS only: no conditionals, no
  * comparisons, no patterns, no format logic — that is the admission rule.
  * Anything needing two properties or a condition is a named renderer the
  * host registers in code (`kind: "custom"`), which a page selects by name.

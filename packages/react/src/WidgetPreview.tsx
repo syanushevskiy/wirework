@@ -1,7 +1,7 @@
 /**
  * WidgetPreview — a live, NON-INTERACTIVE render of a widget definition in
  * an isolated sandbox, scaled into a fixed frame: what a palette or catalog
- * shows (doc/widget-previews-design.md). A view model that fails
+ * shows. A view model that fails
  * validation shows "no preview"; a widget that throws shows the error
  * boundary's placeholder — the catalog tells the truth.
  * Render-only: logic in useWidgetPreview.
