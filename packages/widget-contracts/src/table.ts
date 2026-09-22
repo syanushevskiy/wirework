@@ -6,25 +6,32 @@
  * - Each row's identity is the value of its `rowKey` property (default
  *   "id") — never its position, so a re-sorted or re-fetched page keeps
  *   rows apart. A row without that property falls back to its position.
- * - Columns are `{ title, property }`, the property a dot path into the row
- *   ("status.state"). They come from the optional `columns` port — a store
- *   path, so a host can load them (a table the server describes) — and fall
- *   back to the `columns` setting. Without either, one column per top-level
- *   field of the first row.
+ * - Columns are `{ title, property, cell? }`, the property a dot path into
+ *   the row ("status.state"), the cell how its value is shown (table-cell.ts:
+ *   text, a tag, a link, or a renderer the host registered). They come from
+ *   the optional `columns` port — a store path, so a host can load them (a
+ *   table the server describes) — and fall back to the `columns` setting.
+ *   Without either, one column per top-level field of the first row.
  * - A click on a row EMITS `row-selected` with the row's key and the row
  *   itself, so a reaction stores either (`from: "key"`, `from: "row.name"`).
+ * - A plain click on a LINK cell EMITS `link-clicked` with the address
+ *   instead (never `row-selected`): the reaction calls the host's navigation
+ *   (`{ call: "nav/follow" }`). A modifier or middle click is the browser's
+ *   (a new tab), as the link carries its real address.
  * - When the table APPEARS it emits `load`, once: the moment to fetch its
  *   data. The table itself never fetches — the reaction calls an action
  *   (`{ call: "table-view/load", with: { url, into } }`), which writes the
  *   rows where the table reads them.
  *
  * Implementations render a table and expose each row's key as
- * `data-row-key` and each cell's property as `data-property`. They emit
- * `load` AFTER mounting — once the page has bound its reactions — and only
- * once per mount (React's StrictMode mounts twice).
+ * `data-row-key`, each cell's property as `data-property` and its kind as
+ * `data-cell`; a tag cell exposes its tone as `data-tone`. They emit `load`
+ * AFTER mounting — once the page has bound its reactions — and only once
+ * per mount (React's StrictMode mounts twice).
  */
 import { z } from "zod";
 import { defineContract } from "@wirework/schema";
+import { appPathSchema, tableCellSchema } from "./table-cell";
 
 export const tableColumnSchema = z
   .object({
@@ -32,6 +39,8 @@ export const tableColumnSchema = z
     title: z.string(),
     /** Dot path into the row ("name", "status.state"). */
     property: z.string().min(1),
+    /** How the value is shown; text when absent. */
+    cell: tableCellSchema.optional(),
   })
   .strict();
 export type TableColumn = z.infer<typeof tableColumnSchema>;
@@ -77,12 +86,24 @@ export const tableContract = defineContract({
       payload: z.object({ key: z.string(), row: z.record(z.string(), z.unknown()) }),
       primary: "key",
     },
+    "link-clicked": {
+      description: "Fired when the user clicks a link cell; carries the address — call nav/follow",
+      payload: z.object({
+        href: appPathSchema,
+        key: z.string(),
+        property: z.string(),
+        row: z.record(z.string(), z.unknown()),
+      }),
+      primary: "href",
+    },
   },
   settings: z.object({
     columns: z
       .array(tableColumnSchema)
       .default([])
-      .describe("Columns { title, property }; empty = one per field of the first row"),
+      .describe(
+        'Columns { title, property, cell? }; empty = one per field of the first row. cell: { "kind": "tag", "tones": { "Failed": "danger" } } or { "kind": "link", "to": "/demo/runs/{id}" }',
+      ),
     rowKey: z.string().min(1).default("id").describe("Row property holding each row's stable identity"),
     emptyText: z.string().default("No rows").describe("Shown when there are no rows"),
   }),
@@ -95,6 +116,13 @@ export const tableContract = defineContract({
         ],
       },
     },
-    viewModel: { inputs: { rows: "preview.rows" } },
+    viewModel: {
+      inputs: { rows: "preview.rows" },
+      columns: [
+        { title: "#", property: "id" },
+        { title: "Name", property: "name" },
+        { title: "Status", property: "status", cell: { kind: "tag", tones: { Success: "success", Failed: "danger" } } },
+      ],
+    },
   },
 });

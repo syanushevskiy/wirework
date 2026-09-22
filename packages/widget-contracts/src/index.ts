@@ -27,6 +27,8 @@ export type { AlertTone } from "./alert";
 export { multiSelectContract } from "./multi-select";
 export { tableContract, tableColumnSchema, tableRowsSchema } from "./table";
 export type { TableColumn, TableRow } from "./table";
+export { tableCellSchema, appPathSchema, cellText, cellTone, cellHref } from "./table-cell";
+export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
 
