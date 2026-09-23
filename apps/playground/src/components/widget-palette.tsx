@@ -66,7 +66,7 @@ export function WidgetPalette({ search, selected, onSelect, action }: WidgetPale
         </Typography.Text>
       ) : (
         <div className="pg-palette-cards" id="widget-catalog">
-          {items.map(({ type, description, definition, kind }) => (
+          {items.map(({ type, description, definition, kind, kindTag }) => (
             <Card
               key={type}
               size="small"
@@ -88,7 +88,7 @@ export function WidgetPalette({ search, selected, onSelect, action }: WidgetPale
                   <Typography.Text code>{type}</Typography.Text>
                   {/* The contract this widget implements — unless the
                       widget's own name already says it. */}
-                  {kind === "other" || kind === type ? null : <Tag>{kind}</Tag>}
+                  {kindTag ? <Tag>{kindTag}</Tag> : null}
                 </Flex>
                 {description ? (
                   <Typography.Text type="secondary">{description}</Typography.Text>

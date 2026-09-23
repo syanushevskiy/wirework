@@ -19,6 +19,8 @@ export interface PaletteItem {
   description?: string;
   definition: AnyWidgetDefinition;
   kind: string;
+  /** The kind worth naming ON the card — absent when the widget's own name already says it. */
+  kindTag?: string;
 }
 
 export function usePalettePress(onSelect: (type: string) => void) {
@@ -64,7 +66,13 @@ export function useWidgetSearch(groups: WidgetGroup[]) {
   const items = useMemo<PaletteItem[]>(
     () =>
       matching.flatMap((group) =>
-        group.widgets.map((widget) => ({ ...widget, kind: group.kind })),
+        group.widgets.map((widget) => ({
+          ...widget,
+          kind: group.kind,
+          // "other" is no contract at all, and a kind the type already
+          // spells out would only repeat itself.
+          ...(group.kind === "other" || group.kind === widget.type ? {} : { kindTag: group.kind }),
+        })),
       ),
     [matching],
   );

@@ -31,6 +31,8 @@ export function useWidgetBuilder(
   /** The page widgets are added to: the first segment of every generated path. */
   page: string,
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void,
+  /** Why the HOST is not accepting a widget right now; undefined when it is. */
+  addLocked?: string,
 ) {
   const [widgetType, setWidgetType] = useState<string>("");
   /** Registered widgets grouped by the contract kind they implement. */
@@ -86,5 +88,16 @@ export function useWidgetBuilder(
     search.clear();
   }, [definition, form.collect, form.reset, search.clear, onAdd]);
 
-  return { widgetGroups, widgetType, selectWidget, form, search, canAdd: form.valid, add };
+  return {
+    widgetGroups,
+    widgetType,
+    selectWidget,
+    form,
+    search,
+    /** The form holds everything a widget needs. */
+    canAdd: form.valid,
+    /** …and the host is accepting one: the single answer a control needs. */
+    addDisabled: !form.valid || addLocked !== undefined,
+    add,
+  };
 }

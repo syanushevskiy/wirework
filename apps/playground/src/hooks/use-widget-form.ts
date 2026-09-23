@@ -33,6 +33,22 @@ import {
 } from "@wirework/schema";
 import { compatibleStorePaths, problemText, type ActionRegistry } from "@wirework/engine";
 
+/**
+ * A dropdown option cannot carry "", so the two "nothing chosen" answers
+ * need a value of their own. They never leave this file: the form exposes
+ * `choice`/`choices` and takes the answer back through `chooseSetting` /
+ * `chooseFrom`, so no component ever handles a sentinel.
+ */
+const WHOLE_PAYLOAD = "$payload";
+const USE_DEFAULT = "$default";
+
+/** One dropdown option, ready for a select. */
+export interface Choice<T extends string = string> {
+  value: T;
+  label: string;
+  disabled?: boolean;
+}
+
 export interface PortField {
   name: string;
   description?: string;
@@ -42,6 +58,8 @@ export interface PortField {
   value: string;
   /** The generated path the field started from (a builder's default); the user may change it. */
   suggested?: string;
+  /** Still exactly the path the builder proposed — say so, so the user knows it is a suggestion. */
+  untouched: boolean;
 }
 
 export type ReactionKind = "set" | "call";
@@ -57,11 +75,19 @@ export interface EventField {
   actions: { name: string; description?: string }[];
   /** Reaction draft. */
   kind: ReactionKind;
+  /** The two verbs, with `call` disabled while the host registered no actions. */
+  kindChoices: Choice<ReactionKind>[];
   /** `set`: store path to write (empty = no reaction) + payload field ("" = whole payload). */
   set: string;
   from: string;
+  /** The payload field as its dropdown shows it, and what it offers (absent: not an object payload). */
+  fromChoice: string;
+  fromChoices?: Choice[];
   /** `call`: action name (empty = no reaction). */
   call: string;
+  /** The action as its dropdown shows it (undefined shows the placeholder), and what it offers. */
+  callChoice?: string;
+  actionChoices: Choice[];
   /** `call`: the chosen action's declared parameters, with the user's drafts (none: the action declares none). */
   params: ParamDraft[];
   /** `call`: the drafts as the reaction's `with` — what `collect()` saves. */
@@ -83,11 +109,20 @@ export interface ParamDraft extends SettingField {
   unset: boolean;
   /** Why this draft cannot be used: not a number, JSON that does not parse. */
   error?: string;
+  /** A yes/no parameter's three answers, for the checkbox and its label. */
+  state: "unset" | "yes" | "no";
+  stateLabel: string;
+  /** A select parameter's value (undefined shows the placeholder) and what it offers. */
+  choice?: string;
+  choices?: Choice[];
 }
 
 /** A setting with the user's draft value (string for text/number inputs). */
 export interface SettingDraft extends SettingField {
   value: string | boolean;
+  /** A select setting's value — its own, or "use the widget's default" — and what it offers. */
+  choice?: string;
+  choices?: Choice[];
 }
 
 /** Widget settings collected by the form, already coerced to their kind. */
@@ -127,6 +162,28 @@ function draftsOfArguments(given: Record<string, unknown> | undefined): Record<s
   );
 }
 
+/** A parameter before the form works out how to SHOW it. */
+type ParamCore = Omit<ParamDraft, "state" | "stateLabel" | "choice" | "choices">;
+
+/** Options for a text-ish field the schema limits to a set of values. */
+const optionChoices = (options: readonly string[] | undefined): Choice[] =>
+  (options ?? []).map((option) => ({ value: option, label: option }));
+
+/** A select's value, or nothing chosen — which shows the placeholder. */
+const chosen = (value: string | boolean): { choice?: string } =>
+  typeof value === "string" && value !== "" ? { choice: value } : {};
+
+/** What a parameter's control shows: the yes/no/not-set answer, and a select's options. */
+function shownParam(param: ParamCore): ParamDraft {
+  const answer = param.unset ? "unset" : param.value === true ? "yes" : "no";
+  return {
+    ...param,
+    state: answer,
+    stateLabel: answer === "unset" ? "not set — the action decides" : answer,
+    ...(param.kind === "select" ? { ...chosen(param.value), choices: optionChoices(param.options) } : {}),
+  };
+}
+
 /**
  * The drafts as arguments, field by field: blank = not given (the action's
  * default applies), numbers and JSON parsed — with the reason when a draft
@@ -137,7 +194,7 @@ function argumentsOf(
   drafts: Record<string, string | boolean>,
 ): { params: ParamDraft[]; values: Record<string, unknown> } {
   const values: Record<string, unknown> = {};
-  const params = fields.map<ParamDraft>((field) => {
+  const params = fields.map<ParamCore>((field) => {
     const draft = drafts[field.name];
     const value = draft ?? (field.kind === "boolean" ? false : "");
     if (typeof draft === "boolean") {
@@ -161,7 +218,14 @@ function argumentsOf(
     }
     return { ...field, value, unset: false };
   });
-  return { params, values };
+  return { params: params.map(shownParam), values };
+}
+
+/** The next answer of a yes/no parameter: not set -> yes -> no -> not set (a required one only toggles). */
+export function nextParamValue(param: ParamDraft): string | boolean | undefined {
+  if (param.unset) return true;
+  if (param.value === true) return false;
+  return param.required ? true : undefined;
 }
 
 /** Prefill from a RESOLVED (validated) view model — the editor's starting point. */
@@ -236,14 +300,19 @@ export function useWidgetForm(
   const fields = useMemo<PortField[]>(
     () =>
       Object.entries((definition?.io.inputs ?? {}) as Record<string, PortDefinition>).map(
-        ([name, port]) => ({
-          name,
-          description: port.description,
-          required: port.required !== false,
-          ...(port.default === undefined ? {} : { defaultValue: port.default }),
-          value: paths[name] ?? "",
-          ...(suggested[name] === undefined ? {} : { suggested: suggested[name] }),
-        }),
+        ([name, port]) => {
+          const value = paths[name] ?? "";
+          const proposed = suggested[name];
+          return {
+            name,
+            description: port.description,
+            required: port.required !== false,
+            ...(port.default === undefined ? {} : { defaultValue: port.default }),
+            value,
+            ...(proposed === undefined ? {} : { suggested: proposed }),
+            untouched: proposed !== undefined && value === proposed,
+          };
+        },
       ),
     [definition, paths, suggested],
   );
@@ -251,10 +320,26 @@ export function useWidgetForm(
   /** Primitive settings of the widget, with the user's drafts. */
   const settings = useMemo<SettingDraft[]>(
     () =>
-      (definition ? settingFields(definition.viewModel) : []).map((field) => ({
-        ...field,
-        value: settingValues[field.name] ?? (field.kind === "boolean" ? false : ""),
-      })),
+      (definition ? settingFields(definition.viewModel) : []).map((field) => {
+        const value = settingValues[field.name] ?? (field.kind === "boolean" ? false : "");
+        if (field.kind !== "select") return { ...field, value };
+        // A setting the widget defaults: offer that default as an option of
+        // its own, so "nothing chosen" is something the user can pick back.
+        const fallback =
+          field.defaultValue === undefined
+            ? []
+            : [{ value: USE_DEFAULT, label: `default: ${String(field.defaultValue)}` }];
+        return {
+          ...field,
+          value,
+          ...(typeof value === "string" && value !== ""
+            ? { choice: value }
+            : field.defaultValue === undefined
+              ? {}
+              : { choice: USE_DEFAULT }),
+          choices: [...fallback, ...optionChoices(field.options)],
+        };
+      }),
     [definition, settingValues],
   );
 
@@ -267,6 +352,22 @@ export function useWidgetForm(
   const actionList = useMemo(
     () => actions.list().map(({ name, description }) => ({ name, description })),
     [actions],
+  );
+  /** The same two lists for every event: which verbs are offered, and which actions. */
+  const kindChoices = useMemo<Choice<ReactionKind>[]>(
+    () => [
+      { value: "set", label: "set store path" },
+      { value: "call", label: "call action", disabled: actionList.length === 0 },
+    ],
+    [actionList],
+  );
+  const actionChoices = useMemo<Choice[]>(
+    () =>
+      actionList.map((action) => ({
+        value: action.name,
+        label: action.description ? `${action.name} — ${action.description}` : action.name,
+      })),
+    [actionList],
   );
   /** What each action asks for: its declared parameters, objects and lists as JSON fields. */
   const parametersOf = useMemo(
@@ -298,6 +399,8 @@ export function useWidgetForm(
               argumentsError = problemText(error);
             }
           }
+          const from = draft?.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : "");
+          const call = draft?.call ?? "";
           return {
             name,
             description: event.description,
@@ -305,9 +408,16 @@ export function useWidgetForm(
             fields,
             actions: actionList,
             kind: draft?.kind ?? "set",
+            kindChoices,
             set: draft?.set ?? "",
-            from: draft?.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : ""),
-            call: draft?.call ?? "",
+            from,
+            fromChoice: from === "" ? WHOLE_PAYLOAD : from,
+            ...(fields === undefined
+              ? {}
+              : { fromChoices: [...optionChoices(fields), { value: WHOLE_PAYLOAD, label: "whole payload" }] }),
+            call,
+            ...(call === "" ? {} : { callChoice: call }),
+            actionChoices,
             params,
             arguments: values,
             ...(argumentsError === undefined ? {} : { argumentsError }),
@@ -315,7 +425,7 @@ export function useWidgetForm(
           };
         },
       ),
-    [definition, reactions, actionList, parametersOf, loaded],
+    [definition, reactions, actionList, kindChoices, actionChoices, parametersOf, loaded],
   );
 
   /**
@@ -340,6 +450,12 @@ export function useWidgetForm(
     setSettingValues((prev) => ({ ...prev, [name]: value }));
   }, []);
 
+  /** What a select setting's dropdown answered — "use the default" means nothing chosen. */
+  const chooseSetting = useCallback(
+    (name: string, choice: string) => setSetting(name, choice === USE_DEFAULT ? "" : choice),
+    [setSetting],
+  );
+
   const setReaction = useCallback(
     <K extends keyof ReactionDraft>(event: string, field: K, value: NonNullable<ReactionDraft[K]>) => {
       setReactions((prev) => ({
@@ -351,6 +467,12 @@ export function useWidgetForm(
     [],
   );
 
+  /** What a payload-field dropdown answered — "whole payload" means no field. */
+  const chooseFrom = useCallback(
+    (event: string, choice: string) => setReaction(event, "from", choice === WHOLE_PAYLOAD ? "" : choice),
+    [setReaction],
+  );
+
   /** One parameter of the action an event's reaction calls; `undefined` = back to "not set". */
   const setReactionParam = useCallback((event: string, name: string, value: string | boolean | undefined) => {
     setReactions((prev) => {
@@ -359,6 +481,12 @@ export function useWidgetForm(
       return { ...prev, [event]: { ...current, with: value === undefined ? others : { ...others, [name]: value } } };
     });
   }, []);
+
+  /** A click on a yes/no parameter moves it to its next answer. */
+  const cycleParam = useCallback(
+    (event: string, param: ParamDraft) => setReactionParam(event, param.name, nextParamValue(param)),
+    [setReactionParam],
+  );
 
   /**
    * Autocomplete source for an input port: existing store paths whose
@@ -422,8 +550,11 @@ export function useWidgetForm(
     events,
     setPortPath,
     setSetting,
+    chooseSetting,
     setReaction,
+    chooseFrom,
     setReactionParam,
+    cycleParam,
     suggestionsFor,
     valid,
     collect,

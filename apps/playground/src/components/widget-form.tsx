@@ -9,10 +9,15 @@ import { Alert, Checkbox, Flex, Form, Input, Select, Typography } from "antd";
 import { PathCombobox } from "./path-combobox";
 import type { ReactionKind, WidgetFormState } from "../hooks/use-widget-form";
 
-/** Select value standing for "the whole payload" (an option cannot be ""). */
-const WHOLE_PAYLOAD = "$payload";
-/** Select value standing for "use the widget's default" (an option cannot be ""). */
-const USE_DEFAULT = "$default";
+/**
+ * The form's field ids — also its test ids, which a suite drives the builder
+ * through. Named here, in one place, because they are part of what this form
+ * promises anyone who automates it.
+ */
+export const portFieldId = (port: string): string => `port-input-${port}`;
+export const settingFieldId = (setting: string): string => `setting-${setting}`;
+export const reactionFieldId = (event: string, part: string): string => `reaction-${event}-${part}`;
+export const paramFieldId = (event: string, param: string): string => reactionFieldId(event, `param-${param}`);
 
 export interface WidgetFormProps {
   form: WidgetFormState;
@@ -21,8 +26,20 @@ export interface WidgetFormProps {
 }
 
 export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
-  const { definition, fields, settings, events, setPortPath, setSetting, setReaction, setReactionParam, suggestionsFor } =
-    form;
+  const {
+    definition,
+    fields,
+    settings,
+    events,
+    setPortPath,
+    setSetting,
+    chooseSetting,
+    setReaction,
+    chooseFrom,
+    setReactionParam,
+    cycleParam,
+    suggestionsFor,
+  } = form;
   if (!definition) return null;
 
   return (
@@ -36,7 +53,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
         />
       ) : null}
       {fields.map((field) => {
-        const fieldId = `port-input-${field.name}`;
+        const fieldId = portFieldId(field.name);
         return (
           <Form.Item
             key={field.name}
@@ -57,7 +74,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
             }
             // A builder starts every port from a generated path; say so while it is untouched.
             extra={
-              field.suggested !== undefined && field.value === field.suggested ? (
+              field.untouched ? (
                 <span data-testid={`${fieldId}-suggested`}>
                   suggested path — keep it, change it, or pick existing data from the list
                 </span>
@@ -83,7 +100,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
         <Flex vertical gap="small" data-testid="widget-settings">
           <Typography.Text strong>Settings</Typography.Text>
           {settings.map((setting) => {
-            const fieldId = `setting-${setting.name}`;
+            const fieldId = settingFieldId(setting.name);
             return (
               <Form.Item
                 key={setting.name}
@@ -111,22 +128,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     data-testid={fieldId}
                     className="pg-field"
                     placeholder="choose…"
-                    value={
-                      typeof setting.value === "string" && setting.value !== ""
-                        ? setting.value
-                        : setting.defaultValue === undefined
-                          ? undefined
-                          : USE_DEFAULT
-                    }
-                    onChange={(value: string) =>
-                      setSetting(setting.name, value === USE_DEFAULT ? "" : value)
-                    }
-                    options={[
-                      ...(setting.defaultValue === undefined
-                        ? []
-                        : [{ value: USE_DEFAULT, label: `default: ${String(setting.defaultValue)}` }]),
-                      ...(setting.options ?? []).map((option) => ({ value: option, label: option })),
-                    ]}
+                    value={setting.choice}
+                    onChange={(value: string) => chooseSetting(setting.name, value)}
+                    options={setting.choices}
                   />
                 ) : (
                   <Input
@@ -177,66 +181,55 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     mandatory when the event carries state (required).
                     Two verbs: set a store path, or call a host action. */}
                 <div className="pg-reaction">
-                  <label htmlFor={`reaction-${event.name}-kind`}>
+                  <label htmlFor={reactionFieldId(event.name, "kind")}>
                     on {event.name}:{event.required ? " *" : ""}
                   </label>
                   <Select
-                    id={`reaction-${event.name}-kind`}
-                    data-testid={`reaction-${event.name}-kind`}
+                    id={reactionFieldId(event.name, "kind")}
+                    data-testid={reactionFieldId(event.name, "kind")}
                     className="pg-field-narrow"
                     disabled={bindingsLocked}
                     value={event.kind}
                     onChange={(value: ReactionKind) => setReaction(event.name, "kind", value)}
-                    options={[
-                      { value: "set", label: "set store path" },
-                      { value: "call", label: "call action", disabled: event.actions.length === 0 },
-                    ]}
+                    options={event.kindChoices}
                   />
                   {event.kind === "call" ? (
                     <Select
-                      id={`reaction-${event.name}-call`}
-                      data-testid={`reaction-${event.name}-call`}
+                      id={reactionFieldId(event.name, "call")}
+                      data-testid={reactionFieldId(event.name, "call")}
                       className="pg-field"
                       placeholder="choose an action…"
                       disabled={bindingsLocked}
-                      value={event.call === "" ? undefined : event.call}
+                      value={event.callChoice}
                       onChange={(value: string) => setReaction(event.name, "call", value)}
-                      options={event.actions.map((action) => ({
-                        value: action.name,
-                        label: action.description ? `${action.name} — ${action.description}` : action.name,
-                      }))}
+                      options={event.actionChoices}
                     />
                   ) : (
                     <>
                       <Input
-                        id={`reaction-${event.name}-set`}
-                        data-testid={`reaction-${event.name}-set`}
+                        id={reactionFieldId(event.name, "set")}
+                        data-testid={reactionFieldId(event.name, "set")}
                         className="pg-field-narrow pg-mono"
                         placeholder="store.path"
                         disabled={bindingsLocked}
                         value={event.set}
                         onChange={(change) => setReaction(event.name, "set", change.target.value)}
                       />
-                      <label htmlFor={`reaction-${event.name}-from`}>from payload</label>
-                      {event.fields ? (
+                      <label htmlFor={reactionFieldId(event.name, "from")}>from payload</label>
+                      {event.fromChoices ? (
                         <Select
-                          id={`reaction-${event.name}-from`}
-                          data-testid={`reaction-${event.name}-from`}
+                          id={reactionFieldId(event.name, "from")}
+                          data-testid={reactionFieldId(event.name, "from")}
                           className="pg-field-narrow pg-mono"
                           disabled={bindingsLocked}
-                          value={event.from === "" ? WHOLE_PAYLOAD : event.from}
-                          onChange={(value: string) =>
-                            setReaction(event.name, "from", value === WHOLE_PAYLOAD ? "" : value)
-                          }
-                          options={[
-                            ...event.fields.map((field) => ({ value: field, label: field })),
-                            { value: WHOLE_PAYLOAD, label: "whole payload" },
-                          ]}
+                          value={event.fromChoice}
+                          onChange={(value: string) => chooseFrom(event.name, value)}
+                          options={event.fromChoices}
                         />
                       ) : (
                         <Input
-                          id={`reaction-${event.name}-from`}
-                          data-testid={`reaction-${event.name}-from`}
+                          id={reactionFieldId(event.name, "from")}
+                          data-testid={reactionFieldId(event.name, "from")}
                           className="pg-field-narrow pg-mono"
                           placeholder="field (optional)"
                           disabled={bindingsLocked}
@@ -250,9 +243,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                 {/* What the chosen action asks for: one field per declared
                     parameter (objects and lists as JSON), saved as `with`. */}
                 {event.kind === "call" && event.params.length > 0 ? (
-                  <Flex vertical gap="small" className="pg-params" data-testid={`reaction-${event.name}-params`}>
+                  <Flex vertical gap="small" className="pg-params" data-testid={reactionFieldId(event.name, "params")}>
                     {event.params.map((param) => {
-                      const fieldId = `reaction-${event.name}-param-${param.name}`;
+                      const fieldId = paramFieldId(event.name, param.name);
                       return (
                         <Form.Item
                           key={param.name}
@@ -276,21 +269,13 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                             <Checkbox
                               id={fieldId}
                               data-testid={fieldId}
-                              data-state={param.unset ? "unset" : param.value === true ? "yes" : "no"}
+                              data-state={param.state}
                               disabled={bindingsLocked}
                               indeterminate={param.unset && !param.required}
                               checked={param.value === true}
-                              onChange={() =>
-                                setReactionParam(
-                                  event.name,
-                                  param.name,
-                                  param.unset ? true : param.value === true ? false : param.required ? true : undefined,
-                                )
-                              }
+                              onChange={() => cycleParam(event.name, param)}
                             >
-                              <Typography.Text type="secondary">
-                                {param.unset ? "not set — the action decides" : param.value === true ? "yes" : "no"}
-                              </Typography.Text>
+                              <Typography.Text type="secondary">{param.stateLabel}</Typography.Text>
                             </Checkbox>
                           ) : param.kind === "select" ? (
                             <Select
@@ -300,9 +285,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                               placeholder="choose…"
                               allowClear
                               disabled={bindingsLocked}
-                              value={typeof param.value === "string" && param.value !== "" ? param.value : undefined}
+                              value={param.choice}
                               onChange={(value: string | undefined) => setReactionParam(event.name, param.name, value ?? "")}
-                              options={(param.options ?? []).map((option) => ({ value: option, label: option }))}
+                              options={param.choices}
                             />
                           ) : param.kind === "json" ? (
                             <Input.TextArea
@@ -333,14 +318,14 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                       );
                     })}
                     {event.argumentsError ? (
-                      <Typography.Text type="danger" data-testid={`reaction-${event.name}-params-error`}>
+                      <Typography.Text type="danger" data-testid={reactionFieldId(event.name, "params-error")}>
                         {event.argumentsError}
                       </Typography.Text>
                     ) : null}
                   </Flex>
                 ) : null}
                 {event.kept > 0 ? (
-                  <Typography.Text type="secondary" data-testid={`reaction-${event.name}-kept`}>
+                  <Typography.Text type="secondary" data-testid={reactionFieldId(event.name, "kept")}>
                     then {event.kept} more reaction{event.kept === 1 ? "" : "s"}, kept as configured
                   </Typography.Text>
                 ) : null}

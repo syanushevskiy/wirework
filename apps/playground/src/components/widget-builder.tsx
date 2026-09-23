@@ -24,13 +24,14 @@ export interface WidgetBuilderProps {
 }
 
 export function WidgetBuilder({ registry, contracts, store, actions, page, addLocked, onAdd }: WidgetBuilderProps) {
-  const { widgetType, selectWidget, form, search, canAdd, add } = useWidgetBuilder(
+  const { widgetType, selectWidget, form, search, addDisabled, add } = useWidgetBuilder(
     registry,
     contracts,
     store,
     actions,
     page,
     onAdd,
+    addLocked,
   );
 
   return (
@@ -47,7 +48,7 @@ export function WidgetBuilder({ registry, contracts, store, actions, page, addLo
                 type="primary"
                 size="small"
                 data-testid="add-widget"
-                disabled={!canAdd || addLocked !== undefined}
+                disabled={addDisabled}
                 title={addLocked}
                 onClick={add}
               >
