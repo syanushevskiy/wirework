@@ -70,7 +70,16 @@ export interface PageEditingInput {
   target: EditTarget;
   withUserOverlay: boolean;
   trees: EditableTrees;
+  /**
+   * Where a BUILDER's widget templates live (`use-builder.ts`). Removing the
+   * last cell that uses one takes the template with it; templates outside
+   * this namespace are the page author's and are never touched.
+   */
+  modelNamespace?: string;
 }
+
+/** What a builder names its widget templates unless the host says otherwise. */
+const BUILDER_MODELS = "widgets.custom";
 
 /** Keys the form owns: dropped from a base template before the form's values are re-applied. */
 function withoutFormKeys(template: unknown, settingNames: string[]): Record<string, unknown> {
@@ -108,6 +117,7 @@ export function usePageEditing({
   target,
   withUserOverlay,
   trees,
+  modelNamespace = BUILDER_MODELS,
 }: PageEditingInput) {
   /** null = view mode; [] = an open session with nothing changed yet. */
   const [ops, setOps] = useState<Op[] | null>(null);
@@ -227,7 +237,7 @@ export function usePageEditing({
           // The cell's overlay entry would be dead config.
           next = { ...next, userViewModels: removeUserCell(next.userViewModels, page, cellId) };
         } else if (
-          removed?.model.startsWith("widgets.custom.") &&
+          removed?.model.startsWith(`${modelNamespace}.`) &&
           !isModelReferenced(layoutEngines, next, page, removed.model)
         ) {
           // A builder-owned template map nobody references any more goes with it.
@@ -236,7 +246,7 @@ export function usePageEditing({
         return next;
       });
     },
-    [cells, target, page, layoutEngines, pageOp, push],
+    [cells, target, page, layoutEngines, modelNamespace, pageOp, push],
   );
 
   const saveWidget = useCallback(
