@@ -45,6 +45,7 @@ import {
   type WidgetRegistry,
 } from "@wirework/engine";
 import { usePagePlan } from "@wirework/react";
+import type { Commit, EditableTrees } from "./use-commit";
 import type { EditableCell } from "./use-widget-editor";
 import type { WidgetSettings } from "./use-widget-form";
 
@@ -52,17 +53,20 @@ export type EditTarget = "user" | "base";
 /** Name of the user's own page template (the sketch's "my own" pill). */
 export const USER_PAGE_TEMPLATE = "my-own";
 
-/** Both editable trees, as they live in the store. */
-export interface EditableTrees {
-  viewModels: ViewModels;
-  userViewModels: UserViewModels;
-}
+export type { EditableTrees } from "./use-commit";
 
 /** One pure edit, replayed onto the store's current trees on every render and on Save. */
 type Op = (trees: EditableTrees) => EditableTrees;
 
 export interface PageEditingInput {
   store: Store;
+  /** THE write path (use-commit): the session commits through it, never to the store itself. */
+  commit: Commit;
+  /**
+   * Whether this user may change pages at all. Gating the BUTTON is not
+   * enough: a session must not open, and must not commit, without it.
+   */
+  canEdit?: boolean;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry;
@@ -110,6 +114,8 @@ function isModelReferenced(
 
 export function usePageEditing({
   store,
+  commit,
+  canEdit = true,
   registry,
   layoutEngines,
   actions,
@@ -189,30 +195,23 @@ export function usePageEditing({
   /** Ops apply only inside a session (chrome exists only in edit mode anyway). */
   const push = useCallback((op: Op) => setOps((current) => (current ? [...current, op] : current)), []);
 
-  /**
-   * Store dedups unchanged trees, so committing both is always safe.
-   * `setConfig`: the view models are configuration, which `set` refuses —
-   * only editors like this one may write them.
-   */
-  const commit = useCallback(
-    (next: EditableTrees) => {
-      store.setConfig("viewModels", next.viewModels);
-      store.setConfig("userViewModels", next.userViewModels);
-    },
-    [store],
-  );
-
   /* ---- session ---- */
 
+  /** Why this user cannot edit the page, if they cannot. */
+  const editLocked = canEdit ? undefined : "You may not change pages.";
+
   const startEditing = useCallback(() => {
+    if (!canEdit) return;
     setSelected(null);
     setOps([]);
-  }, []);
+  }, [canEdit]);
   const save = useCallback(() => {
-    if (ops) commit(shown);
+    // Gated here too: a session opened before the permission changed must
+    // not be able to write after it.
+    if (ops && canEdit) commit(shown);
     setOps(null);
     setSelected(null);
-  }, [ops, shown, commit]);
+  }, [ops, canEdit, shown, commit]);
   const cancel = useCallback(() => {
     setOps(null);
     setSelected(null);
@@ -290,6 +289,7 @@ export function usePageEditing({
     editing: ops !== null,
     /** Ops recorded in the open session (0 when nothing changed yet). */
     pendingChanges: ops?.length ?? 0,
+    editLocked,
     startEditing,
     save,
     cancel,

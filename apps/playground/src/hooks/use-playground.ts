@@ -23,6 +23,7 @@ import { validateViewModels } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import type { PageVisit, Playground } from "../boot";
 import { BUILDER_NAMING, builderPage, modelNamespaceOf, useBuilder } from "./use-builder";
+import { useCommit, type SaveTrees } from "./use-commit";
 import { useDemoBridge } from "./use-demo-bridge";
 import { usePageEditing, type EditTarget } from "./use-page-editing";
 
@@ -74,10 +75,36 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   /** This demo's own host-side wiring — not the builder's and not the engine's. */
   useDemoBridge(bus, store);
 
+  /**
+   * GLOBAL state at work: what the user may do arrived with the session
+   * (app.permissions). Only an explicit `false` forbids — the builder has no
+   * global state, and the demo's is still on its way when a page first shows.
+   */
+  const canEditPages = useStorePath<boolean>(store, "app.permissions.editPages") !== false;
+
+  /**
+   * Where a real host PERSISTS its pages. This demo keeps nothing: every
+   * visit starts from the fixtures on purpose (visits.feature), so it only
+   * records that a save happened — the State panel shows the count. A host
+   * that means it writes the trees somewhere and reads them back when it
+   * boots:
+   *
+   *   const persist: SaveTrees = (trees) =>
+   *     localStorage.setItem("wirework.pages", JSON.stringify(trees));
+   */
+  const persist = useCallback<SaveTrees>(() => {
+    store.set("saved", (store.get<number>("saved") ?? 0) + 1);
+  }, [store]);
+
+  /** THE write path: everything that changes a page goes through it. */
+  const commit = useCommit(store, persist);
+
   /** With the overlay on, edits are the USER's; without it they change the shared page. */
   const target: EditTarget = withUserOverlay ? "user" : "base";
   const editing = usePageEditing({
     store,
+    commit,
+    canEdit: canEditPages,
     registry,
     layoutEngines,
     actions,
@@ -87,13 +114,6 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     trees,
     modelNamespace: modelNamespaceOf(BUILDER_NAMING),
   });
-
-  /**
-   * GLOBAL state at work: what the user may do arrived with the session
-   * (app.permissions). Only an explicit `false` forbids — the builder has no
-   * global state, and the demo's is still on its way when a page first shows.
-   */
-  const canEditPages = useStorePath<boolean>(store, "app.permissions.editPages") !== false;
 
   /** Toggling the overlay changes the edit target — an open session ends. */
   const toggleUserOverlay = useCallback(
@@ -110,11 +130,13 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * dropped by it, and a user's own view is no place for a new widget (the
    * overlay carries settings, view and layout only).
    */
-  const addLocked = editing.editing
-    ? "Save or cancel the page edit to add widgets."
-    : target === "user"
-      ? "Adding a widget changes the shared page — turn the user overlay off to add one."
-      : undefined;
+  const addLocked =
+    editing.editLocked ??
+    (editing.editing
+      ? "Save or cancel the page edit to add widgets."
+      : target === "user"
+        ? "Adding a widget changes the shared page — turn the user overlay off to add one."
+        : undefined);
 
   /**
    * The page changed under the user's hands — a widget ADDED, a page edit
@@ -128,6 +150,8 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   const { engineLocked, setEngine, addWidget } = useBuilder({
     store,
+    commit,
+    canEdit: canEditPages,
     layoutEngines,
     viewModels,
     page: BUILDER_PAGE,

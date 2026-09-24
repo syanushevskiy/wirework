@@ -117,6 +117,22 @@ Feature: Demo application — routes and global state
       """
     Then the page cannot be edited
 
+  Scenario: The permission is a gate, not a hidden button — a session open when it is revoked saves nothing
+    Given I open the "overview" page
+    When the server has had time to answer
+    And I edit the page
+    And I drag the cell "counter-main" onto the cell "label-main"
+    Then the cell "counter-main" is placed at x 0 y 0 w 6 h 2
+    # Revoked while the session is open — the drag is on screen but unsaved.
+    When the store holds at "app.permissions":
+      """
+      { "editPages": false }
+      """
+    And I save the page
+    Then the page mode is "view"
+    And the cell "counter-main" is placed at x 0 y 1 w 6 h 2
+    And the page cannot be edited
+
   Scenario: Redux DevTools are off until a console command turns them on, and the choice survives a reload
     Given I open the "overview" page
     Then "wirework.devtools()" in the console answers "off"

@@ -13,6 +13,7 @@
 import { useCallback } from "react";
 import type { Store, ViewModels, WidgetBindings } from "@wirework/schema";
 import { resolveTemplate, updatePageTemplate, type LayoutEngineRegistry } from "@wirework/engine";
+import type { Commit } from "./use-commit";
 import type { WidgetSettings } from "./use-widget-form";
 
 /** What a builder calls the things it creates. A host may name them differently. */
@@ -66,6 +67,10 @@ export function builderPage(
 
 export interface BuilderInput {
   store: Store;
+  /** THE write path (use-commit): placing a widget commits through it, never to the store itself. */
+  commit: Commit;
+  /** Whether this user may change pages at all — placing a widget changes the shared one. */
+  canEdit?: boolean;
   layoutEngines: LayoutEngineRegistry;
   viewModels: ViewModels;
   /** The page widgets are added to. */
@@ -81,6 +86,8 @@ export interface BuilderInput {
 
 export function useBuilder({
   store,
+  commit,
+  canEdit = true,
   layoutEngines,
   viewModels,
   page,
@@ -99,16 +106,14 @@ export function useBuilder({
 
   const setEngine = useCallback(
     (name: string) => {
+      if (!canEdit) return;
       const engine = layoutEngines.get(name);
       const current = builderPage(layoutEngines, viewModels, page, naming);
       if (!engine || current.problem !== undefined || current.cells.length > 0) return;
       cancelEditing();
-      store.setConfig(
-        "viewModels",
-        updatePageTemplate(viewModels, page, naming.pageView, () => engine.empty()),
-      );
+      commit({ viewModels: updatePageTemplate(viewModels, page, naming.pageView, () => engine.empty()) });
     },
-    [layoutEngines, viewModels, page, naming, store, cancelEditing],
+    [canEdit, layoutEngines, viewModels, page, naming, commit, cancelEditing],
   );
 
   /**
@@ -120,6 +125,7 @@ export function useBuilder({
    */
   const addWidget = useCallback(
     (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => {
+      if (!canEdit) return;
       const prev = store.get<ViewModels>("viewModels");
       if (!prev) return;
       const target = builderPage(layoutEngines, prev, page, naming);
@@ -142,16 +148,18 @@ export function useBuilder({
         }),
       );
       const placed = (withCell.widgets[naming.modelGroup] as Record<string, unknown> | undefined) ?? {};
-      store.setConfig("viewModels", {
-        ...withCell,
-        widgets: {
-          ...withCell.widgets,
-          [naming.modelGroup]: { ...placed, [id]: { [naming.widgetTemplate]: template } },
+      commit({
+        viewModels: {
+          ...withCell,
+          widgets: {
+            ...withCell.widgets,
+            [naming.modelGroup]: { ...placed, [id]: { [naming.widgetTemplate]: template } },
+          },
         },
       });
       onAdded();
     },
-    [store, layoutEngines, page, naming, onAdded],
+    [canEdit, store, commit, layoutEngines, page, naming, onAdded],
   );
 
   return { engineLocked, setEngine, addWidget };
