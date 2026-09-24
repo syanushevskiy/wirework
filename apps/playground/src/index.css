@@ -82,8 +82,7 @@
   font-size: 0.85em;
 }
 
-.pg-toolbar,
-.pg-builder {
+.pg-toolbar {
   margin-bottom: 1rem;
 }
 
@@ -94,14 +93,6 @@
 /* Doubled class: antd's own "fill the form item" rule is a single class. */
 .pg-field.pg-field {
   width: 16rem;
-}
-
-.pg-field-narrow.pg-field-narrow {
-  width: 10rem;
-}
-
-.pg-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* ---- state inspector ---- */
@@ -142,63 +133,7 @@ textarea.pg-state-editor {
   font-size: 0.875rem;
 }
 
-/* ---- widget palette ---- */
-
-.pg-palette {
-  display: grid;
-  gap: 1rem;
-}
-
-.pg-palette-search.pg-palette-search {
-  width: 100%;
-  max-width: 20rem;
-}
-
-.pg-palette {
-  gap: 0.5rem;
-}
-
-/* Compact form rows in the builder: antd's own spacing is one class. */
-.pg-builder .ant-form-item {
-  margin-bottom: 0.5rem;
-}
-
-.pg-builder .ant-form-item-label {
-  padding-bottom: 0;
-}
-
-/* As many columns as fit: one card is never narrower than its preview. */
-.pg-palette-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  gap: 0.75rem;
-}
-
-.pg-palette-card {
-  cursor: pointer;
-}
-
-.pg-palette-card[aria-pressed="true"] {
-  border-color: var(--ant-color-primary, #1677ff);
-  box-shadow: 0 0 0 2px var(--ant-color-primary-border, #91caff);
-}
-
-/* ---- widget form ---- */
-
-.pg-reaction {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* The parameters of the action a reaction calls: indented under the reaction. */
-.pg-params {
-  margin-left: 1rem;
-  padding-left: 0.75rem;
-  border-left: 2px solid rgba(5, 5, 5, 0.1);
-}
-
-.pg-params .ant-form-item {
-  margin-bottom: 0;
-}
+/*
+ * The builder's own styles live with it: @wirework/antd-builder/styles.css,
+ * imported in main.tsx.
+ */

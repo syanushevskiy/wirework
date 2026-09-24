@@ -8,9 +8,8 @@
 import { Button, Drawer, Flex, Form, Typography } from "antd";
 import type { Store, WidgetBindings } from "@wirework/schema";
 import type { ActionRegistry } from "@wirework/engine";
+import { useWidgetEditor, type EditableCell, type WidgetSettings } from "@wirework/builder";
 import { WidgetForm } from "./widget-form";
-import { useWidgetEditor, type EditableCell } from "../hooks/use-widget-editor";
-import type { WidgetSettings } from "../hooks/use-widget-form";
 
 export interface WidgetEditorProps {
   cell: EditableCell;

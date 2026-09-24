@@ -6,7 +6,7 @@
  * still be typed for wiring state that does not exist yet.
  */
 import { AutoComplete } from "antd";
-import { usePathCombobox } from "../hooks/use-path-combobox";
+import { usePathCombobox } from "@wirework/builder";
 
 export interface PathComboboxProps {
   id: string;
@@ -37,7 +37,7 @@ export function PathCombobox({
     <AutoComplete
       id={id}
       data-testid={testId}
-      className="pg-field pg-mono"
+      className="ww-builder-field ww-builder-mono"
       placeholder={placeholder}
       disabled={disabled}
       value={value}

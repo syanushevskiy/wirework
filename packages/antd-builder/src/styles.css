@@ -1,0 +1,81 @@
+/**
+ * Builder styles — semantic classes only (doc/guidelines.md: no
+ * utility-class frameworks, no hardcoded colours). Everything with a look of
+ * its own is an antd component; this file only places things and sets the
+ * few widths a form needs. Hosts import it once, after antd's reset and
+ * @wirework/react's styles.
+ */
+
+.ww-builder {
+  margin-bottom: 1rem;
+}
+
+/* Compact form rows in the builder: antd's own spacing is one class. */
+.ww-builder .ant-form-item {
+  margin-bottom: 0.5rem;
+}
+
+.ww-builder .ant-form-item-label {
+  padding-bottom: 0;
+}
+
+/* Doubled class: antd's own "fill the form item" rule is a single class. */
+.ww-builder-field.ww-builder-field {
+  width: 16rem;
+}
+
+.ww-builder-field-narrow.ww-builder-field-narrow {
+  width: 10rem;
+}
+
+.ww-builder-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ---- widget palette ---- */
+
+.ww-builder-palette {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ww-builder-palette-search.ww-builder-palette-search {
+  width: 100%;
+  max-width: 20rem;
+}
+
+/* As many columns as fit: one card is never narrower than its preview. */
+.ww-builder-palette-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+
+.ww-builder-palette-card {
+  cursor: pointer;
+}
+
+.ww-builder-palette-card[aria-pressed="true"] {
+  border-color: var(--ant-color-primary, #1677ff);
+  box-shadow: 0 0 0 2px var(--ant-color-primary-border, #91caff);
+}
+
+/* ---- widget form ---- */
+
+.ww-builder-reaction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The parameters of the action a reaction calls: indented under the reaction. */
+.ww-builder-params {
+  margin-left: 1rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(5, 5, 5, 0.1);
+}
+
+.ww-builder-params .ant-form-item {
+  margin-bottom: 0;
+}

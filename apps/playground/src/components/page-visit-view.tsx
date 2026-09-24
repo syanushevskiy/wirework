@@ -13,8 +13,7 @@ import { BUILDER_PAGE, usePlayground } from "../hooks/use-playground";
 import { CollapsibleCard } from "./collapsible-card";
 import { EventLog } from "./event-log";
 import { StateInspector } from "./state-inspector";
-import { WidgetBuilder } from "./widget-builder";
-import { WidgetEditor } from "./widget-editor";
+import { WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 
 export interface PageVisitViewProps {
   playground: Playground;

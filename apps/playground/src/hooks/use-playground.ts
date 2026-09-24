@@ -21,11 +21,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UserViewModels, ViewModels } from "@wirework/schema";
 import { validateViewModels } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
+import {
+  BUILDER_NAMING,
+  builderPage,
+  modelNamespaceOf,
+  useBuilder,
+  useCommit,
+  usePageEditing,
+  type EditTarget,
+  type SaveTrees,
+} from "@wirework/builder";
 import type { PageVisit, Playground } from "../boot";
-import { BUILDER_NAMING, builderPage, modelNamespaceOf, useBuilder } from "./use-builder";
-import { useCommit, type SaveTrees } from "./use-commit";
 import { useDemoBridge } from "./use-demo-bridge";
-import { usePageEditing, type EditTarget } from "./use-page-editing";
 
 /** The page the widget builder adds to. */
 export const BUILDER_PAGE = "builder";

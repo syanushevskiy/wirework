@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@wirework/antd-builder": "workspace:*",
     "@wirework/antd-widgets": "workspace:*",
+    "@wirework/builder": "workspace:*",
     "@wirework/engine": "workspace:*",
     "@wirework/engine-flex-rows": "workspace:*",
     "@wirework/engine-flexlayout": "workspace:*",

@@ -6,8 +6,8 @@
  * reactions are shown read-only: they belong to the shared page.
  */
 import { Alert, Checkbox, Flex, Form, Input, Select, Typography } from "antd";
+import type { ReactionKind, WidgetFormState } from "@wirework/builder";
 import { PathCombobox } from "./path-combobox";
-import type { ReactionKind, WidgetFormState } from "../hooks/use-widget-form";
 
 /**
  * The form's field ids — also its test ids, which a suite drives the builder
@@ -126,7 +126,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                   <Select
                     id={fieldId}
                     data-testid={fieldId}
-                    className="pg-field"
+                    className="ww-builder-field"
                     placeholder="choose…"
                     value={setting.choice}
                     onChange={(value: string) => chooseSetting(setting.name, value)}
@@ -137,7 +137,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     id={fieldId}
                     data-testid={fieldId}
                     type={setting.kind === "number" ? "number" : "text"}
-                    className="pg-field"
+                    className="ww-builder-field"
                     placeholder={
                       setting.defaultValue === undefined
                         ? undefined
@@ -180,14 +180,14 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                 {/* Reaction: a user-level subscription saved in the view model;
                     mandatory when the event carries state (required).
                     Two verbs: set a store path, or call a host action. */}
-                <div className="pg-reaction">
+                <div className="ww-builder-reaction">
                   <label htmlFor={reactionFieldId(event.name, "kind")}>
                     on {event.name}:{event.required ? " *" : ""}
                   </label>
                   <Select
                     id={reactionFieldId(event.name, "kind")}
                     data-testid={reactionFieldId(event.name, "kind")}
-                    className="pg-field-narrow"
+                    className="ww-builder-field-narrow"
                     disabled={bindingsLocked}
                     value={event.kind}
                     onChange={(value: ReactionKind) => setReaction(event.name, "kind", value)}
@@ -197,7 +197,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     <Select
                       id={reactionFieldId(event.name, "call")}
                       data-testid={reactionFieldId(event.name, "call")}
-                      className="pg-field"
+                      className="ww-builder-field"
                       placeholder="choose an action…"
                       disabled={bindingsLocked}
                       value={event.callChoice}
@@ -209,7 +209,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                       <Input
                         id={reactionFieldId(event.name, "set")}
                         data-testid={reactionFieldId(event.name, "set")}
-                        className="pg-field-narrow pg-mono"
+                        className="ww-builder-field-narrow ww-builder-mono"
                         placeholder="store.path"
                         disabled={bindingsLocked}
                         value={event.set}
@@ -220,7 +220,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                         <Select
                           id={reactionFieldId(event.name, "from")}
                           data-testid={reactionFieldId(event.name, "from")}
-                          className="pg-field-narrow pg-mono"
+                          className="ww-builder-field-narrow ww-builder-mono"
                           disabled={bindingsLocked}
                           value={event.fromChoice}
                           onChange={(value: string) => chooseFrom(event.name, value)}
@@ -230,7 +230,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                         <Input
                           id={reactionFieldId(event.name, "from")}
                           data-testid={reactionFieldId(event.name, "from")}
-                          className="pg-field-narrow pg-mono"
+                          className="ww-builder-field-narrow ww-builder-mono"
                           placeholder="field (optional)"
                           disabled={bindingsLocked}
                           value={event.from}
@@ -243,7 +243,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                 {/* What the chosen action asks for: one field per declared
                     parameter (objects and lists as JSON), saved as `with`. */}
                 {event.kind === "call" && event.params.length > 0 ? (
-                  <Flex vertical gap="small" className="pg-params" data-testid={reactionFieldId(event.name, "params")}>
+                  <Flex vertical gap="small" className="ww-builder-params" data-testid={reactionFieldId(event.name, "params")}>
                     {event.params.map((param) => {
                       const fieldId = paramFieldId(event.name, param.name);
                       return (
@@ -281,7 +281,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                             <Select
                               id={fieldId}
                               data-testid={fieldId}
-                              className="pg-field"
+                              className="ww-builder-field"
                               placeholder="choose…"
                               allowClear
                               disabled={bindingsLocked}
@@ -293,7 +293,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                             <Input.TextArea
                               id={fieldId}
                               data-testid={fieldId}
-                              className="pg-mono"
+                              className="ww-builder-mono"
                               autoSize={{ minRows: 1, maxRows: 8 }}
                               placeholder="JSON (optional)"
                               disabled={bindingsLocked}
@@ -305,7 +305,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                               id={fieldId}
                               data-testid={fieldId}
                               type={param.kind === "number" ? "number" : "text"}
-                              className="pg-field"
+                              className="ww-builder-field"
                               placeholder={
                                 param.defaultValue === undefined ? undefined : `default: ${String(param.defaultValue)}`
                               }

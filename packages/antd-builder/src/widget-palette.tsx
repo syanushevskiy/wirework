@@ -10,7 +10,7 @@
 import type { ReactNode } from "react";
 import { AutoComplete, Button, Card, Flex, Tag, Typography } from "antd";
 import { WidgetPreview } from "@wirework/react";
-import { usePalettePress, type WidgetSearch } from "../hooks/use-widget-palette";
+import { usePalettePress, type WidgetSearch } from "@wirework/builder";
 
 export interface WidgetPaletteProps {
   /** The search and "Show widgets" state — owned by the builder, which starts it over after an add. */
@@ -30,13 +30,13 @@ export function WidgetPalette({ search, selected, onSelect, action }: WidgetPale
       data-testid="widget-palette"
       data-state={open ? "open" : "closed"}
       data-registered={total}
-      className="pg-palette"
+      className="ww-builder-palette"
       {...focusProps}
     >
       <Flex gap="small" wrap align="center">
         <AutoComplete
           data-testid="widget-search"
-          className="pg-palette-search"
+          className="ww-builder-palette-search"
           aria-label="Search widgets"
           placeholder="search widgets…"
           size="small"
@@ -65,13 +65,13 @@ export function WidgetPalette({ search, selected, onSelect, action }: WidgetPale
           No widget matches “{query}”.
         </Typography.Text>
       ) : (
-        <div className="pg-palette-cards" id="widget-catalog">
+        <div className="ww-builder-palette-cards" id="widget-catalog">
           {items.map(({ type, description, definition, kind, kindTag }) => (
             <Card
               key={type}
               size="small"
               hoverable
-              className="pg-palette-card"
+              className="ww-builder-palette-card"
               data-testid="widget-card"
               data-widget={type}
               data-kind={kind}

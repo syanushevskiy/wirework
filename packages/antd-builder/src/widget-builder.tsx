@@ -6,10 +6,9 @@
 import { Button, Card, Flex, Form, Typography } from "antd";
 import type { Store, WidgetBindings } from "@wirework/schema";
 import type { ActionRegistry, ContractRegistry, WidgetRegistry } from "@wirework/engine";
+import { useWidgetBuilder, type WidgetSettings } from "@wirework/builder";
 import { WidgetForm } from "./widget-form";
 import { WidgetPalette } from "./widget-palette";
-import { useWidgetBuilder } from "../hooks/use-widget-builder";
-import type { WidgetSettings } from "../hooks/use-widget-form";
 
 export interface WidgetBuilderProps {
   registry: WidgetRegistry;
@@ -35,7 +34,7 @@ export function WidgetBuilder({ registry, contracts, store, actions, page, addLo
   );
 
   return (
-    <Card size="small" className="pg-builder" data-testid="widget-builder">
+    <Card size="small" className="ww-builder" data-testid="widget-builder">
       <Form layout="vertical" component="div" size="small">
         <Flex vertical gap="small">
           {/* Search, then "Add", then the catalog: the whole flow in one column. */}

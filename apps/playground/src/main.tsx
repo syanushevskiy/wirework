@@ -8,6 +8,7 @@ import "@wirework/engine-react-grid-layout/styles.css";
 import "@wirework/engine-gridstack/styles.css";
 import "@wirework/engine-flexlayout/styles.css";
 import "@wirework/antd-widgets/styles.css";
+import "@wirework/antd-builder/styles.css";
 import "./index.css";
 import { RouterProvider } from "react-router/dom";
 import { installDevtoolsCommand } from "./devtools";
