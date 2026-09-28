@@ -228,7 +228,9 @@ describe("fromZustand", () => {
   });
 
   it("works through middleware", () => {
-    const api = createZustandStore<Record<string, unknown>>()(subscribeWithSelector<Record<string, unknown>>(() => ({ n: 1 })));
+    const api = createZustandStore<Record<string, unknown>>()(
+      subscribeWithSelector<Record<string, unknown>>(() => ({ n: 1 })),
+    );
     const store = fromZustand(api);
     const selected = vi.fn();
     api.subscribe((state) => state["n"], selected);

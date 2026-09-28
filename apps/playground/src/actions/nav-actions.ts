@@ -32,7 +32,8 @@ export function createNavActions(navigator: Navigator): ActionDefinition[] {
       params: z.object({}).strict(),
       handler: ({ event }) => {
         const href = appPathSchema.safeParse(getPath(event.payload, "href"));
-        if (!href.success) throw new Error(`nav/follow: the event "${event.name}" carries no address of the application`);
+        if (!href.success)
+          throw new Error(`nav/follow: the event "${event.name}" carries no address of the application`);
         navigator.go(href.data);
       },
     },

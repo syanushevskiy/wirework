@@ -87,10 +87,7 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
   const { overlay, problem: overlayProblem } = checkOverlay(input.userViewModels);
   if (overlayProblem !== undefined) error("userViewModels", `${overlayProblem} — the overlay is ignored entirely`);
 
-  const pageNames = new Set([
-    ...Object.keys(viewModels.pages ?? {}),
-    ...Object.keys(overlay?.pages ?? {}),
-  ]);
+  const pageNames = new Set([...Object.keys(viewModels.pages ?? {}), ...Object.keys(overlay?.pages ?? {})]);
 
   for (const pageName of pageNames) {
     const baseTemplates = viewModels.pages?.[pageName] ?? {};

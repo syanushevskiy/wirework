@@ -6,13 +6,7 @@
  *  - the source cell is stamped by the engine, never by the widget.
  * Violations throw: they are widget bugs, not runtime conditions.
  */
-import type {
-  AnyWidgetDefinition,
-  Emit,
-  EventBus,
-  EventSource,
-  WidgetEvents,
-} from "@wirework/schema";
+import type { AnyWidgetDefinition, Emit, EventBus, EventSource, WidgetEvents } from "@wirework/schema";
 import { problemText } from "./messages";
 
 export class WidgetEventError extends Error {
@@ -26,11 +20,7 @@ export class WidgetEventError extends Error {
   }
 }
 
-export function createEmitter(
-  bus: EventBus,
-  definition: AnyWidgetDefinition,
-  source: EventSource,
-): Emit<WidgetEvents> {
+export function createEmitter(bus: EventBus, definition: AnyWidgetDefinition, source: EventSource): Emit<WidgetEvents> {
   const events = definition.events as WidgetEvents;
   const { type: widget } = definition;
 

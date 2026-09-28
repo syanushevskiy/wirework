@@ -17,14 +17,7 @@ import type { FlexLayoutModelJson, FlexLayoutPage } from "./schema";
 
 type Props = LayoutRendererProps<FlexLayoutPage, FlexLayoutModelJson>;
 
-export function useFlexLayout({
-  template,
-  cellById,
-  editable,
-  onChange,
-  renderCell,
-  renderChrome,
-}: Props) {
+export function useFlexLayout({ template, cellById, editable, onChange, renderCell, renderChrome }: Props) {
   const document = JSON.stringify(template.model);
   const model = useMemo(() => {
     const json = JSON.parse(document) as IJsonModel;

@@ -43,17 +43,25 @@ interface ListTemplate extends PageViewModel {
 
 export const listEngine: AnyLayoutEngine = {
   name: "list",
-  template: z.object({ engine: z.literal("list"), cells: z.array(z.object({
-    id: z.string().min(1),
-    widget: z.string().min(1),
-    model: z.string().min(1),
-    template: z.string().min(1),
-  })) }),
+  template: z.object({
+    engine: z.literal("list"),
+    cells: z.array(
+      z.object({
+        id: z.string().min(1),
+        widget: z.string().min(1),
+        model: z.string().min(1),
+        template: z.string().min(1),
+      }),
+    ),
+  }),
   change: z.unknown(),
   empty: (): ListTemplate => ({ engine: "list", cells: [] }),
   cells: (template: ListTemplate) => template.cells,
   appendCell: (template: ListTemplate, cell: CellBase) => ({ ...template, cells: [...template.cells, cell] }),
-  removeCell: (template: ListTemplate, id: string) => ({ ...template, cells: template.cells.filter((cell) => cell.id !== id) }),
+  removeCell: (template: ListTemplate, id: string) => ({
+    ...template,
+    cells: template.cells.filter((cell) => cell.id !== id),
+  }),
   applyChange: (template: ListTemplate) => template,
   renderer: () => null,
 };

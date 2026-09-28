@@ -30,8 +30,6 @@ export type ReactLayoutEngine<T extends PageViewModel = PageViewModel, C = unkno
 >;
 
 /** Identity helper for authoring React layout engines with full type inference. */
-export function defineLayoutEngine<T extends PageViewModel, C>(
-  def: ReactLayoutEngine<T, C>,
-): ReactLayoutEngine<T, C> {
+export function defineLayoutEngine<T extends PageViewModel, C>(def: ReactLayoutEngine<T, C>): ReactLayoutEngine<T, C> {
   return def;
 }

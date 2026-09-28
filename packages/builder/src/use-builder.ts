@@ -17,7 +17,12 @@
  */
 import { useCallback } from "react";
 import type { Store, ViewModels, WidgetBindings } from "@wirework/schema";
-import { resolveTemplate, updatePageTemplate, type LayoutEngineRegistry, type TemplateResolution } from "@wirework/engine";
+import {
+  resolveTemplate,
+  updatePageTemplate,
+  type LayoutEngineRegistry,
+  type TemplateResolution,
+} from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import type { Commit } from "./use-commit";
 import type { WidgetSettings } from "./use-widget-form";

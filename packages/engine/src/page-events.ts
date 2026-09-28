@@ -35,7 +35,11 @@ export interface PageReactions {
 }
 
 /** What is wrong with ONE reaction of a page event, if anything. */
-function reactionProblem(event: PageEventName, reaction: Reaction, actions: ActionRegistry | undefined): string | undefined {
+function reactionProblem(
+  event: PageEventName,
+  reaction: Reaction,
+  actions: ActionRegistry | undefined,
+): string | undefined {
   if ("call" in reaction) {
     if (actions === undefined) return undefined;
     const action = actions.get(reaction.call);

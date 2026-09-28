@@ -141,7 +141,9 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
                 size="small"
                 data-testid="page-edit"
                 disabled={!canEditPages}
-                title={canEditPages ? undefined : "Your permissions do not include editing pages (app.permissions.editPages)"}
+                title={
+                  canEditPages ? undefined : "Your permissions do not include editing pages (app.permissions.editPages)"
+                }
                 onClick={startEditing}
               >
                 Edit page

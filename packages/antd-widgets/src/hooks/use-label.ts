@@ -13,12 +13,7 @@ const TYPOGRAPHY_TYPE = {
 } as const satisfies Record<LabelTone, "secondary" | "success" | "danger" | undefined>;
 
 /** Bound store value when the optional port is wired and holds one, else the static text. */
-export function useLabel(
-  store: ReadableStore,
-  path: string | undefined,
-  fallback: string,
-  tone: LabelTone,
-) {
+export function useLabel(store: ReadableStore, path: string | undefined, fallback: string, tone: LabelTone) {
   const bound = useStorePath<unknown>(store, path);
   return {
     text: bound === undefined ? fallback : String(bound),

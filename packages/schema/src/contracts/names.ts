@@ -27,11 +27,7 @@ export const PATH_SEGMENT = /^[^.\s]+$/;
 export const STORE_PATH = /^[^.\s]+(?:\.[^.\s]+)*$/;
 
 /** Path segments that would address the prototype chain instead of own data. */
-export const FORBIDDEN_SEGMENTS: ReadonlySet<string> = new Set([
-  "__proto__",
-  "prototype",
-  "constructor",
-]);
+export const FORBIDDEN_SEGMENTS: ReadonlySet<string> = new Set(["__proto__", "prototype", "constructor"]);
 
 /**
  * Store roots holding CONFIGURATION, not application data: the view-model

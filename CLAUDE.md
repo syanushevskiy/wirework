@@ -5,17 +5,20 @@
 This project runs Claude Code in auto mode with reads outside the working directory blocked. Any shell command that can't be statically analyzed triggers a manual approval prompt and stops the work. Follow these rules for every Bash call.
 
 ### Never pipe code into an interpreter
+
 - Do NOT use `node -e`, `node -`, `python -c`, `python -`, `bash -c`, `sh -c`, `eval`, or `npx tsx -e`.
 - Do NOT pipe into interpreters: `... | node`, `... | python`, `... | bash`.
 - Do NOT use heredocs or here-strings in shell commands: `<<EOF`, `<<'EOF'`, `<<<`.
 - Do NOT create or edit files via the shell (`cat > file <<EOF`, `echo ... > file`, `sed -i`). Use the Edit/Write tools instead.
 
 ### One-off scripts go in a file
+
 1. Write the script with the Write tool to `.claude-tmp/<name>.mjs` (or `.ts` / `.py`). The folder is gitignored.
 2. Run it with a plain command: `node .claude-tmp/<name>.mjs`.
 3. Delete it when finished unless it is worth keeping. If so, move it to `scripts/` and add a package.json script.
 
 ### Keep commands simple
+
 - Run from the repo root. Avoid `cd other/dir && ...` — every script below works from the root.
 - One command per Bash call. Avoid long `&&` / `;` chains, subshells `$(...)`, and backticks.
 - Keep everything inside the repo. Do not read or write `~`, `/tmp`, or other absolute paths outside the project. Use `.claude-tmp/` for scratch files and logs. Exception: the output file Claude Code itself names for a background command may be read — or run the command in the foreground instead.
@@ -23,19 +26,19 @@ This project runs Claude Code in auto mode with reads outside the working direct
 
 ## Commands (repo root)
 
-| What | Command |
-|---|---|
-| Typecheck every package | `pnpm typecheck` |
-| Lint (ESLint: typescript-eslint strict, react-hooks; `eslint.config.js`) | `pnpm lint` |
-| Format with Prettier / check that everything is formatted | `pnpm format` / `pnpm format:check` |
-| Build every package to `dist/` (what gets published; the workspace itself runs from `src/`) | `pnpm build` |
-| Unit tests (vitest, every package under `packages/`; `scripts/check-test-scripts.mjs` fails first if one has no `test` script) | `pnpm test:unit` |
-| Unit tests of one package | `pnpm --filter @wirework/engine test` |
-| E2E suite | `pnpm test:e2e` (alias `pnpm e2e`) |
-| Everything CI runs (typecheck, lint, format:check, build, unit, e2e) | `pnpm check` |
-| Playground dev server | `pnpm dev` (port 5173, strict — fails if one is already running; the developer often has it open) |
-| Storybook | `pnpm storybook` (its play tests are not run by any script yet) |
-| Redux DevTools for every store (off by default) | in the browser console: `wirework.devtools(true)` — reloads and connects; `wirework.devtools(false)` turns it off (`apps/playground/src/devtools.ts`) |
+| What                                                                                                                           | Command                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typecheck every package                                                                                                        | `pnpm typecheck`                                                                                                                                      |
+| Lint (ESLint: typescript-eslint strict, react-hooks; `eslint.config.js`)                                                       | `pnpm lint`                                                                                                                                           |
+| Format with Prettier / check that everything is formatted                                                                      | `pnpm format` / `pnpm format:check`                                                                                                                   |
+| Build every package to `dist/` (what gets published; the workspace itself runs from `src/`)                                    | `pnpm build`                                                                                                                                          |
+| Unit tests (vitest, every package under `packages/`; `scripts/check-test-scripts.mjs` fails first if one has no `test` script) | `pnpm test:unit`                                                                                                                                      |
+| Unit tests of one package                                                                                                      | `pnpm --filter @wirework/engine test`                                                                                                                 |
+| E2E suite                                                                                                                      | `pnpm test:e2e` (alias `pnpm e2e`)                                                                                                                    |
+| Everything CI runs (typecheck, lint, format:check, build, unit, e2e)                                                           | `pnpm check`                                                                                                                                          |
+| Playground dev server                                                                                                          | `pnpm dev` (port 5173, strict — fails if one is already running; the developer often has it open)                                                     |
+| Storybook                                                                                                                      | `pnpm storybook` (its play tests are not run by any script yet)                                                                                       |
+| Redux DevTools for every store (off by default)                                                                                | in the browser console: `wirework.devtools(true)` — reloads and connects; `wirework.devtools(false)` turns it off (`apps/playground/src/devtools.ts`) |
 
 `pnpm test` runs unit tests, then e2e.
 

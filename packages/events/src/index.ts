@@ -16,13 +16,7 @@
  * This guard sees SYNCHRONOUS re-emits only. A loop through the store and a
  * re-render (write → render → emit) is outside the bus.
  */
-import type {
-  EventBus,
-  EventFilter,
-  EventListener,
-  Unsubscribe,
-  WidgetEvent,
-} from "@wirework/schema";
+import type { EventBus, EventFilter, EventListener, Unsubscribe, WidgetEvent } from "@wirework/schema";
 
 interface Subscription {
   filter: EventFilter;
@@ -60,10 +54,7 @@ function notify({ filter, listener }: Subscription, event: WidgetEvent): void {
     // Isolation is for listener BUGS; a detected loop must reach the emitter.
     if (error instanceof EventLoopError) throw error;
     // eslint-disable-next-line no-console
-    console.error(
-      `Event listener for ${JSON.stringify(filter)} threw on "${event.widget}/${event.name}":`,
-      error,
-    );
+    console.error(`Event listener for ${JSON.stringify(filter)} threw on "${event.widget}/${event.name}":`, error);
   }
 }
 

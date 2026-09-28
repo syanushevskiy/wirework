@@ -131,10 +131,7 @@ export function usePageEditing({
   const [selected, setSelected] = useState<{ cellId: string; target: EditTarget } | null>(null);
 
   /** The store's current trees with the session's ops replayed — live rebase. */
-  const shown = useMemo(
-    () => (ops ?? []).reduce((current, op) => op(current), trees),
-    [ops, trees],
-  );
+  const shown = useMemo(() => (ops ?? []).reduce((current, op) => op(current), trees), [ops, trees]);
   const shownUserViewModels = withUserOverlay ? shown.userViewModels : undefined;
   const plan = usePagePlan({
     viewModels: shown.viewModels,
@@ -214,8 +211,7 @@ export function usePageEditing({
     // not be able to write after it. And only a session that CHANGED
     // something commits — an untouched one has nothing to ask the host to
     // persist (`ops` is `[]`, not null, while a session is open).
-    const outcome: SaveOutcome =
-      ops === null || ops.length === 0 ? "unchanged" : canEdit ? "committed" : "refused";
+    const outcome: SaveOutcome = ops === null || ops.length === 0 ? "unchanged" : canEdit ? "committed" : "refused";
     if (outcome === "committed") commit(shown);
     setOps(null);
     setSelected(null);

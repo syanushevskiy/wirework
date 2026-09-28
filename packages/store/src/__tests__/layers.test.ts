@@ -85,7 +85,10 @@ describe("layerStores", () => {
   });
 
   it("replace with a page-only tree leaves the shared layer alone — the user, the permissions, the overlay stay", () => {
-    const sharedState = { app: { user: { name: "Ann" }, permissions: { editPages: true } }, userViewModels: { pages: {} } };
+    const sharedState = {
+      app: { user: { name: "Ann" }, permissions: { editPages: true } },
+      userViewModels: { pages: {} },
+    };
     const { page, shared, store } = layers({ runs: { page: 1 }, demo: { counter: 3 } }, sharedState);
     const onRoot = vi.fn();
     store.subscribe("", onRoot);

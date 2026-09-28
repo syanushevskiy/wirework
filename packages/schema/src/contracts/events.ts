@@ -41,14 +41,10 @@ export type WidgetEvents = Record<string, EventDefinition>;
 export const NO_EVENTS = {} satisfies WidgetEvents;
 
 /** Payload type of one declared event. */
-export type EventPayload<E extends WidgetEvents, K extends keyof E> =
-  E[K] extends EventDefinition<infer T> ? T : never;
+export type EventPayload<E extends WidgetEvents, K extends keyof E> = E[K] extends EventDefinition<infer T> ? T : never;
 
 /** The `emit` a widget receives: only DECLARED names, typed payloads. */
-export type Emit<E extends WidgetEvents> = <K extends keyof E & string>(
-  name: K,
-  payload: EventPayload<E, K>,
-) => void;
+export type Emit<E extends WidgetEvents> = <K extends keyof E & string>(name: K, payload: EventPayload<E, K>) => void;
 
 /** Where an event came from — cell identity, never widget type alone. */
 export interface EventSource {

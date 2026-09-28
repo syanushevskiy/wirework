@@ -8,7 +8,14 @@
  */
 import type { ComponentType } from "react";
 import type { TagProps } from "antd";
-import { cellHref, cellText, cellTone, type TableColumn, type TableRow, type TagTone } from "@wirework/widget-contracts";
+import {
+  cellHref,
+  cellText,
+  cellTone,
+  type TableColumn,
+  type TableRow,
+  type TagTone,
+} from "@wirework/widget-contracts";
 import { TAG_COLOR } from "../tones";
 
 /** What a renderer the host registers receives — no store, no emit: it shows the row's data. */
@@ -46,7 +53,12 @@ function warnUnknown(name: string): void {
   console.warn(`table: no cell renderer is registered as "${name}" — showing the value as text`);
 }
 
-export function useTableCell(column: TableColumn, row: TableRow, value: unknown, cells: TableCellRenderers): TableCellView {
+export function useTableCell(
+  column: TableColumn,
+  row: TableRow,
+  value: unknown,
+  cells: TableCellRenderers,
+): TableCellView {
   const text = cellText(value);
   const cell = column.cell ?? { kind: "text" as const };
   switch (cell.kind) {

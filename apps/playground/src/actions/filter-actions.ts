@@ -20,11 +20,14 @@ const FILTER_PATHS = {
 
 const stringList = z.array(z.string());
 
-export function createFilterActions(suitesFor: (applications: readonly string[]) => ChoiceOption[]): ActionDefinition[] {
+export function createFilterActions(
+  suitesFor: (applications: readonly string[]) => ChoiceOption[],
+): ActionDefinition[] {
   return [
     {
       name: "filters/sync-suites",
-      description: "Offer the suites of the chosen applications (filters.applications); drop chosen suites that no longer belong",
+      description:
+        "Offer the suites of the chosen applications (filters.applications); drop chosen suites that no longer belong",
       handler: ({ store }) => {
         const offered = suitesFor(store.getAs(FILTER_PATHS.applications, stringList) ?? []);
         store.set(FILTER_PATHS.suiteOptions, offered);

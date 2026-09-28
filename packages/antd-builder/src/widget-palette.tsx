@@ -90,17 +90,13 @@ export function WidgetPalette({ search, selected, onSelect, action }: WidgetPale
                       widget's own name already says it. */}
                   {kindTag ? <Tag>{kindTag}</Tag> : null}
                 </Flex>
-                {description ? (
-                  <Typography.Text type="secondary">{description}</Typography.Text>
-                ) : null}
+                {description ? <Typography.Text type="secondary">{description}</Typography.Text> : null}
               </Flex>
             </Card>
           ))}
         </div>
       )}
-      {open ? (
-        <Typography.Text type="secondary">Previews show sample data.</Typography.Text>
-      ) : null}
+      {open ? <Typography.Text type="secondary">Previews show sample data.</Typography.Text> : null}
     </div>
   );
 }

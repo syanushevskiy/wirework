@@ -17,7 +17,9 @@ for (const action of createTableViewActions({ transport: fetchTransport })) acti
 Then, in a page's view models, the table's own `load` reaction:
 
 ```ts
-on: { load: [{ call: "table-view/load", with: { url: "/api/v1/view/runs", into: "runs" } }] }
+on: {
+  load: [{ call: "table-view/load", with: { url: "/api/v1/view/runs", into: "runs" } }];
+}
 ```
 
 Every other reaction of the page (a page change, a filter, a refresh) only

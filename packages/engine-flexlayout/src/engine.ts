@@ -28,7 +28,10 @@ export const flexLayoutEngine = defineLayoutEngine<FlexLayoutPage, FlexLayoutMod
   /** The library's document, reconciled with the cell list (it may lag one edit behind). */
   applyChange: (template, model) => ({
     ...template,
-    model: reconcile(model, template.cells.map((cell) => cell.id)),
+    model: reconcile(
+      model,
+      template.cells.map((cell) => cell.id),
+    ),
   }),
   /** Every tab must be a cell and every cell a tab. */
   validate: (template) => {

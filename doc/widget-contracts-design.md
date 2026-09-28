@@ -21,8 +21,8 @@ wants it, Ren wants a second real implementation first).
 
 ```ts
 const buttonContract = defineContract({
-  kind: "button",                       // kebab-case kind
-  description: "...",                   // what implementations must do
+  kind: "button", // kebab-case kind
+  description: "...", // what implementations must do
   io: { inputs: {} },
   events: { clicked: { payload: z.object({ label: z.string() }) } },
   settings: z.object({ label: z.string().default("Click me") }),
@@ -37,8 +37,8 @@ gives an implementation its typed view model and `emit`.
 
 ```ts
 export const antdButton = implementContract(buttonContract, {
-  type: "antd-button",                 // THIS implementation's registry name
-  component: AntdButton,               // props: ContractProps<typeof buttonContract>
+  type: "antd-button", // THIS implementation's registry name
+  component: AntdButton, // props: ContractProps<typeof buttonContract>
 });
 ```
 
@@ -62,13 +62,13 @@ not when its first widget does.
 - `button` — `clicked { label }`; implementations render role=button with
   the caption as its accessible name.
 - `input` — controlled: `value` port (default ""), required `changed
-  { value, valid, message? }` (primary `value`), settings label /
+{ value, valid, message? }` (primary `value`), settings label /
   placeholder / type / validation (closed rule set) / pattern /
   patternMessage; implementations render a textbox with `aria-invalid`
   and an `alert` holding the message.
 - `pagination` — `page` and `total` ports, optional `pageSize` port
   (falling back to the `pageSize` setting), required `changed { page,
-  pageSize }` (primary `page`); settings showSizeChanger / showTotal / size.
+pageSize }` (primary `page`); settings showSizeChanger / showTotal / size.
 - `refresher` — `schedule` port `{ enabled, interval }` (default off, 5 s),
   optional `busy` port, required `changed` (the whole schedule) and required
   `refresh { trigger }`; implementations tick only while enabled and skip a
@@ -95,9 +95,9 @@ The basics every UI library has:
   `data`), optional `loading` and `columns` ports; settings `columns`
   (`{ title, property, cell? }`), `rowKey`, `emptyText`; events `load` (once
   when it appears), `row-selected { key, row }`, `link-clicked { href, key,
-  property, row }`. A column's `cell` is one of the CONTRACT's predefined
+property, row }`. A column's `cell` is one of the CONTRACT's predefined
   kinds (`table-cell.ts`: `text`, `tag { tones }`, `link { to }`, `custom
-  { name, params }`), so every implementation shows them the same; the
+{ name, params }`), so every implementation shows them the same; the
   helpers `cellText`, `cellTone`, `cellHref` are shared and unit-tested.
   Implementations expose `data-row-key`, `data-property`, `data-cell` and a
   tag cell's `data-tone`, and decide clicks in ONE place: a plain click on

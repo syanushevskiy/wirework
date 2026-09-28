@@ -12,13 +12,7 @@ export function FlexLayoutView(props: LayoutRendererProps<FlexLayoutPage, FlexLa
   const { model, factory, onRenderTab, onModelChange } = useFlexLayout(props);
   return (
     <div className="ww-flexlayout" data-testid="flexlayout">
-      <Layout
-        model={model}
-        factory={factory}
-        onRenderTab={onRenderTab}
-        onModelChange={onModelChange}
-        realtimeResize
-      />
+      <Layout model={model} factory={factory} onRenderTab={onRenderTab} onModelChange={onModelChange} realtimeResize />
     </div>
   );
 }

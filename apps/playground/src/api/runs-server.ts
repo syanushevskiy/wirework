@@ -92,8 +92,26 @@ const toViewRow = (run: Run): ViewRow => ({
 /** The description of the runs table. `null` among filter values is the API's "rows without a value". */
 const describeRuns = (rows: readonly ViewRow[]): NonNullable<TableViewResponse["metadata"]> => ({
   columnDefinitions: [
-    { id: "id", headerName: "#", type: "varchar(l)", description: null, filterValues: null, isFilterable: false, isHidden: false, isSortable: true },
-    { id: "name", headerName: "Name", type: "varchar(l)", description: null, filterValues: null, isFilterable: true, isHidden: false, isSortable: true },
+    {
+      id: "id",
+      headerName: "#",
+      type: "varchar(l)",
+      description: null,
+      filterValues: null,
+      isFilterable: false,
+      isHidden: false,
+      isSortable: true,
+    },
+    {
+      id: "name",
+      headerName: "Name",
+      type: "varchar(l)",
+      description: null,
+      filterValues: null,
+      isFilterable: true,
+      isHidden: false,
+      isSortable: true,
+    },
     { id: "reference", headerName: "Reference", type: "varchar(l)", description: null },
     {
       id: "inbound",
@@ -124,7 +142,8 @@ const describeRuns = (rows: readonly ViewRow[]): NonNullable<TableViewResponse["
 
 /** The rows a request's `dataFilter` selects, in its order — before paging. */
 function select(rows: readonly ViewRow[], { filterIn, orderBy }: TableViewRequest["dataFilter"]): ViewRow[] {
-  const field = (row: ViewRow, column: string): string | undefined => (row as Record<string, string | undefined>)[column];
+  const field = (row: ViewRow, column: string): string | undefined =>
+    (row as Record<string, string | undefined>)[column];
   const selected = rows.filter((row) =>
     Object.entries(filterIn).every(
       ([column, values]) => values.length === 0 || values.map(String).includes(field(row, column) ?? ""),

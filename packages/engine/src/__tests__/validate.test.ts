@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { createActions, validateViewModels, type ValidationReport } from "../index";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
-const templates = { counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] } } } };
+const templates = {
+  counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] } } },
+};
 const registry = () => registryWith(counter, plain);
 const engines = () => enginesWith(listEngine);
 
@@ -53,7 +55,9 @@ describe("validateViewModels", () => {
 
   it("reports unknown widgets, dangling models and rejected templates as errors", () => {
     expect(messages(check(page([cell({ widget: "ghost" })], templates)), "error")[0]).toMatch(/unknown widget "ghost"/);
-    expect(messages(check(page([cell({ model: "widgets.nowhere" })], templates)), "error")[0]).toMatch(/dangling model path/);
+    expect(messages(check(page([cell({ model: "widgets.nowhere" })], templates)), "error")[0]).toMatch(
+      /dangling model path/,
+    );
     expect(messages(check(page([cell()], { counter: { default: { inputs: { value: 1 } } } })), "error")[0]).toMatch(
       /rejected by the widget/,
     );
@@ -127,7 +131,9 @@ describe("validateViewModels", () => {
   });
 
   it("agrees with the renderer about a reaction calling an unknown action", () => {
-    const withCall = page([cell()], { counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ call: "nope" }] } } } });
+    const withCall = page([cell()], {
+      counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ call: "nope" }] } } },
+    });
     expect(messages(check(withCall), "error")[0]).toMatch(/unknown actions: nope/);
   });
 });

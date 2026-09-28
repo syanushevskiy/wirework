@@ -98,7 +98,8 @@ export function createRunsActions(services: {
     },
     {
       name: "run/load",
-      description: "Request the run named by the address (route.params.runId) into run.data — for the page's load reaction",
+      description:
+        "Request the run named by the address (route.params.runId) into run.data — for the page's load reaction",
       handler: ({ store }) => loadRun(store),
     },
     {

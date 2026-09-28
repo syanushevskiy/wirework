@@ -137,12 +137,15 @@ export interface ResolveInput {
  * The user overlay when it is structurally valid; otherwise undefined and
  * WHY — an invalid overlay is ignored as a whole, and that must be visible.
  */
-export function checkOverlay(
-  userViewModels: UserViewModels | undefined,
-): { overlay?: UserViewModels; problem?: string } {
+export function checkOverlay(userViewModels: UserViewModels | undefined): {
+  overlay?: UserViewModels;
+  problem?: string;
+} {
   if (userViewModels === undefined) return {};
   const parsed = userViewModelsSchema.safeParse(userViewModels);
-  return parsed.success ? { overlay: parsed.data } : { problem: `user view models ignored: ${issuesText(parsed.error)}` };
+  return parsed.success
+    ? { overlay: parsed.data }
+    : { problem: `user view models ignored: ${issuesText(parsed.error)}` };
 }
 
 /**
@@ -168,9 +171,7 @@ export function pickTemplate(
     // Own properties only: "valueOf" or "toString" would otherwise "resolve"
     // to an inherited function and fail later with a confusing message.
     if (Object.hasOwn(templateMap, name) && templateMap[name] !== undefined && templateMap[name] !== null) {
-      return requested !== undefined && requested !== name
-        ? { name, fallback: { requested, used: name } }
-        : { name };
+      return requested !== undefined && requested !== name ? { name, fallback: { requested, used: name } } : { name };
     }
   }
   return undefined;
@@ -243,7 +244,8 @@ export function contractProblems(
     );
   }
   if (invalidArguments.length > 0) parts.push(`reactions call actions wrongly: ${invalidArguments.join("; ")}`);
-  if (unknownFields.length > 0) parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
+  if (unknownFields.length > 0)
+    parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
   return parts.length > 0 ? parts.join("; ") : undefined;
 }
 

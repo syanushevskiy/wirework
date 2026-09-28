@@ -4,12 +4,7 @@
  *  An antd Button. Render-only: all logic in useCounter. */
 import { Button } from "antd";
 import { z } from "zod";
-import {
-  widgetBindingsSchema,
-  type WidgetEvents,
-  type WidgetIO,
-  type WidgetProps,
-} from "@wirework/schema";
+import { widgetBindingsSchema, type WidgetEvents, type WidgetIO, type WidgetProps } from "@wirework/schema";
 import { defineWidget } from "@wirework/react";
 import { useCounter } from "../hooks/use-counter";
 
@@ -40,13 +35,7 @@ const viewModel = widgetBindingsSchema(io, events).extend({
 type VM = z.infer<typeof viewModel>;
 
 function AntdCounter({ viewModel, store, emit }: WidgetProps<VM, CounterEvents>) {
-  const { value, increment } = useCounter(
-    store,
-    emit,
-    viewModel.inputs.value,
-    viewModel.step,
-    io.inputs.value.default,
-  );
+  const { value, increment } = useCounter(store, emit, viewModel.inputs.value, viewModel.step, io.inputs.value.default);
   return (
     <Button data-testid="antd-counter" data-path={viewModel.inputs.value} onClick={increment}>
       {viewModel.label} ({value})

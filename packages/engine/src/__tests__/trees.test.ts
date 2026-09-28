@@ -35,20 +35,33 @@ describe("updatePageTemplate", () => {
 describe("updateUserPageTemplate", () => {
   it("creates the user's template from the shown one and selects it", () => {
     const next = updateUserPageTemplate({}, "demo", "my-own", shown, mark);
-    expect(next.pages?.["demo"]).toMatchObject({ view: "my-own", templates: { "my-own": { cells: [{ id: "shown" }], edited: true } } });
+    expect(next.pages?.["demo"]).toMatchObject({
+      view: "my-own",
+      templates: { "my-own": { cells: [{ id: "shown" }], edited: true } },
+    });
   });
 
   it("keeps editing the user's template while it is the selected view (a session's second edit)", () => {
     const first = updateUserPageTemplate({}, "demo", "my-own", shown, mark);
-    const second = updateUserPageTemplate(first, "demo", "my-own", { engine: "list", cells: [] } as never, (template) =>
-      ({ ...(template as object), again: true }) as never,
+    const second = updateUserPageTemplate(
+      first,
+      "demo",
+      "my-own",
+      { engine: "list", cells: [] } as never,
+      (template) => ({ ...(template as object), again: true }) as never,
     );
-    expect(second.pages?.["demo"]?.templates?.["my-own"]).toMatchObject({ cells: [{ id: "shown" }], edited: true, again: true });
+    expect(second.pages?.["demo"]?.templates?.["my-own"]).toMatchObject({
+      cells: [{ id: "shown" }],
+      edited: true,
+      again: true,
+    });
   });
 
   it("regression: an edit while ANOTHER view is shown starts from what is shown, not the stale own template", () => {
     const stale: UserViewModels = {
-      pages: { demo: { view: "default", templates: { "my-own": { engine: "list", cells: [{ id: "stale" }] } as never } } },
+      pages: {
+        demo: { view: "default", templates: { "my-own": { engine: "list", cells: [{ id: "stale" }] } as never } },
+      },
     };
     const next = updateUserPageTemplate(stale, "demo", "my-own", shown, mark);
     expect(next.pages?.["demo"]?.templates?.["my-own"]).toMatchObject({ cells: [{ id: "shown" }] });

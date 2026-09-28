@@ -25,10 +25,7 @@ export function useWidgetPreview(definition: AnyWidgetDefinition, overrides?: Wi
       return { problem: errorText(error) };
     }
   }, [definition, templateKey]);
-  const emit = useMemo(
-    () => createEmitter(bus, definition, { page: "preview", cell: "preview" }),
-    [bus, definition],
-  );
+  const emit = useMemo(() => createEmitter(bus, definition, { page: "preview", cell: "preview" }), [bus, definition]);
   const readable = useMemo(() => readableStore(store), [store]);
   return { parsed, emit, readable };
 }

@@ -55,10 +55,7 @@ function keyOf(row: TableRow, rowKey: string, index: number): string {
  * click on an address of the application. Anything else on a link (a
  * modifier, the middle button, another origin) is left to the browser.
  */
-type Clicked =
-  | { on: "row" }
-  | { on: "control" }
-  | { on: "link"; href: string; property: string; follow: boolean };
+type Clicked = { on: "row" } | { on: "control" } | { on: "link"; href: string; property: string; follow: boolean };
 
 function clicked(event: MouseEvent<HTMLElement>): Clicked {
   const control = (event.target as Element).closest(INTERACTIVE);
@@ -100,7 +97,10 @@ export function useTable(
     () =>
       configured.length > 0
         ? configured
-        : firstRowFields.split("\n").filter(Boolean).map((field) => ({ title: field, property: field })),
+        : firstRowFields
+            .split("\n")
+            .filter(Boolean)
+            .map((field) => ({ title: field, property: field })),
     [configured, firstRowFields],
   );
 
@@ -117,7 +117,10 @@ export function useTable(
         render: (_, rendered) =>
           createElement(TableCell, { column, row: rendered.row, value: getPath(rendered.row, column.property), cells }),
         onCell: () =>
-          ({ "data-property": column.property, "data-cell": column.cell?.kind ?? "text" }) as TdHTMLAttributes<HTMLElement>,
+          ({
+            "data-property": column.property,
+            "data-cell": column.cell?.kind ?? "text",
+          }) as TdHTMLAttributes<HTMLElement>,
       })),
     [columns, cells],
   );

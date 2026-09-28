@@ -102,7 +102,11 @@ export const Cells: Story = {
 /** A renderer the HOST registers: the status tag with the failure's message in a tooltip — two row properties, which no predefined kind offers. */
 function StatusWithMessage({ text, row }: TableCellProps) {
   const tag = <Tag color={text === "Failed" ? "error" : "success"}>{text}</Tag>;
-  return typeof row["message"] === "string" && row["message"] !== "" ? <Tooltip title={row["message"]}>{tag}</Tooltip> : tag;
+  return typeof row["message"] === "string" && row["message"] !== "" ? (
+    <Tooltip title={row["message"]}>{tag}</Tooltip>
+  ) : (
+    tag
+  );
 }
 
 /** A renderer that ACTS: a button next to the value. The button owns its click — the row is not selected by it. */
@@ -137,7 +141,9 @@ export const CustomCell: Story = {
     await expect(canvas.getByText("Failed")).toBeVisible();
     await expect(canvas.getAllByText("Core")[0]).toHaveAttribute("data-cell-problem", "unknown-renderer");
     // A button inside a cell owns its click: no row-selected.
-    await userEvent.click(within(canvas.getByText("Smoke").closest("tr") as HTMLElement).getByRole("button", { name: "Copy" }));
+    await userEvent.click(
+      within(canvas.getByText("Smoke").closest("tr") as HTMLElement).getByRole("button", { name: "Copy" }),
+    );
     await expect(canvas.getByTestId("story-store")).not.toHaveTextContent("selected");
     await userEvent.click(canvas.getByText("Smoke"));
     await expect(canvas.getByTestId("story-store")).toHaveTextContent('"selected": "2"');
@@ -147,7 +153,12 @@ export const CustomCell: Story = {
 /** No columns configured: one per field of the first row (objects shown as JSON). */
 export const InferredColumns: Story = {
   render: () => (
-    <WidgetStory key="inferred" definition={antdTable} seed={{ demo: { rows } }} viewModel={{ inputs: { rows: "demo.rows" } }} />
+    <WidgetStory
+      key="inferred"
+      definition={antdTable}
+      seed={{ demo: { rows } }}
+      viewModel={{ inputs: { rows: "demo.rows" } }}
+    />
   ),
 };
 
@@ -157,7 +168,14 @@ export const CustomRowKey: Story = {
     <WidgetStory
       key="row-key"
       definition={antdTable}
-      seed={{ demo: { users: [{ email: "ann@example.com", name: "Ann" }, { email: "bo@example.com", name: "Bo" }] } }}
+      seed={{
+        demo: {
+          users: [
+            { email: "ann@example.com", name: "Ann" },
+            { email: "bo@example.com", name: "Bo" },
+          ],
+        },
+      }}
       viewModel={{ inputs: { rows: "demo.users" }, rowKey: "email" }}
     />
   ),
@@ -166,7 +184,11 @@ export const CustomRowKey: Story = {
 /** The bound path holds nothing: the port's default, no rows. */
 export const EmptyPath: Story = {
   render: () => (
-    <WidgetStory key="empty" definition={antdTable} viewModel={{ inputs: { rows: "demo.missing" }, emptyText: "No runs yet" }} />
+    <WidgetStory
+      key="empty"
+      definition={antdTable}
+      viewModel={{ inputs: { rows: "demo.missing" }, emptyText: "No runs yet" }}
+    />
   ),
 };
 
@@ -176,7 +198,15 @@ export const ColumnsFromTheStore: Story = {
     <WidgetStory
       key="bound-columns"
       definition={antdTable}
-      seed={{ demo: { rows, columns: [{ title: "Run", property: "name" }, { title: "Result", property: "status" }] } }}
+      seed={{
+        demo: {
+          rows,
+          columns: [
+            { title: "Run", property: "name" },
+            { title: "Result", property: "status" },
+          ],
+        },
+      }}
       viewModel={{
         inputs: { rows: "demo.rows", columns: "demo.columns" },
         columns: [{ title: "Ignored while the port holds columns", property: "id" }],

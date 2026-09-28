@@ -12,18 +12,11 @@ import type { ReadableStore } from "@wirework/schema";
 
 const NOOP_UNSUBSCRIBE = (): void => undefined;
 
-export function useStorePath<T = unknown>(
-  store: ReadableStore,
-  path: string | undefined,
-): T | undefined {
+export function useStorePath<T = unknown>(store: ReadableStore, path: string | undefined): T | undefined {
   const subscribe = useCallback(
-    (onStoreChange: () => void) =>
-      path === undefined ? NOOP_UNSUBSCRIBE : store.subscribe(path, onStoreChange),
+    (onStoreChange: () => void) => (path === undefined ? NOOP_UNSUBSCRIBE : store.subscribe(path, onStoreChange)),
     [store, path],
   );
-  const getSnapshot = useCallback(
-    () => (path === undefined ? undefined : store.get<T>(path)),
-    [store, path],
-  );
+  const getSnapshot = useCallback(() => (path === undefined ? undefined : store.get<T>(path)), [store, path]);
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

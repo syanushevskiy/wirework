@@ -70,7 +70,9 @@ describe("setPath", () => {
   });
 
   it("regression: accepts explicit segments so a name may contain a dot", () => {
-    const next = setPath({ widgets: { x: { "v1.0": { text: "keep" } } } }, ["widgets", "x", "v1.0"], { text: "edited" });
+    const next = setPath({ widgets: { x: { "v1.0": { text: "keep" } } } }, ["widgets", "x", "v1.0"], {
+      text: "edited",
+    });
     expect(next).toEqual({ widgets: { x: { "v1.0": { text: "edited" } } } });
   });
 });

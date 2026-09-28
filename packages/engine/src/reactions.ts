@@ -54,8 +54,7 @@ export interface ReactionTarget {
   viewModel: unknown;
 }
 
-const bindingsOf = (viewModel: unknown): EventBindings =>
-  (viewModel as { on?: EventBindings } | undefined)?.on ?? {};
+const bindingsOf = (viewModel: unknown): EventBindings => (viewModel as { on?: EventBindings } | undefined)?.on ?? {};
 
 const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   typeof (value as PromiseLike<unknown> | null | undefined)?.then === "function";
@@ -65,7 +64,10 @@ const isThenable = (value: unknown): value is PromiseLike<unknown> =>
  * action's declared parameters when it has any (defaults applied, unknown
  * or missing arguments refused) — untouched otherwise.
  */
-export function actionArguments(action: ActionDefinition, given: Record<string, unknown> | undefined): Record<string, unknown> {
+export function actionArguments(
+  action: ActionDefinition,
+  given: Record<string, unknown> | undefined,
+): Record<string, unknown> {
   if (!action.params) return given ?? {};
   try {
     return action.params.parse(given ?? {});
@@ -112,10 +114,7 @@ function runAll(
     // fail: whatever its action rejected with is the abort itself.
     if (signal.aborted) return;
     // eslint-disable-next-line no-console
-    console.error(
-      `Reaction on "${event.widget}/${event.name}" from cell "${event.source.cell}" failed:`,
-      error,
-    );
+    console.error(`Reaction on "${event.widget}/${event.name}" from cell "${event.source.cell}" failed:`, error);
   };
   // Imperative on purpose: the ORDER, the early stop and the hand-over to
   // an async continuation are the whole point of this function.
@@ -177,12 +176,7 @@ export function bindCellReactions(
  * unsubscribe. A page's events come from the page with the empty cell id
  * (`pageEventSource`), so they bind exactly like a cell's.
  */
-export function bindReactions(
-  bus: EventBus,
-  store: Store,
-  plan: ResolvedPage,
-  actions?: ActionRegistry,
-): Unsubscribe {
+export function bindReactions(bus: EventBus, store: Store, plan: ResolvedPage, actions?: ActionRegistry): Unsubscribe {
   const cells = plan.problem === undefined ? plan.cells : [];
   const page = pageEventSource(plan.page);
   const unsubscribes = [

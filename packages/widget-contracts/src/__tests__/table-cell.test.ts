@@ -14,7 +14,10 @@ describe("tableCellSchema", () => {
       kind: "tag",
       tones: { Failed: "danger" },
     });
-    expect(tableCellSchema.parse({ kind: "link", to: "/demo/runs/{id}" })).toEqual({ kind: "link", to: "/demo/runs/{id}" });
+    expect(tableCellSchema.parse({ kind: "link", to: "/demo/runs/{id}" })).toEqual({
+      kind: "link",
+      to: "/demo/runs/{id}",
+    });
     expect(tableCellSchema.parse({ kind: "custom", name: "run-status", params: { a: 1 } })).toEqual({
       kind: "custom",
       name: "run-status",

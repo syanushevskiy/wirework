@@ -38,10 +38,7 @@ export function useRefresher(
     return () => clearInterval(timer);
   }, [enabled, interval]);
 
-  const toggle = useCallback(
-    (next: boolean) => emit("changed", { enabled: next, interval }),
-    [emit, interval],
-  );
+  const toggle = useCallback((next: boolean) => emit("changed", { enabled: next, interval }), [emit, interval]);
 
   // Mid-typing values (empty, 0, 2.5) are not a schedule: keep the stored one.
   const changeInterval = useCallback(

@@ -78,10 +78,7 @@ export function useWidgetSearch(groups: WidgetGroup[]) {
   );
 
   /** Suggestions are exactly what the cards below show. */
-  const options = useMemo(
-    () => items.map((item) => ({ value: item.type, label: item.type })),
-    [items],
-  );
+  const options = useMemo(() => items.map((item) => ({ value: item.type, label: item.type })), [items]);
 
   /**
    * Focus tracked on the whole palette, not on the search box: picking a

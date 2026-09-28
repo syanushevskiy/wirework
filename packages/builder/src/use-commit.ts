@@ -34,10 +34,7 @@ export type SaveTrees = (trees: EditableTrees) => void | Promise<void>;
 export type SaveError = (error: unknown, trees: EditableTrees) => void;
 
 /** At least one tree: a commit that writes nothing is a mistake, not a no-op the host should be asked to persist. */
-export type TreesChange =
-  | EditableTrees
-  | Pick<EditableTrees, "viewModels">
-  | Pick<EditableTrees, "userViewModels">;
+export type TreesChange = EditableTrees | Pick<EditableTrees, "viewModels"> | Pick<EditableTrees, "userViewModels">;
 
 export type Commit = (next: TreesChange) => void;
 
@@ -54,7 +51,12 @@ const queues = new WeakMap<Store, Promise<void>>();
  * host what the store holds — read BACK, never the argument, so a dedup or
  * a concurrent write can never leave the host with a stale tree.
  */
-export function commitTrees(store: Store, save: SaveTrees, next: TreesChange, onError: SaveError = reportToConsole): void {
+export function commitTrees(
+  store: Store,
+  save: SaveTrees,
+  next: TreesChange,
+  onError: SaveError = reportToConsole,
+): void {
   // The store dedups unchanged trees, so writing both is always safe.
   if ("viewModels" in next) store.setConfig("viewModels", next.viewModels);
   if ("userViewModels" in next) store.setConfig("userViewModels", next.userViewModels);

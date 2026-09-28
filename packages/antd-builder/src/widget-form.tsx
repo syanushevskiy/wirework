@@ -139,9 +139,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     type={setting.kind === "number" ? "number" : "text"}
                     className="ww-builder-field"
                     placeholder={
-                      setting.defaultValue === undefined
-                        ? undefined
-                        : `default: ${String(setting.defaultValue)}`
+                      setting.defaultValue === undefined ? undefined : `default: ${String(setting.defaultValue)}`
                     }
                     value={typeof setting.value === "string" ? setting.value : ""}
                     onChange={(event) => setSetting(setting.name, event.target.value)}
@@ -243,7 +241,12 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                 {/* What the chosen action asks for: one field per declared
                     parameter (objects and lists as JSON), saved as `with`. */}
                 {event.kind === "call" && event.params.length > 0 ? (
-                  <Flex vertical gap="small" className="ww-builder-params" data-testid={reactionFieldId(event.name, "params")}>
+                  <Flex
+                    vertical
+                    gap="small"
+                    className="ww-builder-params"
+                    data-testid={reactionFieldId(event.name, "params")}
+                  >
                     {event.params.map((param) => {
                       const fieldId = paramFieldId(event.name, param.name);
                       return (
@@ -286,7 +289,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                               allowClear
                               disabled={bindingsLocked}
                               {...(param.choice === undefined ? {} : { value: param.choice })}
-                              onChange={(value: string | undefined) => setReactionParam(event.name, param.name, value ?? "")}
+                              onChange={(value: string | undefined) =>
+                                setReactionParam(event.name, param.name, value ?? "")
+                              }
                               options={param.choices ?? []}
                             />
                           ) : param.kind === "json" ? (

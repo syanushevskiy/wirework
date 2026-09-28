@@ -229,10 +229,7 @@ export function nextParamValue(param: ParamDraft): string | boolean | undefined 
 }
 
 /** Prefill from a RESOLVED (validated) view model — the editor's starting point. */
-export function valuesFromViewModel(
-  definition: AnyWidgetDefinition,
-  viewModel: unknown,
-): WidgetFormValues {
+export function valuesFromViewModel(definition: AnyWidgetDefinition, viewModel: unknown): WidgetFormValues {
   const vm = (viewModel ?? {}) as Record<string, unknown>;
   const paths = Object.fromEntries(
     Object.entries((vm["inputs"] ?? {}) as Record<string, unknown>).flatMap(([port, path]) =>
@@ -273,7 +270,9 @@ export function editedReaction(event: EventField, original: Reaction | undefined
     // form holds is what is saved. One that declares none keeps a `with`
     // the form cannot show.
     if (event.params.length > 0) {
-      return Object.keys(event.arguments).length > 0 ? { call: event.call, with: event.arguments } : { call: event.call };
+      return Object.keys(event.arguments).length > 0
+        ? { call: event.call, with: event.arguments }
+        : { call: event.call };
     }
     return original && "call" in original && original.call === event.call ? original : { call: event.call };
   }
@@ -299,21 +298,19 @@ export function useWidgetForm(
 
   const fields = useMemo<PortField[]>(
     () =>
-      Object.entries((definition?.io.inputs ?? {}) as Record<string, PortDefinition>).map(
-        ([name, port]) => {
-          const value = paths[name] ?? "";
-          const proposed = suggested[name];
-          return {
-            name,
-            description: port.description,
-            required: port.required !== false,
-            ...(port.default === undefined ? {} : { defaultValue: port.default }),
-            value,
-            ...(proposed === undefined ? {} : { suggested: proposed }),
-            untouched: proposed !== undefined && value === proposed,
-          };
-        },
-      ),
+      Object.entries((definition?.io.inputs ?? {}) as Record<string, PortDefinition>).map(([name, port]) => {
+        const value = paths[name] ?? "";
+        const proposed = suggested[name];
+        return {
+          name,
+          description: port.description,
+          required: port.required !== false,
+          ...(port.default === undefined ? {} : { defaultValue: port.default }),
+          value,
+          ...(proposed === undefined ? {} : { suggested: proposed }),
+          untouched: proposed !== undefined && value === proposed,
+        };
+      }),
     [definition, paths, suggested],
   );
 
@@ -349,10 +346,7 @@ export function useWidgetForm(
    * and stays so until the user picks another: writing a `{ value }` object
    * into a number-typed path is the classic wiring trap.
    */
-  const actionList = useMemo(
-    () => actions.list().map(({ name, description }) => ({ name, description })),
-    [actions],
-  );
+  const actionList = useMemo(() => actions.list().map(({ name, description }) => ({ name, description })), [actions]);
   /** The same two lists for every event: which verbs are offered, and which actions. */
   const kindChoices = useMemo<Choice<ReactionKind>[]>(
     () => [
@@ -373,58 +367,58 @@ export function useWidgetForm(
   const parametersOf = useMemo(
     () =>
       new Map(
-        actions.list().map((action) => [
-          action.name,
-          { validator: action.params, fields: action.params ? settingFields(action.params, { json: true }) : [] },
-        ]),
+        actions
+          .list()
+          .map((action) => [
+            action.name,
+            { validator: action.params, fields: action.params ? settingFields(action.params, { json: true }) : [] },
+          ]),
       ),
     [actions],
   );
   const events = useMemo<EventField[]>(
     () =>
-      Object.entries((definition?.events ?? {}) as WidgetEvents).map(
-        ([name, event]: [string, EventDefinition]) => {
-          const fields = validatorKeys(event.payload);
-          const draft = reactions[name];
-          const called = draft?.kind === "call" ? parametersOf.get(draft.call) : undefined;
-          const { params, values } = argumentsOf(called?.fields ?? [], draft?.with ?? {});
-          // The action's own check, once every field can be read and the
-          // required ones are filled — it knows rules no field does.
-          let argumentsError: string | undefined;
-          const readable = params.every((param) => !param.error && !(param.required && isBlank(param.value)));
-          if (called?.validator && readable) {
-            try {
-              called.validator.parse(values);
-            } catch (error) {
-              argumentsError = problemText(error);
-            }
+      Object.entries((definition?.events ?? {}) as WidgetEvents).map(([name, event]: [string, EventDefinition]) => {
+        const fields = validatorKeys(event.payload);
+        const draft = reactions[name];
+        const called = draft?.kind === "call" ? parametersOf.get(draft.call) : undefined;
+        const { params, values } = argumentsOf(called?.fields ?? [], draft?.with ?? {});
+        // The action's own check, once every field can be read and the
+        // required ones are filled — it knows rules no field does.
+        let argumentsError: string | undefined;
+        const readable = params.every((param) => !param.error && !(param.required && isBlank(param.value)));
+        if (called?.validator && readable) {
+          try {
+            called.validator.parse(values);
+          } catch (error) {
+            argumentsError = problemText(error);
           }
-          const from = draft?.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : "");
-          const call = draft?.call ?? "";
-          return {
-            name,
-            description: event.description,
-            required: event.required === true,
-            fields,
-            actions: actionList,
-            kind: draft?.kind ?? "set",
-            kindChoices,
-            set: draft?.set ?? "",
-            from,
-            fromChoice: from === "" ? WHOLE_PAYLOAD : from,
-            ...(fields === undefined
-              ? {}
-              : { fromChoices: [...optionChoices(fields), { value: WHOLE_PAYLOAD, label: "whole payload" }] }),
-            call,
-            ...(call === "" ? {} : { callChoice: call }),
-            actionChoices,
-            params,
-            arguments: values,
-            ...(argumentsError === undefined ? {} : { argumentsError }),
-            kept: Math.max(0, (loaded[name]?.length ?? 0) - 1),
-          };
-        },
-      ),
+        }
+        const from = draft?.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : "");
+        const call = draft?.call ?? "";
+        return {
+          name,
+          description: event.description,
+          required: event.required === true,
+          fields,
+          actions: actionList,
+          kind: draft?.kind ?? "set",
+          kindChoices,
+          set: draft?.set ?? "",
+          from,
+          fromChoice: from === "" ? WHOLE_PAYLOAD : from,
+          ...(fields === undefined
+            ? {}
+            : { fromChoices: [...optionChoices(fields), { value: WHOLE_PAYLOAD, label: "whole payload" }] }),
+          call,
+          ...(call === "" ? {} : { callChoice: call }),
+          actionChoices,
+          params,
+          arguments: values,
+          ...(argumentsError === undefined ? {} : { argumentsError }),
+          kept: Math.max(0, (loaded[name]?.length ?? 0) - 1),
+        };
+      }),
     [definition, reactions, actionList, kindChoices, actionChoices, parametersOf, loaded],
   );
 
@@ -506,9 +500,7 @@ export function useWidgetForm(
     fields.every((field) => !field.required || field.value.trim() !== "") &&
     events.every(
       (event) =>
-        !event.required ||
-        event.kept > 0 ||
-        (event.kind === "call" ? event.call !== "" : event.set.trim() !== ""),
+        !event.required || event.kept > 0 || (event.kind === "call" ? event.call !== "" : event.set.trim() !== ""),
     ) &&
     // A chosen action must get what it asks for: required parameters, readable drafts.
     events.every(

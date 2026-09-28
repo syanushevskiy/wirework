@@ -10,11 +10,7 @@
 import { useEffect, useRef } from "react";
 import type { EventBus, EventFilter, EventListener } from "@wirework/schema";
 
-export function useWidgetEvent<T = unknown>(
-  bus: EventBus,
-  filter: EventFilter<T>,
-  handler: EventListener<T>,
-): void {
+export function useWidgetEvent<T = unknown>(bus: EventBus, filter: EventFilter<T>, handler: EventListener<T>): void {
   const handlerRef = useRef(handler);
   useEffect(() => {
     handlerRef.current = handler;
@@ -22,8 +18,7 @@ export function useWidgetEvent<T = unknown>(
 
   const { widget, name, page, cell } = filter;
   useEffect(
-    () =>
-      bus.subscribe<T>({ widget, name, page, cell }, (event) => handlerRef.current(event)),
+    () => bus.subscribe<T>({ widget, name, page, cell }, (event) => handlerRef.current(event)),
     [bus, widget, name, page, cell],
   );
 }

@@ -21,7 +21,10 @@ describe("flexRowsEngine", () => {
     const template = {
       engine: "flex-rows" as const,
       rows: [
-        [{ ...cell("a"), width: "m-6/12" }, { ...cell("b"), width: "m-6/12" }],
+        [
+          { ...cell("a"), width: "m-6/12" },
+          { ...cell("b"), width: "m-6/12" },
+        ],
         [{ ...cell("c"), width: "full" }],
       ],
     };

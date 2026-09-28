@@ -113,16 +113,10 @@ export function WidgetStory({
     }
   }, [definition, viewModel]);
 
-  const emit = useMemo(
-    () => createEmitter(bus, definition, { page: "storybook", cell: "story" }),
-    [bus, definition],
-  );
+  const emit = useMemo(() => createEmitter(bus, definition, { page: "storybook", cell: "story" }), [bus, definition]);
 
   // Every event -> Actions panel.
-  useEffect(
-    () => bus.subscribe({}, (event) => action(`${event.widget}/${event.name}`)(event.payload)),
-    [bus],
-  );
+  useEffect(() => bus.subscribe({}, (event) => action(`${event.widget}/${event.name}`)(event.payload)), [bus]);
 
   // The story's own reactions (`on`) run exactly as on a page.
   useEffect(() => {
@@ -152,7 +146,11 @@ export function WidgetStory({
   );
 }
 
-type ArgType = { control: "text" | "number" | "boolean" | "select" | "object"; options?: string[]; description?: string };
+type ArgType = {
+  control: "text" | "number" | "boolean" | "select" | "object";
+  options?: string[];
+  description?: string;
+};
 
 /** Controls for a widget's primitive settings — the builder's introspection, reused. */
 export function storyArgTypes(definition: AnyWidgetDefinition): Record<string, ArgType> {

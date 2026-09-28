@@ -28,12 +28,12 @@ store from them — nothing in this package restores anything.
 
 ## What a host provides
 
-| To | What |
-|---|---|
-| `useCommit` | the store, `save` |
-| `usePageEditing` | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace` |
-| `useBuilder` | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded` |
-| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions |
+| To                                                       | What                                                                                                                                                       |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useCommit`                                              | the store, `save`                                                                                                                                          |
+| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace` |
+| `useBuilder`                                             | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded`                                                      |
+| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions                                                                                                                     |
 
 `canEdit` is required everywhere a hook can write: the builder never assumes
 this user may change pages, and it gates inside the hooks, not only on a

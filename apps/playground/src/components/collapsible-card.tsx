@@ -30,9 +30,7 @@ export function CollapsibleCard({ id, title, summary, defaultOpen = false, child
           {
             key: id,
             label: <span data-testid={`panel-${id}-toggle`}>{title}</span>,
-            extra: summary ? (
-              <Typography.Text type="secondary">{summary}</Typography.Text>
-            ) : undefined,
+            extra: summary ? <Typography.Text type="secondary">{summary}</Typography.Text> : undefined,
             children,
           },
         ]}

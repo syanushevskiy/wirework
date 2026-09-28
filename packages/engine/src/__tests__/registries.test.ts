@@ -52,7 +52,9 @@ describe("widget registry", () => {
     expect(() => registry.register({ ...counter, viewModel: undefined as never })).toThrow(/view-model validator/);
     expect(() => registry.register({ ...counter, io: undefined as never })).toThrow(/IO declaration/);
     expect(() => registry.register({ ...counter, events: undefined as never })).toThrow(/events declaration/);
-    expect(() => registry.register({ ...counter, events: { "Not Kebab": { payload: z.string() } } })).toThrow(/kebab-case/);
+    expect(() => registry.register({ ...counter, events: { "Not Kebab": { payload: z.string() } } })).toThrow(
+      /kebab-case/,
+    );
     expect(() => registry.register({ ...counter, events: { ok: {} as never } })).toThrow(/payload validator/);
   });
 
@@ -131,8 +133,12 @@ describe("layout-engine registry", () => {
     const engines = createLayoutEngines();
     engines.register(listEngine);
     expect(engines.keys()).toEqual(["list"]);
-    expect(() => engines.register({ ...listEngine, name: "x", template: undefined as never })).toThrow(/template validator/);
-    expect(() => engines.register({ ...listEngine, name: "y", appendCell: undefined as never })).toThrow(/"appendCell"/);
+    expect(() => engines.register({ ...listEngine, name: "x", template: undefined as never })).toThrow(
+      /template validator/,
+    );
+    expect(() => engines.register({ ...listEngine, name: "y", appendCell: undefined as never })).toThrow(
+      /"appendCell"/,
+    );
     expect(() => engines.register({ ...listEngine, name: "z", renderer: null })).toThrow(/renderer/);
   });
 });
@@ -169,15 +175,17 @@ describe("contract registry", () => {
     expect(() => contracts.register({ ...contract, kind: "d", io: { inputs: badDefault } })).toThrow(
       /default its own validator rejects/,
     );
-    expect(() => contracts.register({ ...contract, kind: "e", events: { "Not Kebab": { payload: z.string() } } })).toThrow(
-      /kebab-case/,
-    );
+    expect(() =>
+      contracts.register({ ...contract, kind: "e", events: { "Not Kebab": { payload: z.string() } } }),
+    ).toThrow(/kebab-case/);
   });
 
   it("regression: rejects io or events that are null, not just missing", () => {
     const contracts = createContracts();
     expect(() => contracts.register({ ...contract, kind: "a", events: null as never })).toThrow(/events declaration/);
     expect(() => contracts.register({ ...contract, kind: "b", io: null as never })).toThrow(/IO declaration/);
-    expect(() => contracts.register({ ...contract, kind: "c", viewModel: undefined as never })).toThrow(/view-model validator/);
+    expect(() => contracts.register({ ...contract, kind: "c", viewModel: undefined as never })).toThrow(
+      /view-model validator/,
+    );
   });
 });

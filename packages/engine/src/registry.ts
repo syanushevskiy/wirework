@@ -45,7 +45,8 @@ export function createRegistry({ contracts }: WidgetRegistryOptions = {}): Widge
     invariants: [
       // The component is framework-specific and opaque to the engine — only
       // its presence is checked; the rendering adapter owns its shape.
-      (definition) => (definition.component === undefined || definition.component === null ? "has no component" : undefined),
+      (definition) =>
+        definition.component === undefined || definition.component === null ? "has no component" : undefined,
       ...declarationInvariants,
       (definition) => contractProblem(definition, contracts),
     ],

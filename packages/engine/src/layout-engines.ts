@@ -26,8 +26,10 @@ export function createLayoutEngines(): LayoutEngineRegistry {
     invariants: [
       (engine) => (typeof engine.template?.parse !== "function" ? "has no template validator" : undefined),
       (engine) => (typeof engine.change?.parse !== "function" ? "has no change validator" : undefined),
-      (engine) => OPERATIONS.filter((operation) => typeof engine[operation] !== "function")
-        .map((operation) => `lacks the "${operation}" operation`)[0],
+      (engine) =>
+        OPERATIONS.filter((operation) => typeof engine[operation] !== "function").map(
+          (operation) => `lacks the "${operation}" operation`,
+        )[0],
       (engine) => (engine.renderer === undefined || engine.renderer === null ? "has no renderer" : undefined),
     ],
   });

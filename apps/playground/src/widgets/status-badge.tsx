@@ -24,6 +24,9 @@ function StatusBadge({ viewModel, store }: ContractProps<typeof statusBadgeContr
 
 export const statusBadge = implementContract(statusBadgeContract, {
   type: "status-badge",
-  preview: { seed: { preview: { state: "Success" } }, viewModel: { inputs: { state: "preview.state" }, prefix: "Run: " } },
+  preview: {
+    seed: { preview: { state: "Success" } },
+    viewModel: { inputs: { state: "preview.state" }, prefix: "Run: " },
+  },
   component: StatusBadge,
 });

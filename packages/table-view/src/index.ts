@@ -26,12 +26,7 @@ export { createTableViewLoader, tableViewArgsSchema } from "./loader";
 export type { TableViewArgs, TableViewLoader } from "./loader";
 export { columnsOf, filtersOf, requestOf, tableViewSchema, DEFAULT_PAGE_SIZE } from "./view";
 export type { TableView, TableViewQuery } from "./view";
-export {
-  fetchTransport,
-  columnDefinitionSchema,
-  tableMetadataSchema,
-  tableViewResponseSchema,
-} from "./api";
+export { fetchTransport, columnDefinitionSchema, tableMetadataSchema, tableViewResponseSchema } from "./api";
 export type {
   ColumnDefinition,
   SortDirection,

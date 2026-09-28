@@ -2,12 +2,7 @@
  *  with antd Typography. Render-only: all logic in useEchoValue. */
 import { Flex, Typography } from "antd";
 import { z } from "zod";
-import {
-  ioBindingsSchema,
-  NO_EVENTS,
-  type WidgetIO,
-  type WidgetProps,
-} from "@wirework/schema";
+import { ioBindingsSchema, NO_EVENTS, type WidgetIO, type WidgetProps } from "@wirework/schema";
 import { defineWidget } from "@wirework/react";
 import { useEchoValue } from "../hooks/use-echo-value";
 

@@ -10,8 +10,7 @@ type JsonNode = Record<string, unknown> & { type?: string; children?: unknown[] 
 const isNode = (value: unknown): value is JsonNode =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
-const childrenOf = (node: JsonNode): JsonNode[] =>
-  Array.isArray(node.children) ? node.children.filter(isNode) : [];
+const childrenOf = (node: JsonNode): JsonNode[] => (Array.isArray(node.children) ? node.children.filter(isNode) : []);
 
 /** Ids of every tab in the tree, in document order. */
 export function tabIds(model: FlexLayoutModelJson): string[] {

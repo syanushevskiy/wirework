@@ -59,11 +59,7 @@ export function NodePanel({ nodeId }: NodePanelProps) {
       </div>
       <div className="node-panel__field">
         <Label htmlFor="node-label">Label</Label>
-        <Input
-          id="node-label"
-          value={node.data.label}
-          onChange={(e) => updateLabel(e.target.value)}
-        />
+        <Input id="node-label" value={node.data.label} onChange={(e) => updateLabel(e.target.value)} />
       </div>
       <NodeTypeBadge type={node.type} />
     </div>
@@ -178,8 +174,7 @@ export function useEditorToolbar() {
 // components/editor-toolbar.tsx — active state via aria-pressed + CSS,
 // not conditional utility classes
 export function EditorToolbar() {
-  const { mode, setMode, undo, redo, canUndo, canRedo, zoomIn, zoomOut, fitView } =
-    useEditorToolbar();
+  const { mode, setMode, undo, redo, canUndo, canRedo, zoomIn, zoomOut, fitView } = useEditorToolbar();
 
   return (
     <Toolbar className="editor-toolbar">
@@ -244,10 +239,7 @@ export function EditorToolbar() {
   return (
     <div style={{ display: "flex", gap: 4, padding: 8, borderBottom: "1px solid #e5e7eb" }}>
       {/* ❌ inline styles for static layout, ❌ hardcoded border color */}
-      <button
-        onClick={() => setMode("select")}
-        style={{ background: mode === "select" ? "#3b82f6" : "transparent" }}
-      >
+      <button onClick={() => setMode("select")} style={{ background: mode === "select" ? "#3b82f6" : "transparent" }}>
         {/* ❌ hardcoded active color, ❌ no tooltip, ❌ raw button */}
         Select
       </button>

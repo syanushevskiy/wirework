@@ -9,19 +9,19 @@ without writing code, and a host application decides where pages are kept.
 
 ## Packages
 
-| Package | What it is |
-|---|---|
-| `@wirework/schema` | Contracts, model types and the path rules. Depends on zod only. |
-| `@wirework/store` | The Store contract on Zustand: path reads, path subscriptions, layered stores. |
-| `@wirework/events` | The widget event bus. |
-| `@wirework/engine` | Registries, page resolution, validation, reactions, tree editing. Framework-free. |
-| `@wirework/react` | The React adapter: `PageView`, `WidgetPreview`, widget and layout-engine definitions, store hooks. |
-| `@wirework/widget-contracts` | The standard widget kinds (label, button, input, table, …) as contracts without components. |
-| `@wirework/antd-widgets` | The standard kinds implemented on Ant Design. |
-| `@wirework/table-view` | Actions for a table the server describes (the view table API). |
-| `@wirework/engine-react-grid-layout`, `-gridstack`, `-flexlayout`, `-flex-rows` | Layout engine plugins. |
-| `@wirework/builder` | The page builder as hooks, without a UI library. |
-| `@wirework/antd-builder` | The page builder as Ant Design components. |
+| Package                                                                         | What it is                                                                                         |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `@wirework/schema`                                                              | Contracts, model types and the path rules. Depends on zod only.                                    |
+| `@wirework/store`                                                               | The Store contract on Zustand: path reads, path subscriptions, layered stores.                     |
+| `@wirework/events`                                                              | The widget event bus.                                                                              |
+| `@wirework/engine`                                                              | Registries, page resolution, validation, reactions, tree editing. Framework-free.                  |
+| `@wirework/react`                                                               | The React adapter: `PageView`, `WidgetPreview`, widget and layout-engine definitions, store hooks. |
+| `@wirework/widget-contracts`                                                    | The standard widget kinds (label, button, input, table, …) as contracts without components.        |
+| `@wirework/antd-widgets`                                                        | The standard kinds implemented on Ant Design.                                                      |
+| `@wirework/table-view`                                                          | Actions for a table the server describes (the view table API).                                     |
+| `@wirework/engine-react-grid-layout`, `-gridstack`, `-flexlayout`, `-flex-rows` | Layout engine plugins.                                                                             |
+| `@wirework/builder`                                                             | The page builder as hooks, without a UI library.                                                   |
+| `@wirework/antd-builder`                                                        | The page builder as Ant Design components.                                                         |
 
 `apps/playground` is the demo host and the e2e harness; `e2e` the Gherkin
 suite; `doc/` the engine's design decisions and coding guidelines.

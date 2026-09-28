@@ -78,13 +78,21 @@ const messageOf = (error: unknown): string => (error instanceof Error ? error.me
 function equalJson(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (Array.isArray(a) || Array.isArray(b)) {
-    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => equalJson(item, b[index]));
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, index) => equalJson(item, b[index]))
+    );
   }
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
   const left = a as Record<string, unknown>;
   const right = b as Record<string, unknown>;
   const keys = Object.keys(left);
-  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && equalJson(left[key], right[key]));
+  return (
+    keys.length === Object.keys(right).length &&
+    keys.every((key) => Object.hasOwn(right, key) && equalJson(left[key], right[key]))
+  );
 }
 
 /** One request of a view: the newest of its store and `into` is the only one that may write. */
@@ -109,7 +117,9 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
   return async (store, rawArgs) => {
     const parsed = tableViewArgsSchema.safeParse(rawArgs);
     if (!parsed.success) {
-      throw new Error(`table-view/load: ${parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`);
+      throw new Error(
+        `table-view/load: ${parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`,
+      );
     }
     // `metadata` belongs to this call; everything else but `into` declares the view.
     const { into, metadata, ...declared } = parsed.data;
@@ -165,7 +175,8 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         store.set(at("filters"), filtersOf(answer.metadata, view));
       }
       if (answer.data) store.set(at("data"), answer.data);
-      if (answer.totalRecords !== undefined && answer.totalRecords !== null) store.set(at("total"), answer.totalRecords);
+      if (answer.totalRecords !== undefined && answer.totalRecords !== null)
+        store.set(at("total"), answer.totalRecords);
       store.set(at("page"), query.page);
       store.set(at("pageSize"), query.pageSize);
       store.set(at("error"), undefined);

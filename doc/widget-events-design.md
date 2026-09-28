@@ -24,22 +24,22 @@ Every `WidgetDefinition` declares its events next to its IO ports:
 ```ts
 interface EventDefinition<T = unknown> {
   description?: string;
-  payload: Validator<T>;         // zod-compatible, runs on EVERY emit
+  payload: Validator<T>; // zod-compatible, runs on EVERY emit
 }
-type WidgetEvents = Record<string, EventDefinition>;   // kebab-case names
+type WidgetEvents = Record<string, EventDefinition>; // kebab-case names
 
 interface WidgetDefinition<VM, TComponent, E extends WidgetEvents> {
   type: string;
   io: WidgetIO;
-  events: E;                     // NEW — required; NO_EVENTS for none
+  events: E; // NEW — required; NO_EVENTS for none
   viewModel: Validator<VM>;
   component: TComponent;
 }
 
 interface WidgetProps<VM, E extends WidgetEvents> {
   viewModel: VM;
-  store: ReadableStore;          // read + subscribe, no `set`
-  emit: Emit<E>;                 // NEW — only declared names, typed payloads
+  store: ReadableStore; // read + subscribe, no `set`
+  emit: Emit<E>; // NEW — only declared names, typed payloads
 }
 ```
 
@@ -63,11 +63,11 @@ export const antdCounter = defineWidget<VM, typeof events>({ type, io, events, v
 
 ```ts
 interface WidgetEvent<T> {
-  widget: string;                // definition.type
+  widget: string; // definition.type
   name: string;
-  payload: T;                    // already validated
-  source: { page: string; cell: string };   // cell identity, never type alone
-  seq: number;                   // monotonic per bus
+  payload: T; // already validated
+  source: { page: string; cell: string }; // cell identity, never type alone
+  seq: number; // monotonic per bus
 }
 
 interface EventBus {
@@ -105,8 +105,10 @@ never from effects (StrictMode double-fires them).
 Host code:
 
 ```ts
-useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "runs", cell: "table-main" }), (event) =>
-  store.set("runs.selected", event.payload.key),  // payload typed, no cast
+useWidgetEvent(
+  bus,
+  eventFilter(antdTable, "row-selected", { page: "runs", cell: "table-main" }),
+  (event) => store.set("runs.selected", event.payload.key), // payload typed, no cast
 );
 ```
 
@@ -164,15 +166,15 @@ A widget only EMITS (the button is the archetype: no inputs, no state, one
 `clicked` event). WHO reacts, and how, is layered:
 
 1. **Host code** — `useWidgetEvent(bus, eventFilter(antdButton, "clicked"),
-   handler)` or `bus.subscribe(...)`: for behaviour the application owns and
+handler)` or `bus.subscribe(...)`: for behaviour the application owns and
    nobody configures. Typed payload, no cast.
 2. **User configuration (reactions)** — the widget's view model says what
    its events DO, with exactly two verbs:
    - `{ set, from?, value? }` writes the store (state changes);
    - `{ call, with? }` runs a host-registered ACTION by name.
-   The builder offers both per event: a store path + payload field, or a
-   dropdown of the registered actions with their descriptions. Required
-   events must have one of them.
+     The builder offers both per event: a store path + payload field, or a
+     dropdown of the registered actions with their descriptions. Required
+     events must have one of them.
 3. **Host actions (`ActionDefinition`)** — the escape hatch for everything
    that is not a store write: refresh the runs, reset a counter, open a
    dialog. Registered with `createActions()` under a kebab-case name and a
@@ -253,7 +255,7 @@ starts, and the action's `signal` is aborted).
   builder-wired reaction on a table). The "reaction to an undeclared
   event is rejected at boot" case lives in `failurePathViewModels`
   (@wirework/view-data-models-examples, cell `bad-reaction`), resolved cell
-  by cell in packages/engine/src/__tests__/failure-path.test.ts — it is no
+  by cell in packages/engine/src/**tests**/failure-path.test.ts — it is no
   longer on a playground page.
 
 ## Page events and load events (built)

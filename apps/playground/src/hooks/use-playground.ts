@@ -66,8 +66,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    */
   const builder = builderPage(layoutEngines, viewModels, BUILDER_PAGE, DEFAULT_BUILDER_NAMING);
   const [overlayWanted, setOverlayWanted] = useState(visit.userOverlayOnOpen);
-  const userOverlayAvailable =
-    page !== BUILDER_PAGE || (builder.problem === undefined && builder.cells.length > 0);
+  const userOverlayAvailable = page !== BUILDER_PAGE || (builder.problem === undefined && builder.cells.length > 0);
   // The page was emptied under an overlay that was on (the inspector can):
   // it goes OFF for good, rather than coming back by itself with the next
   // widget — which would lock Add right after the first one.

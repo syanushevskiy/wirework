@@ -18,7 +18,9 @@ type Story = StoryObj<any>;
 const arg = (args: unknown, key: string): string => String((args as Record<string, unknown>)[key]);
 
 /** `label` contract: static text, text from a store path, fallback on an empty path. */
-export function labelConformance(definition: AnyWidgetDefinition): Record<"Static" | "FromStore" | "BoundToEmptyPath", Story> {
+export function labelConformance(
+  definition: AnyWidgetDefinition,
+): Record<"Static" | "FromStore" | "BoundToEmptyPath", Story> {
   return {
     Static: {
       play: async ({ canvas, args }) => {

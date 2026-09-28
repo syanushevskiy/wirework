@@ -69,7 +69,12 @@ describe("bindReactions", () => {
   it("regression: a failing reaction stops its own chain and never throws at the emitter", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const actions = createActions();
-    actions.register({ name: "boom", handler: () => { throw new Error("nope"); } });
+    actions.register({
+      name: "boom",
+      handler: () => {
+        throw new Error("nope");
+      },
+    });
     const { store, bus } = bind({ changed: [{ call: "boom" }, { set: "demo.n", from: "value" }] }, actions);
     expect(() => emit(bus, { value: 5 })).not.toThrow();
     await vi.waitFor(() => expect(spy).toHaveBeenCalled());
@@ -99,7 +104,10 @@ describe("bindReactions", () => {
         });
       },
     });
-    const { store, bus, unbind } = bind({ changed: [{ call: "runs/load" }, { set: "demo.n", from: "value" }] }, actions);
+    const { store, bus, unbind } = bind(
+      { changed: [{ call: "runs/load" }, { set: "demo.n", from: "value" }] },
+      actions,
+    );
     emit(bus, { value: 7 });
     unbind();
     expect(seen?.aborted).toBe(true);
@@ -167,7 +175,11 @@ describe("bindReactions", () => {
     const { bus, store } = bind({ changed: [{ call: "log-it", with: { level: "info" } }] }, actions);
     emit(bus, { value: 3 });
     expect(handler).toHaveBeenCalledWith(
-      expect.objectContaining({ store, args: { level: "info" }, event: expect.objectContaining({ payload: { value: 3 } }) }),
+      expect.objectContaining({
+        store,
+        args: { level: "info" },
+        event: expect.objectContaining({ payload: { value: 3 } }),
+      }),
     );
   });
 
@@ -211,7 +223,13 @@ describe("page reactions", () => {
       },
     });
     const { store, bus } = bindPage(
-      { load: [{ set: "opened", from: "page" }, { call: "load", with: { url: "/api/x" } }, { set: "after", value: true }] },
+      {
+        load: [
+          { set: "opened", from: "page" },
+          { call: "load", with: { url: "/api/x" } },
+          { set: "after", value: true },
+        ],
+      },
       actions,
     );
     emitPageLoad(bus, "demo");
@@ -281,13 +299,18 @@ describe("action parameters", () => {
     const { plan, bus } = bind({ changed: [{ call: "table/load" }] }, withParams(seen));
     const cells = plan.problem === undefined ? plan.cells : [];
     expect(cells[0]?.problem).toMatchObject({ kind: "unmet-contract" });
-    expect(JSON.stringify(cells[0]?.problem)).toContain('Action \\"table/load\\" got invalid arguments — into: Required');
+    expect(JSON.stringify(cells[0]?.problem)).toContain(
+      'Action \\"table/load\\" got invalid arguments — into: Required',
+    );
     emit(bus, { value: 1 });
     expect(seen).not.toHaveBeenCalled();
   });
 
   it("refuses arguments the action does not know", () => {
-    const { plan } = bind({ changed: [{ call: "table/load", with: { into: "jobs", colums: {} } }] }, withParams(vi.fn()));
+    const { plan } = bind(
+      { changed: [{ call: "table/load", with: { into: "jobs", colums: {} } }] },
+      withParams(vi.fn()),
+    );
     const cells = plan.problem === undefined ? plan.cells : [];
     expect(JSON.stringify(cells[0]?.problem)).toContain("colums");
   });

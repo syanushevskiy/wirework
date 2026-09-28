@@ -108,9 +108,7 @@ const dropdown = (page: Page) =>
  */
 const option = (page: Page, label: string, match: "exact" | "prefix" = "exact") =>
   dropdown(page).locator(
-    match === "exact"
-      ? `.ant-select-item-option[title="${label}"]`
-      : `.ant-select-item-option[title^="${label}"]`,
+    match === "exact" ? `.ant-select-item-option[title="${label}"]` : `.ant-select-item-option[title^="${label}"]`,
   );
 
 /** Open an antd Select by its test id and pick one option. */
@@ -131,7 +129,7 @@ const paletteSearch = (page: Page) => page.getByTestId("widget-search").locator(
  * it would cover the cards underneath.
  */
 async function openPalette(page: Page) {
-  if (await page.getByTestId("widget-palette").getAttribute("data-state") === "open") return;
+  if ((await page.getByTestId("widget-palette").getAttribute("data-state")) === "open") return;
   await paletteSearch(page).click();
   await paletteSearch(page).press("Escape");
   await expect(page.getByTestId("widget-palette")).toHaveAttribute("data-state", "open");
@@ -222,33 +220,27 @@ Then("the preview of {string} reads {string}", async ({ page }, widget: string, 
   await expect(page.locator(`[data-testid="widget-preview"][data-widget="${widget}"]`)).toContainText(text);
 });
 
-When(
-  "I set the {string} port {string} to {string}",
-  async ({ page }, section: string, port: string, path: string) => {
-    if (section !== "input") throw new Error(`only input ports exist (got "${section}")`);
-    // Input ports use the autocomplete: type the path, then take the
-    // matching suggestion — or keep what was typed, since a path may name
-    // state that does not exist yet.
-    const field = page.getByTestId(`port-${section}-${port}`);
-    await field.click();
-    const query = field.locator("input");
-    await query.fill(path);
-    const exact = option(page, path);
-    if ((await exact.count()) > 0) {
-      await exact.click();
-    } else {
-      await query.blur();
-    }
-  },
-);
+When("I set the {string} port {string} to {string}", async ({ page }, section: string, port: string, path: string) => {
+  if (section !== "input") throw new Error(`only input ports exist (got "${section}")`);
+  // Input ports use the autocomplete: type the path, then take the
+  // matching suggestion — or keep what was typed, since a path may name
+  // state that does not exist yet.
+  const field = page.getByTestId(`port-${section}-${port}`);
+  await field.click();
+  const query = field.locator("input");
+  await query.fill(path);
+  const exact = option(page, path);
+  if ((await exact.count()) > 0) {
+    await exact.click();
+  } else {
+    await query.blur();
+  }
+});
 
 /** What an input port's field holds — a suggested path before anybody typed. */
-Then(
-  "the {string} port {string} holds {string}",
-  async ({ page }, section: string, port: string, path: string) => {
-    await expect(page.getByTestId(`port-${section}-${port}`).locator("input")).toHaveValue(path);
-  },
-);
+Then("the {string} port {string} holds {string}", async ({ page }, section: string, port: string, path: string) => {
+  await expect(page.getByTestId(`port-${section}-${port}`).locator("input")).toHaveValue(path);
+});
 
 /** The field still shows the builder's own proposal, and says so. */
 Then("the {string} port {string} is marked as suggested", async ({ page }, section: string, port: string) => {
@@ -265,24 +257,18 @@ When("I clear the {string} port {string}", async ({ page }, section: string, por
   await query.blur();
 });
 
-When(
-  "I open the {string} port {string} suggestions",
-  async ({ page }, section: string, port: string) => {
-    await page.getByTestId(`port-${section}-${port}`).click();
-  },
-);
+When("I open the {string} port {string} suggestions", async ({ page }, section: string, port: string) => {
+  await page.getByTestId(`port-${section}-${port}`).click();
+});
 
 Then("the path suggestions include {string}", async ({ page }, path: string) => {
   await expect(option(page, path)).toHaveCount(1);
 });
 
-Then(
-  "the path suggestions do not include {string}",
-  async ({ page }, path: string) => {
-    await expect(dropdown(page)).toBeVisible();
-    await expect(option(page, path)).toHaveCount(0);
-  },
-);
+Then("the path suggestions do not include {string}", async ({ page }, path: string) => {
+  await expect(dropdown(page)).toBeVisible();
+  await expect(option(page, path)).toHaveCount(0);
+});
 
 When("I add the widget", async ({ page }) => {
   await page.getByTestId("add-widget").click();
@@ -319,22 +305,17 @@ Then("row {int} has {int} cells", async ({ page }, row: number, count: number) =
 });
 
 Then("I see a widget {string}", async ({ page }, widget: string) => {
-  await expect(
-    page.locator(`[data-testid="cell"][data-widget="${widget}"]`).first(),
-  ).toBeVisible();
+  await expect(page.locator(`[data-testid="cell"][data-widget="${widget}"]`).first()).toBeVisible();
 });
 
 /* ------------------------------ binding ------------------------------ */
 
-Then(
-  "the echo widget at {string} shows {string}",
-  async ({ page }, path: string, value: string) => {
-    const echo = page
-      .locator(`[data-testid="page"] [data-testid="antd-echo"][data-path="${path}"]`)
-      .getByTestId("antd-echo-value");
-    await expect(echo).toHaveText(value);
-  },
-);
+Then("the echo widget at {string} shows {string}", async ({ page }, path: string, value: string) => {
+  const echo = page
+    .locator(`[data-testid="page"] [data-testid="antd-echo"][data-path="${path}"]`)
+    .getByTestId("antd-echo-value");
+  await expect(echo).toHaveText(value);
+});
 
 When("I click the counter {int} time(s)", async ({ page }, times: number) => {
   const counter = live(page).getByTestId("antd-counter");
@@ -344,8 +325,7 @@ When("I click the counter {int} time(s)", async ({ page }, times: number) => {
 });
 
 /** A table row on the live page, found by its row key (the rowKey property's value). */
-const tableRow = (page: Page, key: string) =>
-  live(page).locator(`[data-testid="table-row"][data-row-key="${key}"]`);
+const tableRow = (page: Page, key: string) => live(page).locator(`[data-testid="table-row"][data-row-key="${key}"]`);
 
 Then("the table has {int} row(s)", async ({ page }, count: number) => {
   await expect(live(page).getByTestId("table-row")).toHaveCount(count);
@@ -648,30 +628,20 @@ When("I try to put into the store at {string}:", async ({ page }, path: string, 
 });
 
 Then("the state JSON contains {string}", async ({ page }, fragment: string) => {
-  await expect
-    .poll(async () => page.getByTestId("state-editor").inputValue())
-    .toContain(fragment);
+  await expect.poll(async () => page.getByTestId("state-editor").inputValue()).toContain(fragment);
 });
 
 Then("the state JSON does not contain {string}", async ({ page }, fragment: string) => {
-  await expect
-    .poll(async () => page.getByTestId("state-editor").inputValue())
-    .not.toContain(fragment);
+  await expect.poll(async () => page.getByTestId("state-editor").inputValue()).not.toContain(fragment);
 });
 
-When(
-  "I edit the state JSON setting {string} to {int}",
-  async ({ page }, path: string, value: number) => {
-    await editStateJson(page, path, value);
-  },
-);
+When("I edit the state JSON setting {string} to {int}", async ({ page }, path: string, value: number) => {
+  await editStateJson(page, path, value);
+});
 
-When(
-  "I edit the state JSON setting {string} to {string}",
-  async ({ page }, path: string, value: string) => {
-    await editStateJson(page, path, value);
-  },
-);
+When("I edit the state JSON setting {string} to {string}", async ({ page }, path: string, value: string) => {
+  await editStateJson(page, path, value);
+});
 
 When("I replace the state JSON with {string}", async ({ page }, text: string) => {
   await page.getByTestId("state-editor").fill(text);
@@ -684,22 +654,15 @@ Then("the state error is shown", async ({ page }) => {
 
 /* ------------------------------ failures ------------------------------ */
 
-Then(
-  "all {int} broken widget definitions were rejected",
-  async ({ page }, count: number) => {
-    const rejected = page
-      .getByTestId("registration-report")
-      .locator('li[data-rejected="true"]');
-    await expect(rejected).toHaveCount(count);
-  },
-);
+Then("all {int} broken widget definitions were rejected", async ({ page }, count: number) => {
+  const rejected = page.getByTestId("registration-report").locator('li[data-rejected="true"]');
+  await expect(rejected).toHaveCount(count);
+});
 
 /* ------------------------------ events ------------------------------ */
 
 function eventRows(page: Page, widget: string, event: string) {
-  return page.locator(
-    `[data-testid="event-log-row"][data-widget="${widget}"][data-event="${event}"]`,
-  );
+  return page.locator(`[data-testid="event-log-row"][data-widget="${widget}"][data-event="${event}"]`);
 }
 
 /** The log's rows render only while its panel is open: a count on a closed panel is always 0. */
@@ -721,9 +684,7 @@ Then(
   "the event log shows widget {string} event {string} with payload {string}",
   async ({ page }, widget: string, event: string, payload: string) => {
     // Newest first: the most recent emit of this event carries the payload.
-    await expect(
-      eventRows(page, widget, event).first().getByTestId("event-log-payload"),
-    ).toHaveText(payload);
+    await expect(eventRows(page, widget, event).first().getByTestId("event-log-payload")).toHaveText(payload);
   },
 );
 
@@ -751,22 +712,15 @@ When("I click the table row {string}", async ({ page }, key: string) => {
   await tableRow(page, key).click({ position: { x: 2, y: 2 } });
 });
 
-When(
-  "I click the counter in cell {string} {int} time(s)",
-  async ({ page }, cell: string, times: number) => {
-    const counter = page
-      .locator(`[data-testid="cell"][data-cell="${cell}"]`)
-      .getByTestId("antd-counter");
-    for (let i = 0; i < times; i += 1) {
-      await counter.click();
-    }
-  },
-);
+When("I click the counter in cell {string} {int} time(s)", async ({ page }, cell: string, times: number) => {
+  const counter = page.locator(`[data-testid="cell"][data-cell="${cell}"]`).getByTestId("antd-counter");
+  for (let i = 0; i < times; i += 1) {
+    await counter.click();
+  }
+});
 
 Then("the widget events list includes {string}", async ({ page }, name: string) => {
-  await expect(
-    page.locator(`[data-testid="widget-event"][data-event="${name}"]`),
-  ).toBeVisible();
+  await expect(page.locator(`[data-testid="widget-event"][data-event="${name}"]`)).toBeVisible();
 });
 
 Then("the widget emits no events", async ({ page }) => {
@@ -776,8 +730,7 @@ Then("the widget emits no events", async ({ page }) => {
 
 /* --------------------------- layout engines --------------------------- */
 
-const gridItem = (page: Page, cell: string) =>
-  page.locator(`[data-testid="grid-item"][data-cell="${cell}"]`);
+const gridItem = (page: Page, cell: string) => page.locator(`[data-testid="grid-item"][data-cell="${cell}"]`);
 
 type Box = NonNullable<Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>>;
 
@@ -827,9 +780,9 @@ async function dragBetween(page: Page, from: ReturnType<Page["locator"]>, to: Re
 Then("the page has {int} cell(s)", async ({ page }, count: number) => {
   // The page must exist: a count of 0 must never pass because nothing rendered.
   await expect(page.getByTestId("page")).toBeVisible();
-  await expect(
-    page.getByTestId("page").locator('[data-testid="cell"], [data-testid="cell-problem"]'),
-  ).toHaveCount(count);
+  await expect(page.getByTestId("page").locator('[data-testid="cell"], [data-testid="cell-problem"]')).toHaveCount(
+    count,
+  );
 });
 
 Then(
@@ -887,37 +840,31 @@ When("I cancel the page edit", async ({ page }) => {
   await expect(page.getByTestId("page-mode")).toHaveText("view");
 });
 
-When(
-  "I drag the cell {string} onto the cell {string}",
-  async ({ page }, from: string, to: string) => {
-    await dragBetween(
-      page,
-      gridItem(page, from).getByTestId("grid-handle"),
-      gridItem(page, to).getByTestId("grid-handle"),
-    );
-  },
-);
+When("I drag the cell {string} onto the cell {string}", async ({ page }, from: string, to: string) => {
+  await dragBetween(
+    page,
+    gridItem(page, from).getByTestId("grid-handle"),
+    gridItem(page, to).getByTestId("grid-handle"),
+  );
+});
 
-When(
-  "I widen the cell {string} by {int} column(s)",
-  async ({ page }, cell: string, columns: number) => {
-    const item = gridItem(page, cell);
-    await item.scrollIntoViewIfNeeded();
-    const box = await settledBox(page, item);
-    const w = Number(await item.getAttribute("data-w"));
-    if (!w) throw new Error(`grid item ${cell} has no data-w`);
-    // One column + gutter in px: item width = w*col + (w-1)*margin, margin 10.
-    const unit = (box.width + 10) / w;
-    const hb = await settledBox(page, item.locator(".react-resizable-handle"));
-    const startX = hb.x + hb.width / 2;
-    const startY = hb.y + hb.height / 2;
-    await page.mouse.move(startX, startY);
-    await page.mouse.down();
-    // Land well past the rounding boundary of the target column.
-    await page.mouse.move(startX + (columns + 0.4) * unit, startY, { steps: 12 });
-    await page.mouse.up();
-  },
-);
+When("I widen the cell {string} by {int} column(s)", async ({ page }, cell: string, columns: number) => {
+  const item = gridItem(page, cell);
+  await item.scrollIntoViewIfNeeded();
+  const box = await settledBox(page, item);
+  const w = Number(await item.getAttribute("data-w"));
+  if (!w) throw new Error(`grid item ${cell} has no data-w`);
+  // One column + gutter in px: item width = w*col + (w-1)*margin, margin 10.
+  const unit = (box.width + 10) / w;
+  const hb = await settledBox(page, item.locator(".react-resizable-handle"));
+  const startX = hb.x + hb.width / 2;
+  const startY = hb.y + hb.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  // Land well past the rounding boundary of the target column.
+  await page.mouse.move(startX + (columns + 0.4) * unit, startY, { steps: 12 });
+  await page.mouse.up();
+});
 
 /* ----------------------------- reactions ----------------------------- */
 
@@ -940,13 +887,10 @@ When(
   },
 );
 
-When(
-  "I set the reaction for {string} to call {string}",
-  async ({ page }, event: string, action: string) => {
-    await chooseOption(page, `reaction-${event}-kind`, "call action");
-    await chooseOption(page, `reaction-${event}-call`, action, "prefix");
-  },
-);
+When("I set the reaction for {string} to call {string}", async ({ page }, event: string, action: string) => {
+  await chooseOption(page, `reaction-${event}-kind`, "call action");
+  await chooseOption(page, `reaction-${event}-call`, action, "prefix");
+});
 
 /** One declared parameter of the action an event's reaction calls (text, number or JSON). */
 When(
@@ -965,9 +909,12 @@ When("I click the action parameter {string} for {string}", async ({ page }, para
 });
 
 /** "unset", "yes" or "no". */
-Then("the action parameter {string} for {string} is {string}", async ({ page }, param: string, event: string, state: string) => {
-  await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toHaveAttribute("data-state", state);
-});
+Then(
+  "the action parameter {string} for {string} is {string}",
+  async ({ page }, param: string, event: string, state: string) => {
+    await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toHaveAttribute("data-state", state);
+  },
+);
 
 Then("the action parameters for {string} include {string}", async ({ page }, event: string, params: string) => {
   for (const param of params.split(", ")) {
@@ -979,20 +926,20 @@ Then("the reaction for {string} asks for no action parameters", async ({ page },
   await expect(page.getByTestId(`reaction-${event}-params`)).toHaveCount(0);
 });
 
-Then("the action parameter {string} for {string} holds {string}", async ({ page }, param: string, event: string, value: string) => {
-  await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toHaveValue(value);
-});
+Then(
+  "the action parameter {string} for {string} holds {string}",
+  async ({ page }, param: string, event: string, value: string) => {
+    await expect(page.getByTestId(`reaction-${event}-param-${param}`)).toHaveValue(value);
+  },
+);
 
 When("I click the button {string}", async ({ page }, label: string) => {
   await live(page).getByTestId("antd-button").filter({ hasText: label }).click();
 });
 
-Then(
-  "the reaction for {string} takes {string} from the payload",
-  async ({ page }, event: string, from: string) => {
-    await expect(page.getByTestId(`reaction-${event}-from`)).toHaveText(from);
-  },
-);
+Then("the reaction for {string} takes {string} from the payload", async ({ page }, event: string, from: string) => {
+  await expect(page.getByTestId(`reaction-${event}-from`)).toHaveText(from);
+});
 
 Then("the counter shows {string}", async ({ page }, text: string) => {
   await expect(live(page).getByTestId("antd-counter")).toContainText(text);
@@ -1065,7 +1012,9 @@ Then("the cell {string} has no edit chrome", async ({ page }, cell: string) => {
 
 Then("the widget editor keeps inputs and reactions read-only", async ({ page }) => {
   await expect(page.getByTestId("bindings-locked")).toBeVisible();
-  await expect(page.locator('[data-testid^="reaction-"][data-testid$="-kind"]').first()).toHaveClass(/ant-select-disabled/);
+  await expect(page.locator('[data-testid^="reaction-"][data-testid$="-kind"]').first()).toHaveClass(
+    /ant-select-disabled/,
+  );
 });
 
 Then("the reaction for {string} keeps {int} more reaction(s)", async ({ page }, event: string, count: number) => {

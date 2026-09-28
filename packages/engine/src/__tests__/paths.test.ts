@@ -107,7 +107,10 @@ describe("generated paths", () => {
               inputs: { schedule: "builder.refresher.schedule" },
               on: {
                 changed: [{ set: "builder.refresher.schedule" }],
-                refresh: [{ call: "table-view/load", with: { into: "jobs" } }, { set: "builder.refreshed", value: true }],
+                refresh: [
+                  { call: "table-view/load", with: { into: "jobs" } },
+                  { set: "builder.refreshed", value: true },
+                ],
               },
               label: "not a path",
             },

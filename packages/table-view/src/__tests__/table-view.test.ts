@@ -108,7 +108,9 @@ describe("filtersOf", () => {
 
   it("offers nothing the server says cannot be filtered", () => {
     const base = { id: "a", filterValues: ["x"] };
-    expect(filtersOf(tableMetadataSchema.parse({ columnDefinitions: [{ ...base, isFilterable: false }] }), {})).toEqual([]);
+    expect(filtersOf(tableMetadataSchema.parse({ columnDefinitions: [{ ...base, isFilterable: false }] }), {})).toEqual(
+      [],
+    );
     expect(filtersOf(tableMetadataSchema.parse({ columnDefinitions: [base], enableFilter: false }), {})).toEqual([]);
   });
 });
@@ -175,7 +177,12 @@ describe("the loader", () => {
     const { requests, transport } = exampleServer();
     const load = createTableViewLoader(transport);
     const store = createStore({});
-    await load(store, { url: "/api/v1/view/jobs", into: "jobs", pageSize: 10, columns: { output_path: { hidden: true } } });
+    await load(store, {
+      url: "/api/v1/view/jobs",
+      into: "jobs",
+      pageSize: 10,
+      columns: { output_path: { hidden: true } },
+    });
     store.set("jobs.page", 2);
     store.set("jobs.filterIn", { host_name: ["local"] });
     await load(store, { into: "jobs" });
@@ -236,7 +243,11 @@ describe("the loader", () => {
       load(createStore({}), { url: "/x", into: "jobs", columns: { a: { cell: { kind: "badge" } } } }),
     ).rejects.toThrow(/columns\.a\.cell/);
     await expect(
-      load(createStore({}), { url: "/x", into: "jobs", columns: { a: { cell: { kind: "link", to: "//evil.example" } } } }),
+      load(createStore({}), {
+        url: "/x",
+        into: "jobs",
+        columns: { a: { cell: { kind: "link", to: "//evil.example" } } },
+      }),
     ).rejects.toThrow(/columns\.a\.cell\.to/);
   });
 

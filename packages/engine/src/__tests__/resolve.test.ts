@@ -7,7 +7,9 @@ import { createActions, resolvePage, type ResolveInput } from "../index";
 import { pickTemplate } from "../resolve";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
-const templates = { counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] } } } };
+const templates = {
+  counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] } } },
+};
 
 const input = (overrides: Partial<ResolveInput> = {}): ResolveInput => ({
   viewModels: page([cell()], templates),
@@ -62,9 +64,15 @@ describe("resolvePage", () => {
       return resolved.problem === undefined ? resolved.cells.map((c) => c.problem?.kind) : [resolved.problem];
     };
     expect(kinds({ viewModels: page([cell({ widget: "ghost" })], templates) })).toEqual(["unknown-widget"]);
-    expect(kinds({ viewModels: page([cell({ model: "widgets.nowhere" })], templates) })).toEqual(["dangling-model-path"]);
-    expect(kinds({ viewModels: page([cell({ template: "loud" })], { counter: { other: {} } }) })).toEqual(["missing-template"]);
-    expect(kinds({ viewModels: page([cell()], { counter: { default: { inputs: { value: 42 } } } }) })).toEqual(["invalid-view-model"]);
+    expect(kinds({ viewModels: page([cell({ model: "widgets.nowhere" })], templates) })).toEqual([
+      "dangling-model-path",
+    ]);
+    expect(kinds({ viewModels: page([cell({ template: "loud" })], { counter: { other: {} } }) })).toEqual([
+      "missing-template",
+    ]);
+    expect(kinds({ viewModels: page([cell()], { counter: { default: { inputs: { value: 42 } } } }) })).toEqual([
+      "invalid-view-model",
+    ]);
     // The schema accepts this template; the CONTRACT does not, because a
     // required event with no reaction leaves widget state nowhere to go.
     expect(kinds({ viewModels: page([cell()], { counter: { default: { inputs: { value: "demo.n" } } } }) })).toEqual([
@@ -87,7 +95,9 @@ describe("resolvePage", () => {
 
   it("regression: a structurally broken overlay is ignored, not applied", () => {
     const resolved = plan({
-      userViewModels: { pages: { demo: { view: "mine", templates: { mine: { engine: "list", cells: [] } }, cells: [] } } } as never,
+      userViewModels: {
+        pages: { demo: { view: "mine", templates: { mine: { engine: "list", cells: [] } }, cells: [] } },
+      } as never,
     });
     if (resolved.problem !== undefined) throw new Error("expected a plan");
     expect(resolved.view).toBe("default");
@@ -124,8 +134,12 @@ describe("resolvePage", () => {
 
   it("applies a valid overlay: selected view and per-cell settings", () => {
     const resolved = plan({
-      viewModels: page([cell()], { counter: { ...templates.counter, loud: { ...templates.counter.default, label: "LOUD" } } }),
-      userViewModels: { pages: { demo: { cells: { c1: { view: "loud", settings: { loud: { label: "OVERRIDE" } } } } } } },
+      viewModels: page([cell()], {
+        counter: { ...templates.counter, loud: { ...templates.counter.default, label: "LOUD" } },
+      }),
+      userViewModels: {
+        pages: { demo: { cells: { c1: { view: "loud", settings: { loud: { label: "OVERRIDE" } } } } } },
+      },
     });
     if (resolved.problem !== undefined) throw new Error("expected a plan");
     expect(resolved.cells[0]?.template).toBe("loud");
@@ -134,7 +148,9 @@ describe("resolvePage", () => {
 
   it("reports a reaction calling an unregistered action", () => {
     const resolved = plan({
-      viewModels: page([cell()], { counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ call: "nope" }] } } } }),
+      viewModels: page([cell()], {
+        counter: { default: { inputs: { value: "demo.n" }, on: { changed: [{ call: "nope" }] } } },
+      }),
       actions: createActions(),
     });
     if (resolved.problem !== undefined) throw new Error("expected a plan");

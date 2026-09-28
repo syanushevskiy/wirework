@@ -10,7 +10,12 @@ const withTabs = (ids: string[], selected: number): FlexLayoutModelJson => ({
   layout: {
     type: "row",
     children: [
-      { type: "tabset", id: "main", selected, children: ids.map((id) => ({ type: "tab", id, name: id, component: "cell" })) },
+      {
+        type: "tabset",
+        id: "main",
+        selected,
+        children: ids.map((id) => ({ type: "tab", id, name: id, component: "cell" })),
+      },
     ],
   },
 });

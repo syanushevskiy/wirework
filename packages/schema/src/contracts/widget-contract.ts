@@ -19,11 +19,7 @@ import type { WidgetIO } from "./io";
 import { widgetBindingsSchema } from "./reactions";
 import type { WidgetPreviewSpec, WidgetProps } from "./widget";
 
-export interface WidgetContractInput<
-  IO extends WidgetIO,
-  E extends WidgetEvents,
-  S extends z.ZodRawShape,
-> {
+export interface WidgetContractInput<IO extends WidgetIO, E extends WidgetEvents, S extends z.ZodRawShape> {
   /** Kebab-case kind name ("label", "button", "input", ...). */
   kind: string;
   /** What implementations must do — shown by builders as the group label. */
@@ -40,11 +36,9 @@ export interface WidgetContractInput<
  * A contract: the input plus the DERIVED view-model schema
  * (inputs + on + settings), so contract and schema can never drift.
  */
-export function defineContract<
-  IO extends WidgetIO,
-  E extends WidgetEvents,
-  S extends z.ZodRawShape,
->(input: WidgetContractInput<IO, E, S>) {
+export function defineContract<IO extends WidgetIO, E extends WidgetEvents, S extends z.ZodRawShape>(
+  input: WidgetContractInput<IO, E, S>,
+) {
   return {
     // `.extend()` on a strict object stays strict: an unknown setting key is
     // a config error, never silently stripped.

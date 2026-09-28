@@ -50,17 +50,89 @@ export const demoViewModels: ViewModels = {
       default: {
         engine: "react-grid-layout",
         cells: [
-          { id: "label-main", widget: "antd-label", model: "widgets.overview.title", template: "default", x: 0, y: 0, w: 12, h: 1 },
-          { id: "counter-main", widget: "antd-counter", model: "widgets.overview.counter", template: "default", x: 0, y: 1, w: 6, h: 2 },
-          { id: "echo-counter", widget: "antd-echo", model: "widgets.overview.echo", template: "default", x: 6, y: 1, w: 3, h: 2 },
-          { id: "echo-demo", widget: "antd-echo", model: "widgets.overview.echoAll", template: "default", x: 9, y: 1, w: 3, h: 2 },
+          {
+            id: "label-main",
+            widget: "antd-label",
+            model: "widgets.overview.title",
+            template: "default",
+            x: 0,
+            y: 0,
+            w: 12,
+            h: 1,
+          },
+          {
+            id: "counter-main",
+            widget: "antd-counter",
+            model: "widgets.overview.counter",
+            template: "default",
+            x: 0,
+            y: 1,
+            w: 6,
+            h: 2,
+          },
+          {
+            id: "echo-counter",
+            widget: "antd-echo",
+            model: "widgets.overview.echo",
+            template: "default",
+            x: 6,
+            y: 1,
+            w: 3,
+            h: 2,
+          },
+          {
+            id: "echo-demo",
+            widget: "antd-echo",
+            model: "widgets.overview.echoAll",
+            template: "default",
+            x: 9,
+            y: 1,
+            w: 3,
+            h: 2,
+          },
           // A click is an INTENT: the reaction calls a host action by name.
-          { id: "button-reset", widget: "antd-button", model: "widgets.overview.resetButton", template: "default", x: 0, y: 3, w: 3, h: 2 },
+          {
+            id: "button-reset",
+            widget: "antd-button",
+            model: "widgets.overview.resetButton",
+            template: "default",
+            x: 0,
+            y: 3,
+            w: 3,
+            h: 2,
+          },
           // GLOBAL state: the name typed on the Settings page, the user the
           // application signed in (a mock call when the application starts).
-          { id: "label-welcome", widget: "antd-label", model: "widgets.overview.welcome", template: "default", x: 3, y: 3, w: 6, h: 1 },
-          { id: "tag-role", widget: "antd-tag", model: "widgets.overview.role", template: "default", x: 9, y: 3, w: 3, h: 1 },
-          { id: "label-user", widget: "antd-label", model: "widgets.overview.user", template: "default", x: 3, y: 4, w: 6, h: 1 },
+          {
+            id: "label-welcome",
+            widget: "antd-label",
+            model: "widgets.overview.welcome",
+            template: "default",
+            x: 3,
+            y: 3,
+            w: 6,
+            h: 1,
+          },
+          {
+            id: "tag-role",
+            widget: "antd-tag",
+            model: "widgets.overview.role",
+            template: "default",
+            x: 9,
+            y: 3,
+            w: 3,
+            h: 1,
+          },
+          {
+            id: "label-user",
+            widget: "antd-label",
+            model: "widgets.overview.user",
+            template: "default",
+            x: 3,
+            y: 4,
+            w: 6,
+            h: 1,
+          },
         ],
       },
     },
@@ -71,28 +143,109 @@ export const demoViewModels: ViewModels = {
         cells: [
           // Refresh by hand or on a timer: `refresh` CALLS the same host
           // action the pagination uses.
-          { id: "refresher-runs", widget: "antd-refresher", model: "widgets.runs.refresher", template: "default", x: 0, y: 0, w: 9, h: 1 },
+          {
+            id: "refresher-runs",
+            widget: "antd-refresher",
+            model: "widgets.runs.refresher",
+            template: "default",
+            x: 0,
+            y: 0,
+            w: 9,
+            h: 1,
+          },
           // The filters the SERVER offers for its table (and what this page
           // changed about them): nobody wrote them into this page.
-          { id: "filters-runs", widget: "antd-filter-bar", model: "widgets.runs.filterBar", template: "default", x: 0, y: 1, w: 9, h: 2 },
+          {
+            id: "filters-runs",
+            widget: "antd-filter-bar",
+            model: "widgets.runs.filterBar",
+            template: "default",
+            x: 0,
+            y: 1,
+            w: 9,
+            h: 2,
+          },
           // A table the server DESCRIBES: no columns here, they come with
           // the first answer (@wirework/table-view).
-          { id: "table-main", widget: "antd-table", model: "widgets.runs.table", template: "default", x: 0, y: 3, w: 9, h: 5 },
+          {
+            id: "table-main",
+            widget: "antd-table",
+            model: "widgets.runs.table",
+            template: "default",
+            x: 0,
+            y: 3,
+            w: 9,
+            h: 5,
+          },
           // Server-side paging: a page change re-requests the table view.
-          { id: "pagination-runs", widget: "antd-pagination", model: "widgets.runs.pagination", template: "default", x: 0, y: 8, w: 9, h: 1 },
+          {
+            id: "pagination-runs",
+            widget: "antd-pagination",
+            model: "widgets.runs.pagination",
+            template: "default",
+            x: 0,
+            y: 8,
+            w: 9,
+            h: 1,
+          },
           // Empty until a request fails; the last good rows stay.
-          { id: "label-runs-error", widget: "antd-label", model: "widgets.runs.error", template: "default", x: 0, y: 9, w: 9, h: 1 },
+          {
+            id: "label-runs-error",
+            widget: "antd-label",
+            model: "widgets.runs.error",
+            template: "default",
+            x: 0,
+            y: 9,
+            w: 9,
+            h: 1,
+          },
           // Dependent filters: the suites on offer follow the applications
           // chosen — a reaction CALLS the host action that computes them.
           // The applications on offer are a GLOBAL list (app.lists).
-          { id: "filter-applications", widget: "antd-multi-select", model: "widgets.runs.applicationsFilter", template: "default", x: 9, y: 0, w: 3, h: 2 },
-          { id: "filter-suites", widget: "antd-multi-select", model: "widgets.runs.suitesFilter", template: "default", x: 9, y: 2, w: 3, h: 2 },
+          {
+            id: "filter-applications",
+            widget: "antd-multi-select",
+            model: "widgets.runs.applicationsFilter",
+            template: "default",
+            x: 9,
+            y: 0,
+            w: 3,
+            h: 2,
+          },
+          {
+            id: "filter-suites",
+            widget: "antd-multi-select",
+            model: "widgets.runs.suitesFilter",
+            template: "default",
+            x: 9,
+            y: 2,
+            w: 3,
+            h: 2,
+          },
           // Displays the run the HOST wrote to "runs.selected" in reaction
           // to the table's `row-selected` event (doc/widget-events-design.md).
-          { id: "echo-selected-run", widget: "antd-echo", model: "widgets.runs.echoSelectedRun", template: "default", x: 9, y: 4, w: 3, h: 2 },
+          {
+            id: "echo-selected-run",
+            widget: "antd-echo",
+            model: "widgets.runs.echoSelectedRun",
+            template: "default",
+            x: 9,
+            y: 4,
+            w: 3,
+            h: 2,
+          },
           // Opens the selected run's page: the action reads runs.selected
           // and asks the host's router for /demo/runs/<id>.
-          { id: "button-open-run", widget: "antd-button", model: "widgets.runs.openRun", template: "default", x: 9, y: 6, w: 3, h: 2 },
+          {
+            id: "button-open-run",
+            widget: "antd-button",
+            model: "widgets.runs.openRun",
+            template: "default",
+            x: 9,
+            y: 6,
+            w: 3,
+            h: 2,
+          },
         ],
       },
     },
@@ -101,15 +254,78 @@ export const demoViewModels: ViewModels = {
       default: {
         engine: "react-grid-layout",
         cells: [
-          { id: "label-run-name", widget: "antd-label", model: "widgets.run.name", template: "default", x: 0, y: 0, w: 9, h: 1 },
-          { id: "button-back", widget: "antd-button", model: "widgets.run.back", template: "default", x: 9, y: 0, w: 3, h: 2 },
+          {
+            id: "label-run-name",
+            widget: "antd-label",
+            model: "widgets.run.name",
+            template: "default",
+            x: 0,
+            y: 0,
+            w: 9,
+            h: 1,
+          },
+          {
+            id: "button-back",
+            widget: "antd-button",
+            model: "widgets.run.back",
+            template: "default",
+            x: 9,
+            y: 0,
+            w: 3,
+            h: 2,
+          },
           // An application-defined widget (status-badge) next to standard ones.
-          { id: "status-run", widget: "status-badge", model: "widgets.run.status", template: "default", x: 0, y: 1, w: 3, h: 1 },
-          { id: "tag-run-reference", widget: "antd-tag", model: "widgets.run.reference", template: "default", x: 3, y: 1, w: 3, h: 1 },
-          { id: "label-run-message", widget: "antd-label", model: "widgets.run.message", template: "default", x: 6, y: 1, w: 3, h: 1 },
+          {
+            id: "status-run",
+            widget: "status-badge",
+            model: "widgets.run.status",
+            template: "default",
+            x: 0,
+            y: 1,
+            w: 3,
+            h: 1,
+          },
+          {
+            id: "tag-run-reference",
+            widget: "antd-tag",
+            model: "widgets.run.reference",
+            template: "default",
+            x: 3,
+            y: 1,
+            w: 3,
+            h: 1,
+          },
+          {
+            id: "label-run-message",
+            widget: "antd-label",
+            model: "widgets.run.message",
+            template: "default",
+            x: 6,
+            y: 1,
+            w: 3,
+            h: 1,
+          },
           // Empty until the server says there is no such run.
-          { id: "label-run-error", widget: "antd-label", model: "widgets.run.error", template: "default", x: 0, y: 2, w: 9, h: 1 },
-          { id: "echo-route", widget: "antd-echo", model: "widgets.run.route", template: "default", x: 0, y: 3, w: 9, h: 1 },
+          {
+            id: "label-run-error",
+            widget: "antd-label",
+            model: "widgets.run.error",
+            template: "default",
+            x: 0,
+            y: 2,
+            w: 9,
+            h: 1,
+          },
+          {
+            id: "echo-route",
+            widget: "antd-echo",
+            model: "widgets.run.route",
+            template: "default",
+            x: 0,
+            y: 3,
+            w: 9,
+            h: 1,
+          },
         ],
       },
     },
@@ -118,13 +334,67 @@ export const demoViewModels: ViewModels = {
       default: {
         engine: "react-grid-layout",
         cells: [
-          { id: "label-settings", widget: "antd-label", model: "widgets.settings.title", template: "default", x: 0, y: 0, w: 12, h: 1 },
+          {
+            id: "label-settings",
+            widget: "antd-label",
+            model: "widgets.settings.title",
+            template: "default",
+            x: 0,
+            y: 0,
+            w: 12,
+            h: 1,
+          },
           // A controlled input: the text lives at app.settings.displayName, written by the reaction.
-          { id: "input-name", widget: "antd-input", model: "widgets.settings.nameInput", template: "default", x: 0, y: 1, w: 6, h: 2 },
-          { id: "select-page-size", widget: "antd-select", model: "widgets.settings.pageSize", template: "default", x: 6, y: 1, w: 3, h: 2 },
-          { id: "checkbox-auto-refresh", widget: "antd-checkbox", model: "widgets.settings.autoRefresh", template: "default", x: 9, y: 1, w: 3, h: 2 },
-          { id: "echo-settings", widget: "antd-echo", model: "widgets.settings.echoSettings", template: "default", x: 0, y: 3, w: 6, h: 2 },
-          { id: "echo-permissions", widget: "antd-echo", model: "widgets.settings.echoPermissions", template: "default", x: 6, y: 3, w: 6, h: 2 },
+          {
+            id: "input-name",
+            widget: "antd-input",
+            model: "widgets.settings.nameInput",
+            template: "default",
+            x: 0,
+            y: 1,
+            w: 6,
+            h: 2,
+          },
+          {
+            id: "select-page-size",
+            widget: "antd-select",
+            model: "widgets.settings.pageSize",
+            template: "default",
+            x: 6,
+            y: 1,
+            w: 3,
+            h: 2,
+          },
+          {
+            id: "checkbox-auto-refresh",
+            widget: "antd-checkbox",
+            model: "widgets.settings.autoRefresh",
+            template: "default",
+            x: 9,
+            y: 1,
+            w: 3,
+            h: 2,
+          },
+          {
+            id: "echo-settings",
+            widget: "antd-echo",
+            model: "widgets.settings.echoSettings",
+            template: "default",
+            x: 0,
+            y: 3,
+            w: 6,
+            h: 2,
+          },
+          {
+            id: "echo-permissions",
+            widget: "antd-echo",
+            model: "widgets.settings.echoPermissions",
+            template: "default",
+            x: 6,
+            y: 3,
+            w: 6,
+            h: 2,
+          },
         ],
       },
     },
@@ -249,7 +519,10 @@ export const demoViewModels: ViewModels = {
                     name: { cell: { kind: "link", to: "/demo/runs/{id}" } },
                     reference: { cell: { kind: "custom", name: "copy" } },
                     state: {
-                      cell: { kind: "tag", tones: { Success: "success", Failed: "danger", Running: "info", Queued: "default" } },
+                      cell: {
+                        kind: "tag",
+                        tones: { Success: "success", Failed: "danger", Running: "info", Queued: "default" },
+                      },
                     },
                   },
                   filters: {
@@ -385,9 +658,21 @@ export const failurePathViewModels: ViewModels = {
             // 1. widget type nobody registered
             { id: "ghost", widget: "ghost-widget", model: "widgets.demo.label", template: "default", width: "m-4/12" },
             // 2. model path pointing nowhere
-            { id: "dangling", widget: "antd-label", model: "widgets.nowhere.label", template: "default", width: "m-4/12" },
+            {
+              id: "dangling",
+              widget: "antd-label",
+              model: "widgets.nowhere.label",
+              template: "default",
+              width: "m-4/12",
+            },
             // 3. template that fails the widget's validator
-            { id: "bad-template", widget: "antd-label", model: "widgets.demo.badLabel", template: "default", width: "m-4/12" },
+            {
+              id: "bad-template",
+              widget: "antd-label",
+              model: "widgets.demo.badLabel",
+              template: "default",
+              width: "m-4/12",
+            },
           ],
           [
             // 4. widget that throws during render — isolated by the boundary
@@ -397,17 +682,41 @@ export const failurePathViewModels: ViewModels = {
           ],
           [
             // 6. requested template missing -> REPORTED fallback to "default"
-            { id: "fallback-label", widget: "antd-label", model: "widgets.demo.label", template: "nope", width: "m-6/12" },
+            {
+              id: "fallback-label",
+              widget: "antd-label",
+              model: "widgets.demo.label",
+              template: "nope",
+              width: "m-6/12",
+            },
             // 7. requested template missing and NO "default" -> problem
             { id: "orphan", widget: "antd-label", model: "widgets.demo.orphan", template: "nope", width: "m-6/12" },
           ],
           [
             // 8. reaction to an event the widget never declares -> problem
-            { id: "bad-reaction", widget: "antd-counter", model: "widgets.demo.badReaction", template: "default", width: "m-6/12" },
+            {
+              id: "bad-reaction",
+              widget: "antd-counter",
+              model: "widgets.demo.badReaction",
+              template: "default",
+              width: "m-6/12",
+            },
             // 9. required event with no reaction bound -> problem
-            { id: "unreacted", widget: "antd-counter", model: "widgets.demo.unreacted", template: "default", width: "m-6/12" },
+            {
+              id: "unreacted",
+              widget: "antd-counter",
+              model: "widgets.demo.unreacted",
+              template: "default",
+              width: "m-6/12",
+            },
             // 10. reaction calling an action nobody registered -> problem
-            { id: "bad-action", widget: "antd-button", model: "widgets.demo.badAction", template: "default", width: "m-6/12" },
+            {
+              id: "bad-action",
+              widget: "antd-button",
+              model: "widgets.demo.badAction",
+              template: "default",
+              width: "m-6/12",
+            },
           ],
         ],
       },
@@ -454,7 +763,6 @@ export const failurePathViewModels: ViewModels = {
   },
 };
 
-
 /** The user's overlay of the demo application: proves per-CELL template selection + settings merge on top. */
 export const demoUserViewModels: UserViewModels = {
   pages: {
@@ -489,7 +797,6 @@ export interface Run {
   inbound: string;
   status: RunStatus;
 }
-
 
 /** What the user may do. Arrives with the session, like the user. */
 export interface Permissions {

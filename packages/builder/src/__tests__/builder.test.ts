@@ -88,7 +88,13 @@ describe("argumentsOf", () => {
   it("shows a yes/no parameter's three answers and a select's options", () => {
     const withSelect: SettingField[] = [{ name: "mode", kind: "select", required: false, options: ["a", "b"] }];
     const { params } = argumentsOf(withSelect, { mode: "b" });
-    expect(params[0]).toMatchObject({ choice: "b", choices: [{ value: "a", label: "a" }, { value: "b", label: "b" }] });
+    expect(params[0]).toMatchObject({
+      choice: "b",
+      choices: [
+        { value: "a", label: "a" },
+        { value: "b", label: "b" },
+      ],
+    });
     const { params: none } = argumentsOf(withSelect, {});
     expect(none[0]?.choice).toBeUndefined();
     const { params: flag } = argumentsOf(fields, { flag: true });
@@ -121,17 +127,27 @@ describe("editedReaction — what a save keeps of a reaction the form does not s
   });
 
   it("saves exactly the form's arguments when the action declares parameters", () => {
-    const params = [{ name: "into", kind: "text", required: true, value: "runs", unset: false, state: "no", stateLabel: "" }] as ParamDraft[];
-    expect(editedReaction(event({ kind: "call", call: "table-view/load", params, arguments: { into: "runs" } }), { call: "table-view/load", with: { into: "old" } }))
-      .toEqual({ call: "table-view/load", with: { into: "runs" } });
-    expect(editedReaction(event({ kind: "call", call: "table-view/load", params, arguments: {} }), undefined))
-      .toEqual({ call: "table-view/load" });
+    const params = [
+      { name: "into", kind: "text", required: true, value: "runs", unset: false, state: "no", stateLabel: "" },
+    ] as ParamDraft[];
+    expect(
+      editedReaction(event({ kind: "call", call: "table-view/load", params, arguments: { into: "runs" } }), {
+        call: "table-view/load",
+        with: { into: "old" },
+      }),
+    ).toEqual({ call: "table-view/load", with: { into: "runs" } });
+    expect(editedReaction(event({ kind: "call", call: "table-view/load", params, arguments: {} }), undefined)).toEqual({
+      call: "table-view/load",
+    });
   });
 
   it("keeps a set's `value` while its target is unchanged, and clears the reaction when the path is blank", () => {
     const original = { set: "demo.count", value: 0 };
     expect(editedReaction(event({ kind: "set", set: "demo.count", from: "" }), original)).toBe(original);
-    expect(editedReaction(event({ kind: "set", set: "demo.other", from: "value" }), original)).toEqual({ set: "demo.other", from: "value" });
+    expect(editedReaction(event({ kind: "set", set: "demo.other", from: "value" }), original)).toEqual({
+      set: "demo.other",
+      from: "value",
+    });
     expect(editedReaction(event({ kind: "set", set: "   " }), original)).toBeUndefined();
     expect(editedReaction(event({ kind: "call", call: "" }), original)).toBeUndefined();
   });
@@ -167,12 +183,22 @@ describe("commitTrees — the one write path", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = createStore({ viewModels: { pages: {}, widgets: {} } });
     expect(() => commitTrees(store, () => Promise.reject(new Error("503")), { viewModels })).not.toThrow();
-    expect(() => commitTrees(store, () => { throw new Error("sync"); }, { viewModels })).not.toThrow();
+    expect(() =>
+      commitTrees(
+        store,
+        () => {
+          throw new Error("sync");
+        },
+        { viewModels },
+      ),
+    ).not.toThrow();
     await tick();
     expect(store.get("viewModels")).toBe(viewModels);
     expect(error).toHaveBeenCalledTimes(2);
     // Both are reported; in which order the microtasks settle is not promised.
-    expect(error.mock.calls.map((call) => call[1])).toEqual(expect.arrayContaining([new Error("503"), new Error("sync")]));
+    expect(error.mock.calls.map((call) => call[1])).toEqual(
+      expect.arrayContaining([new Error("503"), new Error("sync")]),
+    );
   });
 
   it("saves in commit order, one at a time, however slow the host is", async () => {
@@ -200,7 +226,12 @@ describe("commitTrees — the one write path", () => {
   it("lets the host handle a failed save its own way", async () => {
     const store = createStore({ viewModels: { pages: {}, widgets: {} } });
     const failures: unknown[] = [];
-    commitTrees(store, () => Promise.reject(new Error("503")), { viewModels }, (error) => void failures.push(error));
+    commitTrees(
+      store,
+      () => Promise.reject(new Error("503")),
+      { viewModels },
+      (error) => void failures.push(error),
+    );
     await tick();
     expect(failures).toEqual([new Error("503")]);
   });
@@ -210,7 +241,9 @@ describe("commitTrees — the one write path", () => {
     const seen: EditableTrees[] = [];
     commitTrees(store, (trees) => void seen.push(trees), { viewModels });
     await tick();
-    expect(z.object({ pages: z.record(z.unknown()), widgets: z.record(z.unknown()) }).safeParse(seen[0]?.viewModels).success).toBe(true);
+    expect(
+      z.object({ pages: z.record(z.unknown()), widgets: z.record(z.unknown()) }).safeParse(seen[0]?.viewModels).success,
+    ).toBe(true);
     expect(seen[0]?.userViewModels).toEqual({});
   });
 });

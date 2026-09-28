@@ -14,10 +14,11 @@ import type {
   WidgetProps,
 } from "@wirework/schema";
 
-export type ReactWidgetDefinition<
-  VM = unknown,
-  E extends WidgetEvents = WidgetEvents,
-> = WidgetDefinition<VM, ComponentType<WidgetProps<VM, E>>, E>;
+export type ReactWidgetDefinition<VM = unknown, E extends WidgetEvents = WidgetEvents> = WidgetDefinition<
+  VM,
+  ComponentType<WidgetProps<VM, E>>,
+  E
+>;
 
 /**
  * Identity helper for authoring React widgets with full type inference:

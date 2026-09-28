@@ -34,8 +34,7 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
 }
 
 /** The segments of a path, unchecked. */
-export const pathSegments = (path: PathInput): string[] =>
-  typeof path === "string" ? path.split(".") : [...path];
+export const pathSegments = (path: PathInput): string[] => (typeof path === "string" ? path.split(".") : [...path]);
 
 /**
  * The segments of a path a write may use; throws naming the bad segment.
@@ -81,7 +80,9 @@ export function setPath<T>(root: T, path: PathInput, value: unknown): T {
     if (existing !== null && typeof existing === "object") return existing;
     if (existing !== undefined && existing !== null) {
       const at = segments.slice(0, index + 1).join(".");
-      throw new Error(`Cannot write "${shown}": "${at}" holds a ${typeof existing}, which writing through it would replace`);
+      throw new Error(
+        `Cannot write "${shown}": "${at}" holds a ${typeof existing}, which writing through it would replace`,
+      );
     }
     return segments[index + 1] === "0" ? [] : {};
   };
@@ -89,8 +90,7 @@ export function setPath<T>(root: T, path: PathInput, value: unknown): T {
   const assign = (container: unknown, index: number): unknown => {
     const key = segments[index] ?? "";
     const last = index === segments.length - 1;
-    const child = (existing: unknown): unknown =>
-      last ? value : assign(containerFor(existing, index), index + 1);
+    const child = (existing: unknown): unknown => (last ? value : assign(containerFor(existing, index), index + 1));
     if (Array.isArray(container)) {
       if (!isIndexSegment(key)) {
         throw new Error(`Cannot write "${shown}": segment "${key}" through an array needs a numeric index`);

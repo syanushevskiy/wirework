@@ -45,13 +45,8 @@ export function collectPaths(root: unknown, maxDepth = 8): string[] {
  * them would only produce templates the widget then rejects. A live value
  * may still change shape later; this is a tooling aid, not a guarantee.
  */
-export function compatibleStorePaths(
-  store: ReadableStore,
-  validator: Validator<unknown>,
-): string[] {
-  const data = Object.fromEntries(
-    Object.entries(store.snapshot()).filter(([root]) => !CONFIG_ROOTS.includes(root)),
-  );
+export function compatibleStorePaths(store: ReadableStore, validator: Validator<unknown>): string[] {
+  const data = Object.fromEntries(Object.entries(store.snapshot()).filter(([root]) => !CONFIG_ROOTS.includes(root)));
   return collectPaths(data).filter((path) => {
     try {
       validator.parse(store.get(path));

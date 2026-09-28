@@ -30,7 +30,10 @@ export const cellBaseSchema = z.object({
    * names are joined into dot paths by editors, so a "v1.0" would write to
    * a nested branch and lose the edit.
    */
-  template: z.string().min(1).regex(/^[^.]+$/, "template names must not contain a dot"),
+  template: z
+    .string()
+    .min(1)
+    .regex(/^[^.]+$/, "template names must not contain a dot"),
 });
 export type CellBase = z.infer<typeof cellBaseSchema>;
 

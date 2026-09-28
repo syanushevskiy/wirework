@@ -13,8 +13,5 @@ export function useCellEmitter(
   page: string,
   cell: string,
 ): Emit<WidgetEvents> {
-  return useMemo(
-    () => createEmitter(bus, definition, { page, cell }),
-    [bus, definition, page, cell],
-  );
+  return useMemo(() => createEmitter(bus, definition, { page, cell }), [bus, definition, page, cell]);
 }

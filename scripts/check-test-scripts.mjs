@@ -16,6 +16,8 @@ const missing = readdirSync(root, { withFileTypes: true })
   .map((pkg) => pkg.name);
 
 if (missing.length > 0) {
-  console.error(`These packages have no "test" script, so pnpm test:unit would skip them silently:\n  ${missing.join("\n  ")}`);
+  console.error(
+    `These packages have no "test" script, so pnpm test:unit would skip them silently:\n  ${missing.join("\n  ")}`,
+  );
   process.exit(1);
 }

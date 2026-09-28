@@ -15,11 +15,7 @@
 import type { CellBase, PageViewModel } from "../models/view-models";
 import type { Validator } from "./widget";
 
-export interface LayoutEngine<
-  T extends PageViewModel = PageViewModel,
-  C = unknown,
-  TRenderer = unknown,
-> {
+export interface LayoutEngine<T extends PageViewModel = PageViewModel, C = unknown, TRenderer = unknown> {
   /** Kebab-case name referenced by page templates as `engine`. */
   name: string;
   /** Validator for the whole page template (engine-owned shape). */

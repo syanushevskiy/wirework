@@ -112,9 +112,7 @@ export function PageView({
 
   // Resolution already checked the engine exists; the cast narrows the
   // opaque renderer slot to this adapter's React shape.
-  const Renderer = layoutEngines.get(plan.engine)?.renderer as
-    | ComponentType<LayoutRendererProps>
-    | undefined;
+  const Renderer = layoutEngines.get(plan.engine)?.renderer as ComponentType<LayoutRendererProps> | undefined;
   if (!Renderer) {
     return (
       <div role="alert" className="ww-page-problem" data-testid="page-problem">

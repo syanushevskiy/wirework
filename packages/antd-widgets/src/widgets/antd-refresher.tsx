@@ -33,7 +33,11 @@ function AntdRefresher({ viewModel, store, emit }: ContractProps<typeof refreshe
       data-interval={interval}
       data-busy={busy}
     >
-      <Checkbox data-testid="antd-refresher-toggle" checked={enabled} onChange={(event) => toggle(event.target.checked)}>
+      <Checkbox
+        data-testid="antd-refresher-toggle"
+        checked={enabled}
+        onChange={(event) => toggle(event.target.checked)}
+      >
         {viewModel.label}
       </Checkbox>
       <InputNumber

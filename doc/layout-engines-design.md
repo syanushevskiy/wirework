@@ -13,15 +13,15 @@ different template.
 
 ```ts
 interface LayoutEngine<T extends PageViewModel, C, TRenderer> {
-  name: string;                            // page templates: { engine: "<name>", ... }
-  template: Validator<T>;                  // the engine OWNS the template shape
-  cells(template: T): CellBase[];          // identity + widget binding, stable order
+  name: string; // page templates: { engine: "<name>", ... }
+  template: Validator<T>; // the engine OWNS the template shape
+  cells(template: T): CellBase[]; // identity + widget binding, stable order
   appendCell(template: T, cell: CellBase): T;
   removeCell(template: T, cellId: string): T;
-  applyChange(template: T, change: C): T;  // renderer-reported change, PURE
-  empty(): T;                              // what a builder starts from
-  validate?(template: T): string[];        // e.g. "cell exceeds the grid"
-  renderer: TRenderer;                     // opaque to the core
+  applyChange(template: T, change: C): T; // renderer-reported change, PURE
+  empty(): T; // what a builder starts from
+  validate?(template: T): string[]; // e.g. "cell exceeds the grid"
+  renderer: TRenderer; // opaque to the core
 }
 ```
 
@@ -59,14 +59,14 @@ operation mutates its input. Every engine package's unit tests run it.
 ## Engines shipped
 
 - `@wirework/engine-react-grid-layout` — `{ engine, cols?, rowHeight?,
-  cells: [{ id, widget, model, template, x, y, w, h }] }`; change payload =
+cells: [{ id, widget, model, template, x, y, w, h }] }`; change payload =
   placements by id; validates that cells fit the column count. Edit-mode
   chrome sits in the drag-handle bar; the buttons are excluded from the
   drag via the library's `cancel` selector.
 - `@wirework/engine-flex-rows` — `{ engine, rows: [[{ ..., width?, height?
-  }]] }`; no interactive change; chrome sits above each cell.
+}]] }`; no interactive change; chrome sits above each cell.
 - `@wirework/engine-gridstack` — `{ engine, cols?, cellHeight?, cells: [{
-  ..., x, y, w, h }] }`; the library OWNS the item DOM, so each cell's
+..., x, y, w, h }] }`; the library OWNS the item DOM, so each cell's
   content (chrome + widget) is portalled into the content element gridstack
   creates (static `renderCB`), `load()` syncs items by id, and the `change`
   event's nodes are the change payload. Written against the contract with

@@ -50,10 +50,7 @@ export interface WidgetIO {
 export const storePathSchema = z
   .string()
   .regex(STORE_PATH, "must be a dot-separated store path")
-  .refine(
-    (path) => !hasForbiddenSegment(path),
-    "must not contain __proto__, prototype or constructor segments",
-  )
+  .refine((path) => !hasForbiddenSegment(path), "must not contain __proto__, prototype or constructor segments")
   .refine(
     (path) => !isConfigPath(path),
     "must not address a configuration tree (viewModels, userViewModels) — only editors write those",

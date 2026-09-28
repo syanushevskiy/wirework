@@ -23,11 +23,7 @@ const samePlacements = (layout: Layout, placements: GridPlacements): boolean =>
     return p !== undefined && p.x === x && p.y === y && p.w === w && p.h === h;
   });
 
-export function useGridView(
-  template: GridPage,
-  editable: boolean,
-  onChange?: (placements: GridPlacements) => void,
-) {
+export function useGridView(template: GridPage, editable: boolean, onChange?: (placements: GridPlacements) => void) {
   const layout = useMemo<Layout>(
     () => template.cells.map(({ id, x, y, w, h }) => ({ i: id, x, y, w, h })),
     [template.cells],

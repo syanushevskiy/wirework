@@ -13,12 +13,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { GridStack, type GridStackNode } from "gridstack";
-import {
-  DEFAULT_GRIDSTACK_MARGIN_PX,
-  gridstackSettings,
-  type GridstackPage,
-  type GridstackPlacements,
-} from "./schema";
+import { DEFAULT_GRIDSTACK_MARGIN_PX, gridstackSettings, type GridstackPage, type GridstackPlacements } from "./schema";
 
 export const GRIDSTACK_HANDLE_SELECTOR = ".ww-grid-handle";
 export const GRIDSTACK_CANCEL_SELECTOR = ".ww-cell-action";

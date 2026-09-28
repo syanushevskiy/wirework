@@ -18,9 +18,7 @@ export function EventLog({ bus }: { bus: EventBus }) {
       id="events"
       title="Events"
       summary={
-        <span data-testid="event-log-count">
-          {events.length === 0 ? "none yet" : `${events.length} logged`}
-        </span>
+        <span data-testid="event-log-count">{events.length === 0 ? "none yet" : `${events.length} logged`}</span>
       }
     >
       <Flex vertical gap="small" align="start">

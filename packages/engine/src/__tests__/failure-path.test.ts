@@ -26,7 +26,10 @@ const counter: AnyWidgetDefinition = {
   viewModel: z
     .object({
       inputs: z.object({ value: z.string() }).strict(),
-      on: z.object({ incremented: z.array(z.unknown()).optional() }).strict().default({}),
+      on: z
+        .object({ incremented: z.array(z.unknown()).optional() })
+        .strict()
+        .default({}),
       step: z.number().default(1),
       label: z.string().default("Increment"),
     })
@@ -37,7 +40,9 @@ const crash: AnyWidgetDefinition = {
   type: "antd-crash",
   io: { inputs: {} },
   events: {},
-  viewModel: z.object({ inputs: z.object({}).strict().default({}), on: z.object({}).strict().default({}), message: z.string() }).strict(),
+  viewModel: z
+    .object({ inputs: z.object({}).strict().default({}), on: z.object({}).strict().default({}), message: z.string() })
+    .strict(),
   component,
 };
 
@@ -100,7 +105,9 @@ describe("failurePathViewModels", () => {
     const report = validateViewModels(input());
     expect(report.ok).toBe(false);
     const cells = (severity: "error" | "warning") =>
-      report.problems.filter((problem) => problem.severity === severity).map((problem) => /#([\w-]+)/.exec(problem.location)?.[1]);
+      report.problems
+        .filter((problem) => problem.severity === severity)
+        .map((problem) => /#([\w-]+)/.exec(problem.location)?.[1]);
     expect(new Set(cells("error"))).toEqual(
       new Set(["ghost", "dangling", "bad-template", "orphan", "bad-reaction", "unreacted", "bad-action"]),
     );

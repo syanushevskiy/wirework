@@ -53,11 +53,7 @@ export interface WidgetPreviewSpec {
 }
 
 /** The registration envelope for a widget. */
-export interface WidgetDefinition<
-  VM = unknown,
-  TComponent = unknown,
-  E extends WidgetEvents = WidgetEvents,
-> {
+export interface WidgetDefinition<VM = unknown, TComponent = unknown, E extends WidgetEvents = WidgetEvents> {
   /**
    * Unique registry name. Layout cells reference it via `widget: "<type>"`.
    * Must be a non-empty kebab-case string.

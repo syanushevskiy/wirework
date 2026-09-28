@@ -19,7 +19,14 @@ export interface WidgetPreviewProps extends WidgetPreviewSpec {
   scale?: number;
 }
 
-export function WidgetPreview({ definition, seed, viewModel, width = 240, height = 110, scale = 0.7 }: WidgetPreviewProps) {
+export function WidgetPreview({
+  definition,
+  seed,
+  viewModel,
+  width = 240,
+  height = 110,
+  scale = 0.7,
+}: WidgetPreviewProps) {
   const { parsed, emit, readable } = useWidgetPreview(definition, { seed, viewModel });
   const Widget = definition.component as ComponentType<WidgetProps>;
   return (

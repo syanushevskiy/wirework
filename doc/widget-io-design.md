@@ -136,10 +136,10 @@ implementation.
 
 ## Examples
 
-| widget            | inputs                       | events (reaction required?)     |
-| ----------------- | ---------------------------- | ------------------------------- |
-| antd-counter     | `value: number`              | `incremented { value }` — YES   |
-| antd-table       | `rows: object[]`, `loading?: boolean` | `row-selected { key, row }` — no |
-| antd-echo        | `value: unknown`             | —                               |
-| antd-label       | `text?: string` (optional)   | —                               |
-| antd-crash       | —                            | —                               |
+| widget       | inputs                                | events (reaction required?)      |
+| ------------ | ------------------------------------- | -------------------------------- |
+| antd-counter | `value: number`                       | `incremented { value }` — YES    |
+| antd-table   | `rows: object[]`, `loading?: boolean` | `row-selected { key, row }` — no |
+| antd-echo    | `value: unknown`                      | —                                |
+| antd-label   | `text?: string` (optional)            | —                                |
+| antd-crash   | —                                     | —                                |

@@ -6,7 +6,14 @@ import { playground } from "./playground";
 
 const filters = [
   { id: "state", label: "Status", options: [{ value: "Running" }, { value: "Failed" }, { value: "Success" }] },
-  { id: "host", label: "Host", options: [{ value: "qa-1", label: "QA 1" }, { value: "qa-2", label: "QA 2" }] },
+  {
+    id: "host",
+    label: "Host",
+    options: [
+      { value: "qa-1", label: "QA 1" },
+      { value: "qa-2", label: "QA 2" },
+    ],
+  },
 ];
 
 const meta = {

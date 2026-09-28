@@ -22,13 +22,7 @@
  * "app.user.name" exactly like "runs.data". The builder is a single page
  * with a plain store of its own and no global state.
  */
-import {
-  createActions,
-  createContracts,
-  createLayoutEngines,
-  createRegistry,
-  errorText,
-} from "@wirework/engine";
+import { createActions, createContracts, createLayoutEngines, createRegistry, errorText } from "@wirework/engine";
 import { flexRowsEngine } from "@wirework/engine-flex-rows";
 import { flexLayoutEngine } from "@wirework/engine-flexlayout";
 import { gridstackEngine } from "@wirework/engine-gridstack";

@@ -39,7 +39,8 @@ const APPLICATIONS: readonly Application[] = [
 ];
 
 /** Every application, as options. */
-export const applicationOptions = (): ChoiceOption[] => APPLICATIONS.map(({ id, name }) => ({ value: id, label: name }));
+export const applicationOptions = (): ChoiceOption[] =>
+  APPLICATIONS.map(({ id, name }) => ({ value: id, label: name }));
 
 /** The suites of the chosen applications, in catalog order (not in the order they were chosen). */
 export const suiteOptionsFor = (chosen: readonly string[]): ChoiceOption[] =>

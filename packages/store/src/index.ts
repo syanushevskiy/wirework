@@ -77,9 +77,7 @@ export function fromZustand(api: StateApi): Store {
 
     set(path: string, value: unknown): void {
       if (isConfigPath(path)) {
-        throw new Error(
-          `Refusing to write configuration path "${path}" with set() — use setConfig() (editors only)`,
-        );
+        throw new Error(`Refusing to write configuration path "${path}" with set() — use setConfig() (editors only)`);
       }
       write(path, value);
     },

@@ -22,9 +22,7 @@ export const flexRowsEngine = defineLayoutEngine<FlexRowsPage, undefined>({
   }),
   removeCell: (template, cellId) => ({
     ...template,
-    rows: template.rows
-      .map((row) => row.filter((cell) => cell.id !== cellId))
-      .filter((row) => row.length > 0),
+    rows: template.rows.map((row) => row.filter((cell) => cell.id !== cellId)).filter((row) => row.length > 0),
   }),
   applyChange: (template) => template,
   renderer: FlexRowsView,

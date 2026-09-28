@@ -20,8 +20,14 @@ describe("reactGridLayoutEngine", () => {
   });
 
   it("applyChange moves reported cells only and ignores unknown ids", () => {
-    const template = reactGridLayoutEngine.appendCell(reactGridLayoutEngine.appendCell(reactGridLayoutEngine.empty(), cell("a")), cell("b"));
-    const moved = reactGridLayoutEngine.applyChange(template, { b: { x: 6, y: 0, w: 6, h: 2 }, ghost: { x: 0, y: 0, w: 1, h: 1 } });
+    const template = reactGridLayoutEngine.appendCell(
+      reactGridLayoutEngine.appendCell(reactGridLayoutEngine.empty(), cell("a")),
+      cell("b"),
+    );
+    const moved = reactGridLayoutEngine.applyChange(template, {
+      b: { x: 6, y: 0, w: 6, h: 2 },
+      ghost: { x: 0, y: 0, w: 1, h: 1 },
+    });
     expect(moved.cells.find((c) => c.id === "b")).toMatchObject({ x: 6, y: 0, w: 6 });
     expect(moved.cells.find((c) => c.id === "a")).toEqual(template.cells[0]);
     expect(moved.cells).toHaveLength(2);

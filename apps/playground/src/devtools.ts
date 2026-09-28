@@ -52,7 +52,9 @@ export function installDevtoolsCommand(): void {
     devtools: (on?: boolean) => {
       if (on !== undefined) {
         localStorage.setItem(KEY, on ? "on" : "off");
-        console.info(`Wirework DevTools ${on ? "on" : "off"} — reloading; every store ${on ? "connects" : "disconnects"}`);
+        console.info(
+          `Wirework DevTools ${on ? "on" : "off"} — reloading; every store ${on ? "connects" : "disconnects"}`,
+        );
         setTimeout(() => location.reload(), 0);
       }
       return devtoolsEnabled() ? "on" : "off";

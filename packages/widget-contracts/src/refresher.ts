@@ -39,7 +39,8 @@ export const refresherContract = defineContract({
         default: { enabled: false, interval: REFRESH_INTERVAL.default },
       },
       busy: {
-        description: "Store path that is true while a refresh is in flight (optional; the button spins, ticks are skipped)",
+        description:
+          "Store path that is true while a refresh is in flight (optional; the button spins, ticks are skipped)",
         value: z.boolean(),
         required: false,
       },

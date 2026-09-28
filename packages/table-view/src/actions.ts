@@ -24,7 +24,7 @@ export function createTableViewActions(options: { transport: TableViewTransport 
     {
       name: TABLE_VIEW_LOAD,
       description:
-        'Load a table the server describes: with { url, into } declares it (columns, filters, rows and total land under <into>); with { into } re-requests it',
+        "Load a table the server describes: with { url, into } declares it (columns, filters, rows and total land under <into>); with { into } re-requests it",
       // What a builder asks for, and what boot validation checks `with` against.
       params: tableViewArgsSchema,
       handler: ({ store, args }) => load(store, args),

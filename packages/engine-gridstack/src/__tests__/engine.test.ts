@@ -11,8 +11,14 @@ describe("gridstackEngine", () => {
   });
 
   it("applyChange moves reported cells only and ignores unknown ids", () => {
-    const template = gridstackEngine.appendCell(gridstackEngine.appendCell(gridstackEngine.empty(), cell("a")), cell("b"));
-    const moved = gridstackEngine.applyChange(template, { a: { x: 0, y: 4, w: 6, h: 2 }, ghost: { x: 0, y: 0, w: 1, h: 1 } });
+    const template = gridstackEngine.appendCell(
+      gridstackEngine.appendCell(gridstackEngine.empty(), cell("a")),
+      cell("b"),
+    );
+    const moved = gridstackEngine.applyChange(template, {
+      a: { x: 0, y: 4, w: 6, h: 2 },
+      ghost: { x: 0, y: 0, w: 1, h: 1 },
+    });
     expect(moved.cells.find((c) => c.id === "a")).toMatchObject({ y: 4, w: 6 });
     expect(moved.cells.find((c) => c.id === "b")).toEqual(template.cells[1]);
   });

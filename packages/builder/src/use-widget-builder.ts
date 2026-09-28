@@ -48,7 +48,8 @@ export function useWidgetBuilder(
     const entries = [...byKind.entries()].sort(([a], [b]) => Number(a === "other") - Number(b === "other"));
     return entries.map(([kind, widgets]) => ({
       kind,
-      label: kind === "other" ? "other widgets" : `${kind} — ${contracts.get(kind)?.description ?? "app-defined contract"}`,
+      label:
+        kind === "other" ? "other widgets" : `${kind} — ${contracts.get(kind)?.description ?? "app-defined contract"}`,
       widgets,
     }));
   }, [registry, contracts]);
@@ -75,7 +76,9 @@ export function useWidgetBuilder(
       setWidgetType(type);
       picked();
       const chosen = registry.get(type);
-      resetForm(chosen ? suggestedInputPaths(page, chosen, boundPaths(store.get<{ widgets?: unknown }>("viewModels"))) : {});
+      resetForm(
+        chosen ? suggestedInputPaths(page, chosen, boundPaths(store.get<{ widgets?: unknown }>("viewModels"))) : {},
+      );
     },
     [resetForm, picked, registry, store, page],
   );
