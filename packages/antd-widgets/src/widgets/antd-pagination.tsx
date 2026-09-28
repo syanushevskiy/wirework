@@ -4,7 +4,7 @@
  * required reaction writes it back, so a table bound to the same path
  * follows along. Render-only: logic in usePagination.
  */
-import { Pagination } from "antd";
+import { Pagination, type PaginationProps } from "antd";
 import type { ContractProps } from "@wirework/schema";
 import { implementContract } from "@wirework/react";
 import { paginationContract } from "@wirework/widget-contracts";
@@ -12,6 +12,8 @@ import { usePagination } from "../hooks/use-pagination";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
 export type PaginationEvents = (typeof paginationContract)["events"];
+
+const showTotal: NonNullable<PaginationProps["showTotal"]> = (count, [from, to]) => `${from}-${to} of ${count}`;
 
 function AntdPagination({ viewModel, store, emit }: ContractProps<typeof paginationContract>) {
   const { page, total, pageSize, change } = usePagination(
@@ -26,6 +28,8 @@ function AntdPagination({ viewModel, store, emit }: ContractProps<typeof paginat
     // The page-size port is optional: without it the setting decides.
     viewModel.pageSize,
   );
+  // The contract's density maps to antd's size ("default" is unset: the host's ConfigProvider decides).
+  const density: Pick<PaginationProps, "size"> = viewModel.size === "small" ? { size: "small" } : {};
 
   return (
     <div data-testid="antd-pagination" data-page={page} data-total={total} data-page-size={pageSize}>
@@ -33,14 +37,9 @@ function AntdPagination({ viewModel, store, emit }: ContractProps<typeof paginat
         current={page}
         total={total}
         pageSize={pageSize}
-        // The contract's density maps to antd's size ("default" is unset).
-        size={viewModel.size === "small" ? "small" : undefined}
+        {...density}
         showSizeChanger={viewModel.showSizeChanger}
-        showTotal={
-          viewModel.showTotal
-            ? (count, [from, to]) => `${from}-${to} of ${count}`
-            : undefined
-        }
+        {...(viewModel.showTotal ? { showTotal } : {})}
         onChange={change}
       />
     </div>

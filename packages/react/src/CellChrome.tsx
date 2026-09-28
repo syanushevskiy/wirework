@@ -13,8 +13,8 @@ const keepPress = (event: PointerEvent | MouseEvent): void => event.stopPropagat
 
 export interface CellChromeProps {
   cell: ResolvedCell;
-  onEdit?: (cellId: string) => void;
-  onRemove?: (cellId: string) => void;
+  onEdit?: ((cellId: string) => void) | undefined;
+  onRemove?: ((cellId: string) => void) | undefined;
 }
 
 export function CellChrome({ cell, onEdit, onRemove }: CellChromeProps) {

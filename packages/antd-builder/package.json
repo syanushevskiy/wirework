@@ -21,7 +21,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@wirework/builder": "workspace:*",
@@ -34,9 +35,13 @@
     "react": "catalog:"
   },
   "devDependencies": {
+    "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "antd": "catalog:",
+    "jsdom": "catalog:",
     "react": "catalog:",
-    "typescript": "catalog:"
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

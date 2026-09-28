@@ -19,7 +19,7 @@ describe("widget bindings types", () => {
   it("types inputs by port name: required ports are strings, optional ones may be absent", () => {
     expectTypeOf<ViewModel["inputs"]>().toEqualTypeOf<{ data: string; loading?: string | undefined }>();
     // @ts-expect-error — a port the widget never declared does not exist
-    type Misspelled = ViewModel["inputs"]["daat"];
+    type _Misspelled = ViewModel["inputs"]["daat"];
     expect(schema.parse({ inputs: { data: "runs.data" } }).inputs.data).toBe("runs.data");
   });
 

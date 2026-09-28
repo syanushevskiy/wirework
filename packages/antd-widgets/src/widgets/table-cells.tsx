@@ -27,7 +27,7 @@ export function TableCell({
       return view.text;
     case "tag":
       return view.text === "" ? null : (
-        <Tag color={view.color} data-tone={view.tone}>
+        <Tag {...(view.color === undefined ? {} : { color: view.color })} data-tone={view.tone}>
           {view.text}
         </Tag>
       );

@@ -16,7 +16,7 @@ import type { WidgetGroup } from "./use-widget-builder";
 /** One palette card: a widget, plus the contract kind it implements. */
 export interface PaletteItem {
   type: string;
-  description?: string;
+  description?: string | undefined;
   definition: AnyWidgetDefinition;
   kind: string;
   /** The kind worth naming ON the card — absent when the widget's own name already says it. */

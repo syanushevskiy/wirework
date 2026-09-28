@@ -51,7 +51,7 @@ export interface Choice<T extends string = string> {
 
 export interface PortField {
   name: string;
-  description?: string;
+  description?: string | undefined;
   required: boolean;
   /** The port's declared default (shown while the path holds nothing). */
   defaultValue?: unknown;
@@ -66,13 +66,13 @@ export type ReactionKind = "set" | "call";
 
 export interface EventField {
   name: string;
-  description?: string;
+  description?: string | undefined;
   /** A required event must have a reaction (it carries state). */
   required: boolean;
   /** Top-level payload fields a reaction can pick with `from` (undefined: not an object payload). */
-  fields?: string[];
+  fields?: string[] | undefined;
   /** Host actions a `call` reaction may pick. */
-  actions: { name: string; description?: string }[];
+  actions: { name: string; description?: string | undefined }[];
   /** Reaction draft. */
   kind: ReactionKind;
   /** The two verbs, with `call` disabled while the host registered no actions. */

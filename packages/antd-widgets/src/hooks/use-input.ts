@@ -7,8 +7,8 @@ import type { InputEvents } from "../widgets/antd-input";
 
 export interface InputRules {
   validation: ValidationRule;
-  pattern?: string;
-  patternMessage?: string;
+  pattern?: string | undefined;
+  patternMessage?: string | undefined;
 }
 
 export function useInput(

@@ -18,11 +18,13 @@ export function useWidgetEditor(
 ) {
   const initial = useMemo(() => valuesFromViewModel(cell.definition, cell.viewModel), [cell]);
   const form = useWidgetForm(cell.definition, store, actions, initial);
+  const { collect, valid } = form;
 
   const save = useCallback(() => {
-    const { bindings, settings } = form.collect();
+    if (!valid) return;
+    const { bindings, settings } = collect();
     onSave(cell, bindings, settings);
-  }, [cell, form.collect, onSave]);
+  }, [cell, valid, collect, onSave]);
 
-  return { form, canSave: form.valid, save };
+  return { form, canSave: valid, save };
 }

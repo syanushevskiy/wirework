@@ -26,11 +26,13 @@ This project runs Claude Code in auto mode with reads outside the working direct
 | What | Command |
 |---|---|
 | Typecheck every package | `pnpm typecheck` |
+| Lint (ESLint: typescript-eslint strict, react-hooks; `eslint.config.js`) | `pnpm lint` |
+| Format with Prettier / check that everything is formatted | `pnpm format` / `pnpm format:check` |
 | Build every package to `dist/` (what gets published; the workspace itself runs from `src/`) | `pnpm build` |
-| Unit tests (vitest, every package under `packages/` that has a `test` script — one without is skipped silently) | `pnpm test:unit` |
+| Unit tests (vitest, every package under `packages/`; `scripts/check-test-scripts.mjs` fails first if one has no `test` script) | `pnpm test:unit` |
 | Unit tests of one package | `pnpm --filter @wirework/engine test` |
 | E2E suite | `pnpm test:e2e` (alias `pnpm e2e`) |
-| Everything CI runs | `pnpm check` |
+| Everything CI runs (typecheck, lint, format:check, build, unit, e2e) | `pnpm check` |
 | Playground dev server | `pnpm dev` (port 5173, strict — fails if one is already running; the developer often has it open) |
 | Storybook | `pnpm storybook` (its play tests are not run by any script yet) |
 | Redux DevTools for every store (off by default) | in the browser console: `wirework.devtools(true)` — reloads and connects; `wirework.devtools(false)` turns it off (`apps/playground/src/devtools.ts`) |

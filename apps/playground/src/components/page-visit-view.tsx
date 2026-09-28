@@ -117,7 +117,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
               data-testid="engine-select"
               className="pg-field"
               placeholder="choose an engine…"
-              value={engine ?? undefined}
+              {...(engine ? { value: engine } : {})}
               onChange={setBuilderEngine}
               options={engineNames.map((name) => ({ value: name, label: name }))}
             />
@@ -161,7 +161,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
             data-testid="toggle-user-overlay"
             checked={withUserOverlay}
             disabled={!userOverlayAvailable}
-            title={userOverlayAvailable ? undefined : "Add a widget first — there is nothing to personalise yet"}
+            {...(userOverlayAvailable ? {} : { title: "Add a widget first — there is nothing to personalise yet" })}
             onChange={(event) => setWithUserOverlay(event.target.checked)}
           >
             user overlay

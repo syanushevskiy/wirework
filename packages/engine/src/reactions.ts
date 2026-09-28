@@ -70,7 +70,7 @@ export function actionArguments(action: ActionDefinition, given: Record<string, 
   try {
     return action.params.parse(given ?? {});
   } catch (error) {
-    throw new Error(`Action "${action.name}" got invalid arguments — ${problemText(error)}`);
+    throw new Error(`Action "${action.name}" got invalid arguments — ${problemText(error)}`, { cause: error });
   }
 }
 

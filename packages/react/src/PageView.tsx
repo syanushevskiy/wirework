@@ -34,25 +34,25 @@ import { LayoutErrorBoundary } from "./WidgetErrorBoundary";
 export interface PageViewProps {
   page: string;
   viewModels: ViewModels;
-  userViewModels?: UserViewModels;
+  userViewModels?: UserViewModels | undefined;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   /** Host actions that `call` reactions may invoke. */
-  actions?: ActionRegistry;
+  actions?: ActionRegistry | undefined;
   /**
    * An already-resolved plan (from `usePagePlan`) for these same inputs.
    * When given, PageView renders it and resolves nothing itself.
    */
-  plan?: ResolvedPage;
+  plan?: ResolvedPage | undefined;
   store: Store;
   bus: EventBus;
   /** Edit mode: the engine's interactive editing + per-cell chrome. */
-  editable?: boolean;
+  editable?: boolean | undefined;
   /** Engine-specific change payload after each drop/resize (see the engine's `applyChange`). */
-  onLayoutChange?: (change: unknown) => void;
+  onLayoutChange?: ((change: unknown) => void) | undefined;
   /** Edit-mode chrome actions; a button renders only when its callback is given. */
-  onEditCell?: (cellId: string) => void;
-  onRemoveCell?: (cellId: string) => void;
+  onEditCell?: ((cellId: string) => void) | undefined;
+  onRemoveCell?: ((cellId: string) => void) | undefined;
   /**
    * Change it to LOAD THE PAGE AGAIN — for a host that changed the page
    * while it is open (an editor after Add or Save): the page's `load` event
@@ -60,7 +60,7 @@ export interface PageViewProps {
    * data when they appear (a table's `load`) ask again, now by the NEW
    * configuration. The store is untouched.
    */
-  reloadKey?: string | number;
+  reloadKey?: string | number | undefined;
 }
 
 export function PageView({

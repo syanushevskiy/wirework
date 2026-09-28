@@ -13,7 +13,7 @@ import { useRunStatusCell } from "../hooks/use-run-status-cell";
 export function RunStatusCell({ text, row }: TableCellProps) {
   const { color, message } = useRunStatusCell(text, row);
   const tag = (
-    <Tag color={color} data-testid="run-status" data-message={message}>
+    <Tag {...(color === undefined ? {} : { color })} data-testid="run-status" data-message={message}>
       {text}
     </Tag>
   );

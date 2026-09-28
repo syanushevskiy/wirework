@@ -75,11 +75,11 @@ export interface WidgetEvent<T = unknown> {
  * payloads — it is never present at runtime.
  */
 export interface EventFilter<T = unknown> {
-  widget?: string;
-  name?: string;
+  widget?: string | undefined;
+  name?: string | undefined;
   /** Cell ids are unique per PAGE only — filter on both to pin one cell. */
-  page?: string;
-  cell?: string;
+  page?: string | undefined;
+  cell?: string | undefined;
   readonly __payload?: T;
 }
 

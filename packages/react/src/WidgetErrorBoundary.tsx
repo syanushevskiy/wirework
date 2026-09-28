@@ -18,12 +18,12 @@ interface ErrorBoundaryProps {
 }
 
 interface State {
-  error?: Error;
+  error?: Error | undefined;
   prevResetKey?: unknown;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
-  state: State = {};
+  override state: State = {};
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
     return null;
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     return this.state.error ? this.props.fallback(this.state.error) : this.props.children;
   }
 }

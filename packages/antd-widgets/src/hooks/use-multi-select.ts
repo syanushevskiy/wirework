@@ -10,7 +10,7 @@ const NONE: string[] = [];
 export function useMultiSelect(
   store: ReadableStore,
   emit: Emit<MultiSelectEvents>,
-  paths: { value: string; options?: string },
+  paths: { value: string; options?: string | undefined },
   ports: { value: PortDefinition<string[]>; options: PortDefinition<ChoiceOption[]> },
   settingOptions: ChoiceOption[],
 ) {
@@ -20,7 +20,7 @@ export function useMultiSelect(
   // A bound options port wins; a missing or malformed one shows the setting's.
   const options = usePort(store, paths.options, ports.options) ?? settingOptions;
   const selectOptions = useMemo(
-    () => options.map(({ value, label, disabled }) => ({ value, label: label ?? value, disabled })),
+    () => options.map(({ value, label, disabled }) => ({ value, label: label ?? value, disabled: disabled === true })),
     [options],
   );
 

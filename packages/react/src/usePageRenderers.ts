@@ -14,8 +14,8 @@ export interface PageRenderersInput {
   store: Store;
   bus: EventBus;
   editable: boolean;
-  onEditCell?: (cellId: string) => void;
-  onRemoveCell?: (cellId: string) => void;
+  onEditCell?: ((cellId: string) => void) | undefined;
+  onRemoveCell?: ((cellId: string) => void) | undefined;
 }
 
 export function usePageRenderers({ plan, store, bus, editable, onEditCell, onRemoveCell }: PageRenderersInput) {

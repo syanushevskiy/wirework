@@ -34,10 +34,15 @@ export type TableCellView =
 
 const warned = new Set<string>();
 
-/** Once per unknown name: the page shows text, the console says why. */
+/**
+ * Once per unknown name: the page shows text, the console says why. The
+ * console because there is nobody else to tell — the name arrives at
+ * runtime from a column list, after every boot check has run.
+ */
 function warnUnknown(name: string): void {
   if (warned.has(name)) return;
   warned.add(name);
+  // eslint-disable-next-line no-console -- a runtime name has no boot-time report to land in
   console.warn(`table: no cell renderer is registered as "${name}" — showing the value as text`);
 }
 

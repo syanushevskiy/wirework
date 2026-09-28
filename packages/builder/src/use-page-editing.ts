@@ -26,7 +26,6 @@ import {
   settingFields,
   type AnyLayoutEngine,
   type PageViewModel,
-  type Store,
   type WidgetBindings,
 } from "@wirework/schema";
 import {
@@ -64,8 +63,7 @@ export type SaveOutcome = "committed" | "unchanged" | "refused";
 type Op = (trees: EditableTrees) => EditableTrees;
 
 export interface PageEditingInput {
-  store: Store;
-  /** THE write path (use-commit): the session commits through it, never to the store itself. */
+  /** THE write path (use-commit): the session commits through it, never to a store itself. */
   commit: Commit;
   /**
    * Whether this user may change pages at all. Gating the BUTTON is not
@@ -117,7 +115,6 @@ function isModelReferenced(
 }
 
 export function usePageEditing({
-  store,
   commit,
   canEdit,
   registry,

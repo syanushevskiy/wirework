@@ -75,7 +75,7 @@ export function buttonConformance(definition: AnyWidgetDefinition): Record<"Defa
 
 /** `input` contract: a textbox, aria-invalid + alert on failure, premade and custom rules, text stored by reaction. */
 export function inputConformance(
-  definition: AnyWidgetDefinition,
+  _definition: AnyWidgetDefinition,
 ): Record<"Plain" | "Required" | "Email" | "CustomPattern" | "Validates", Story> {
   return {
     Plain: {

@@ -15,7 +15,7 @@ export interface RenderedFilter {
   /** DOM id tying the visible label to the combobox. */
   fieldId: string;
   label: string;
-  options: { value: string; label: string; disabled?: boolean | undefined }[];
+  options: { value: string; label: string; disabled: boolean }[];
   values: string[];
   /** For tests and inspection. */
   chosenAttribute: string;
@@ -39,7 +39,7 @@ export function useFilterBar(
         const options = definition.options.map(({ value, label, disabled }) => ({
           value,
           label: label ?? value,
-          disabled,
+          disabled: disabled === true,
         }));
         const values = chosen[definition.id] ?? NONE;
         return {

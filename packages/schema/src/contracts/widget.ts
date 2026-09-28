@@ -47,9 +47,9 @@ export interface WidgetProps<VM = unknown, E extends WidgetEvents = WidgetEvents
  */
 export interface WidgetPreviewSpec {
   /** Store state the preview's input ports read (e.g. `{ preview: { count: 3 } }`). */
-  seed?: Record<string, unknown>;
+  seed?: Record<string, unknown> | undefined;
   /** View-model template (bindings + settings) to render with; `{}` when absent. */
-  viewModel?: Record<string, unknown>;
+  viewModel?: Record<string, unknown> | undefined;
 }
 
 /** The registration envelope for a widget. */

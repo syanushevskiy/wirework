@@ -16,11 +16,11 @@ export interface LayoutRendererProps<T extends PageViewModel = PageViewModel, C 
   /** Edit mode: enable the engine's interactive editing, show chrome. */
   editable: boolean;
   /** Report an engine-specific change (drop, resize, ...). */
-  onChange?: (change: C) => void;
+  onChange?: ((change: C) => void) | undefined;
   /** Render one cell's content (problem placeholder or widget); the engine places it. */
   renderCell: (cell: ResolvedCell) => ReactNode;
   /** Edit-mode chrome (edit/remove actions) to place per cell; absent outside edit mode. */
-  renderChrome?: (cell: ResolvedCell) => ReactNode;
+  renderChrome?: ((cell: ResolvedCell) => ReactNode) | undefined;
 }
 
 export type ReactLayoutEngine<T extends PageViewModel = PageViewModel, C = unknown> = LayoutEngine<

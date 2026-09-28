@@ -125,12 +125,12 @@ export interface ResolveInput {
    * The user overlay. `resolvePage` checks it once (`checkOverlay`); a
    * direct `resolveCells` caller passes an already checked one.
    */
-  userViewModels?: UserViewModels;
+  userViewModels?: UserViewModels | undefined;
   page: string;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   /** When given, reactions calling an unregistered action are a cell problem. */
-  actions?: ActionRegistry;
+  actions?: ActionRegistry | undefined;
 }
 
 /**
@@ -306,10 +306,11 @@ function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): R
   }
 
   const checked = checkTemplate(definition, templateMap[picked.name], userWidget?.settings?.[picked.name], actions);
+  const chosen = { template: picked.name, ...(picked.fallback === undefined ? {} : { fallback: picked.fallback }) };
   if (checked.problem) {
-    return { ...base, definition, template: picked.name, fallback: picked.fallback, problem: checked.problem };
+    return { ...base, definition, ...chosen, problem: checked.problem };
   }
-  return { ...base, definition, template: picked.name, fallback: picked.fallback, viewModel: checked.viewModel };
+  return { ...base, definition, ...chosen, viewModel: checked.viewModel };
 }
 
 /**
@@ -361,7 +362,7 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
   return {
     page,
     view: picked.name,
-    fallback: picked.fallback,
+    ...(picked.fallback === undefined ? {} : { fallback: picked.fallback }),
     ...notes,
     engine: resolution.engine.name,
     template: resolution.template,

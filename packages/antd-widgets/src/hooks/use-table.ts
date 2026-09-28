@@ -10,7 +10,7 @@
  * OWNS its click and never selects the row.
  */
 import { createElement, useCallback, useMemo, type MouseEvent, type TdHTMLAttributes } from "react";
-import type { TableProps } from "antd";
+import type { TableColumnsType, TableProps } from "antd";
 import { getPath, type Emit, type PortDefinition, type ReadableStore } from "@wirework/schema";
 import { useAfterMount, usePort } from "@wirework/react";
 import { appPathSchema, type TableColumn, type TableRow } from "@wirework/widget-contracts";
@@ -30,7 +30,7 @@ export interface RenderedRow {
  * antd builds it from.
  */
 export interface TableView {
-  columns: TableProps<RenderedRow>["columns"];
+  columns: TableColumnsType<RenderedRow>;
   rows: RenderedRow[];
   loading: boolean;
   rowProps: NonNullable<TableProps<RenderedRow>["onRow"]>;
@@ -73,7 +73,7 @@ function clicked(event: MouseEvent<HTMLElement>): Clicked {
 export function useTable(
   store: ReadableStore,
   emit: Emit<TableEvents>,
-  paths: { rows: string; loading?: string; columns?: string },
+  paths: { rows: string; loading?: string | undefined; columns?: string | undefined },
   ports: {
     rows: PortDefinition<TableRow[]>;
     loading: PortDefinition<boolean>;
@@ -109,7 +109,7 @@ export function useTable(
     [rows, settings.rowKey],
   );
 
-  const tableColumns = useMemo<TableProps<RenderedRow>["columns"]>(
+  const tableColumns = useMemo<TableColumnsType<RenderedRow>>(
     () =>
       columns.map((column, index) => ({
         key: `${index}:${column.property}`,

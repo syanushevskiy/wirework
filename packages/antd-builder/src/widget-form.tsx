@@ -128,9 +128,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                     data-testid={fieldId}
                     className="ww-builder-field"
                     placeholder="choose…"
-                    value={setting.choice}
+                    {...(setting.choice === undefined ? {} : { value: setting.choice })}
                     onChange={(value: string) => chooseSetting(setting.name, value)}
-                    options={setting.choices}
+                    options={setting.choices ?? []}
                   />
                 ) : (
                   <Input
@@ -200,7 +200,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                       className="ww-builder-field"
                       placeholder="choose an action…"
                       disabled={bindingsLocked}
-                      value={event.callChoice}
+                      {...(event.callChoice === undefined ? {} : { value: event.callChoice })}
                       onChange={(value: string) => setReaction(event.name, "call", value)}
                       options={event.actionChoices}
                     />
@@ -250,7 +250,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                         <Form.Item
                           key={param.name}
                           htmlFor={fieldId}
-                          validateStatus={param.error ? "error" : undefined}
+                          validateStatus={param.error ? "error" : ""}
                           help={param.error}
                           label={
                             <>
@@ -285,9 +285,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                               placeholder="choose…"
                               allowClear
                               disabled={bindingsLocked}
-                              value={param.choice}
+                              {...(param.choice === undefined ? {} : { value: param.choice })}
                               onChange={(value: string | undefined) => setReactionParam(event.name, param.name, value ?? "")}
-                              options={param.choices}
+                              options={param.choices ?? []}
                             />
                           ) : param.kind === "json" ? (
                             <Input.TextArea

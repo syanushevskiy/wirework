@@ -151,7 +151,6 @@ export function boot({ navigator }: { navigator: Navigator }) {
   actions.register({
     name: "log-event",
     description: "console.log the event (debugging)",
-    // eslint-disable-next-line no-console
     handler: ({ event, args }) => console.log("[action log-event]", event, args),
   });
   // Server-side data for the demo: a fake server with real latency.

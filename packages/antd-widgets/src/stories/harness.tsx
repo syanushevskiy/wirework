@@ -29,22 +29,22 @@ export interface WidgetStoryProps {
   /** The widget's view model template (bindings + settings), validated by the widget. */
   viewModel: Record<string, unknown>;
   /** Initial store state the inputs read from. */
-  seed?: Record<string, unknown>;
+  seed?: Record<string, unknown> | undefined;
   /**
    * Store values DRIVEN from outside (a playground's data controls): path ->
    * value, written into the store whenever they change.
    */
-  data?: Record<string, unknown>;
+  data?: Record<string, unknown> | undefined;
   /**
    * Called when the store holds something else at one of the `data` paths —
    * the widget's own reaction wrote it (a click, a keystroke) — so controls
    * can follow what the widget did.
    */
-  onData?: (path: string, value: unknown) => void;
+  onData?: ((path: string, value: unknown) => void) | undefined;
   /** Width of the cell the widget sits in, px; the full canvas when absent. */
-  cellWidth?: number;
+  cellWidth?: number | undefined;
   /** Show the live store readout underneath. Default true. */
-  showStore?: boolean;
+  showStore?: boolean | undefined;
 }
 
 /** Same data, whatever the object identity: controls hand over fresh objects on every change. */

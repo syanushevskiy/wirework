@@ -49,11 +49,13 @@ export function implementContract<C extends AnyWidgetContract>(
   contract: C,
   implementation: ContractImplementation<C>,
 ): ReactWidgetDefinition<ContractViewModel<C>, C["events"]> {
+  const description = implementation.description ?? contract.description;
+  const preview = implementation.preview ?? contract.preview;
   return {
     type: implementation.type,
-    description: implementation.description ?? contract.description,
+    ...(description === undefined ? {} : { description }),
     kind: contract.kind,
-    preview: implementation.preview ?? contract.preview,
+    ...(preview === undefined ? {} : { preview }),
     io: contract.io,
     events: contract.events,
     viewModel: contract.viewModel,

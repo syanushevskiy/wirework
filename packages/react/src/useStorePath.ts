@@ -10,7 +10,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { ReadableStore } from "@wirework/schema";
 
-const NOOP_UNSUBSCRIBE = () => {};
+const NOOP_UNSUBSCRIBE = (): void => undefined;
 
 export function useStorePath<T = unknown>(
   store: ReadableStore,

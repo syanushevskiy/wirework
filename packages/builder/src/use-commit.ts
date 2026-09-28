@@ -43,6 +43,7 @@ export type Commit = (next: TreesChange) => void;
 
 const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
 
+// eslint-disable-next-line no-console -- the documented default until the host passes its own SaveError
 const reportToConsole: SaveError = (error) => console.error("Saving the page failed:", error);
 
 /** The save in flight per store, so the next one queues behind it. */

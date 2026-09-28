@@ -11,7 +11,12 @@ import { useTag } from "../hooks/use-tag";
 function AntdTag({ viewModel, store }: ContractProps<typeof tagContract>) {
   const { text, color } = useTag(store, viewModel.inputs.text, viewModel.text, viewModel.tone);
   return (
-    <Tag color={color} data-testid="antd-tag" data-path={viewModel.inputs.text} data-tone={viewModel.tone}>
+    <Tag
+      {...(color === undefined ? {} : { color })}
+      data-testid="antd-tag"
+      data-path={viewModel.inputs.text}
+      data-tone={viewModel.tone}
+    >
       {text}
     </Tag>
   );

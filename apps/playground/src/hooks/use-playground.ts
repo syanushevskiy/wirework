@@ -113,7 +113,6 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   /** With the overlay on, edits are the USER's; without it they change the shared page. */
   const target: EditTarget = withUserOverlay ? "user" : "base";
   const editing = usePageEditing({
-    store,
     commit,
     canEdit: canEditPages,
     registry,
@@ -126,13 +125,17 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     modelNamespace: modelNamespaceOf(DEFAULT_BUILDER_NAMING),
   });
 
+  // The session's stable functions: the callbacks below depend on what they
+  // use, not on the session object rebuilt every render.
+  const { cancel: cancelEditing, save: saveSession } = editing;
+
   /** Toggling the overlay changes the edit target — an open session ends. */
   const toggleUserOverlay = useCallback(
     (checked: boolean) => {
-      editing.cancel();
+      cancelEditing();
       setOverlayWanted(checked);
     },
-    [editing.cancel],
+    [cancelEditing],
   );
 
   /**
@@ -166,14 +169,14 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     layoutEngines,
     page: BUILDER_PAGE,
     naming: DEFAULT_BUILDER_NAMING,
-    cancelEditing: editing.cancel,
+    cancelEditing,
     onAdded: loadAgain,
   });
 
   /** Save page: commit the session; if something was committed, the page loads again — by what was just saved. */
   const savePage = useCallback(() => {
-    if (editing.save() === "committed") loadAgain();
-  }, [editing.save, loadAgain]);
+    if (saveSession() === "committed") loadAgain();
+  }, [saveSession, loadAgain]);
 
   return {
     registry,

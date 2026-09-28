@@ -8,7 +8,7 @@ import type { SelectEvents } from "../widgets/antd-select";
 export function useSelect(
   store: ReadableStore,
   emit: Emit<SelectEvents>,
-  paths: { value: string; options?: string },
+  paths: { value: string; options?: string | undefined },
   ports: { value: PortDefinition<string>; options: PortDefinition<ChoiceOption[]> },
   settingOptions: ChoiceOption[],
 ) {
@@ -18,7 +18,12 @@ export function useSelect(
   // A bound options port wins; a missing or malformed one shows the setting's.
   const options = usePort(store, paths.options, ports.options) ?? settingOptions;
   const selectOptions = useMemo(
-    () => options.map(({ value: optionValue, label, disabled }) => ({ value: optionValue, label: label ?? optionValue, disabled })),
+    () =>
+      options.map(({ value: optionValue, label, disabled }) => ({
+        value: optionValue,
+        label: label ?? optionValue,
+        disabled: disabled === true,
+      })),
     [options],
   );
 

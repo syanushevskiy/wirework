@@ -45,7 +45,7 @@ function AntdMultiSelect({ viewModel, store, emit }: ContractProps<typeof multiS
         aria-label={viewModel.label ?? viewModel.placeholder}
         placeholder={viewModel.placeholder}
         allowClear
-        maxTagCount={viewModel.collapseTags ? "responsive" : undefined}
+        {...(viewModel.collapseTags ? { maxTagCount: "responsive" as const } : {})}
         value={values}
         options={options}
         onChange={change}

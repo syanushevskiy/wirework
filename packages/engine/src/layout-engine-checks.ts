@@ -14,7 +14,7 @@
 import type { AnyLayoutEngine, CellBase, PageViewModel } from "@wirework/schema";
 import { errorText, problemText } from "./messages";
 
-const SAMPLE_CELLS: readonly CellBase[] = [
+const SAMPLE_CELLS: readonly [CellBase, CellBase] = [
   { id: "first", widget: "sample-widget", model: "widgets.sample.first", template: "default" },
   { id: "second", widget: "sample-widget", model: "widgets.sample.second", template: "compact" },
 ];
@@ -48,8 +48,8 @@ export function layoutEngineProblems(engine: AnyLayoutEngine): string[] {
     valid(empty, "empty()");
     expect(engine.cells(empty).length === 0, "empty(): has cells");
 
-    const withFirst = pure(empty, "appendCell", () => engine.appendCell(empty, SAMPLE_CELLS[0]!));
-    const withBoth = pure(withFirst, "appendCell", () => engine.appendCell(withFirst, SAMPLE_CELLS[1]!));
+    const withFirst = pure(empty, "appendCell", () => engine.appendCell(empty, SAMPLE_CELLS[0]));
+    const withBoth = pure(withFirst, "appendCell", () => engine.appendCell(withFirst, SAMPLE_CELLS[1]));
     valid(withBoth, "appendCell");
     expect(
       JSON.stringify(engine.cells(withBoth).map(binding)) === JSON.stringify(SAMPLE_CELLS),

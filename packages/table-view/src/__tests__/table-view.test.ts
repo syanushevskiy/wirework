@@ -259,7 +259,7 @@ describe("the loader", () => {
   });
 
   it("lets only the newest request write", async () => {
-    const pending: Array<(answer: unknown) => void> = [];
+    const pending: ((answer: unknown) => void)[] = [];
     const transport: TableViewTransport = () => new Promise((resolve) => pending.push(resolve));
     const load = createTableViewLoader(transport);
     const store = createStore({});

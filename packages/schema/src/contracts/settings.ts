@@ -38,8 +38,8 @@ interface Unwrapped {
   inner: z.ZodTypeAny;
   optional: boolean;
   hasDefault: boolean;
-  defaultValue?: unknown;
-  description?: string;
+  defaultValue: unknown;
+  description: string | undefined;
 }
 
 /** Peel `.default()` / `.optional()` / `.nullable()` wrappers, keeping their facts. */
@@ -114,7 +114,7 @@ export function settingFields(validator: Validator<unknown>, options: { json?: b
         name,
         kind,
         required: !optional && !hasDefault,
-        description,
+        ...(description === undefined ? {} : { description }),
         ...(hasDefault ? { defaultValue } : {}),
         ...(inner instanceof z.ZodEnum ? { options: [...(inner.options as string[])] } : {}),
       },

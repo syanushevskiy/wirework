@@ -15,7 +15,7 @@ function AntdLabel({ viewModel, store }: ContractProps<typeof labelContract>) {
   return (
     <Typography.Text
       className="ww-label"
-      type={type}
+      {...(type === undefined ? {} : { type })}
       data-testid="antd-label"
       data-path={viewModel.inputs.text}
       data-tone={viewModel.tone}

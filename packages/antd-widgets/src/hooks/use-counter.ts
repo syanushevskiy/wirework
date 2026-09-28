@@ -23,7 +23,7 @@ export function useCounter(
   const increment = useCallback(() => {
     const current = store.get<unknown>(inputPath);
     emit("incremented", { value: (typeof current === "number" ? current : fallback) + step });
-  }, [store, emit, inputPath, step]);
+  }, [store, emit, inputPath, step, fallback]);
 
   return { value, increment };
 }

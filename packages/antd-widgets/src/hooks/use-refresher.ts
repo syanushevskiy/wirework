@@ -12,7 +12,7 @@ import type { RefresherEvents } from "../widgets/antd-refresher";
 export function useRefresher(
   store: ReadableStore,
   emit: Emit<RefresherEvents>,
-  paths: { schedule: string; busy?: string },
+  paths: { schedule: string; busy?: string | undefined },
   ports: { schedule: PortDefinition<RefreshSchedule>; busy: PortDefinition<boolean> },
 ) {
   // Validated by the contract's port: a broken schedule shows the default.

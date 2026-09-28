@@ -20,7 +20,7 @@ export interface WidgetGroup {
   /** Contract kind, or "other" for widgets implementing none. */
   kind: string;
   label: string;
-  widgets: { type: string; description?: string; definition: AnyWidgetDefinition }[];
+  widgets: { type: string; description?: string | undefined; definition: AnyWidgetDefinition }[];
 }
 
 export function useWidgetBuilder(
@@ -54,8 +54,12 @@ export function useWidgetBuilder(
   }, [registry, contracts]);
   const definition = widgetType ? registry.get(widgetType) : undefined;
   const form = useWidgetForm(definition, store, actions);
+  // The stable functions of the form and the search, so the callbacks below
+  // depend on what they use — not on objects rebuilt every render.
+  const { reset: resetForm, collect, valid } = form;
   /** The palette's search and "Show widgets" state lives HERE: adding a widget starts it over. */
   const search = useWidgetSearch(widgetGroups);
+  const { picked, clear } = search;
 
   /**
    * Choosing a widget fills its input ports with GENERATED paths —
@@ -69,13 +73,11 @@ export function useWidgetBuilder(
   const selectWidget = useCallback(
     (type: string) => {
       setWidgetType(type);
-      search.picked();
+      picked();
       const chosen = registry.get(type);
-      form.reset(
-        chosen ? suggestedInputPaths(page, chosen, boundPaths(store.get<{ widgets?: unknown }>("viewModels"))) : {},
-      );
+      resetForm(chosen ? suggestedInputPaths(page, chosen, boundPaths(store.get<{ widgets?: unknown }>("viewModels"))) : {});
     },
-    [form.reset, search.picked, registry, store, page],
+    [resetForm, picked, registry, store, page],
   );
 
   /**
@@ -84,13 +86,13 @@ export function useWidgetBuilder(
    * that renders its own control gets the same refusal.
    */
   const add = useCallback(() => {
-    if (!definition || !form.valid || addLocked !== undefined) return;
-    const { bindings, settings } = form.collect();
+    if (!definition || !valid || addLocked !== undefined) return;
+    const { bindings, settings } = collect();
     onAdd(definition.type, bindings, settings);
     setWidgetType("");
-    form.reset();
-    search.clear();
-  }, [definition, form.valid, form.collect, form.reset, search.clear, onAdd, addLocked]);
+    resetForm();
+    clear();
+  }, [definition, valid, collect, resetForm, clear, onAdd, addLocked]);
 
   return {
     widgetGroups,
@@ -99,9 +101,9 @@ export function useWidgetBuilder(
     form,
     search,
     /** The form holds everything a widget needs. */
-    canAdd: form.valid,
+    canAdd: valid,
     /** …and the host is accepting one: the single answer a control needs. */
-    addDisabled: !form.valid || addLocked !== undefined,
+    addDisabled: !valid || addLocked !== undefined,
     add,
   };
 }

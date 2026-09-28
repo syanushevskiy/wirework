@@ -625,7 +625,8 @@ async function editStateJson(page: Page, path: string, value: unknown, accepted 
     cursor[segment] ??= {};
     cursor = cursor[segment] as Record<string, unknown>;
   }
-  cursor[segments[segments.length - 1]!] = value;
+  const [last = path] = segments.slice(-1);
+  cursor[last] = value;
   await editor.fill(JSON.stringify(state, null, 2));
   await page.getByTestId("state-apply").click();
   if (accepted) await expect(page.getByTestId("state-mode")).toHaveText("live");

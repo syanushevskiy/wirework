@@ -36,8 +36,8 @@ function AntdInput({ viewModel, store, emit }: ContractProps<typeof inputContrac
         data-path={viewModel.inputs.value}
         data-valid={valid}
         aria-invalid={!valid}
-        status={valid ? undefined : "error"}
-        placeholder={viewModel.placeholder}
+        status={valid ? "" : "error"}
+        {...(viewModel.placeholder === undefined ? {} : { placeholder: viewModel.placeholder })}
         value={value}
         onChange={(event) => change(event.target.value)}
       />

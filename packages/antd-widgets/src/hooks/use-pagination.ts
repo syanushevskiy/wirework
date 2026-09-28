@@ -7,7 +7,7 @@ import type { PaginationEvents } from "../widgets/antd-pagination";
 export function usePagination(
   store: ReadableStore,
   emit: Emit<PaginationEvents>,
-  paths: { page: string; total: string; pageSize?: string },
+  paths: { page: string; total: string; pageSize?: string | undefined },
   ports: { page: PortDefinition<number>; total: PortDefinition<number>; pageSize: PortDefinition<number> },
   settingPageSize: number,
 ) {
