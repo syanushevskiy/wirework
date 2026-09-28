@@ -38,9 +38,10 @@ jobs:
 
       - run: pnpm lint:publish
 
-      - run: pnpm test:unit
-
+      # One Chromium for both: the stories run in it under vitest (antd-widgets), and so does the e2e suite.
       - run: pnpm --filter e2e exec playwright install --with-deps chromium
+
+      - run: pnpm test:unit
 
       - run: pnpm test:e2e
         env:

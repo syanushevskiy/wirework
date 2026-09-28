@@ -3,6 +3,7 @@ import { Button, Tag, Tooltip } from "antd";
 import { expect, within } from "storybook/test";
 import { antdTable, createAntdTable } from "../widgets/antd-table";
 import type { TableCellProps } from "../hooks/use-table-cell";
+import { tableConformance } from "./conformance";
 import { WidgetStory } from "./harness";
 import { playground } from "./playground";
 
@@ -61,12 +62,12 @@ export const Playground: Story = playground(antdTable, {
   },
 });
 
-export const ConfiguredColumns: Story = {
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByText("Smoke"));
-    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"selected": "2"');
-  },
-};
+// The `table` contract's conformance set.
+const conformance = tableConformance(antdTable);
+export const Rows: Story = conformance.Rows;
+export const RowSelected: Story = conformance.RowSelected;
+export const LoadsOnAppearance: Story = conformance.LoadsOnAppearance;
+export const BoundToEmptyPath: Story = conformance.BoundToEmptyPath;
 
 /**
  * Cells: `#` and Name are links to the run, Status a tag in a tone. A plain
@@ -177,17 +178,6 @@ export const CustomRowKey: Story = {
         },
       }}
       viewModel={{ inputs: { rows: "demo.users" }, rowKey: "email" }}
-    />
-  ),
-};
-
-/** The bound path holds nothing: the port's default, no rows. */
-export const EmptyPath: Story = {
-  render: () => (
-    <WidgetStory
-      key="empty"
-      definition={antdTable}
-      viewModel={{ inputs: { rows: "demo.missing" }, emptyText: "No runs yet" }}
     />
   ),
 };

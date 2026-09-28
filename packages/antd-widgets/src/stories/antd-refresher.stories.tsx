@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
 import { antdRefresher } from "../widgets/antd-refresher";
+import { refresherConformance } from "./conformance";
 import { storyArgs, storyArgTypes, WidgetStory } from "./harness";
 import { playground } from "./playground";
 
@@ -37,13 +37,8 @@ export const Playground: Story = playground(antdRefresher);
 
 export const Default: Story = {};
 
-/** Interaction test: the checkbox round-trips through the store; a click is a manual refresh. */
-export const ToggleAndRefresh: Story = {
-  play: async ({ canvas, userEvent }) => {
-    const toggle = canvas.getByRole("checkbox", { name: "Auto-refresh every" });
-    await userEvent.click(toggle);
-    await expect(toggle).toBeChecked();
-    await userEvent.click(canvas.getByRole("button", { name: "Refresh" }));
-    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"lastTrigger": "manual"');
-  },
-};
+// The `refresher` contract's conformance set.
+const conformance = refresherConformance(antdRefresher);
+export const Idle: Story = conformance.Idle;
+export const ManualRefresh: Story = conformance.ManualRefresh;
+export const Schedule: Story = conformance.Schedule;

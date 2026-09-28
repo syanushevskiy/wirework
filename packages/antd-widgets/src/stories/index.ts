@@ -8,4 +8,18 @@ export type { WidgetStoryProps } from "./harness";
 // One story with a control for every setting, every input port's data and the cell width.
 export { playground } from "./playground";
 export type { PlaygroundOptions } from "./playground";
-export { buttonConformance, inputConformance, labelConformance } from "./conformance";
+export {
+  alertConformance,
+  buttonConformance,
+  checkboxConformance,
+  filterBarConformance,
+  inputConformance,
+  labelConformance,
+  multiSelectConformance,
+  paginationConformance,
+  progressConformance,
+  refresherConformance,
+  selectConformance,
+  tableConformance,
+  tagConformance,
+} from "./conformance";

@@ -15,6 +15,7 @@ catalog:
   zod: 3.25.76
   vite: ^6.3.5
   vitest: ^3.2.4
+  "@vitest/browser": ^3.2.4
   "@testing-library/react": ^16.3.3
   jsdom: ^30.1.1
   "@vitejs/plugin-react": ^4.5.0
@@ -26,4 +27,5 @@ catalog:
   react-router: ^8.4.0
   # pinned: playwright-bdd 8.x does not support Playwright >= 1.60 ESM loader
   "@playwright/test": 1.55.0
+  playwright: 1.55.0
   playwright-bdd: ^8.3.0

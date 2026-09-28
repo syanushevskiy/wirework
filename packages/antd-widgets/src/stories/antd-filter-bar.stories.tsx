@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
 import { antdFilterBar } from "../widgets/antd-filter-bar";
+import { filterBarConformance } from "./conformance";
 import { WidgetStory } from "./harness";
 import { playground } from "./playground";
 
@@ -38,25 +38,8 @@ type Story = StoryObj<typeof meta>;
 /** Which filters there are is DATA: add one in the `filters` control; pick a value and the `value` control follows. */
 export const Playground: Story = playground(antdFilterBar);
 
-export const FiltersFromTheStore: Story = {
-  play: async ({ canvas }) => {
-    await expect(canvas.getByRole("combobox", { name: "Status" })).toBeVisible();
-    await expect(canvas.getByRole("combobox", { name: "Host" })).toBeVisible();
-    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"state": [');
-  },
-};
-
-/** Nothing described yet (the server has not answered): the empty text. */
-export const NoFilters: Story = {
-  render: () => (
-    <WidgetStory
-      key="none"
-      definition={antdFilterBar}
-      seed={{}}
-      viewModel={{
-        inputs: { filters: "demo.filters", value: "demo.chosen" },
-        on: { changed: [{ set: "demo.chosen", from: "value" }] },
-      }}
-    />
-  ),
-};
+// The `filter-bar` contract's conformance set.
+const conformance = filterBarConformance(antdFilterBar);
+export const FromStore: Story = conformance.FromStore;
+export const Chosen: Story = conformance.Chosen;
+export const NoFilters: Story = conformance.NoFilters;

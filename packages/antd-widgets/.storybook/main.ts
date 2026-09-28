@@ -7,6 +7,8 @@ import type { StorybookConfig } from "@storybook/react-vite";
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.tsx"],
   framework: { name: "@storybook/react-vite", options: {} },
+  // The stories double as tests: `vitest.config.ts` runs every one in Chromium.
+  addons: ["@storybook/addon-vitest"],
 };
 
 export default config;

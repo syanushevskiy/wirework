@@ -19,7 +19,11 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./styles.css": "./src/styles.css"
+      "./styles.css": "./src/styles.css",
+      "./stories": {
+        "types": "./dist/stories/index.d.ts",
+        "default": "./dist/stories/index.js"
+      }
     }
   },
   "exports": {
@@ -36,18 +40,30 @@
     "build-storybook": "storybook build"
   },
   "peerDependencies": {
+    "@storybook/react-vite": "^10.6.0",
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
     "antd": "catalog:",
     "react": "catalog:",
+    "storybook": "^10.6.0",
     "zod": "catalog:"
   },
+  "peerDependenciesMeta": {
+    "@storybook/react-vite": {
+      "optional": true
+    },
+    "storybook": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@storybook/addon-vitest": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@vitest/browser": "catalog:",
     "@wirework/engine": "workspace:*",
     "@wirework/events": "workspace:*",
     "@wirework/react": "workspace:*",
@@ -55,6 +71,7 @@
     "@wirework/store": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
     "antd": "catalog:",
+    "playwright": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "storybook": "^10.6.0",
