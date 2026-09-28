@@ -15,8 +15,10 @@
  * @wirework/react's styles.
  *
  * The `data-testid`s these components expose are part of the contract — a
- * suite automating the builder drives them, and the id helpers in
- * `widget-form.tsx` are their one definition site.
+ * suite automating the builder drives them. The per-field ids are built by
+ * the helpers exported from `widget-form.tsx`; the fixed ids (the palette,
+ * the buttons, the editor) are literals in their components. Renaming any
+ * of them is a breaking change for every suite that drives this builder.
  */
 export { WidgetBuilder } from "./widget-builder";
 export type { WidgetBuilderProps } from "./widget-builder";

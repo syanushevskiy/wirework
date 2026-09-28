@@ -9,28 +9,31 @@
  *
  * What a host brings: the registries (widgets, contracts, actions, layout
  * engines), the store the page lives in, the page's name, what it calls the
- * things a builder creates (`BuilderNaming`), whether this user may change
- * pages at all (`canEdit`), and — the one thing nobody can default — where
- * saved pages GO (`SaveTrees`). Nothing here reaches for a router, a
- * concrete widget or a fixture.
+ * things a builder creates (`BuilderNaming`, with defaults), whether THIS
+ * user may change pages (`canEdit` — required, never assumed), and where
+ * saved pages GO (`SaveTrees` — required, never defaulted). Nothing here
+ * reaches for a router, a concrete widget or a fixture, and no user-facing
+ * text lives here: a lock is reported as a fact, and the host says it in
+ * its own words.
  *
- * Every write goes through ONE path (`useCommit`): the store first, then the
- * host's `save`. That is the place a permission, an audit trail or a
- * conflict check belongs.
+ * Every write goes through ONE path (`useCommit` / `commitTrees`): the
+ * store first, then the host's `save` with what the store now holds. That
+ * is the place an audit trail or a conflict check belongs; the permission
+ * is checked by every hook that can write, before it gets there.
  *
  * Contract proof: depends on @wirework/schema, @wirework/engine and the
  * @wirework/react adapter only, with react as a peer.
  */
-export { useCommit } from "./use-commit";
-export type { Commit, EditableTrees, SaveTrees } from "./use-commit";
+export { commitTrees, useCommit } from "./use-commit";
+export type { Commit, EditableTrees, SaveTrees, TreesChange } from "./use-commit";
 
-export { BUILDER_NAMING, builderPage, modelNamespaceOf, numberedIds, useBuilder } from "./use-builder";
+export { DEFAULT_BUILDER_NAMING, builderPage, modelNamespaceOf, numberedIds, useBuilder } from "./use-builder";
 export type { BuilderInput, BuilderNaming } from "./use-builder";
 
 export { USER_PAGE_TEMPLATE, usePageEditing } from "./use-page-editing";
 export type { EditTarget, PageEditingInput } from "./use-page-editing";
 
-export { EMPTY_FORM, nextParamValue, useWidgetForm, valuesFromViewModel } from "./use-widget-form";
+export { EMPTY_FORM, useWidgetForm, valuesFromViewModel } from "./use-widget-form";
 export type {
   Choice,
   EventField,

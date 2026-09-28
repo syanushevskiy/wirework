@@ -27,8 +27,6 @@ import {
   type AnyLayoutEngine,
   type PageViewModel,
   type Store,
-  type UserViewModels,
-  type ViewModels,
   type WidgetBindings,
 } from "@wirework/schema";
 import {
@@ -53,8 +51,6 @@ export type EditTarget = "user" | "base";
 /** Name of the user's own page template (the sketch's "my own" pill). */
 export const USER_PAGE_TEMPLATE = "my-own";
 
-export type { EditableTrees } from "./use-commit";
-
 /** One pure edit, replayed onto the store's current trees on every render and on Save. */
 type Op = (trees: EditableTrees) => EditableTrees;
 
@@ -65,8 +61,9 @@ export interface PageEditingInput {
   /**
    * Whether this user may change pages at all. Gating the BUTTON is not
    * enough: a session must not open, and must not commit, without it.
+   * Required: a builder never assumes it may write.
    */
-  canEdit?: boolean;
+  canEdit: boolean;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry;
@@ -75,15 +72,13 @@ export interface PageEditingInput {
   withUserOverlay: boolean;
   trees: EditableTrees;
   /**
-   * Where a BUILDER's widget templates live (`use-builder.ts`). Removing the
-   * last cell that uses one takes the template with it; templates outside
-   * this namespace are the page author's and are never touched.
+   * Where a BUILDER's widget templates live (`modelNamespaceOf` in
+   * use-builder.ts). Removing the last cell that uses one takes the template
+   * with it; templates outside this namespace are the page author's and are
+   * never touched.
    */
-  modelNamespace?: string;
+  modelNamespace: string;
 }
-
-/** What a builder names its widget templates unless the host says otherwise. */
-const BUILDER_MODELS = "widgets.custom";
 
 /** Keys the form owns: dropped from a base template before the form's values are re-applied. */
 function withoutFormKeys(template: unknown, settingNames: string[]): Record<string, unknown> {
@@ -115,7 +110,7 @@ function isModelReferenced(
 export function usePageEditing({
   store,
   commit,
-  canEdit = true,
+  canEdit,
   registry,
   layoutEngines,
   actions,
@@ -123,7 +118,7 @@ export function usePageEditing({
   target,
   withUserOverlay,
   trees,
-  modelNamespace = BUILDER_MODELS,
+  modelNamespace,
 }: PageEditingInput) {
   /** null = view mode; [] = an open session with nothing changed yet. */
   const [ops, setOps] = useState<Op[] | null>(null);
@@ -197,9 +192,6 @@ export function usePageEditing({
 
   /* ---- session ---- */
 
-  /** Why this user cannot edit the page, if they cannot. */
-  const editLocked = canEdit ? undefined : "You may not change pages.";
-
   const startEditing = useCallback(() => {
     if (!canEdit) return;
     setSelected(null);
@@ -207,8 +199,10 @@ export function usePageEditing({
   }, [canEdit]);
   const save = useCallback(() => {
     // Gated here too: a session opened before the permission changed must
-    // not be able to write after it.
-    if (ops && canEdit) commit(shown);
+    // not be able to write after it. And only a session that CHANGED
+    // something commits — an untouched one has nothing to ask the host to
+    // persist (`ops` is `[]`, not null, while a session is open).
+    if (ops !== null && ops.length > 0 && canEdit) commit(shown);
     setOps(null);
     setSelected(null);
   }, [ops, canEdit, shown, commit]);
@@ -289,7 +283,6 @@ export function usePageEditing({
     editing: ops !== null,
     /** Ops recorded in the open session (0 when nothing changed yet). */
     pendingChanges: ops?.length ?? 0,
-    editLocked,
     startEditing,
     save,
     cancel,

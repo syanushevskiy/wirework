@@ -2,18 +2,18 @@
  * The view of ONE page visit — ONLY presentation (guidelines: render-only
  * components). Left: the visit's state tree (editable) and the collapsed
  * diagnostics; right: the page toolbar, the builder or a widget editor when
- * they apply, and the live page. All logic lives in hooks/use-playground.ts
- * and hooks/use-page-editing.ts. The router keys this component by visit,
- * so every piece of UI state here starts over with the visit.
+ * they apply, and the live page. All logic lives in hooks/use-playground.ts,
+ * which composes the @wirework/builder hooks. The router keys this component
+ * by visit, so every piece of UI state here starts over with the visit.
  */
 import { Button, Checkbox, Flex, Select, Space, Tag, Typography } from "antd";
 import { PageView } from "@wirework/react";
+import { WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 import type { PageVisit, Playground } from "../boot";
 import { BUILDER_PAGE, usePlayground } from "../hooks/use-playground";
 import { CollapsibleCard } from "./collapsible-card";
 import { EventLog } from "./event-log";
 import { StateInspector } from "./state-inspector";
-import { WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 
 export interface PageVisitViewProps {
   playground: Playground;

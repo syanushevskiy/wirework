@@ -2,17 +2,23 @@
  * ALL widget-BUILDER logic: the page a builder adds to, the engine it may
  * still choose, and placing a widget on it. Everything a host would have to
  * decide is NAMING, and naming is an argument — no page name, no id scheme
- * and no template name is written into this file. What remains is the part
- * that is the same for every host, so it can move into a package of its own
- * (see the extraction plan): this hook knows the engine registry and the
- * store, never a concrete widget, route or fixture.
+ * and no template name is written into this file. The hook knows the engine
+ * registry and the store, never a concrete widget, a route or a fixture.
  *
- * Placing a widget writes THROUGH THE STORE — the state inspector shows it
- * instantly and the engine treats it exactly like static configuration.
+ * One rule about state, kept in one place: what is RENDERED (`engineLocked`,
+ * `hasCells`) comes from the store subscription, so it follows every change;
+ * what is WRITTEN (`setEngine`, `addWidget`) is computed from a fresh read
+ * of the store at the moment of the click, never from a render's snapshot —
+ * an inspector or another editor may have changed the tree since.
+ *
+ * Placing a widget writes THROUGH `commit` — the store, then the host's
+ * `save` — so a host's inspector shows it instantly and the engine treats it
+ * exactly like static configuration.
  */
 import { useCallback } from "react";
 import type { Store, ViewModels, WidgetBindings } from "@wirework/schema";
-import { resolveTemplate, updatePageTemplate, type LayoutEngineRegistry } from "@wirework/engine";
+import { resolveTemplate, updatePageTemplate, type LayoutEngineRegistry, type TemplateResolution } from "@wirework/engine";
+import { useStorePath } from "@wirework/react";
 import type { Commit } from "./use-commit";
 import type { WidgetSettings } from "./use-widget-form";
 
@@ -30,8 +36,8 @@ export interface BuilderNaming {
 
 /**
  * Ids of the form `<prefix>-1`, `<prefix>-2`, … — derived from what is
- * TAKEN rather than from a counter, because the state inspector may have
- * applied a tree that already holds some.
+ * TAKEN rather than from a counter, because a host may have applied a tree
+ * that already holds some.
  */
 export function numberedIds(prefix: string): (taken: readonly string[]) => string {
   const head = `${prefix}-`;
@@ -44,8 +50,8 @@ export function numberedIds(prefix: string): (taken: readonly string[]) => strin
   };
 }
 
-/** How this playground names what its builder creates. */
-export const BUILDER_NAMING: BuilderNaming = {
+/** The names a builder uses unless the host says otherwise. */
+export const DEFAULT_BUILDER_NAMING: BuilderNaming = {
   pageView: "default",
   widgetTemplate: "default",
   modelGroup: "custom",
@@ -55,13 +61,15 @@ export const BUILDER_NAMING: BuilderNaming = {
 /** Where a builder's widget templates live — the prefix that marks a model as builder-owned. */
 export const modelNamespaceOf = (naming: BuilderNaming): string => `widgets.${naming.modelGroup}`;
 
+const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
+
 /** The builder's SHARED page template, as the store holds it — not an edit session's view of it. */
 export function builderPage(
   layoutEngines: LayoutEngineRegistry,
   viewModels: ViewModels,
   page: string,
   naming: BuilderNaming,
-) {
+): TemplateResolution {
   return resolveTemplate(layoutEngines, viewModels.pages?.[page]?.[naming.pageView]);
 }
 
@@ -69,15 +77,12 @@ export interface BuilderInput {
   store: Store;
   /** THE write path (use-commit): placing a widget commits through it, never to the store itself. */
   commit: Commit;
-  /** Whether this user may change pages at all — placing a widget changes the shared one. */
-  canEdit?: boolean;
+  /** Whether this user may change pages at all — placing a widget changes the shared one. Required: a builder never assumes it may write. */
+  canEdit: boolean;
   layoutEngines: LayoutEngineRegistry;
-  viewModels: ViewModels;
   /** The page widgets are added to. */
   page: string;
   naming: BuilderNaming;
-  /** The page as `builderPage` resolved it — passed in so it is resolved once. */
-  resolved: ReturnType<typeof builderPage>;
   /** Choosing an engine replaces the page template: an open session would be stale. */
   cancelEditing: () => void;
   /** The page changed, so it must load again by the new configuration. */
@@ -87,41 +92,45 @@ export interface BuilderInput {
 export function useBuilder({
   store,
   commit,
-  canEdit = true,
+  canEdit,
   layoutEngines,
-  viewModels,
   page,
   naming,
-  resolved,
   cancelEditing,
   onAdded,
 }: BuilderInput) {
+  // Rendered facts follow the store.
+  const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? NO_VIEW_MODELS;
+  const resolved = builderPage(layoutEngines, viewModels, page, naming);
+  const hasCells = resolved.problem === undefined && resolved.cells.length > 0;
+
   /**
    * The engine is a free choice UNTIL the first widget is placed: picking one
    * replaces the (empty) template with that engine's empty template. With
    * cells in place it is locked — there is no conversion between engines by
    * decision.
    */
-  const engineLocked = resolved.problem !== undefined || resolved.cells.length > 0;
+  const engineLocked = resolved.problem !== undefined || hasCells;
 
   const setEngine = useCallback(
     (name: string) => {
       if (!canEdit) return;
       const engine = layoutEngines.get(name);
-      const current = builderPage(layoutEngines, viewModels, page, naming);
-      if (!engine || current.problem !== undefined || current.cells.length > 0) return;
+      const prev = store.get<ViewModels>("viewModels");
+      if (!engine || !prev) return;
+      const current = builderPage(layoutEngines, prev, page, naming);
+      if (current.problem !== undefined || current.cells.length > 0) return;
       cancelEditing();
-      commit({ viewModels: updatePageTemplate(viewModels, page, naming.pageView, () => engine.empty()) });
+      commit({ viewModels: updatePageTemplate(prev, page, naming.pageView, () => engine.empty()) });
     },
-    [canEdit, layoutEngines, viewModels, page, naming, commit, cancelEditing],
+    [canEdit, layoutEngines, store, page, naming, commit, cancelEditing],
   );
 
   /**
    * Place a widget: a fresh BASE widget template holding the bindings (input
    * paths + event reactions) and the settings the user typed (the widget's
    * defaults fill the rest), plus a cell appended by the page's engine
-   * plugin. Read fresh from the store, never from a closure: the inspector
-   * may have changed the tree since this callback was made.
+   * plugin.
    */
   const addWidget = useCallback(
     (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => {
@@ -129,7 +138,7 @@ export function useBuilder({
       const prev = store.get<ViewModels>("viewModels");
       if (!prev) return;
       const target = builderPage(layoutEngines, prev, page, naming);
-      // No template to append to (removed via the inspector): write nothing
+      // No template to append to (removed by a host's editor): write nothing
       // rather than a dangling widget template nobody references.
       if (target.problem !== undefined) return;
       const group = (prev.widgets[naming.modelGroup] as Record<string, unknown> | undefined) ?? {};
@@ -162,5 +171,5 @@ export function useBuilder({
     [canEdit, store, commit, layoutEngines, page, naming, onAdded],
   );
 
-  return { engineLocked, setEngine, addWidget };
+  return { hasCells, engineLocked, setEngine, addWidget };
 }

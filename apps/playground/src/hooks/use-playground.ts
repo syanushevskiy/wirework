@@ -1,10 +1,12 @@
 /**
- * ALL playground logic lives here (guidelines: components are render-only):
- * the page visit and overlay UI state, live validation, permissions and the
- * page's reload key. One-time boot (registries, pages, rejection proof) is
- * `boot.ts`; page editing (session, widget edits, removal) lives in
- * use-page-editing; placing widgets lives in use-builder; this demo's own
- * event wiring lives in use-demo-bridge.
+ * The playground's HOST logic for one page visit (guidelines: components are
+ * render-only): the visit's opening, the overlay switch, live validation,
+ * the permission, this demo's stand-in for persistence, and the reload key.
+ * The builder itself is @wirework/builder — `usePageEditing` (the edit
+ * session), `useBuilder` (placing widgets) and `useCommit` (the one write
+ * path) — composed here with what only this application knows. One-time
+ * boot (registries, pages, rejection proof) is `boot.ts`; this demo's own
+ * event wiring is use-demo-bridge.
  *
  * The hook serves ONE page visit, which the router's loader opened
  * (router.tsx, boot.ts): the visit's store and bus, from that page's
@@ -22,7 +24,7 @@ import type { UserViewModels, ViewModels } from "@wirework/schema";
 import { validateViewModels } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import {
-  BUILDER_NAMING,
+  DEFAULT_BUILDER_NAMING,
   builderPage,
   modelNamespaceOf,
   useBuilder,
@@ -55,15 +57,14 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   const userViewModels = useStorePath<UserViewModels>(store, "userViewModels") ?? NO_USER_VIEW_MODELS;
   const trees = useMemo(() => ({ viewModels, userViewModels }), [viewModels, userViewModels]);
 
-  /** The builder's shared page, resolved once and shared with `useBuilder` below. */
-  const builder = builderPage(layoutEngines, viewModels, BUILDER_PAGE, BUILDER_NAMING);
-
   /**
    * The user overlay. Every page has one, and a visit starts with it on or
    * off as the page says (boot.ts). On the builder there is nothing to
    * personalise until the shared page holds a widget: until then the
-   * overlay is unavailable — and off.
+   * overlay is unavailable — and off. (Resolved here rather than taken from
+   * `useBuilder`, which needs the edit session that this decides.)
    */
+  const builder = builderPage(layoutEngines, viewModels, BUILDER_PAGE, DEFAULT_BUILDER_NAMING);
   const [overlayWanted, setOverlayWanted] = useState(visit.userOverlayOnOpen);
   const userOverlayAvailable =
     page !== BUILDER_PAGE || (builder.problem === undefined && builder.cells.length > 0);
@@ -119,7 +120,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     target,
     withUserOverlay,
     trees,
-    modelNamespace: modelNamespaceOf(BUILDER_NAMING),
+    modelNamespace: modelNamespaceOf(DEFAULT_BUILDER_NAMING),
   });
 
   /** Toggling the overlay changes the edit target — an open session ends. */
@@ -133,17 +134,17 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   /**
    * Why the builder's Add is not offered right now, if it is not. Adding
-   * always changes the SHARED page: an open edit session would be silently
-   * dropped by it, and a user's own view is no place for a new widget (the
-   * overlay carries settings, view and layout only).
+   * always changes the SHARED page: not without the permission, not under
+   * an open edit session (it would be silently dropped), and not in a
+   * user's own view (the overlay carries settings, view and layout only).
    */
-  const addLocked =
-    editing.editLocked ??
-    (editing.editing
+  const addLocked = !canEditPages
+    ? "You may not change pages."
+    : editing.editing
       ? "Save or cancel the page edit to add widgets."
       : target === "user"
         ? "Adding a widget changes the shared page — turn the user overlay off to add one."
-        : undefined);
+        : undefined;
 
   /**
    * The page changed under the user's hands — a widget ADDED, a page edit
@@ -160,16 +161,14 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     commit,
     canEdit: canEditPages,
     layoutEngines,
-    viewModels,
     page: BUILDER_PAGE,
-    naming: BUILDER_NAMING,
-    resolved: builder,
+    naming: DEFAULT_BUILDER_NAMING,
     cancelEditing: editing.cancel,
     onAdded: loadAgain,
   });
 
   /** Save page: commit the session, then the page loads again — by what was just saved. */
-  const save = useCallback(() => {
+  const savePage = useCallback(() => {
     editing.save();
     loadAgain();
   }, [editing.save, loadAgain]);
@@ -195,8 +194,8 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     addLocked,
     addWidget,
     ...editing,
-    // After the spread: Save also loads the page again.
-    save,
+    // Deliberately after the spread: the page's Save is the session's Save plus the reload.
+    save: savePage,
     reloadKey,
   };
 }
