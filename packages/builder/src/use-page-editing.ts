@@ -143,7 +143,7 @@ export function usePageEditing({
   });
   const activeView = plan.problem === undefined ? plan.view : undefined;
   const engine = plan.problem === undefined ? plan.engine : undefined;
-  const cells = useMemo<ResolvedCell[]>(() => (plan.problem === undefined ? plan.cells : []), [plan]);
+  const cells = useMemo<readonly ResolvedCell[]>(() => (plan.problem === undefined ? plan.cells : []), [plan]);
 
   const editingCell = useMemo<EditableCell | undefined>(() => {
     // The form was prefilled under `selected.target`; a different target now

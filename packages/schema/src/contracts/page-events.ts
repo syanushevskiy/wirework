@@ -15,7 +15,7 @@
  */
 import { z } from "zod";
 import type { EventSource, WidgetEvents } from "./events";
-import { reactionSchema } from "./reactions";
+import { reactionsByEventSchema } from "./reactions";
 
 /** The `widget` of a page's own events on the bus. */
 export const PAGE_EVENT_WIDGET = "page";
@@ -34,8 +34,10 @@ export const pageEvents = {
 export type PageEventName = keyof typeof pageEvents;
 
 /**
- * One page's reactions. strict: reacting to an event pages do not have
- * ("loaded", "open") must fail, never be dropped.
+ * One page's reactions — DERIVED from the events pages have, exactly like a
+ * widget's `on` from its events: a new page event is one entry in
+ * `pageEvents`. strict: reacting to an event pages do not have ("loaded",
+ * "open") must fail, never be dropped.
  */
-export const pageBindingsSchema = z.object({ load: z.array(reactionSchema).optional() }).strict();
+export const pageBindingsSchema = reactionsByEventSchema(pageEvents);
 export type PageBindings = z.infer<typeof pageBindingsSchema>;

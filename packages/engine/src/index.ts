@@ -12,8 +12,9 @@
  * engine's own building blocks (cell pipeline, template checks, path
  * tooling) stay module-internal; its tests import them from their modules.
  */
-export { RegistrationError } from "./named-registry";
-export type { NamedRegistry } from "./named-registry";
+// The one registry behind every extension point: a host's own registry (a fifth extension point) is built the same way.
+export { createNamedRegistry, RegistrationError } from "./named-registry";
+export type { Invariant, NamedRegistry, NamedRegistryOptions } from "./named-registry";
 export { createRegistry } from "./registry";
 export type { WidgetRegistry, WidgetRegistryOptions } from "./registry";
 export { createContracts } from "./contracts";

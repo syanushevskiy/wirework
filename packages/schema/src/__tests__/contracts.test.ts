@@ -12,6 +12,8 @@ import {
   defineContract,
   eventFilter,
   isConfigPath,
+  pageBindingsSchema,
+  pageEvents,
   reactionSchema,
   settingFields,
   storePathSchema,
@@ -142,6 +144,45 @@ describe("eventFilter", () => {
   });
 });
 
+describe("defineContract", () => {
+  it("refuses a setting named like a binding — it would replace the wiring in the view model", () => {
+    expect(() =>
+      defineContract({ kind: "odd", io, events, settings: z.object({ inputs: z.string(), tone: z.string() }) }),
+    ).toThrow(/names a setting "inputs": inputs and on are the bindings/);
+    expect(() => defineContract({ kind: "odd", io, events, settings: z.object({ on: z.string() }) })).toThrow(/"on"/);
+  });
+
+  it("keeps a rule the settings object carries, and still offers the settings as fields", () => {
+    const contract = defineContract({
+      kind: "ranged",
+      io,
+      events,
+      settings: z
+        .object({ min: z.number().default(0), max: z.number().default(10) })
+        .refine((range) => range.min <= range.max, { message: "min must not exceed max" }),
+    });
+    const bindings = { inputs: { value: "form.text" } };
+    expect(contract.viewModel.parse({ ...bindings, min: 1, max: 2 })).toMatchObject({ min: 1, max: 2 });
+    expect(contract.viewModel.safeParse({ ...bindings, min: 5, max: 2 }).error?.issues[0]?.message).toBe(
+      "min must not exceed max",
+    );
+    // An unknown key is still refused; the fields are still found through the rule.
+    expect(contract.viewModel.safeParse({ ...bindings, mni: 1 }).success).toBe(false);
+    expect(settingFields(contract.viewModel).map((field) => field.name)).toEqual(["min", "max"]);
+    expect(validatorKeys(contract.viewModel)).toEqual(["inputs", "on", "min", "max"]);
+  });
+});
+
+describe("pageBindingsSchema", () => {
+  it("is derived from the page events: their names and nothing else", () => {
+    expect(Object.keys(pageBindingsSchema.shape)).toEqual(Object.keys(pageEvents));
+    expect(pageBindingsSchema.parse({ load: [{ call: "overview/load" }] })).toEqual({
+      load: [{ call: "overview/load" }],
+    });
+    expect(pageBindingsSchema.safeParse({ opened: [] }).success).toBe(false);
+  });
+});
+
 describe("settingFields per zod wrapper", () => {
   const field = (schema: z.ZodTypeAny) => settingFields(z.object({ x: schema }))[0];
 
@@ -161,6 +202,27 @@ describe("settingFields per zod wrapper", () => {
 
   it("takes the outermost default when there are two", () => {
     expect(field(z.number().default(1).default(2))?.defaultValue).toBe(2);
+  });
+
+  it("sees through a rule, a catch, readonly and a brand to the setting's type", () => {
+    expect(field(z.string().refine((text) => text.length < 10))).toMatchObject({ kind: "text", required: true });
+    expect(field(z.number().catch(0))).toMatchObject({ kind: "number", required: true });
+    expect(field(z.boolean().readonly().default(true))).toMatchObject({ kind: "boolean", defaultValue: true });
+    expect(field(z.string().brand("Name").optional())).toMatchObject({ kind: "text", required: false });
+  });
+
+  it("offers a native enum's names and a single literal as a select", () => {
+    enum Tone {
+      Quiet = "quiet",
+      Loud = "loud",
+    }
+    expect(field(z.nativeEnum(Tone).default(Tone.Quiet))).toMatchObject({
+      kind: "select",
+      options: ["quiet", "loud"],
+      defaultValue: "quiet",
+    });
+    expect(field(z.literal("fixed"))).toMatchObject({ kind: "select", options: ["fixed"] });
+    expect(field(z.literal(42))).toBeUndefined();
   });
 
   it("leaves out what it cannot offer as a field, and reserved keys", () => {

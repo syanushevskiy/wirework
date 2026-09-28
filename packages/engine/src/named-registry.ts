@@ -29,6 +29,13 @@ export interface NamedRegistry<T> {
   get(key: string): T | undefined;
   keys(): readonly string[];
   list(): readonly T[];
+  /**
+   * Boot is over: no more registrations. Rendering treats the registries
+   * as immutable (a page resolved against them is memoized); a late
+   * registration would be silently invisible to what is already on screen,
+   * so it fails loudly instead.
+   */
+  seal(): void;
 }
 
 export interface NamedRegistryOptions<T> {
@@ -49,6 +56,7 @@ export function createNamedRegistry<T>({
   invariants = [],
 }: NamedRegistryOptions<T>): NamedRegistry<T> {
   const items = new Map<string, T>();
+  let sealed = false;
   const fail = (message: string, key: string): never => {
     throw new RegistrationError(message, label.toLowerCase(), key);
   };
@@ -59,6 +67,8 @@ export function createNamedRegistry<T>({
       if (!key || typeof key !== "string" || !pattern.test(key)) {
         fail(`${label} name ${JSON.stringify(key)} is not a valid identifier`, String(key));
       }
+      if (sealed)
+        fail(`${label} "${key}" cannot be registered: the registry is sealed (registration happens at boot)`, key);
       if (items.has(key)) fail(`${label} "${key}" is already registered`, key);
       for (const invariant of invariants) {
         const message = invariant(item, key);
@@ -69,5 +79,8 @@ export function createNamedRegistry<T>({
     get: (key) => items.get(key),
     keys: () => [...items.keys()],
     list: () => [...items.values()],
+    seal: () => {
+      sealed = true;
+    },
   };
 }

@@ -19,7 +19,7 @@ export interface PageRenderersInput {
 }
 
 export function usePageRenderers({ plan, store, bus, editable, onEditCell, onRemoveCell }: PageRenderersInput) {
-  const cells = useMemo<ResolvedCell[]>(() => (plan.problem === undefined ? plan.cells : []), [plan]);
+  const cells = useMemo<readonly ResolvedCell[]>(() => (plan.problem === undefined ? plan.cells : []), [plan]);
   const byId = useMemo(() => new Map(cells.map((cell) => [cell.key, cell])), [cells]);
   const cellById = useCallback((id: string) => byId.get(id), [byId]);
 

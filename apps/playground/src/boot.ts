@@ -179,6 +179,10 @@ export function boot({ navigator }: { navigator: Navigator }) {
     }
   });
 
+  // Boot is over: the registries are what the pages render against, and a
+  // registration after this point would be invisible to them — so it fails.
+  for (const extensionPoint of [contracts, registry, layoutEngines, actions]) extensionPoint.seal();
+
   /** A page of the demo application: its own data plus what the router matched. */
   const demoPage = (name: DemoPage, onOpen?: (store: Store) => void): PlaygroundPage => ({
     initialState: (route) => ({ ...demoPageData[name], route }),

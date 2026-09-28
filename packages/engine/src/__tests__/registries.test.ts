@@ -9,6 +9,7 @@ import {
   createActions,
   createContracts,
   createLayoutEngines,
+  createNamedRegistry,
   createRegistry,
   layoutEngineProblems,
   RegistrationError,
@@ -42,6 +43,27 @@ describe("shared registry guarantees", () => {
       expect(error).toBeInstanceOf(RegistrationError);
       expect(error).toMatchObject({ registry: "action", key: "Bad Name" });
     }
+  });
+
+  it("refuses a registration once sealed — boot is over — and keeps what it has", () => {
+    const registry = createRegistry();
+    registry.register(counter);
+    registry.seal();
+    expect(() => registry.register(plain)).toThrow(/"plain" cannot be registered: the registry is sealed/);
+    expect(registry.keys()).toEqual(["counter"]);
+    expect(registry.get("counter")).toBe(counter);
+  });
+
+  it("is what a host builds its own extension point from", () => {
+    const themes = createNamedRegistry<{ name: string; accent: string }>({
+      label: "Theme",
+      keyOf: (theme) => theme.name,
+      pattern: /^[a-z]+$/,
+      invariants: [(theme) => (theme.accent.startsWith("#") ? undefined : "has an accent that is not a colour")],
+    });
+    themes.register({ name: "dawn", accent: "#fda" });
+    expect(() => themes.register({ name: "dusk", accent: "purple" })).toThrow(/Theme "dusk" has an accent/);
+    expect(themes.keys()).toEqual(["dawn"]);
   });
 });
 
@@ -99,8 +121,41 @@ describe("widget registry", () => {
         /kind "button", which is not a registered contract/,
       );
       expect(() => registry.register({ ...implementation, type: "y", events: counter.events })).toThrow(
-        /ports or events differ/,
+        /declares events the contract has not: "changed"/,
       );
+    });
+
+    it("names exactly what departs from the contract: ports, their requiredness, events, their fields", () => {
+      const gauge = defineContract({
+        kind: "gauge",
+        io: { inputs: { value: { value: z.number(), default: 0 }, unit: { value: z.string(), required: false } } },
+        events: { changed: { payload: z.object({ value: z.number() }), required: true, primary: "value" } },
+        settings: z.object({}),
+      });
+      const known = createContracts();
+      known.register(gauge);
+      const registry = createRegistry({ contracts: known });
+      const base = { ...plain, kind: "gauge", io: gauge.io, events: gauge.events, viewModel: gauge.viewModel };
+      expect(() => registry.register({ ...base, type: "ok" })).not.toThrow();
+      expect(() => registry.register({ ...base, type: "a", io: { inputs: { value: gauge.io.inputs.value } } })).toThrow(
+        /is missing the input ports "unit"/,
+      );
+      expect(() =>
+        registry.register({ ...base, type: "b", io: { inputs: { ...gauge.io.inputs, unit: { value: z.string() } } } }),
+      ).toThrow(/has the input port "unit" required, the contract optional/);
+      expect(() =>
+        registry.register({ ...base, type: "c", events: { changed: { ...gauge.events.changed, required: false } } }),
+      ).toThrow(/has the event "changed" optional, the contract required/);
+      expect(() =>
+        registry.register({ ...base, type: "d", events: { changed: { ...gauge.events.changed, primary: "unit" } } }),
+      ).toThrow(/has the event "changed" with primary field "unit", the contract "value"/);
+      expect(() =>
+        registry.register({
+          ...base,
+          type: "e",
+          events: { changed: { ...gauge.events.changed, payload: z.object({ value: z.number(), at: z.number() }) } },
+        }),
+      ).toThrow(/has the event "changed" carrying \["value","at"\], the contract \["value"\]/);
     });
   });
 });

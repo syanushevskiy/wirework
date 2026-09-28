@@ -42,7 +42,11 @@ interface Unwrapped {
   description: string | undefined;
 }
 
-/** Peel `.default()` / `.optional()` / `.nullable()` wrappers, keeping their facts. */
+/**
+ * Peel the wrappers off a setting, keeping their facts: `.default()`,
+ * `.optional()`, `.nullable()`, a rule (`.refine()` — a ZodEffects), `.catch()`,
+ * `.readonly()` and `.brand()` all wrap the setting's real type.
+ */
 function unwrap(schema: z.ZodTypeAny): Unwrapped {
   let current = schema;
   let optional = false;
@@ -64,13 +68,33 @@ function unwrap(schema: z.ZodTypeAny): Unwrapped {
       current = current._def.innerType;
       continue;
     }
-    if (current instanceof z.ZodNullable) {
-      // Nullable keeps the key required; only the VALUE may be null.
+    if (current instanceof z.ZodNullable || current instanceof z.ZodCatch || current instanceof z.ZodReadonly) {
+      // Nullable keeps the key required (only the VALUE may be null); catch and readonly change nothing a field shows.
       current = current._def.innerType;
+      continue;
+    }
+    if (current instanceof z.ZodEffects) {
+      current = current._def.schema;
+      continue;
+    }
+    if (current instanceof z.ZodBranded) {
+      current = current._def.type;
       continue;
     }
     return { inner: current, optional, hasDefault, defaultValue, description };
   }
+}
+
+/** The choices of a setting that offers a fixed set: an enum, a native enum's names, or ONE literal. */
+function optionsOf(schema: z.ZodTypeAny): string[] | undefined {
+  if (schema instanceof z.ZodEnum) return [...(schema.options as string[])];
+  if (schema instanceof z.ZodNativeEnum) {
+    return Object.values(schema.enum as Record<string, unknown>).filter(
+      (value): value is string => typeof value === "string",
+    );
+  }
+  if (schema instanceof z.ZodLiteral && typeof schema.value === "string") return [schema.value];
+  return undefined;
 }
 
 const kindOf = (schema: z.ZodTypeAny): SettingKind | undefined =>
@@ -80,9 +104,16 @@ const kindOf = (schema: z.ZodTypeAny): SettingKind | undefined =>
       ? "number"
       : schema instanceof z.ZodBoolean
         ? "boolean"
-        : schema instanceof z.ZodEnum
+        : optionsOf(schema) !== undefined
           ? "select"
           : undefined;
+
+/** The object behind a validator — through a rule on top of it (`.refine()` makes a ZodEffects) — or undefined. */
+function objectShape(validator: Validator<unknown>): Record<string, unknown> | undefined {
+  const object = validator instanceof z.ZodEffects ? (validator.innerType() as unknown) : validator;
+  const shape = (object as { shape?: unknown }).shape;
+  return shape !== null && typeof shape === "object" ? (shape as Record<string, unknown>) : undefined;
+}
 
 /**
  * Top-level keys of an object validator (e.g. an event payload), or
@@ -90,9 +121,8 @@ const kindOf = (schema: z.ZodTypeAny): SettingKind | undefined =>
  * as the `from` field of a reaction.
  */
 export function validatorKeys(validator: Validator<unknown>): string[] | undefined {
-  const shape = (validator as { shape?: unknown }).shape;
-  if (shape === null || typeof shape !== "object") return undefined;
-  return Object.keys(shape as Record<string, unknown>);
+  const shape = objectShape(validator);
+  return shape === undefined ? undefined : Object.keys(shape);
 }
 
 /**
@@ -102,13 +132,14 @@ export function validatorKeys(validator: Validator<unknown>): string[] | undefin
  * for a form that lets the user type JSON (an action's column overrides).
  */
 export function settingFields(validator: Validator<unknown>, options: { json?: boolean } = {}): SettingField[] {
-  const shape = (validator as { shape?: unknown }).shape;
-  if (shape === null || typeof shape !== "object") return [];
-  return Object.entries(shape as Record<string, unknown>).flatMap(([name, schema]) => {
+  const shape = objectShape(validator);
+  if (shape === undefined) return [];
+  return Object.entries(shape).flatMap(([name, schema]) => {
     if (RESERVED_VIEW_MODEL_KEYS.has(name) || !(schema instanceof z.ZodType)) return [];
     const { inner, optional, hasDefault, defaultValue, description } = unwrap(schema);
     const kind = kindOf(inner) ?? (options.json === true ? "json" : undefined);
     if (!kind) return [];
+    const choices = optionsOf(inner);
     return [
       {
         name,
@@ -116,7 +147,7 @@ export function settingFields(validator: Validator<unknown>, options: { json?: b
         required: !optional && !hasDefault,
         ...(description === undefined ? {} : { description }),
         ...(hasDefault ? { defaultValue } : {}),
-        ...(inner instanceof z.ZodEnum ? { options: [...(inner.options as string[])] } : {}),
+        ...(choices === undefined ? {} : { options: choices }),
       },
     ];
   });

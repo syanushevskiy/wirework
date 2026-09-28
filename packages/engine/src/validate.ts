@@ -40,9 +40,9 @@ export interface ValidationProblem {
 export interface ValidationReport {
   /** True when there is no ERROR (warnings do not fail a boot). */
   ok: boolean;
-  problems: ValidationProblem[];
-  errors: ValidationProblem[];
-  warnings: ValidationProblem[];
+  problems: readonly ValidationProblem[];
+  errors: readonly ValidationProblem[];
+  warnings: readonly ValidationProblem[];
 }
 
 /** What `resolvePage` takes, minus the page: validation walks every page. */

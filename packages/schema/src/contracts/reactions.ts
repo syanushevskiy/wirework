@@ -64,14 +64,27 @@ export type EventBindingsShape<E extends WidgetEvents> = {
   [K in keyof E]: z.ZodOptional<z.ZodArray<typeof reactionSchema>>;
 };
 
-/** Builds the `on` part of a widget's view-model schema from its events. */
-export function eventBindingsSchema<E extends WidgetEvents>(events: E) {
+/**
+ * The reactions per DECLARED event — an optional list each and nothing
+ * else (strict): what a widget's `on` holds, and a page's own reactions.
+ */
+export function reactionsByEventSchema<E extends WidgetEvents>(events: E) {
+  // The one cast: `reactionLists` builds exactly EventBindingsShape<E>.
+  return reactionLists(events) as unknown as z.ZodObject<EventBindingsShape<E>, "strict">;
+}
+
+/** An optional reaction list per declared event, unchecked: the typed casts sit in the two callers. */
+function reactionLists(events: WidgetEvents) {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const name of Object.keys(events)) {
     shape[name] = z.array(reactionSchema).optional();
   }
-  // The one cast: the loop above builds exactly EventBindingsShape<E>.
-  const on = z.object(shape).strict().default({}) as unknown as z.ZodType<
+  return z.object(shape).strict();
+}
+
+/** Builds the `on` part of a widget's view-model schema from its events. */
+export function eventBindingsSchema<E extends WidgetEvents>(events: E) {
+  const on = reactionLists(events).default({}) as unknown as z.ZodType<
     z.output<z.ZodObject<EventBindingsShape<E>, "strict">>
   >;
   return z.object({ on }).strict();

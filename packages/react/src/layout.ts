@@ -11,7 +11,7 @@ export interface LayoutRendererProps<T extends PageViewModel = PageViewModel, C 
   /** The page template, validated by this engine. */
   template: T;
   /** Every cell, resolved by id (definition, view model or problem). */
-  cells: ResolvedCell[];
+  cells: readonly ResolvedCell[];
   cellById: (id: string) => ResolvedCell | undefined;
   /** Edit mode: enable the engine's interactive editing, show chrome. */
   editable: boolean;

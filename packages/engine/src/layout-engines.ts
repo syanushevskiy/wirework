@@ -40,9 +40,9 @@ export type TemplateResolution =
       engine: AnyLayoutEngine;
       template: PageViewModel;
       /** Every cell of the template, as the engine lists them. */
-      cells: CellBase[];
+      cells: readonly CellBase[];
       /** The engine's own `validate` findings: the page renders, but not as designed. */
-      warnings: string[];
+      warnings: readonly string[];
       problem?: undefined;
     }
   | { engine?: undefined; template?: undefined; cells?: undefined; warnings?: undefined; problem: string };

@@ -107,9 +107,9 @@ export interface ResolvedPagePlan extends ResolvedPageBase {
   problem?: undefined;
   engine: string;
   template: PageViewModel;
-  cells: ResolvedCell[];
+  cells: readonly ResolvedCell[];
   /** The layout engine's validation findings: the page renders, not as designed. */
-  warnings: string[];
+  warnings: readonly string[];
 }
 
 /** A page that cannot render (unknown page / template / engine). */

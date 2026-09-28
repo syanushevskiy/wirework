@@ -82,7 +82,8 @@ export function checkPageReactions(
   return { on: Object.fromEntries(entries.flatMap(([event, reactions]) => (reactions ? [[event, reactions]] : []))) };
 }
 
-/** The page has opened: tell the bus, and with it the page's `load` reactions. */
+/** The page has opened: tell the bus, and with it the page's `load` reactions. The payload is what the event declares. */
 export function emitPageLoad(bus: EventBus, page: string): void {
-  bus.emit({ widget: PAGE_EVENT_WIDGET, name: "load", payload: { page }, source: pageEventSource(page) });
+  const payload = pageEvents.load.payload.parse({ page });
+  bus.emit({ widget: PAGE_EVENT_WIDGET, name: "load", payload, source: pageEventSource(page) });
 }
