@@ -100,6 +100,39 @@ describe("layerStores", () => {
     expect(onRoot).toHaveBeenCalledOnce();
   });
 
+  it("routes a validated read to the layer that owns the root", () => {
+    const { store } = layers({ runs: { page: "1" } }, { app: { settings: { pageSize: 5 } } });
+    const number = { parse: (input: unknown) => (typeof input === "number" ? input : undefined) };
+    expect(store.getAs("app.settings.pageSize", number)).toBe(5);
+    expect(store.getAs("runs.page", number)).toBeUndefined();
+  });
+
+  it("stops a path subscription in the layer that owns it", () => {
+    const { store } = layers({}, { app: { settings: { pageSize: 5 } } });
+    const onShared = vi.fn();
+    const stop = store.subscribe("app.settings.pageSize", onShared);
+    store.set("app.settings.pageSize", 10);
+    stop();
+    store.set("app.settings.pageSize", 15);
+    expect(onShared).toHaveBeenCalledOnce();
+  });
+
+  it("gives a new snapshot when only the shared layer changed", () => {
+    const { store } = layers({ runs: { page: 1 } }, { app: { user: { name: "Ann" } } });
+    const before = store.snapshot();
+    store.set("app.user.name", "Bob");
+    expect(store.snapshot()).not.toBe(before);
+    expect(store.snapshot()).toEqual({ runs: { page: 1 }, app: { user: { name: "Bob" } } });
+  });
+
+  it("replace with an empty tree clears the page and keeps the shared layer", () => {
+    const { page, shared, store } = layers({ runs: { page: 1 } }, { app: { user: { name: "Ann" } } });
+    store.replace({});
+    expect(page.snapshot()).toEqual({});
+    expect(shared.snapshot()).toEqual({ app: { user: { name: "Ann" } } });
+    expect(store.snapshot()).toEqual({ app: { user: { name: "Ann" } } });
+  });
+
   it("replace with some shared roots keeps the shared roots it does not name", () => {
     const { shared, store } = layers({}, { app: { user: { name: "Ann" } }, userViewModels: { pages: { runs: {} } } });
     store.replace({ app: { user: { name: "Bob" } } });

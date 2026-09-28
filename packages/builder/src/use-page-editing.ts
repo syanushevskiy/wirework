@@ -227,23 +227,22 @@ export function usePageEditing({
   const changeLayout = useCallback(
     (change: unknown) => {
       if (!mayEdit) return;
-      push(
-        pageOp((plugin, template) => {
-          // The engine's own validator first: a payload that does not fit
-          // (a renderer's bug, a host's) is reported and changes nothing.
-          let checked: unknown;
-          try {
-            checked = plugin.change.parse(change);
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn(`Layout change ignored: it does not fit the "${plugin.name}" engine — ${problemText(error)}`);
-            return template;
-          }
-          return plugin.applyChange(template, checked);
-        }),
-      );
+      // The engine's own validator first: a payload that does not fit (a
+      // renderer's bug, a host's) is reported and never becomes an op — a
+      // session must not count a change that changes nothing.
+      const plugin = engine === undefined ? undefined : layoutEngines.get(engine);
+      if (!plugin) return;
+      let checked: unknown;
+      try {
+        checked = plugin.change.parse(change);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn(`Layout change ignored: it does not fit the "${plugin.name}" engine — ${problemText(error)}`);
+        return;
+      }
+      push(pageOp((current, template) => current.applyChange(template, checked)));
     },
-    [mayEdit, push, pageOp],
+    [mayEdit, engine, layoutEngines, push, pageOp],
   );
 
   const removeCellById = useCallback(

@@ -142,6 +142,44 @@ describe("eventFilter", () => {
   });
 });
 
+describe("settingFields per zod wrapper", () => {
+  const field = (schema: z.ZodTypeAny) => settingFields(z.object({ x: schema }))[0];
+
+  it("reads a description from the setting or any wrapper around it", () => {
+    expect(field(z.string().describe("inner").optional())?.description).toBe("inner");
+    expect(field(z.string().optional().describe("outer"))?.description).toBe("outer");
+    expect(field(z.string().describe("inner").default("a").describe("outer"))?.description).toBe("outer");
+  });
+
+  it("keeps a nullable setting required, and an optional or defaulted one not", () => {
+    expect(field(z.string().nullable())).toMatchObject({ kind: "text", required: true });
+    expect(field(z.string().optional())).toMatchObject({ kind: "text", required: false });
+    expect(field(z.string().default("a"))).toMatchObject({ kind: "text", required: false, defaultValue: "a" });
+    expect(field(z.string().default("a").optional())).toMatchObject({ required: false, defaultValue: "a" });
+    expect(field(z.string().optional().default("a"))).toMatchObject({ required: false, defaultValue: "a" });
+  });
+
+  it("takes the outermost default when there are two", () => {
+    expect(field(z.number().default(1).default(2))?.defaultValue).toBe(2);
+  });
+
+  it("leaves out what it cannot offer as a field, and reserved keys", () => {
+    const schema = z.object({ inputs: z.string(), on: z.string(), list: z.array(z.string()), when: z.date() });
+    expect(settingFields(schema)).toEqual([]);
+    expect(settingFields(z.string())).toEqual([]);
+  });
+
+  it("pins the zod internals it reads, so an upgrade that moves them fails here and not in a builder", () => {
+    const wrapped = z.string().optional().default("a");
+    expect(wrapped).toBeInstanceOf(z.ZodDefault);
+    expect(wrapped._def.defaultValue()).toBe("a");
+    expect(wrapped._def.innerType).toBeInstanceOf(z.ZodOptional);
+    expect(wrapped._def.innerType._def.innerType).toBeInstanceOf(z.ZodString);
+    expect(z.string().nullable()._def.innerType).toBeInstanceOf(z.ZodString);
+    expect(z.object({ a: z.string() }).shape).toEqual({ a: expect.any(z.ZodString) });
+  });
+});
+
 describe("settingFields with json", () => {
   const params = z.object({
     url: z.string().optional().describe("Where the API lives"),

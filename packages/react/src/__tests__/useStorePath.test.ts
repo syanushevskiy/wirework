@@ -1,17 +1,13 @@
-// @vitest-environment jsdom
 /**
  * useStorePath — the canonical reactive read of a store path: a write at
  * the path re-renders with the new value, a changed path reads the other
  * value, and an undefined path (an optional port left unbound) subscribes
  * to nothing and reads undefined.
  */
-import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { createStore } from "@wirework/store";
 import { useStorePath } from "../useStorePath";
-
-// Without vitest globals, Testing Library cannot unmount after each test by itself.
-afterEach(cleanup);
 
 describe("useStorePath", () => {
   it("reads the value at the path and follows writes to it", () => {

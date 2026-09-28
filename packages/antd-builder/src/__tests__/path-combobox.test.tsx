@@ -1,16 +1,12 @@
-// @vitest-environment jsdom
 /**
  * PathCombobox — the port-binding field: it shows the bound path, hands
  * every edit to `onSelect` as it is typed (a path that does not exist yet
  * may be wired), and is inert while disabled.
  */
 import type { ComponentProps } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { PathCombobox } from "../path-combobox";
-
-// Without vitest globals, Testing Library cannot unmount after each test by itself.
-afterEach(cleanup);
 
 function renderField(props: Partial<ComponentProps<typeof PathCombobox>> = {}) {
   const onSelect = vi.fn();

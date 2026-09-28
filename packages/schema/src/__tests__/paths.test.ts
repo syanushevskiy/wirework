@@ -61,7 +61,29 @@ describe("setPath", () => {
   });
 
   it("regression: refuses to write through a primitive", () => {
-    expect(() => setPath({ a: 5 }, "a.b", 1)).toThrow(/holds a number/);
+    expect(() => setPath({ a: 5 }, "a.b", 1)).toThrow(/"a" holds a number/);
+  });
+
+  it("refuses to write through a Date, a Map or a class instance — cloning one as an object would replace it", () => {
+    expect(() => setPath({ when: new Date(0) }, "when.year", 1)).toThrow(/"when" holds a Date/);
+    expect(() => setPath({ byId: new Map() }, "byId.x", 1)).toThrow(/"byId" holds a Map/);
+    class Point {
+      x = 0;
+    }
+    expect(() => setPath({ at: new Point() }, "at.x", 1)).toThrow(/"at" holds a Point/);
+  });
+
+  it("refuses a root that is not a plain object or a list", () => {
+    expect(() => setPath(5, "a", 1)).toThrow(/the root holds a number/);
+    expect(() => setPath(new Map(), "a", 1)).toThrow(/the root holds a Map/);
+    expect(setPath(undefined, "a.b", 1)).toEqual({ a: { b: 1 } });
+    expect(setPath(Object.create(null), "a", 1)).toEqual({ a: 1 });
+  });
+
+  it("treats null as missing, and a Date as a leaf it may replace", () => {
+    expect(setPath({ a: null }, "a.b", 1)).toEqual({ a: { b: 1 } });
+    const when = new Date(0);
+    expect(setPath({ when }, "when", "later")).toEqual({ when: "later" });
   });
 
   it("regression: a missing container is a map for an id and a list only for index 0", () => {

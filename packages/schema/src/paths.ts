@@ -71,26 +71,33 @@ export function getPath(root: unknown, path: PathInput): unknown {
   return current;
 }
 
-/** Immutable write: a new root with `value` at the path. */
+/** What a value is, for a message: "number", "Date", "Map", "object" (a prototype-less one). */
+const kindOf = (value: unknown): string =>
+  typeof value !== "object" || value === null
+    ? typeof value
+    : ((value as { constructor?: { name?: string } }).constructor?.name ?? "object");
+
+/**
+ * Immutable write: a new root with `value` at the path. Only plain objects
+ * and arrays are written THROUGH: a primitive, a Date, a Map or any class
+ * instance on the way is a leaf, and cloning it as a plain object would
+ * silently replace it — so that throws. `null` counts as missing.
+ */
 export function setPath<T>(root: T, path: PathInput, value: unknown): T {
   const segments = checkedSegments(path);
   const shown = segments.join(".");
 
-  const containerFor = (existing: unknown, index: number): unknown => {
-    if (existing !== null && typeof existing === "object") return existing;
-    if (existing !== undefined && existing !== null) {
-      const at = segments.slice(0, index + 1).join(".");
-      throw new Error(
-        `Cannot write "${shown}": "${at}" holds a ${typeof existing}, which writing through it would replace`,
-      );
-    }
-    return segments[index + 1] === "0" ? [] : {};
+  const refuse = (holder: unknown, index: number): never => {
+    const at = index === 0 ? "the root" : `"${segments.slice(0, index).join(".")}"`;
+    throw new Error(`Cannot write "${shown}": ${at} holds a ${kindOf(holder)}, which writing through it would replace`);
   };
 
   const assign = (container: unknown, index: number): unknown => {
     const key = segments[index] ?? "";
     const last = index === segments.length - 1;
-    const child = (existing: unknown): unknown => (last ? value : assign(containerFor(existing, index), index + 1));
+    // A missing child becomes an object, or a list when the next segment is "0".
+    const child = (existing: unknown): unknown =>
+      last ? value : assign(existing ?? (segments[index + 1] === "0" ? [] : {}), index + 1);
     if (Array.isArray(container)) {
       if (!isIndexSegment(key)) {
         throw new Error(`Cannot write "${shown}": segment "${key}" through an array needs a numeric index`);
@@ -99,7 +106,8 @@ export function setPath<T>(root: T, path: PathInput, value: unknown): T {
       next[Number(key)] = child(next[Number(key)]);
       return next;
     }
-    const next: Record<string, unknown> = { ...(container as Record<string, unknown> | undefined) };
+    if (container !== undefined && container !== null && !isPlainObject(container)) return refuse(container, index);
+    const next: Record<string, unknown> = { ...container };
     next[key] = child(Object.hasOwn(next, key) ? next[key] : undefined);
     return next;
   };

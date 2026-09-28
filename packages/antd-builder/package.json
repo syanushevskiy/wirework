@@ -45,11 +45,13 @@
   "devDependencies": {
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
+    "@wirework/store": "workspace:*",
     "antd": "catalog:",
     "jsdom": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

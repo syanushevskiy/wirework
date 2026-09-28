@@ -36,9 +36,12 @@
     "react": "catalog:"
   },
   "devDependencies": {
+    "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@wirework/store": "workspace:*",
+    "jsdom": "catalog:",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
