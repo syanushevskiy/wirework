@@ -2,9 +2,9 @@
  * usePort — the value at an input port's bound path, VALIDATED by the
  * port's own validator: an unbound port, an empty path or a value the
  * validator rejects all give the port's declared default. One hook instead
- * of a hand-written "read, check, fall back" per widget (team-tiger review:
- * seven copies, and the one without a check crashed the table on a
- * malformed value from the inspector).
+ * of a hand-written "read, check, fall back" per widget: there were seven
+ * copies once, and the one without a check crashed the table on a
+ * malformed value from the inspector.
  *
  * Widgets that deliberately SHOW a malformed value (an echo, a text input
  * displaying whatever is there) read `useStorePath` directly instead.

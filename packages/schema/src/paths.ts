@@ -1,8 +1,7 @@
 /**
  * Dot paths — the ONE walker for plain data trees, shared by the store, the
- * engine and widgets (team-tiger review: five hand-written walkers
- * disagreed about arrays, primitives and empty segments, and one of them
- * lost an edit).
+ * engine and widgets: five hand-written walkers once disagreed about
+ * arrays, primitives and empty segments, and one of them lost an edit.
  *
  * Rules:
  *  - a path is a dot-separated string, or explicit segments when a segment

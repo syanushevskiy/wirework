@@ -10,8 +10,8 @@
  *  - nested emits beyond MAX_EMIT_DEPTH throw an EventLoopError that
  *    unwinds EVERY level up to the original emitter: a listener re-emitting
  *    in a loop is a bug, and it must fail loudly instead of hanging the page.
- *    (It used to be caught and logged by the parent listener's isolation, so
- *    a loop that branched ran ~2^32 emits first — team-tiger review.)
+ *    (Caught and logged by the parent listener's isolation, as it once was,
+ *    a loop that branched ran ~2^32 emits first.)
  *
  * This guard sees SYNCHRONOUS re-emits only. A loop through the store and a
  * re-render (write → render → emit) is outside the bus.

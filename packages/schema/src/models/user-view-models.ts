@@ -8,7 +8,7 @@
  *    overrides per template (keyed by cell id — two cells of the same
  *    widget type are customised independently).
  *
- * Fallback chain (per team-tiger QA review): user-selected template ->
+ * Fallback chain: user-selected template ->
  * cell/default template -> boot-validation error. A user override referencing
  * a missing template falls back and is reported, never silently dropped.
  */
@@ -19,8 +19,7 @@ import { pageViewModelSchema } from "./view-models";
 /**
  * One template's settings overrides. SETTINGS only: `inputs` and `on` are
  * the page's wiring, and a user's view must not be able to rebind a widget,
- * call an action or write a data path the page never declared (team-tiger
- * review, Ren).
+ * call an action or write a data path the page never declared.
  */
 const userSettingsSchema = z
   .record(z.string(), z.unknown())

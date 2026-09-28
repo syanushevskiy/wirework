@@ -38,7 +38,9 @@ export type { EditTarget, PageEditingInput, SaveOutcome } from "./use-page-editi
 export { usePageToolbar } from "./use-page-toolbar";
 export type { PageToolbarInput, PageToolbarState } from "./use-page-toolbar";
 
-export { EMPTY_FORM, useWidgetForm, valuesFromViewModel } from "./use-widget-form";
+export { useWidgetForm } from "./use-widget-form";
+export type { WidgetFormInput, WidgetFormState } from "./use-widget-form";
+export { EMPTY_FORM, valuesFromViewModel } from "./form-drafts";
 export type {
   Choice,
   EventField,
@@ -47,11 +49,9 @@ export type {
   ReactionDraft,
   ReactionKind,
   SettingDraft,
-  WidgetFormInput,
-  WidgetFormState,
   WidgetFormValues,
   WidgetSettings,
-} from "./use-widget-form";
+} from "./form-drafts";
 
 export { useWidgetBuilder } from "./use-widget-builder";
 export type { WidgetBuilderInput, WidgetGroup } from "./use-widget-builder";

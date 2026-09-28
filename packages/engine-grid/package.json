@@ -1,16 +1,13 @@
 {
-  "name": "@wirework/engine-react-grid-layout",
+  "name": "@wirework/engine-grid",
   "version": "0.1.0",
   "private": false,
   "license": "UNLICENSED",
   "type": "module",
   "files": [
-    "dist",
-    "src/styles.css"
+    "dist"
   ],
-  "sideEffects": [
-    "**/*.css"
-  ],
+  "sideEffects": false,
   "publishConfig": {
     "access": "restricted",
     "types": "./dist/index.d.ts",
@@ -18,13 +15,11 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./styles.css": "./src/styles.css"
+      }
     }
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
+    ".": "./src/index.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
@@ -32,25 +27,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@wirework/engine-grid": "workspace:*",
-    "react-grid-layout": "catalog:"
-  },
   "peerDependencies": {
-    "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "@wirework/engine": "workspace:*",
-    "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"

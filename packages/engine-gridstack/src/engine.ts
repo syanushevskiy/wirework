@@ -1,50 +1,20 @@
 /**
- * The gridstack engine plugin — the third engine, written against the
- * plugin contract with NO change to schema, engine core or adapter:
- * template shape + the five operations, the optional `validate` and the
- * renderer.
+ * The gridstack engine plugin: the shared column grid's template and
+ * operations (@wirework/engine-grid) under this engine's name, drawn by
+ * gridstack. Written against the plugin contract with NO change to schema,
+ * engine core or adapter.
  */
-import type { CellBase } from "@wirework/schema";
+import { gridOperations, gridPlacementsSchema, type GridPlacements } from "@wirework/engine-grid";
 import { defineLayoutEngine } from "@wirework/react";
 import { GridstackView } from "./GridstackView";
-import {
-  DEFAULT_GRIDSTACK_CELL_ROWS,
-  gridstackPageSchema,
-  gridstackPlacementsSchema,
-  gridstackSettings,
-  type GridstackPage,
-  type GridstackPlacements,
-} from "./schema";
+import { gridstackPageSchema, type GridstackPage } from "./schema";
 
-export const gridstackEngine = defineLayoutEngine<GridstackPage, GridstackPlacements>({
+const grid = gridOperations<GridstackPage>({ empty: () => ({ engine: "gridstack", cells: [] }) });
+
+export const gridstackEngine = defineLayoutEngine<GridstackPage, GridPlacements>({
   name: "gridstack",
   template: gridstackPageSchema,
-  change: gridstackPlacementsSchema,
-  empty: () => ({ engine: "gridstack", cells: [] }),
-  cells: (template) => template.cells,
-  appendCell: (template, cell: CellBase) => {
-    const { cols } = gridstackSettings(template);
-    const y = template.cells.reduce((bottom, c) => Math.max(bottom, c.y + c.h), 0);
-    return {
-      ...template,
-      cells: [...template.cells, { ...cell, x: 0, y, w: cols, h: DEFAULT_GRIDSTACK_CELL_ROWS }],
-    };
-  },
-  removeCell: (template, cellId) => ({
-    ...template,
-    cells: template.cells.filter((cell) => cell.id !== cellId),
-  }),
-  applyChange: (template, placements) => ({
-    ...template,
-    cells: template.cells.map((cell) => ({ ...cell, ...placements[cell.id] })),
-  }),
-  validate: (template) => {
-    const { cols } = gridstackSettings(template);
-    return template.cells.flatMap((cell, index) =>
-      cell.x + cell.w > cols
-        ? [`cells[${index}] (#${cell.id}) exceeds the grid: x ${cell.x} + w ${cell.w} > ${cols} columns`]
-        : [],
-    );
-  },
+  change: gridPlacementsSchema,
+  ...grid,
   renderer: GridstackView,
 });

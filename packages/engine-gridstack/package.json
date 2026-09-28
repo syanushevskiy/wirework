@@ -33,6 +33,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@wirework/engine-grid": "workspace:*",
     "gridstack": "catalog:"
   },
   "peerDependencies": {

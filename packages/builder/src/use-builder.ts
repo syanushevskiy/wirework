@@ -26,7 +26,7 @@ import {
 import { useStorePath } from "@wirework/react";
 import type { EngineLock } from "./locks";
 import type { Commit } from "./use-commit";
-import type { WidgetSettings } from "./use-widget-form";
+import type { WidgetSettings } from "./form-drafts";
 
 /** What a builder calls the things it creates. A host may name them differently. */
 export interface BuilderNaming {

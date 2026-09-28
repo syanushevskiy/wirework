@@ -68,8 +68,8 @@ type PortBinding<P> = P extends { required: false } ? z.ZodOptional<typeof store
 /**
  * The `inputs` section's shape, one binding PER DECLARED PORT NAME — so a
  * widget reading `viewModel.inputs.shedule` fails to compile instead of
- * quietly reading nothing (the shape used to be `Record<string, ZodType>`,
- * which typed every binding as `any`; team-tiger review, Vlad).
+ * quietly reading nothing (a `Record<string, ZodType>` shape would type
+ * every binding as `any`).
  */
 export type InputBindingsShape<P extends Record<string, PortDefinition>> = { [K in keyof P]: PortBinding<P[K]> };
 

@@ -19,7 +19,7 @@ const INTEGER = /^-?\d+$/;
 
 /**
  * A web address: `new URL` alone accepts any `scheme:rest`, so
- * "localhost:8080" or "mailto:x" would pass (team-tiger review, Sasha).
+ * "localhost:8080" or "mailto:x" would pass.
  */
 function isUrl(value: string): boolean {
   try {

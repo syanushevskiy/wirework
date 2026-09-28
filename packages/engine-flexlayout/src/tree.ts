@@ -44,9 +44,9 @@ export function addTab(model: FlexLayoutModelJson, cellId: string): FlexLayoutMo
 
 /**
  * Remove the tab for `cellId`. The tab the user had SELECTED stays
- * selected: removing an earlier tab shifts the index down (it used to stay,
- * silently showing the next tab — team-tiger review, Sasha); removing the
- * selected tab itself selects its neighbour, kept in range.
+ * selected: removing an earlier tab shifts the index down (an index that
+ * stays would silently show the next tab); removing the selected tab itself
+ * selects its neighbour, kept in range.
  */
 export function removeTab(model: FlexLayoutModelJson, cellId: string): FlexLayoutModelJson {
   const visit = (node: JsonNode): JsonNode => {

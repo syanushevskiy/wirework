@@ -13,7 +13,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { GridStack, type GridStackNode } from "gridstack";
-import { DEFAULT_GRIDSTACK_MARGIN_PX, gridstackSettings, type GridstackPage, type GridstackPlacements } from "./schema";
+import { DEFAULT_GRIDSTACK_MARGIN_PX, gridstackSettings, type GridPlacements, type GridstackPage } from "./schema";
 
 export const GRIDSTACK_HANDLE_SELECTOR = ".ww-grid-handle";
 export const GRIDSTACK_CANCEL_SELECTOR = ".ww-cell-action";
@@ -40,7 +40,7 @@ function installDispatcher(): void {
   GridStack.renderCB = dispatcher;
 }
 
-const toPlacements = (nodes: GridStackNode[]): GridstackPlacements =>
+const toPlacements = (nodes: GridStackNode[]): GridPlacements =>
   Object.fromEntries(
     nodes.flatMap((node) =>
       node.id !== undefined &&
@@ -53,7 +53,7 @@ const toPlacements = (nodes: GridStackNode[]): GridstackPlacements =>
     ),
   );
 
-const moved = (page: GridstackPage, placements: GridstackPlacements): boolean =>
+const moved = (page: GridstackPage, placements: GridPlacements): boolean =>
   page.cells.some((cell) => {
     const next = placements[cell.id];
     return next !== undefined && (next.x !== cell.x || next.y !== cell.y || next.w !== cell.w || next.h !== cell.h);
@@ -62,7 +62,7 @@ const moved = (page: GridstackPage, placements: GridstackPlacements): boolean =>
 export function useGridstack(
   template: GridstackPage,
   editable: boolean,
-  onChange?: (placements: GridstackPlacements) => void,
+  onChange?: (placements: GridPlacements) => void,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<GridStack | null>(null);

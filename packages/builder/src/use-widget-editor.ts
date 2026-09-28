@@ -6,7 +6,8 @@
 import { useCallback, useMemo } from "react";
 import type { Store, WidgetBindings } from "@wirework/schema";
 import type { ActionRegistry, ResolvedCell } from "@wirework/engine";
-import { useWidgetForm, valuesFromViewModel, type WidgetSettings } from "./use-widget-form";
+import { valuesFromViewModel, type WidgetSettings } from "./form-drafts";
+import { useWidgetForm } from "./use-widget-form";
 
 export type EditableCell = ResolvedCell & { definition: NonNullable<ResolvedCell["definition"]> };
 

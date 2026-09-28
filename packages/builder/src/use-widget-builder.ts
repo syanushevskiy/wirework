@@ -14,7 +14,8 @@ import {
   type WidgetRegistry,
 } from "@wirework/engine";
 import type { AddLock } from "./locks";
-import { useWidgetForm, type WidgetSettings } from "./use-widget-form";
+import type { WidgetSettings } from "./form-drafts";
+import { useWidgetForm } from "./use-widget-form";
 import { useWidgetSearch } from "./use-widget-palette";
 
 export interface WidgetGroup {

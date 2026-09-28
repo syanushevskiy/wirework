@@ -11,7 +11,7 @@ import { createStore } from "@wirework/store";
 import type { EditableTrees, SaveTrees } from "../use-commit";
 import { commitTrees } from "../use-commit";
 import { DEFAULT_BUILDER_NAMING, modelNamespaceOf, numberedIds } from "../use-builder";
-import { argumentsOf, editedReaction, nextParamValue, type EventField, type ParamDraft } from "../use-widget-form";
+import { argumentsOf, editedReaction, nextParamValue, type EventField, type ParamDraft } from "../form-drafts";
 
 describe("numberedIds", () => {
   const next = numberedIds("custom");

@@ -45,7 +45,7 @@ import {
 import { usePagePlan } from "@wirework/react";
 import type { Commit, EditableTrees } from "./use-commit";
 import type { EditableCell } from "./use-widget-editor";
-import type { WidgetSettings } from "./use-widget-form";
+import type { WidgetSettings } from "./form-drafts";
 
 export type EditTarget = "user" | "base";
 /** Name of the user's own page template (the sketch's "my own" pill). */

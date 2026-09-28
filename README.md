@@ -20,6 +20,7 @@ without writing code, and a host application decides where pages are kept.
 | `@wirework/antd-widgets`                                                        | The standard kinds implemented on Ant Design.                                                      |
 | `@wirework/table-view`                                                          | Actions for a table the server describes (the view table API).                                     |
 | `@wirework/engine-react-grid-layout`, `-gridstack`, `-flexlayout`, `-flex-rows` | Layout engine plugins.                                                                             |
+| `@wirework/engine-grid`                                                         | The column grid the two grid engines share: placements, cells, the pure operations.                |
 | `@wirework/builder`                                                             | The page builder as hooks, without a UI library.                                                   |
 | `@wirework/antd-builder`                                                        | The page builder as Ant Design components.                                                         |
 

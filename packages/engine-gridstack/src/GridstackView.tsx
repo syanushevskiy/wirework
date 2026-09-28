@@ -5,7 +5,7 @@
  */
 import { createPortal } from "react-dom";
 import type { LayoutRendererProps } from "@wirework/react";
-import type { GridstackPage, GridstackPlacements } from "./schema";
+import type { GridstackPage, GridPlacements } from "./schema";
 import { useGridstack } from "./useGridstack";
 
 export function GridstackView({
@@ -15,7 +15,7 @@ export function GridstackView({
   onChange,
   renderCell,
   renderChrome,
-}: LayoutRendererProps<GridstackPage, GridstackPlacements>) {
+}: LayoutRendererProps<GridstackPage, GridPlacements>) {
   const { containerRef, slots } = useGridstack(template, editable, onChange);
 
   return (

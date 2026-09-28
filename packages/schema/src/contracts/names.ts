@@ -1,8 +1,8 @@
 /**
  * Identity grammar and reserved names — ONE source of truth for the whole
- * system (team-tiger: the kebab pattern used to live in five files and the
- * prototype blocklist in three, so a security constant could drift in one
- * package only).
+ * system: the kebab pattern once lived in five files and the prototype
+ * blocklist in three, so a security constant could drift in one package
+ * only.
  */
 
 /** Widget types, event names, layout-engine names, contract kinds. */
@@ -32,8 +32,8 @@ export const FORBIDDEN_SEGMENTS: ReadonlySet<string> = new Set(["__proto__", "pr
 /**
  * Store roots holding CONFIGURATION, not application data: the view-model
  * trees. Widgets bind to data and reactions write data; configuration is
- * changed only by editors, through `Store.setConfig` (team-tiger blocker —
- * otherwise a `set` reaction could blank the page it is rendered on).
+ * changed only by editors, through `Store.setConfig` — otherwise a `set`
+ * reaction could blank the page it is rendered on.
  */
 export const CONFIG_ROOTS: readonly string[] = ["viewModels", "userViewModels"];
 

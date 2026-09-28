@@ -2,7 +2,7 @@
  * react-grid-layout engine styles — semantic classes only; themable via --ww-*.
  * Every rule is scoped under this engine's container: gridstack reuses the
  * item/handle class names, and unscoped rules gave its cells a second edit
- * outline and clipped their content (team-tiger review, Alexei and Katya).
+ * outline and clipped their content.
  */
 @import "react-grid-layout/css/styles.css";
 

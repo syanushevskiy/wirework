@@ -17,8 +17,8 @@ import { pageBindingsSchema, type PageBindings } from "../contracts/page-events"
 /** Fields every cell has, whatever the engine: identity + widget binding. */
 export const cellBaseSchema = z.object({
   /**
-   * Stable cell id, unique within the page (team-tiger: identity must never
-   * be positional — reordering cells must not remount or re-key widgets).
+   * Stable cell id, unique within the page: identity is never positional —
+   * reordering cells must not remount or re-key widgets.
    */
   id: z.string().min(1),
   /** Registered widget type (WidgetDefinition.type). */
