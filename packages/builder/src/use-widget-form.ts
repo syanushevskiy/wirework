@@ -189,7 +189,7 @@ function shownParam(param: ParamCore): ParamDraft {
  * default applies), numbers and JSON parsed — with the reason when a draft
  * cannot be.
  */
-function argumentsOf(
+export function argumentsOf(
   fields: readonly SettingField[],
   drafts: Record<string, string | boolean>,
 ): { params: ParamDraft[]; values: Record<string, unknown> } {
@@ -266,7 +266,7 @@ export function valuesFromViewModel(
  * show (`with` of a call, `value` of a set) is kept while the user left the
  * reaction's target alone; undefined when the user cleared it.
  */
-function editedReaction(event: EventField, original: Reaction | undefined): Reaction | undefined {
+export function editedReaction(event: EventField, original: Reaction | undefined): Reaction | undefined {
   if (event.kind === "call") {
     if (event.call === "") return undefined;
     // An action that declares parameters shows its whole `with`: what the

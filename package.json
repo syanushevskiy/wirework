@@ -4,11 +4,13 @@
   "type": "module",
   "scripts": {
     "typecheck": "pnpm -r run typecheck",
+    "build": "pnpm -r --filter \"./packages/**\" run build",
+    "lint:publish": "pnpm -r --filter \"./packages/**\" --filter \"!@wirework/view-data-models-examples\" exec publint",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "pnpm --no-bail --filter \"./packages/**\" run test",
     "test:e2e": "pnpm --filter e2e test",
     "e2e": "pnpm --filter e2e test",
-    "check": "pnpm typecheck && pnpm test:unit && pnpm test:e2e",
+    "check": "pnpm typecheck && pnpm build && pnpm test:unit && pnpm test:e2e",
     "dev": "pnpm --filter playground dev",
     "storybook": "pnpm --filter @wirework/antd-widgets storybook",
     "build-storybook": "pnpm --filter @wirework/antd-widgets build-storybook"
@@ -18,5 +20,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "devDependencies": {
+    "publint": "^0.3.24"
   }
 }

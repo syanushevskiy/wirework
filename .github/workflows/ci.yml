@@ -28,6 +28,12 @@ jobs:
 
       - run: pnpm typecheck
 
+      # Every package under packages/ is published from dist/ (tsconfig.build.json);
+      # publint checks that what package.json promises is what the tarball holds.
+      - run: pnpm build
+
+      - run: pnpm lint:publish
+
       - run: pnpm test:unit
 
       - run: pnpm --filter e2e exec playwright install --with-deps chromium

@@ -26,7 +26,8 @@ This project runs Claude Code in auto mode with reads outside the working direct
 | What | Command |
 |---|---|
 | Typecheck every package | `pnpm typecheck` |
-| Unit tests (vitest, every package under `packages/`) | `pnpm test:unit` |
+| Build every package to `dist/` (what gets published; the workspace itself runs from `src/`) | `pnpm build` |
+| Unit tests (vitest, every package under `packages/` that has a `test` script — one without is skipped silently) | `pnpm test:unit` |
 | Unit tests of one package | `pnpm --filter @wirework/engine test` |
 | E2E suite | `pnpm test:e2e` (alias `pnpm e2e`) |
 | Everything CI runs | `pnpm check` |
@@ -55,8 +56,9 @@ This project runs Claude Code in auto mode with reads outside the working direct
 
 ## Where things are
 
-- `packages/schema` contracts, model types, path rules · `store` · `events` (bus) · `engine` (registries, resolve, validation, reactions) · `react` (adapter) · `engine-*` (layout engine plugins) · `widget-contracts` (standard kinds) · `antd-widgets` · `table-view` (actions for the view table API: a table the server describes) · `view-data-models-examples` (fixtures)
-- `apps/playground` the demo host (boot in `src/boot.ts`, routes in `src/routes.ts` and `src/router.tsx`) · `e2e` the Gherkin suite
+- `packages/schema` contracts, model types, path rules · `store` · `events` (bus) · `engine` (registries, resolve, validation, reactions) · `react` (adapter) · `engine-*` (layout engine plugins) · `widget-contracts` (standard kinds) · `antd-widgets` · `table-view` (actions for the view table API: a table the server describes) · `builder` (the page builder as hooks, no UI library) · `antd-builder` (its antd components) · `view-data-models-examples` (fixtures, never published)
+- `apps/playground` the demo host (boot in `src/boot.ts`, routes in `src/routes.ts` and `src/router.tsx`; it CONSUMES `@wirework/builder` and `@wirework/antd-builder` and supplies what only a host knows — `use-playground.ts`) · `e2e` the Gherkin suite
+- Publishing: every package under `packages/` except the fixtures is `UNLICENSED`, restricted, built by `tsconfig.build.json` into `dist/`, and pointed at `dist/` by its `publishConfig` only — the workspace keeps resolving `src/`. Each has a README; the root README says how to publish.
 - `doc/*.md` the engine's design decisions (widget IO, events and reactions, contracts, actions, layout engines) with status tables; `doc/guidelines.md` coding guidelines; `doc/tableApi/` the view table API's example requests and responses (read by the table-view unit tests); `doc/team_tiger.md` the review personas
 
 ## Commits

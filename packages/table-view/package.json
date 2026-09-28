@@ -1,13 +1,24 @@
 {
   "name": "@wirework/table-view",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "UNLICENSED",
   "type": "module",
+  "files": ["dist"],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "restricted",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    }
+  },
   "exports": {
     ".": "./src/index.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

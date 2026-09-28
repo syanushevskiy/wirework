@@ -1,14 +1,26 @@
 {
   "name": "@wirework/antd-builder",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "UNLICENSED",
   "type": "module",
+  "files": ["dist", "src/styles.css"],
+  "sideEffects": ["**/*.css"],
+  "publishConfig": {
+    "access": "restricted",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "./styles.css": "./src/styles.css"
+    }
+  },
   "exports": {
     ".": "./src/index.ts",
     "./styles.css": "./src/styles.css"
   },
   "types": "./src/index.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

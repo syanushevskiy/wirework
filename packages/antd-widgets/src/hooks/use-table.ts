@@ -24,6 +24,18 @@ export interface RenderedRow {
   row: TableRow;
 }
 
+/**
+ * What the antd Table is given. Named, not inferred: a declaration file
+ * must refer to antd's public `TableProps`, never to the internal package
+ * antd builds it from.
+ */
+export interface TableView {
+  columns: TableProps<RenderedRow>["columns"];
+  rows: RenderedRow[];
+  loading: boolean;
+  rowProps: NonNullable<TableProps<RenderedRow>["onRow"]>;
+}
+
 const NO_ROWS: TableRow[] = [];
 export const NO_CELLS: TableCellRenderers = {};
 
@@ -69,7 +81,7 @@ export function useTable(
   },
   settings: { columns: TableColumn[]; rowKey: string },
   cells: TableCellRenderers = NO_CELLS,
-) {
+): TableView {
   // The table appeared: `load`, once — the reaction calls whatever fetches its
   // data. After the mount, so the page has bound its reactions (useAfterMount).
   useAfterMount(() => emit("load", {}));
