@@ -21,15 +21,21 @@
  * NOTE: registries are treated as immutable after mount — register all
  * widgets and engines BEFORE rendering.
  */
-import type { ComponentType } from "react";
+import type { ComponentType, ErrorInfo } from "react";
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
 import type { ActionRegistry, LayoutEngineRegistry, ResolvedPage, WidgetRegistry } from "@wirework/engine";
 import type { LayoutRendererProps } from "./layout";
+import { PageReloadContext } from "./useAnnounce";
 import { usePageLoad } from "./usePageLoad";
 import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
 import { useReactions } from "./useReactions";
 import { LayoutErrorBoundary } from "./WidgetErrorBoundary";
+
+/** A crash PageView isolated — in one widget's cell, or in the layout renderer — for the host to report. */
+export type PageError = { error: Error; info: ErrorInfo } & (
+  { in: "widget"; cell: string; widget: string } | { in: "layout"; engine: string }
+);
 
 export interface PageViewProps {
   page: string;
@@ -55,12 +61,14 @@ export interface PageViewProps {
   onRemoveCell?: ((cellId: string) => void) | undefined;
   /**
    * Change it to LOAD THE PAGE AGAIN — for a host that changed the page
-   * while it is open (an editor after Add or Save): the page's `load` event
-   * fires again and the cells mount afresh, so widgets that ask for their
-   * data when they appear (a table's `load`) ask again, now by the NEW
-   * configuration. The store is untouched.
+   * while it is open (an editor after Add or Save): every widget that asks
+   * for its data when it appears (a table's `load`) asks again, then the
+   * page's own `load` fires again — IN PLACE, by the NEW configuration.
+   * Nothing remounts and the store is untouched.
    */
   reloadKey?: string | number | undefined;
+  /** A crash the page isolated (a widget, the layout renderer): report it — the placeholder is shown either way. */
+  onError?: ((report: PageError) => void) | undefined;
 }
 
 export function PageView({
@@ -78,6 +86,7 @@ export function PageView({
   onEditCell,
   onRemoveCell,
   reloadKey,
+  onError,
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
   const plan = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions }, providedPlan);
@@ -91,6 +100,7 @@ export function PageView({
     editable,
     onEditCell,
     onRemoveCell,
+    onError,
   });
 
   const overlayNote = plan.overlayProblem ? (
@@ -139,18 +149,23 @@ export function PageView({
         </ul>
       ) : null}
       {/* resetKey: a new template (fixed in the inspector, say) retries the renderer. */}
-      <LayoutErrorBoundary engine={plan.engine} resetKey={plan.template}>
-        <Renderer
-          // A new key mounts every cell afresh: "the page loads again" (see `reloadKey`).
-          key={reloadKey}
-          template={plan.template}
-          cells={cells}
-          cellById={cellById}
-          editable={editable}
-          onChange={onLayoutChange}
-          renderCell={renderCell}
-          renderChrome={renderChrome}
-        />
+      <LayoutErrorBoundary
+        engine={plan.engine}
+        resetKey={plan.template}
+        onError={(error, info) => onError?.({ in: "layout", engine: plan.engine, error, info })}
+      >
+        {/* The reload signal: every widget under the page announces itself again when it changes (useAfterMount). */}
+        <PageReloadContext value={reloadKey}>
+          <Renderer
+            template={plan.template}
+            cells={cells}
+            cellById={cellById}
+            editable={editable}
+            onChange={onLayoutChange}
+            renderCell={renderCell}
+            renderChrome={renderChrome}
+          />
+        </PageReloadContext>
       </LayoutErrorBoundary>
     </div>
   );

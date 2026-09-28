@@ -71,7 +71,14 @@ export function commitTrees(
   queues.set(store, current);
 }
 
-/** `commitTrees` bound to this store and this host's `save`. Required: a builder never guesses where pages go. */
-export function useCommit(store: Store, save: SaveTrees, onError?: SaveError): Commit {
+export interface CommitInput {
+  store: Store;
+  /** Where the host keeps its pages. Required: a builder never guesses where pages go. */
+  save: SaveTrees;
+  onError?: SaveError | undefined;
+}
+
+/** `commitTrees` bound to this store and this host's `save`. */
+export function useCommit({ store, save, onError }: CommitInput): Commit {
   return useCallback((next) => commitTrees(store, save, next, onError), [store, save, onError]);
 }

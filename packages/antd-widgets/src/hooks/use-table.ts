@@ -129,6 +129,13 @@ export function useTable(
     (rendered) => ({
       "data-testid": "table-row",
       "data-row-key": rendered.key,
+      // A row can be reached and selected by keyboard: Tab to it, Enter or Space selects (a control inside keeps its own keys).
+      tabIndex: 0,
+      onKeyDown: (event) => {
+        if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+        event.preventDefault();
+        emit("row-selected", { key: rendered.key, row: rendered.row });
+      },
       onClick: (event) => {
         const target = clicked(event);
         if (target.on === "row") {

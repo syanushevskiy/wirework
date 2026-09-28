@@ -10,14 +10,16 @@ import { useWidgetForm, valuesFromViewModel, type WidgetSettings } from "./use-w
 
 export type EditableCell = ResolvedCell & { definition: NonNullable<ResolvedCell["definition"]> };
 
-export function useWidgetEditor(
-  cell: EditableCell,
-  store: Store,
-  actions: ActionRegistry,
-  onSave: (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => void,
-) {
+export interface WidgetEditorInput {
+  cell: EditableCell;
+  store: Store;
+  actions: ActionRegistry;
+  onSave: (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => void;
+}
+
+export function useWidgetEditor({ cell, store, actions, onSave }: WidgetEditorInput) {
   const initial = useMemo(() => valuesFromViewModel(cell.definition, cell.viewModel), [cell]);
-  const form = useWidgetForm(cell.definition, store, actions, initial);
+  const form = useWidgetForm({ definition: cell.definition, store, actions, initial });
   const { collect, valid } = form;
 
   const save = useCallback(() => {

@@ -18,12 +18,27 @@ import { DEFAULT_GRIDSTACK_MARGIN_PX, gridstackSettings, type GridstackPage, typ
 export const GRIDSTACK_HANDLE_SELECTOR = ".ww-grid-handle";
 export const GRIDSTACK_CANCEL_SELECTOR = ".ww-cell-action";
 
-/** renderCB is a library-wide static: dispatch to the grid that owns the item. */
+/**
+ * renderCB is a library-wide static. Each mounted view registers its own
+ * handler here, and ONE dispatcher — installed when the first view mounts,
+ * never at import — routes an item to the grid that owns it. A grid this
+ * engine did not create (the host's own gridstack) keeps whatever callback
+ * was there before.
+ */
 const slotHandlers = new WeakMap<GridStack, (id: string, el: HTMLElement) => void>();
-GridStack.renderCB = (el, widget) => {
-  const node = widget as GridStackNode;
-  if (node.grid && node.id !== undefined) slotHandlers.get(node.grid)?.(node.id, el);
-};
+let dispatcher: typeof GridStack.renderCB;
+
+function installDispatcher(): void {
+  if (dispatcher !== undefined && GridStack.renderCB === dispatcher) return;
+  const previous = GridStack.renderCB;
+  dispatcher = (el, widget) => {
+    const node = widget as GridStackNode;
+    const handler = node.grid ? slotHandlers.get(node.grid) : undefined;
+    if (handler && node.id !== undefined) handler(node.id, el);
+    else previous?.(el, widget);
+  };
+  GridStack.renderCB = dispatcher;
+}
 
 const toPlacements = (nodes: GridStackNode[]): GridstackPlacements =>
   Object.fromEntries(
@@ -64,6 +79,7 @@ export function useGridstack(
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
+    installDispatcher();
     const grid = GridStack.init(
       {
         column: cols,

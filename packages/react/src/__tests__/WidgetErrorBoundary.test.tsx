@@ -29,6 +29,20 @@ describe("WidgetErrorBoundary", () => {
     expect(screen.queryByTestId("child")).toBeNull();
   });
 
+  it("reports the crash to the host, with React's component stack", () => {
+    const onError = vi.fn();
+    render(
+      <WidgetErrorBoundary widgetType="crasher" onError={onError}>
+        <Child crash />
+      </WidgetErrorBoundary>,
+    );
+    expect(onError).toHaveBeenCalledTimes(1);
+    const [error, info] = onError.mock.calls[0] ?? [];
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("boom");
+    expect(info).toMatchObject({ componentStack: expect.stringContaining("Child") });
+  });
+
   it("retries when resetKey changes, and stays crashed when it does not", () => {
     const { rerender } = render(
       <WidgetErrorBoundary widgetType="crasher" resetKey={1}>

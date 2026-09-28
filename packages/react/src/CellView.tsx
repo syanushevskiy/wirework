@@ -5,7 +5,7 @@
  * Placement is the engine renderer's job: it wraps what `renderCell`
  * returns in its own item (a grid item, a flex row slot, a tab).
  */
-import { useMemo, type ComponentType } from "react";
+import { useMemo, type ComponentType, type ErrorInfo } from "react";
 import type { EventBus, Store, WidgetProps } from "@wirework/schema";
 import { readableStore, type CellProblem, type ResolvedCell, type ResolvedCellOk } from "@wirework/engine";
 import { useCellEmitter } from "./useCellEmitter";
@@ -16,6 +16,8 @@ export interface CellViewProps {
   page: string;
   store: Store;
   bus: EventBus;
+  /** The widget crashed (its placeholder is shown): for the host to report. */
+  onError?: ((error: Error, info: ErrorInfo) => void) | undefined;
 }
 
 function problemMessage(problem: CellProblem): string {
@@ -50,7 +52,7 @@ function ProblemCell({ cell, problem }: CellViewProps & { problem: CellProblem }
   );
 }
 
-function WidgetCell({ cell, page, store, bus }: CellViewProps & { cell: ResolvedCellOk }) {
+function WidgetCell({ cell, page, store, bus, onError }: CellViewProps & { cell: ResolvedCellOk }) {
   const emit = useCellEmitter(bus, cell.definition, page, cell.key);
   const readable = useMemo(() => readableStore(store), [store]);
   // The registry stores framework-agnostic definitions; this adapter renders
@@ -66,7 +68,7 @@ function WidgetCell({ cell, page, store, bus }: CellViewProps & { cell: Resolved
       data-fallback={cell.fallback?.used}
     >
       {/* resetKey: a re-resolved view model clears a previous crash state */}
-      <WidgetErrorBoundary widgetType={cell.widget} resetKey={cell.viewModel}>
+      <WidgetErrorBoundary widgetType={cell.widget} resetKey={cell.viewModel} onError={onError}>
         <Widget viewModel={cell.viewModel} store={readable} emit={emit} />
       </WidgetErrorBoundary>
     </div>

@@ -20,8 +20,11 @@
  * the buttons, the editor) are literals in their components. Renaming any
  * of them is a breaking change for every suite that drives this builder.
  */
-export { WidgetBuilder } from "./widget-builder";
+export { DEFAULT_ADD_LOCK_TEXTS, WidgetBuilder } from "./widget-builder";
 export type { WidgetBuilderProps } from "./widget-builder";
+
+export { DEFAULT_PAGE_TOOLBAR_TEXTS, PageToolbar } from "./page-toolbar";
+export type { PageToolbarProps, PageToolbarTexts } from "./page-toolbar";
 
 export { WidgetPalette } from "./widget-palette";
 export type { WidgetPaletteProps } from "./widget-palette";

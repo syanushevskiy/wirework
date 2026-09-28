@@ -31,8 +31,12 @@ suite; `doc/` the engine's design decisions and coding guidelines.
 ```
 pnpm install
 pnpm dev          # the playground, port 5173
-pnpm check        # typecheck, build, unit tests, e2e — what CI runs
+pnpm check        # typecheck, lint, format check, build, publint, unit tests (with the stories), e2e — what CI runs
 ```
+
+The stories of `@wirework/antd-widgets` and `@wirework/antd-builder` run in
+Chromium as part of the unit tests, and the e2e suite drives the playground
+in it: `pnpm --filter e2e exec playwright install chromium` once.
 
 Inside the workspace every package resolves to its TypeScript source: no
 build is needed to develop, test or run the playground.

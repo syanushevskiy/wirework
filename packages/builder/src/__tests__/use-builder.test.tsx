@@ -44,7 +44,7 @@ const bindings = { inputs: { value: "builder.counter.value" }, on: { changed: [{
 describe("useBuilder", () => {
   it("lets the engine be chosen while the page is empty, and locks it once a widget is placed", () => {
     const { result, page, cancelEditing, onAdded, store } = setup(emptyPage());
-    expect(result.current.engineLocked).toBe(false);
+    expect(result.current.engineLock).toBeUndefined();
     expect(result.current.hasCells).toBe(false);
 
     act(() => result.current.setEngine("grid"));
@@ -59,7 +59,7 @@ describe("useBuilder", () => {
     expect(store.get("viewModels.widgets.custom.custom-1")).toEqual({ default: { ...bindings, label: "Hits" } });
     expect(onAdded).toHaveBeenCalledTimes(1);
     expect(result.current.hasCells).toBe(true);
-    expect(result.current.engineLocked).toBe(true);
+    expect(result.current.engineLock).toBe("widgets-placed");
 
     act(() => result.current.setEngine("list"));
     expect(page()?.["engine"]).toBe("grid");
@@ -87,7 +87,7 @@ describe("useBuilder", () => {
 
   it("writes nothing when the page has no template to append to", () => {
     const { result, store, onAdded } = setup({ pages: {}, widgets: {} });
-    expect(result.current.engineLocked).toBe(true);
+    expect(result.current.engineLock).toBe("no-template");
     act(() => result.current.addWidget("counter", bindings, {}));
     expect(store.get("viewModels")).toEqual({ pages: {}, widgets: {} });
     expect(onAdded).not.toHaveBeenCalled();

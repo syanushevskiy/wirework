@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
+import type { AddLock } from "@wirework/builder";
 import { WidgetBuilder } from "../widget-builder";
 import { actions, contracts, registry, store } from "./fixtures";
 
-type Args = { addLocked: string | undefined; onAdd: (widgetType: string) => void };
+type Args = { addLock: AddLock | undefined; onAdd: (widgetType: string) => void };
 
 /**
  * The panel that adds widgets: the catalog of registered widgets (live
@@ -12,8 +13,14 @@ type Args = { addLocked: string | undefined; onAdd: (widgetType: string) => void
  */
 const meta = {
   title: "Builder/WidgetBuilder",
-  args: { addLocked: undefined, onAdd: fn() },
-  argTypes: { addLocked: { control: "text", description: "Why the host is not accepting a widget right now" } },
+  args: { addLock: undefined, onAdd: fn() },
+  argTypes: {
+    addLock: {
+      control: "select",
+      options: [undefined, "permission", "editing", "user-view"],
+      description: "Why the host is not accepting a widget right now",
+    },
+  },
   render: (args) => (
     <WidgetBuilder
       registry={registry()}
@@ -21,7 +28,7 @@ const meta = {
       store={store()}
       actions={actions()}
       page="builder"
-      addLocked={args.addLocked}
+      addLock={args.addLock}
       onAdd={args.onAdd}
     />
   ),
@@ -59,9 +66,9 @@ export const WaitsForTheWiring: Story = {
 
 /** The host is not accepting widgets (a page edit is open): Add is locked, and says why. */
 export const Locked: Story = {
-  args: { addLocked: "Finish editing the page first" },
+  args: { addLock: "editing" },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("add-widget-locked")).toHaveTextContent("Finish editing the page first");
+    await expect(canvas.getByTestId("add-widget-locked")).toHaveTextContent("Save or cancel the page edit");
     await expect(canvas.getByRole("button", { name: "Add widget" })).toBeDisabled();
   },
 };

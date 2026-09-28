@@ -567,6 +567,10 @@ export function tableConformance(
       play: async ({ canvas, userEvent }) => {
         await userEvent.click(canvas.getByText("Smoke"));
         await expect(canvas.getByTestId("story-store")).toHaveTextContent('"selected": "2"');
+        // By keyboard too: a row can be reached with Tab and selected with Enter.
+        (canvas.getByText("Nightly").closest("tr") as HTMLElement).focus();
+        await userEvent.keyboard("{Enter}");
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"selected": "1"');
       },
     },
     LoadsOnAppearance: {

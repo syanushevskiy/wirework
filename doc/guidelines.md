@@ -1,5 +1,95 @@
 ---
 
+### Wirework's own rules
+
+The engine and its packages follow the presentation rules below and these
+on top. Every one of them is enforced somewhere — by the compiler
+(`tsconfig.base.json`), by ESLint (`eslint.config.js`), by a registry
+invariant or by a test — so a reviewer checks the exception, not the rule.
+
+#### Types and casts
+
+- A cast is a boundary, and there is one per boundary, commented with what
+  it erases: `// The one cast: the loop above builds exactly
+  EventBindingsShape<E>`. `as unknown as` only where a generic zod shape is
+  rebuilt from an untyped loop; never to silence a mismatch.
+- No `!`. A value that may be absent is narrowed by a discriminant
+  (`if (cell.problem)`) or handled (`?? fallback`); the lint rule refuses the
+  assertion.
+- An INPUT type — a hook's input object, a component's props — declares
+  `field?: T | undefined` when a caller may forward a value it does not
+  have. A RECORD — a definition, a resolved plan, a saved tree — keeps
+  `field?: T` and is built with a conditional spread
+  (`...(note === undefined ? {} : { note })`), so `undefined` never sits in
+  it (`exactOptionalPropertyTypes`).
+- antd's own prop types refuse an explicit `undefined`: a prop that may be
+  absent is spread in (`{...(color === undefined ? {} : { color })}`) or
+  given antd's own "unset" value (`status=""`).
+- What a caller must not change is `readonly`: the arrays of a resolved
+  plan and of a validation report, what a registry lists, the cells a
+  layout renderer receives. What a caller builds (a fresh array, a draft) is
+  mutable.
+
+#### Errors and problems
+
+- A configuration problem is DATA, never a throw: a cell that cannot render
+  is a `CellProblem` on the plan, a boot problem a `ValidationProblem` with a
+  severity, and every placeholder names what is wrong. `problemText` turns
+  a validator's issues into that sentence; `errorText` any thrown value.
+- What is thrown is a bug or a misuse, at the moment it is made: a
+  registration that breaks an invariant (`RegistrationError`, at boot), a
+  path that would silently replace a value it walks through (`setPath`), a
+  contract whose settings shadow its bindings (`defineContract`). The
+  message says what to fix, in the words the reader used.
+- A crash inside a widget or a layout renderer is isolated by a boundary
+  and REPORTED (`PageView.onError`), never swallowed. Nothing in a package
+  writes to the console except the one documented default a host can
+  replace (`use-commit.ts`); `no-console` is an error in `packages/**/src`.
+- A reason a control is locked is a code (`AddLock`, `EditLock`,
+  `EngineLock`, `OverlayLock`), and the UI says it in words: the headless
+  packages carry no user-facing text.
+
+#### Naming
+
+- Identities are kebab-case: widget types, contract kinds, event names,
+  layout-engine names (`KEBAB_NAME`); action names may carry one namespace
+  (`ACTION_NAME`: `table-view/load`). A store path is dot-separated
+  segments of `PATH_SEGMENT`; nothing else (`names.ts` is the one grammar).
+- A hook holds ALL the logic of one component and is named for it
+  (`use-widget-form.ts` → `useWidgetForm`, its component `WidgetForm`);
+  files are kebab-case, React components PascalCase, the `react` adapter's
+  files after their export (`PageView.tsx`, `usePort.ts`).
+- A boolean says what is true (`editing`, `hasCells`, `valid`); a lock says
+  why (`addLock`, `editLock`); a function says what it does
+  (`resolvePage`, `bindReactions`, `commitTrees`). A test id names the
+  thing (`page-save`, `widget-card`, `port-input-<port>`), never its look.
+- The word for a thing is the same everywhere: a page has TEMPLATES, a
+  widget has a VIEW MODEL, a user has an OVERLAY, a cell has a KEY on the
+  plan and an ID in the template, a reaction SETS a path or CALLS an action.
+
+#### Testing
+
+- Every package under `packages/` has a `test` script and
+  `scripts/check-test-scripts.mjs` fails the run when one has not. Pure
+  logic is tested in vitest (node); hooks and components in jsdom with
+  Testing Library (`renderHook`, `render`, `screen`), each package's
+  `vitest.config.ts` naming the environment and `__tests__/setup.ts` the
+  cleanup; a story is a browser test in Chromium — its `play` function is
+  the assertion — and every standard contract has a conformance set any
+  implementation runs.
+- A test says what it pins: its name is the promise, and a test written for
+  a bug starts with `regression:`. It asserts on what the contract exposes —
+  roles, names, test ids, `data-*` facts, the store — never on a library's
+  DOM (`support/antd.ts` is the one place the e2e suite knows antd's).
+- Nothing waits by sleeping. A test waits for a FACT: an element, a store
+  value, the fake servers having nothing in flight (`wirework.requests()`),
+  a box that stopped moving.
+- The demo's scenarios are Gherkin a non-technical reader can follow; a
+  step reads like a sentence and hides the mechanics (`e2e/steps/*.steps.ts`
+  by area, helpers in `e2e/support/`).
+
+---
+
 ### Separating Business Logic from Presentation
 
 Components are render-only. All state, effects, derived values and event

@@ -13,6 +13,7 @@ import {
   type ContractRegistry,
   type WidgetRegistry,
 } from "@wirework/engine";
+import type { AddLock } from "./locks";
 import { useWidgetForm, type WidgetSettings } from "./use-widget-form";
 import { useWidgetSearch } from "./use-widget-palette";
 
@@ -23,17 +24,19 @@ export interface WidgetGroup {
   widgets: { type: string; description?: string | undefined; definition: AnyWidgetDefinition }[];
 }
 
-export function useWidgetBuilder(
-  registry: WidgetRegistry,
-  contracts: ContractRegistry,
-  store: Store,
-  actions: ActionRegistry,
+export interface WidgetBuilderInput {
+  registry: WidgetRegistry;
+  contracts: ContractRegistry;
+  store: Store;
+  actions: ActionRegistry;
   /** The page widgets are added to: the first segment of every generated path. */
-  page: string,
-  onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void,
+  page: string;
+  onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void;
   /** Why the HOST is not accepting a widget right now; undefined when it is. */
-  addLocked?: string,
-) {
+  addLock?: AddLock | undefined;
+}
+
+export function useWidgetBuilder({ registry, contracts, store, actions, page, onAdd, addLock }: WidgetBuilderInput) {
   const [widgetType, setWidgetType] = useState<string>("");
   /** Registered widgets grouped by the contract kind they implement. */
   const widgetGroups = useMemo<WidgetGroup[]>(() => {
@@ -54,7 +57,7 @@ export function useWidgetBuilder(
     }));
   }, [registry, contracts]);
   const definition = widgetType ? registry.get(widgetType) : undefined;
-  const form = useWidgetForm(definition, store, actions);
+  const form = useWidgetForm({ definition, store, actions });
   // The stable functions of the form and the search, so the callbacks below
   // depend on what they use — not on objects rebuilt every render.
   const { reset: resetForm, collect, valid } = form;
@@ -89,13 +92,13 @@ export function useWidgetBuilder(
    * that renders its own control gets the same refusal.
    */
   const add = useCallback(() => {
-    if (!definition || !valid || addLocked !== undefined) return;
+    if (!definition || !valid || addLock !== undefined) return;
     const { bindings, settings } = collect();
     onAdd(definition.type, bindings, settings);
     setWidgetType("");
     resetForm();
     clear();
-  }, [definition, valid, collect, resetForm, clear, onAdd, addLocked]);
+  }, [definition, valid, collect, resetForm, clear, onAdd, addLock]);
 
   return {
     widgetGroups,
@@ -105,8 +108,10 @@ export function useWidgetBuilder(
     search,
     /** The form holds everything a widget needs. */
     canAdd: valid,
+    /** Why the host is not accepting one, for the UI to say; undefined when it is. */
+    addLock,
     /** …and the host is accepting one: the single answer a control needs. */
-    addDisabled: !valid || addLocked !== undefined,
+    addDisabled: !valid || addLock !== undefined,
     add,
   };
 }

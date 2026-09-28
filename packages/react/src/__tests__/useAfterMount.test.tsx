@@ -1,12 +1,14 @@
 /**
  * useAfterMount — a widget announcing its appearance: once per mount (under
  * StrictMode too), in a task of its own, with the LATEST announce (a fresh
- * `emit` after a rebind), and not at all when unmounted before its turn.
+ * `emit` after a rebind), again when the page reloads in place, and not at
+ * all when unmounted before its turn.
  */
 import { StrictMode } from "react";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAfterMount } from "../useAfterMount";
+import { PageReloadContext } from "../useAnnounce";
 
 function Widget({ announce }: { announce: () => void }) {
   useAfterMount(announce);
@@ -39,6 +41,24 @@ describe("useAfterMount", () => {
     act(() => vi.runAllTimers());
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("announces again when the page reloads in place — the widget stays mounted", () => {
+    const announce = vi.fn();
+    const page = (reload: number) => (
+      <PageReloadContext value={reload}>
+        <Widget announce={announce} />
+      </PageReloadContext>
+    );
+    const { rerender } = render(page(1));
+    act(() => vi.runAllTimers());
+    rerender(page(1));
+    act(() => vi.runAllTimers());
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    rerender(page(2));
+    act(() => vi.runAllTimers());
+    expect(announce).toHaveBeenCalledTimes(2);
   });
 
   it("announces nothing for a widget unmounted before its turn", () => {

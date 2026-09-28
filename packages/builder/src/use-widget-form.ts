@@ -283,12 +283,16 @@ export function editedReaction(event: EventField, original: Reaction | undefined
   return from === "" ? { set } : { set, from };
 }
 
-export function useWidgetForm(
-  definition: AnyWidgetDefinition | undefined,
-  store: Store,
-  actions: ActionRegistry,
-  initial: WidgetFormValues = EMPTY_FORM,
-) {
+export interface WidgetFormInput {
+  /** The widget the form is for — none while nothing is chosen. */
+  definition: AnyWidgetDefinition | undefined;
+  store: Store;
+  actions: ActionRegistry;
+  /** What the form starts from (an editor: the placed widget's values); empty when absent. */
+  initial?: WidgetFormValues | undefined;
+}
+
+export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM }: WidgetFormInput) {
   const [paths, setPaths] = useState(initial.paths);
   const [reactions, setReactions] = useState(initial.reactions);
   const [settingValues, setSettingValues] = useState(initial.settings);

@@ -1,8 +1,9 @@
 /**
  * Wirework React adapter layout styles — semantic classes only (guidelines:
  * no utility-class frameworks, no hardcoded values in markup). Hosts import
- * this stylesheet once, plus each layout engine's own; themable via the
- * --ww-* custom properties.
+ * this stylesheet once, plus each layout engine's own. Every colour is a
+ * --ww-* custom property a host may set; under antd its own tokens
+ * (--ant-*) apply next, and a fixed value only when neither exists.
  */
 
 .ww-page {
@@ -29,10 +30,10 @@
   font-size: 0.75rem;
   line-height: 1.25rem;
   padding: 0 0.5rem;
-  border: 1px solid var(--ww-color-action-border, #93c5fd);
+  border: 1px solid var(--ww-color-action-border, var(--ant-color-primary-border, #93c5fd));
   border-radius: 0.25rem;
-  color: var(--ww-color-action-text, #1e3a8a);
-  background: var(--ww-color-action, #eff6ff);
+  color: var(--ww-color-action-text, var(--ant-color-primary-text, #1e3a8a));
+  background: var(--ww-color-action, var(--ant-color-primary-bg, #eff6ff));
 }
 
 .ww-cell-action:disabled {
@@ -47,7 +48,7 @@
   pointer-events: none;
   user-select: none;
   border-radius: 0.25rem;
-  background: var(--ww-color-preview, #ffffff);
+  background: var(--ww-color-preview, var(--ant-color-bg-container, #ffffff));
 }
 
 .ww-preview-scale {
@@ -57,22 +58,22 @@
 
 .ww-preview-empty {
   font-size: 0.75rem;
-  color: var(--ww-color-muted, #6b7280);
+  color: var(--ww-color-muted, var(--ant-color-text-secondary, #6b7280));
 }
 
 /* ---- problems ---- */
 
 .ww-cell-problem,
 .ww-widget-error {
-  border: 1px dashed var(--ww-color-problem, #b91c1c);
-  color: var(--ww-color-problem, #b91c1c);
+  border: 1px dashed var(--ww-color-problem, var(--ant-color-error, #b91c1c));
+  color: var(--ww-color-problem, var(--ant-color-error, #b91c1c));
   padding: var(--ww-gap, 0.5rem);
   border-radius: 0.25rem;
 }
 
 .ww-page-problem {
-  border: 1px solid var(--ww-color-problem, #b91c1c);
-  color: var(--ww-color-problem, #b91c1c);
+  border: 1px solid var(--ww-color-problem, var(--ant-color-error, #b91c1c));
+  color: var(--ww-color-problem, var(--ant-color-error, #b91c1c));
   padding: var(--ww-gap, 0.5rem);
   border-radius: 0.25rem;
 }
@@ -80,8 +81,8 @@
 /* The page renders, but not exactly as configured (ignored overlay, engine warnings). */
 .ww-page-note {
   margin: 0;
-  border: 1px solid var(--ww-color-note, #b45309);
-  color: var(--ww-color-note, #b45309);
+  border: 1px solid var(--ww-color-note, var(--ant-color-warning, #b45309));
+  color: var(--ww-color-note, var(--ant-color-warning, #b45309));
   padding: var(--ww-gap, 0.5rem) calc(var(--ww-gap, 0.5rem) * 3);
   border-radius: 0.25rem;
   font-size: 0.875rem;

@@ -3,10 +3,11 @@
  * render-only): the visit's opening, the overlay switch, live validation,
  * the permission, this demo's stand-in for persistence, and the reload key.
  * The builder itself is @wirework/builder — `usePageEditing` (the edit
- * session), `useBuilder` (placing widgets) and `useCommit` (the one write
- * path) — composed here with what only this application knows. One-time
- * boot (registries, pages, rejection proof) is `boot.ts`; this demo's own
- * event wiring is use-demo-bridge.
+ * session), `useBuilder` (placing widgets), `usePageToolbar` (what the
+ * toolbar offers) and `useCommit` (the one write path) — composed here with
+ * what only this application knows. One-time boot (registries, pages,
+ * rejection proof) is `boot.ts`; this demo's own event wiring is
+ * use-demo-bridge.
  *
  * The hook serves ONE page visit, which the router's loader opened
  * (router.tsx, boot.ts): the visit's store and bus, from that page's
@@ -30,7 +31,11 @@ import {
   useBuilder,
   useCommit,
   usePageEditing,
+  usePageToolbar,
+  type AddLock,
+  type EditLock,
   type EditTarget,
+  type OverlayLock,
   type SaveTrees,
 } from "@wirework/builder";
 import type { PageVisit, Playground } from "../boot";
@@ -66,12 +71,13 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    */
   const builder = builderPage(layoutEngines, viewModels, BUILDER_PAGE, DEFAULT_BUILDER_NAMING);
   const [overlayWanted, setOverlayWanted] = useState(visit.userOverlayOnOpen);
-  const userOverlayAvailable = page !== BUILDER_PAGE || (builder.problem === undefined && builder.cells.length > 0);
+  const overlayLock: OverlayLock | undefined =
+    page !== BUILDER_PAGE || (builder.problem === undefined && builder.cells.length > 0) ? undefined : "no-widgets";
   // The page was emptied under an overlay that was on (the inspector can):
   // it goes OFF for good, rather than coming back by itself with the next
   // widget — which would lock Add right after the first one.
-  if (overlayWanted && !userOverlayAvailable) setOverlayWanted(false);
-  const withUserOverlay = overlayWanted && userOverlayAvailable;
+  if (overlayWanted && overlayLock !== undefined) setOverlayWanted(false);
+  const withUserOverlay = overlayWanted && overlayLock === undefined;
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
@@ -90,7 +96,9 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * for.
    */
   const editPages = useStorePath<boolean>(store, "app.permissions.editPages");
-  const canEditPages = page === BUILDER_PAGE || editPages === true;
+  const editLock: EditLock | undefined =
+    page === BUILDER_PAGE || editPages === true ? undefined : editPages === undefined ? "loading" : "permission";
+  const canEditPages = editLock === undefined;
 
   /**
    * Where a real host PERSISTS its pages. This demo keeps nothing: every
@@ -107,7 +115,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   }, [store]);
 
   /** THE write path: everything that changes a page goes through it. */
-  const commit = useCommit(store, persist);
+  const commit = useCommit({ store, save: persist });
 
   /** With the overlay on, edits are the USER's; without it they change the shared page. */
   const target: EditTarget = withUserOverlay ? "user" : "base";
@@ -126,7 +134,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   // The session's stable functions: the callbacks below depend on what they
   // use, not on the session object rebuilt every render.
-  const { cancel: cancelEditing, save: saveSession } = editing;
+  const { cancel: cancelEditing, save: saveSession, startEditing } = editing;
 
   /** Toggling the overlay changes the edit target — an open session ends. */
   const toggleUserOverlay = useCallback(
@@ -143,12 +151,12 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * an open edit session (it would be silently dropped), and not in a
    * user's own view (the overlay carries settings, view and layout only).
    */
-  const addLocked = !canEditPages
-    ? "You may not change pages."
+  const addLock: AddLock | undefined = !canEditPages
+    ? "permission"
     : editing.editing
-      ? "Save or cancel the page edit to add widgets."
+      ? "editing"
       : target === "user"
-        ? "Adding a widget changes the shared page — turn the user overlay off to add one."
+        ? "user-view"
         : undefined;
 
   /**
@@ -161,7 +169,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   const [reloadKey, setReloadKey] = useState(0);
   const loadAgain = useCallback(() => setReloadKey((loads) => loads + 1), []);
 
-  const { engineLocked, setEngine, addWidget } = useBuilder({
+  const { engineLock, setEngine, addWidget } = useBuilder({
     store,
     commit,
     canEdit: canEditPages,
@@ -177,29 +185,39 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     if (saveSession() === "committed") loadAgain();
   }, [saveSession, loadAgain]);
 
+  const toolbar = usePageToolbar({
+    engines: layoutEngines.keys(),
+    engine: editing.engine,
+    // A demo page's engine is its configuration; only the builder's is a choice, while it is empty.
+    engineLock: page === BUILDER_PAGE ? engineLock : "configured",
+    onSelectEngine: setEngine,
+    editing: editing.editing,
+    pendingChanges: editing.pendingChanges,
+    editLock,
+    onEdit: startEditing,
+    onSave: savePage,
+    onCancel: cancelEditing,
+    overlay: withUserOverlay,
+    overlayLock,
+    onToggleOverlay: toggleUserOverlay,
+    target,
+  });
+
   return {
     registry,
     contracts,
     layoutEngines,
     actions,
-    engineNames: layoutEngines.keys(),
-    builderEngineLocked: engineLocked,
-    setBuilderEngine: setEngine,
     store,
     bus,
     report,
     rejections,
     page,
-    canEditPages,
     target,
-    withUserOverlay,
-    userOverlayAvailable,
-    setWithUserOverlay: toggleUserOverlay,
-    addLocked,
+    addLock,
     addWidget,
+    toolbar,
     ...editing,
-    // Deliberately after the spread: the page's Save is the session's Save plus the reload.
-    save: savePage,
     reloadKey,
   };
 }

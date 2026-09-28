@@ -7,13 +7,17 @@
  * re-resolved view model or plan) clears the error so a fixed
  * configuration can recover without a full remount.
  */
-import { Component, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+
+/** The crash, for the host to report (log, count, tell someone) — the placeholder is shown either way. */
+export type OnError = (error: Error, info: ErrorInfo) => void;
 
 interface ErrorBoundaryProps {
   /** When this value changes, a previous crash state is cleared. */
   resetKey?: unknown;
   /** What renders instead of the crashed subtree. */
   fallback: (error: Error) => ReactNode;
+  onError?: OnError | undefined;
   children: ReactNode;
 }
 
@@ -36,6 +40,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
     return null;
   }
 
+  override componentDidCatch(error: Error, info: ErrorInfo): void {
+    this.props.onError?.(error, info);
+  }
+
   override render(): ReactNode {
     return this.state.error ? this.props.fallback(this.state.error) : this.props.children;
   }
@@ -44,13 +52,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
 export interface WidgetErrorBoundaryProps {
   widgetType: string;
   resetKey?: unknown;
+  onError?: OnError | undefined;
   children: ReactNode;
 }
 
-export function WidgetErrorBoundary({ widgetType, resetKey, children }: WidgetErrorBoundaryProps) {
+export function WidgetErrorBoundary({ widgetType, resetKey, onError, children }: WidgetErrorBoundaryProps) {
   return (
     <ErrorBoundary
       resetKey={resetKey}
+      onError={onError}
       fallback={(error) => (
         <div role="alert" className="ww-widget-error" data-testid="widget-error" data-widget={widgetType}>
           Widget &quot;{widgetType}&quot; crashed: {error.message}
@@ -65,13 +75,15 @@ export function WidgetErrorBoundary({ widgetType, resetKey, children }: WidgetEr
 export interface LayoutErrorBoundaryProps {
   engine: string;
   resetKey?: unknown;
+  onError?: OnError | undefined;
   children: ReactNode;
 }
 
-export function LayoutErrorBoundary({ engine, resetKey, children }: LayoutErrorBoundaryProps) {
+export function LayoutErrorBoundary({ engine, resetKey, onError, children }: LayoutErrorBoundaryProps) {
   return (
     <ErrorBoundary
       resetKey={resetKey}
+      onError={onError}
       fallback={(error) => (
         <div role="alert" className="ww-page-problem" data-testid="layout-error" data-engine={engine}>
           Layout engine &quot;{engine}&quot; crashed: {error.message}

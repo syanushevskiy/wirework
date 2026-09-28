@@ -6,9 +6,9 @@
  * which composes the @wirework/builder hooks. The router keys this component
  * by visit, so every piece of UI state here starts over with the visit.
  */
-import { Button, Checkbox, Flex, Select, Space, Tag, Typography } from "antd";
+import { Typography } from "antd";
 import { PageView } from "@wirework/react";
-import { WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
+import { PageToolbar, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 import type { PageVisit, Playground } from "../boot";
 import { BUILDER_PAGE, usePlayground } from "../hooks/use-playground";
 import { CollapsibleCard } from "./collapsible-card";
@@ -26,29 +26,18 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     contracts,
     layoutEngines,
     actions,
-    engineNames,
-    builderEngineLocked,
-    setBuilderEngine,
     store,
     bus,
     report,
     rejections,
     page,
     target,
-    withUserOverlay,
-    userOverlayAvailable,
-    setWithUserOverlay,
-    canEditPages,
-    addLocked,
+    addLock,
     addWidget,
+    toolbar,
     shownViewModels,
     shownUserViewModels,
-    engine,
     editing,
-    pendingChanges,
-    startEditing,
-    save,
-    cancel,
     changeLayout,
     removeCellById,
     editingCell,
@@ -108,70 +97,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
 
       <div>
         {/* Page toolbar: engine of the shown template, the edit session, the edit target. */}
-        <Flex wrap gap="small" align="center" data-testid="layout-toolbar" className="pg-toolbar">
-          <label htmlFor="engine-select">engine</label>
-          {page === BUILDER_PAGE && !builderEngineLocked ? (
-            /* Free choice until the first widget is placed; then locked. */
-            <Select
-              id="engine-select"
-              data-testid="engine-select"
-              className="pg-field"
-              placeholder="choose an engine…"
-              {...(engine ? { value: engine } : {})}
-              onChange={setBuilderEngine}
-              options={engineNames.map((name) => ({ value: name, label: name }))}
-            />
-          ) : (
-            <Typography.Text code data-testid="engine">
-              {engine ?? "—"}
-            </Typography.Text>
-          )}
-          {engine !== undefined ? (
-            editing ? (
-              <Space size="small">
-                <Button size="small" type="primary" data-testid="page-save" onClick={save}>
-                  Save page
-                </Button>
-                <Button size="small" data-testid="page-cancel" onClick={cancel}>
-                  Cancel
-                </Button>
-              </Space>
-            ) : (
-              <Button
-                size="small"
-                data-testid="page-edit"
-                disabled={!canEditPages}
-                title={
-                  canEditPages ? undefined : "Your permissions do not include editing pages (app.permissions.editPages)"
-                }
-                onClick={startEditing}
-              >
-                Edit page
-              </Button>
-            )
-          ) : null}
-          <Typography.Text type="secondary" data-testid="page-mode">
-            {editing ? "editing" : "view"}
-          </Typography.Text>
-          {editing ? (
-            <Typography.Text type="secondary" data-testid="pending-changes">
-              {pendingChanges} change{pendingChanges === 1 ? "" : "s"}
-            </Typography.Text>
-          ) : null}
-          {/* On the builder there is nothing to personalise before the first widget. */}
-          <Checkbox
-            data-testid="toggle-user-overlay"
-            checked={withUserOverlay}
-            disabled={!userOverlayAvailable}
-            {...(userOverlayAvailable ? {} : { title: "Add a widget first — there is nothing to personalise yet" })}
-            onChange={(event) => setWithUserOverlay(event.target.checked)}
-          >
-            user overlay
-          </Checkbox>
-          <Tag data-testid="edit-target" className="pg-spacer">
-            edits → {target === "user" ? "user overlay" : "view models"}
-          </Tag>
-        </Flex>
+        <PageToolbar toolbar={toolbar} />
         <Typography.Paragraph type="secondary" data-testid="visit-note" className="pg-note">
           {page === BUILDER_PAGE
             ? "Opening this page starts it from its initial state: no data at all."
@@ -185,7 +111,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
             store={store}
             actions={actions}
             page={page}
-            addLocked={addLocked}
+            addLock={addLock}
             onAdd={addWidget}
           />
         ) : null}

@@ -4,7 +4,7 @@
  * reactions are bound — so what they declare actually runs.
  */
 import { StrictMode } from "react";
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEventBus } from "@wirework/events";
 import { createStore } from "@wirework/store";
@@ -47,7 +47,7 @@ describe("load events on a page", () => {
     expect(store.get("log.page")).toBe("demo");
   });
 
-  it("fire again, cells first, when the host reloads the page", () => {
+  it("fire again, cells first, when the host reloads the page — in place, nothing remounts", () => {
     const bus = createEventBus();
     const store = createStore();
     const order: string[] = [];
@@ -69,8 +69,10 @@ describe("load events on a page", () => {
 
     const { rerender } = render(page(1));
     act(() => vi.runAllTimers());
+    const mounted = screen.getByTestId("announcer");
     rerender(page(2));
     act(() => vi.runAllTimers());
     expect(order).toEqual(["announcer", "page", "announcer", "page"]);
+    expect(screen.getByTestId("announcer")).toBe(mounted);
   });
 });

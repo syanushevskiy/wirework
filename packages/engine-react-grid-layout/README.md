@@ -8,3 +8,6 @@ import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
 import "@wirework/engine-react-grid-layout/styles.css";
 layoutEngines.register(reactGridLayoutEngine); // page templates use engine: "react-grid-layout"
 ```
+
+A drop or resize while editing reports placements by cell id. Exports:
+`reactGridLayoutEngine`, the template and placement schemas and their types.

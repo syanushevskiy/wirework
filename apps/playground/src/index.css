@@ -82,19 +82,6 @@
   font-size: 0.85em;
 }
 
-.pg-toolbar {
-  margin-bottom: 1rem;
-}
-
-.pg-spacer {
-  margin-left: auto;
-}
-
-/* Doubled class: antd's own "fill the form item" rule is a single class. */
-.pg-field.pg-field {
-  width: 16rem;
-}
-
 /* ---- state inspector ---- */
 
 /* Element + class: antd's own textarea rule is a single class too. */

@@ -73,23 +73,38 @@ describe("PageView", () => {
     expect(screen.getByTestId("echo").textContent).toBe("hello");
   });
 
-  it("isolates a crashing widget to its cell, and recovers when its view model is fixed", () => {
+  it("isolates a crashing widget to its cell, reports it, and recovers when its view model is fixed", () => {
+    const onError = vi.fn();
     const crashing = (crash: boolean) =>
       viewModels([cell({ widget: "crasher", model: "widgets.crasher" })], { crasher: { default: { crash } } });
-    const { rerender } = renderPage({ viewModels: crashing(true) });
+    const { rerender } = renderPage({ viewModels: crashing(true), onError });
     expect(screen.getByTestId("widget-error").getAttribute("data-widget")).toBe("crasher");
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      in: "widget",
+      cell: "c1",
+      widget: "crasher",
+      error: expect.objectContaining({ message: "the widget is broken" }),
+    });
 
-    rerender({ viewModels: crashing(false) });
+    rerender({ viewModels: crashing(false), onError });
     expect(screen.queryByTestId("widget-error")).toBeNull();
     expect(screen.getByTestId("crasher").textContent).toBe("fine");
   });
 
-  it("isolates a crashing layout renderer to the page", () => {
+  it("isolates a crashing layout renderer to the page, and reports it", () => {
+    const onError = vi.fn();
     renderPage({
       viewModels: viewModels([cell()], { echo: { default: { inputs: { value: "demo.text" } } } }, {}, { crash: true }),
+      onError,
     });
     expect(screen.getByTestId("layout-error").getAttribute("data-engine")).toBe("list");
     expect(screen.queryByTestId("echo")).toBeNull();
+    expect(onError.mock.calls[0]?.[0]).toMatchObject({
+      in: "layout",
+      engine: "list",
+      error: expect.objectContaining({ message: "the list is broken" }),
+    });
   });
 
   it("renders the edit chrome only in edit mode with a callback, and reports the cell it serves", () => {

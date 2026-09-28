@@ -24,6 +24,7 @@ import {
   type TemplateResolution,
 } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
+import type { EngineLock } from "./locks";
 import type { Commit } from "./use-commit";
 import type { WidgetSettings } from "./use-widget-form";
 
@@ -113,9 +114,10 @@ export function useBuilder({
    * The engine is a free choice UNTIL the first widget is placed: picking one
    * replaces the (empty) template with that engine's empty template. With
    * cells in place it is locked — there is no conversion between engines by
-   * decision.
+   * decision — and so it is without a template to choose for.
    */
-  const engineLocked = resolved.problem !== undefined || hasCells;
+  const engineLock: EngineLock | undefined =
+    resolved.problem !== undefined ? "no-template" : hasCells ? "widgets-placed" : undefined;
 
   const setEngine = useCallback(
     (name: string) => {
@@ -176,5 +178,5 @@ export function useBuilder({
     [canEdit, store, commit, layoutEngines, page, naming, onAdded],
   );
 
-  return { hasCells, engineLocked, setEngine, addWidget };
+  return { hasCells, engineLock, setEngine, addWidget };
 }

@@ -24,14 +24,19 @@
  * Contract proof: depends on @wirework/schema, @wirework/engine and the
  * @wirework/react adapter only, with react as a peer.
  */
+export type { AddLock, EditLock, EngineLock, OverlayLock } from "./locks";
+
 export { commitTrees, useCommit } from "./use-commit";
-export type { Commit, EditableTrees, SaveError, SaveTrees, TreesChange } from "./use-commit";
+export type { Commit, CommitInput, EditableTrees, SaveError, SaveTrees, TreesChange } from "./use-commit";
 
 export { DEFAULT_BUILDER_NAMING, builderPage, modelNamespaceOf, numberedIds, useBuilder } from "./use-builder";
 export type { BuilderInput, BuilderNaming } from "./use-builder";
 
 export { USER_PAGE_TEMPLATE, usePageEditing } from "./use-page-editing";
 export type { EditTarget, PageEditingInput, SaveOutcome } from "./use-page-editing";
+
+export { usePageToolbar } from "./use-page-toolbar";
+export type { PageToolbarInput, PageToolbarState } from "./use-page-toolbar";
 
 export { EMPTY_FORM, useWidgetForm, valuesFromViewModel } from "./use-widget-form";
 export type {
@@ -42,18 +47,20 @@ export type {
   ReactionDraft,
   ReactionKind,
   SettingDraft,
+  WidgetFormInput,
   WidgetFormState,
   WidgetFormValues,
   WidgetSettings,
 } from "./use-widget-form";
 
 export { useWidgetBuilder } from "./use-widget-builder";
-export type { WidgetGroup } from "./use-widget-builder";
+export type { WidgetBuilderInput, WidgetGroup } from "./use-widget-builder";
 
 export { usePalettePress, useWidgetSearch } from "./use-widget-palette";
 export type { PaletteItem, WidgetSearch } from "./use-widget-palette";
 
 export { useWidgetEditor } from "./use-widget-editor";
-export type { EditableCell } from "./use-widget-editor";
+export type { EditableCell, WidgetEditorInput } from "./use-widget-editor";
 
 export { usePathCombobox } from "./use-path-combobox";
+export type { PathComboboxInput } from "./use-path-combobox";

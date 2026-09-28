@@ -12,7 +12,7 @@ import { WidgetForm, portFieldId, reactionFieldId, settingFieldId } from "../wid
 import { actions, counter } from "./fixtures";
 
 function Harness({ bindingsLocked = false }: { bindingsLocked?: boolean }) {
-  const form = useWidgetForm(counter, createStore({}), actions());
+  const form = useWidgetForm({ definition: counter, store: createStore({}), actions: actions() });
   return (
     <>
       <WidgetForm form={form} bindingsLocked={bindingsLocked} />

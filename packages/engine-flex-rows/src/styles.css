@@ -5,10 +5,29 @@
   gap: var(--ww-gap, 0.5rem);
 }
 
+/*
+ * A cell's width: the `m` fraction of its width spec is its basis (width.ts
+ * puts the fractions on the item as --ww-basis-*); narrow screens take the
+ * `s` fraction and wide ones the `l` fraction when the spec names them.
+ * "full" and "auto" are inline `flex` values and win over these rules.
+ */
 .ww-flex-item {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1 1 var(--ww-basis-m, auto);
+}
+
+@media (max-width: 767px) {
+  .ww-flex-item {
+    flex-basis: var(--ww-basis-s, var(--ww-basis-m, auto));
+  }
+}
+
+@media (min-width: 1200px) {
+  .ww-flex-item {
+    flex-basis: var(--ww-basis-l, var(--ww-basis-m, auto));
+  }
 }
 
 .ww-flex-item > .ww-cell,

@@ -31,7 +31,7 @@ export function PathCombobox({
   suggestions,
   onSelect,
 }: PathComboboxProps) {
-  const { options, load } = usePathCombobox(value, suggestions, suggested);
+  const { options, load } = usePathCombobox({ value, suggestions, suggested });
 
   return (
     <AutoComplete

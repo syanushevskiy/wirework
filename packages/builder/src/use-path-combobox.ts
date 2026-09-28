@@ -10,7 +10,16 @@
  */
 import { useCallback, useMemo, useState } from "react";
 
-export function usePathCombobox(value: string, suggestions: () => string[], suggested?: string) {
+export interface PathComboboxInput {
+  /** What the field holds. */
+  value: string;
+  /** Called when the field opens — returns the compatible existing paths. */
+  suggestions: () => string[];
+  /** The generated path the field started from; while it is untouched, every compatible path is listed. */
+  suggested?: string | undefined;
+}
+
+export function usePathCombobox({ value, suggestions, suggested }: PathComboboxInput) {
   const [available, setAvailable] = useState<string[]>([]);
 
   const load = useCallback(() => setAvailable(suggestions()), [suggestions]);

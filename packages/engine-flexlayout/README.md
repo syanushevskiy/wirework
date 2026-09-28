@@ -8,3 +8,8 @@ import { flexLayoutEngine } from "@wirework/engine-flexlayout";
 import "@wirework/engine-flexlayout/styles.css";
 layoutEngines.register(flexLayoutEngine); // page templates use engine: "flexlayout"
 ```
+
+The template holds the library's model document; a drag while editing
+reports the whole document as the change. Exports: `flexLayoutEngine`, the
+template schema and its types, and the pure tree helpers it is built on —
+`emptyModel`, `addTab`, `removeTab`, `tabIds`, `reconcile`.

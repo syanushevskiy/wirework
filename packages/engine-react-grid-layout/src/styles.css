@@ -34,8 +34,8 @@
   padding: 0 var(--ww-gap, 0.5rem);
   font-size: 0.75rem;
   line-height: 1.5rem;
-  color: var(--ww-color-handle-text, #1e3a8a);
-  background: var(--ww-color-handle, #dbeafe);
+  color: var(--ww-color-handle-text, var(--ant-color-primary-text, #1e3a8a));
+  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
   border-radius: 0.25rem 0.25rem 0 0;
 }
 
@@ -48,6 +48,6 @@
 }
 
 .ww-page[data-layout-mode="edit"] .ww-grid-container .ww-grid-item {
-  outline: 1px dashed var(--ww-color-edit, #2563eb);
+  outline: 1px dashed var(--ww-color-edit, var(--ant-color-primary, #2563eb));
   border-radius: 0.25rem;
 }

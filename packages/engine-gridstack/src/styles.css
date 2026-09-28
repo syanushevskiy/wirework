@@ -36,8 +36,8 @@
   padding: 0 var(--ww-gap, 0.5rem);
   font-size: 0.75rem;
   line-height: 1.5rem;
-  color: var(--ww-color-handle-text, #14532d);
-  background: var(--ww-color-handle-alt, #dcfce7);
+  color: var(--ww-color-handle-text, var(--ant-color-success-text, #14532d));
+  background: var(--ww-color-handle-alt, var(--ant-color-success-bg, #dcfce7));
   border-radius: 0.25rem 0.25rem 0 0;
 }
 
@@ -50,6 +50,6 @@
 }
 
 .ww-page[data-layout-mode="edit"] .ww-gridstack .grid-stack-item-content {
-  outline: 1px dashed var(--ww-color-edit-alt, #16a34a);
+  outline: 1px dashed var(--ww-color-edit-alt, var(--ant-color-success, #16a34a));
   border-radius: 0.25rem;
 }

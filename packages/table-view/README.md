@@ -25,5 +25,20 @@ on: {
 Every other reaction of the page (a page change, a filter, a refresh) only
 names the view: `with: { into: "runs" }`. The transport is the host's:
 `fetchTransport` POSTs JSON; pass your own to add headers, auth or a fake
-server. `columnsOf`, `filtersOf` and `requestOf` are the pure derivations,
-exported for tests and for hosts that describe tables themselves.
+server.
+
+## Exports
+
+- `createTableViewActions({ transport })`, `TABLE_VIEW_LOAD` (the action's
+  name) — the actions a host registers.
+- `createTableViewLoader` (`TableViewLoader`), `tableViewArgsSchema`
+  (`TableViewArgs`) — the loader behind the action: one request in flight
+  per view, a newer one aborting the older.
+- `columnsOf`, `filtersOf`, `requestOf`, `tableViewSchema` (`TableView`,
+  `TableViewQuery`), `DEFAULT_PAGE_SIZE` — the pure derivations, for tests
+  and for hosts that describe tables themselves.
+- `fetchTransport` (`TableViewTransport`), `tableViewResponseSchema`,
+  `tableMetadataSchema`, `columnDefinitionSchema` (`TableViewRequest`,
+  `TableViewResponse`, `TableMetadata`, `ColumnDefinition`,
+  `SortDirection`) — the API as the server speaks it; `doc/tableApi/` holds
+  example requests and answers the tests read.

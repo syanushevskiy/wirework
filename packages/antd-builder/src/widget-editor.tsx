@@ -23,7 +23,7 @@ export interface WidgetEditorProps {
 }
 
 export function WidgetEditor({ cell, store, actions, bindingsLocked, onSave, onCancel }: WidgetEditorProps) {
-  const { form, canSave, save } = useWidgetEditor(cell, store, actions, onSave);
+  const { form, canSave, save } = useWidgetEditor({ cell, store, actions, onSave });
 
   return (
     <Card

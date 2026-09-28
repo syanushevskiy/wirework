@@ -6,12 +6,13 @@
  */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { AddLock } from "@wirework/builder";
 import { createStore } from "@wirework/store";
-import { WidgetBuilder } from "../widget-builder";
+import { WidgetBuilder, type WidgetBuilderProps } from "../widget-builder";
 import { portFieldId, reactionFieldId } from "../widget-form";
 import { actions, contracts, counter, registryWith } from "./fixtures";
 
-function renderBuilder(addLocked?: string) {
+function renderBuilder(addLock?: AddLock, lockTexts?: WidgetBuilderProps["lockTexts"]) {
   const onAdd = vi.fn();
   render(
     <WidgetBuilder
@@ -20,7 +21,8 @@ function renderBuilder(addLocked?: string) {
       store={createStore({ viewModels: { pages: {}, widgets: {} } })}
       actions={actions()}
       page="builder"
-      addLocked={addLocked}
+      addLock={addLock}
+      lockTexts={lockTexts}
       onAdd={onAdd}
     />,
   );
@@ -62,14 +64,19 @@ describe("WidgetBuilder", () => {
     expect(screen.queryByTestId("widget-selected")).toBeNull();
   });
 
-  it("shows the host's lock and keeps Add disabled while it holds", () => {
-    const { add } = renderBuilder("Finish editing the page first");
-    expect(screen.getByTestId("add-widget-locked").textContent).toBe("Finish editing the page first");
+  it("says the host's lock in words and keeps Add disabled while it holds", () => {
+    const { add } = renderBuilder("editing");
+    expect(screen.getByTestId("add-widget-locked").textContent).toBe("Save or cancel the page edit to add widgets.");
     fireEvent.click(screen.getByTestId("widget-browse"));
     fireEvent.click(screen.getByTestId("widget-card"));
     fireEvent.change(screen.getByTestId(reactionFieldId("changed", "set")), {
       target: { value: "builder.counter.value" },
     });
     expect(add().disabled).toBe(true);
+  });
+
+  it("lets the host say a lock in its own words", () => {
+    renderBuilder("user-view", { "user-view": "Switch your view off first" });
+    expect(screen.getByTestId("add-widget-locked").textContent).toBe("Switch your view off first");
   });
 });

@@ -36,6 +36,16 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* ---- page toolbar ---- */
+
+.ww-builder-toolbar {
+  margin-bottom: 0.5rem;
+}
+
+.ww-builder-toolbar-target {
+  margin-left: auto;
+}
+
 /* ---- widget palette ---- */
 
 .ww-builder-palette {

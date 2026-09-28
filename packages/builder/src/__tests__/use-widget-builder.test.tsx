@@ -6,16 +6,25 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createStore } from "@wirework/store";
+import type { AddLock } from "../locks";
 import { useWidgetBuilder } from "../use-widget-builder";
 import { actions, contracts, counter, registryWith } from "./fixtures";
 
-function setup(addLocked?: string) {
+function setup(addLock?: AddLock) {
   const store = createStore({ viewModels: { pages: {}, widgets: {} } });
   const onAdd = vi.fn();
   const hook = renderHook(
-    ({ addLocked }: { addLocked: string | undefined }) =>
-      useWidgetBuilder(registryWith(counter), contracts(), store, actions(), "builder", onAdd, addLocked),
-    { initialProps: { addLocked } },
+    ({ addLock }: { addLock: AddLock | undefined }) =>
+      useWidgetBuilder({
+        registry: registryWith(counter),
+        contracts: contracts(),
+        store,
+        actions: actions(),
+        page: "builder",
+        onAdd,
+        addLock,
+      }),
+    { initialProps: { addLock } },
   );
   return { onAdd, ...hook };
 }
@@ -59,16 +68,17 @@ describe("useWidgetBuilder", () => {
     expect(result.current.search.open).toBe(false);
   });
 
-  it("is locked by the host, not only its button", () => {
-    const { result, onAdd, rerender } = setup("the page is being edited");
+  it("is locked by the host, not only its button — and reports the reason for the UI to say", () => {
+    const { result, onAdd, rerender } = setup("editing");
     act(() => result.current.selectWidget("counter"));
     act(() => result.current.form.setReaction("changed", "set", "builder.counter.value"));
     expect(result.current.canAdd).toBe(true);
+    expect(result.current.addLock).toBe("editing");
     expect(result.current.addDisabled).toBe(true);
     act(() => result.current.add());
     expect(onAdd).not.toHaveBeenCalled();
 
-    rerender({ addLocked: undefined });
+    rerender({ addLock: undefined });
     expect(result.current.addDisabled).toBe(false);
     act(() => result.current.add());
     expect(onAdd).toHaveBeenCalledTimes(1);
