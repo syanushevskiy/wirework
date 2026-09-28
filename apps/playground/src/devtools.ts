@@ -19,12 +19,17 @@ import { createStore as createZustandStore } from "zustand/vanilla";
 import { devtools } from "zustand/middleware";
 import type { Store } from "@wirework/schema";
 import { fromZustand } from "@wirework/store";
+import { requests, type RequestCounts } from "./api/requests";
 
 const KEY = "wirework.devtools";
 
 declare global {
   interface Window {
-    wirework?: { devtools: (on?: boolean) => "on" | "off" };
+    wirework?: {
+      devtools: (on?: boolean) => "on" | "off";
+      /** What the fake servers were asked and have answered — the e2e suite waits on it. */
+      requests: () => RequestCounts;
+    };
   }
 }
 
@@ -59,5 +64,6 @@ export function installDevtoolsCommand(): void {
       }
       return devtoolsEnabled() ? "on" : "off";
     },
+    requests,
   };
 }

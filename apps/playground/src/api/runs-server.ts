@@ -21,6 +21,7 @@
  */
 import type { TableViewRequest, TableViewResponse } from "@wirework/table-view";
 import type { Run } from "@wirework/view-data-models-examples";
+import { tracked } from "./requests";
 
 /** What the overview shows: counted over ALL runs on the server, as they are now. */
 export interface RunsStats {
@@ -177,32 +178,34 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
     };
   };
 
+  /** One simulated round trip: the answer computed after the latency, and the request counted as pending until then. */
+  const roundTrip = <T>(answer: () => T): Promise<T> =>
+    tracked(
+      new Promise((resolve) => {
+        setTimeout(() => resolve(answer()), options.latencyMs);
+      }),
+    );
+
   return {
-    fetchView: (request) =>
-      new Promise((resolve) => {
-        const started = epoch;
-        setTimeout(() => {
-          const answer = answerView(request);
-          if (started === epoch) rows = rows.map(advance);
-          resolve(answer);
-        }, options.latencyMs);
-      }),
-    fetchRun: (id) =>
-      new Promise((resolve) => {
-        setTimeout(() => resolve(rows.find((row) => row.id === id)), options.latencyMs);
-      }),
+    fetchView: (request) => {
+      const started = epoch;
+      return roundTrip(() => {
+        const answer = answerView(request);
+        if (started === epoch) rows = rows.map(advance);
+        return answer;
+      });
+    },
+    fetchRun: (id) => roundTrip(() => rows.find((row) => row.id === id)),
     fetchStats: () =>
-      new Promise((resolve) => {
-        setTimeout(() => {
-          const count = (state: string): number => rows.filter((row) => row.status.state === state).length;
-          const finished = count("Success") + count("Failed");
-          resolve({
-            total: rows.length,
-            failed: count("Failed"),
-            running: count("Running"),
-            passRate: finished === 0 ? 0 : Math.round((count("Success") / finished) * 100),
-          });
-        }, options.latencyMs);
+      roundTrip(() => {
+        const count = (state: string): number => rows.filter((row) => row.status.state === state).length;
+        const finished = count("Success") + count("Failed");
+        return {
+          total: rows.length,
+          failed: count("Failed"),
+          running: count("Running"),
+          passRate: finished === 0 ? 0 : Math.round((count("Success") / finished) * 100),
+        };
       }),
     reset: () => {
       epoch += 1;

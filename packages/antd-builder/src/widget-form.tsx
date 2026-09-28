@@ -7,17 +7,11 @@
  */
 import { Alert, Checkbox, Flex, Form, Input, Select, Typography } from "antd";
 import type { ReactionKind, WidgetFormState } from "@wirework/builder";
+import { paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "./ids";
 import { PathCombobox } from "./path-combobox";
 
-/**
- * The form's field ids — also its test ids, which a suite drives the builder
- * through. Named here, in one place, because they are part of what this form
- * promises anyone who automates it.
- */
-export const portFieldId = (port: string): string => `port-input-${port}`;
-export const settingFieldId = (setting: string): string => `setting-${setting}`;
-export const reactionFieldId = (event: string, part: string): string => `reaction-${event}-${part}`;
-export const paramFieldId = (event: string, param: string): string => reactionFieldId(event, `param-${param}`);
+// The field ids are the form's promise to whoever automates it (ids.ts).
+export { paramFieldId, portFieldId, reactionFieldId, settingFieldId };
 
 export interface WidgetFormProps {
   form: WidgetFormState;

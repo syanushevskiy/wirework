@@ -25,6 +25,8 @@ export default defineConfig({
     // Own port: never collides with (or kills) a developer's `pnpm dev` on 5173.
     baseURL: "http://localhost:5174",
     trace: "retain-on-failure",
+    // Reading the clipboard back (the Copy cell) needs the browser's leave — for every scenario, up front.
+    permissions: ["clipboard-read", "clipboard-write"],
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

@@ -6,6 +6,7 @@
  */
 import { sampleSession, type Permissions } from "@wirework/view-data-models-examples";
 import type { ChoiceOption } from "@wirework/widget-contracts";
+import { tracked } from "./requests";
 import { applicationOptions } from "./suites-catalog";
 
 export interface Session {
@@ -21,11 +22,13 @@ export interface SessionApi {
 export function createSessionApi(options: { latencyMs: number }): SessionApi {
   return {
     fetchSession: () =>
-      new Promise((resolve) => {
-        setTimeout(
-          () => resolve({ ...sampleSession, lists: { applications: applicationOptions() } }),
-          options.latencyMs,
-        );
-      }),
+      tracked(
+        new Promise((resolve) => {
+          setTimeout(
+            () => resolve({ ...sampleSession, lists: { applications: applicationOptions() } }),
+            options.latencyMs,
+          );
+        }),
+      ),
   };
 }

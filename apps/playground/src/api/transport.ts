@@ -5,6 +5,7 @@
  * the pages stay exactly the same.
  */
 import type { TableViewRequest, TableViewTransport } from "@wirework/table-view";
+import { tracked } from "./requests";
 
 export const RUNS_VIEW_URL = "/api/v1/view/runs";
 
@@ -13,6 +14,6 @@ export function createFakeTransport(
 ): TableViewTransport {
   return (url, request) => {
     const endpoint = endpoints[url];
-    return endpoint ? endpoint(request) : Promise.reject(new Error(`${url} answered 404 Not Found`));
+    return tracked(endpoint ? endpoint(request) : Promise.reject(new Error(`${url} answered 404 Not Found`)));
   };
 }

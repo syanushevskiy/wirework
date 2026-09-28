@@ -10,6 +10,7 @@
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "@wirework/antd-builder": "workspace:*",
     "playwright-bdd": "catalog:",
     "typescript": "catalog:"
   }

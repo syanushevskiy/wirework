@@ -187,6 +187,8 @@ Feature: Widget builder
     Then the edit target is "view models"
     And the page uses the "default" view
     And the cell "custom-2" is placed at x 0 y 0 w 12 h 2
+    # Two placed widgets and one saved session: three commits, each handed to the host.
+    And the host has been asked to save the page 3 times
 
   Scenario: A reaction defaults to the payload's only field
     Given I open the "builder" page
