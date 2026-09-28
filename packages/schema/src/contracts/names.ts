@@ -14,6 +14,18 @@ export const KEBAB_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
  */
 export const ACTION_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*)?$/;
 
+/**
+ * One segment of a dotted store path: anything but a dot, whitespace or
+ * nothing. The ONE grammar — the schema (`storePathSchema`), the store's
+ * write check (`checkedSegments`), path enumeration and the generated-path
+ * checks all use it, so the store can never accept a path the schema
+ * refuses or the other way round.
+ */
+export const PATH_SEGMENT = /^[^.\s]+$/;
+
+/** A dotted store path: one or more `PATH_SEGMENT`s joined by dots. */
+export const STORE_PATH = /^[^.\s]+(?:\.[^.\s]+)*$/;
+
 /** Path segments that would address the prototype chain instead of own data. */
 export const FORBIDDEN_SEGMENTS: ReadonlySet<string> = new Set([
   "__proto__",

@@ -75,8 +75,19 @@ export function layerStores({ page, shared, sharedRoots }: StoreLayers): Store {
       return merged.state;
     },
 
+    /**
+     * Each layer sees only its own roots. The PAGE is replaced whole — it is
+     * the visit's own state. The SHARED layer keeps every root the tree does
+     * not name: a page-level tree (an import, a "reset page") must not take
+     * the user, the permissions and the overlay with it, and naming one
+     * shared root must not drop the others. A layer nothing names is not
+     * written at all. Two writes at most, so a root subscriber hears each
+     * layer that changed; nothing renders in between — both happen
+     * synchronously in this call.
+     */
     replace(next: StateObject): void {
-      shared.replace(pick(next, isShared));
+      const sharedNext = pick(next, isShared);
+      if (Object.keys(sharedNext).length > 0) shared.replace({ ...shared.snapshot(), ...sharedNext });
       page.replace(pick(next, (root) => !isShared(root)));
     },
   };

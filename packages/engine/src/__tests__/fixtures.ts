@@ -49,6 +49,7 @@ export const listEngine: AnyLayoutEngine = {
     model: z.string().min(1),
     template: z.string().min(1),
   })) }),
+  change: z.unknown(),
   empty: (): ListTemplate => ({ engine: "list", cells: [] }),
   cells: (template: ListTemplate) => template.cells,
   appendCell: (template: ListTemplate, cell: CellBase) => ({ ...template, cells: [...template.cells, cell] }),

@@ -14,9 +14,10 @@
  *    next segment is "0": `rows.0.name` starts a list, while
  *    `byId.123456.name` must not allocate 123 457 array slots;
  *  - writing through a primitive, a non-index segment through an array,
- *    and empty or prototype segments throw.
+ *    and empty, whitespace or prototype segments throw — the same grammar
+ *    the schema applies (`PATH_SEGMENT` in contracts/names.ts).
  */
-import { FORBIDDEN_SEGMENTS } from "./contracts/names";
+import { FORBIDDEN_SEGMENTS, PATH_SEGMENT } from "./contracts/names";
 
 export type PathInput = string | readonly string[];
 
@@ -36,12 +37,21 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
 export const pathSegments = (path: PathInput): string[] =>
   typeof path === "string" ? path.split(".") : [...path];
 
-/** The segments of a path a write may use; throws naming the bad segment. */
+/**
+ * The segments of a path a write may use; throws naming the bad segment.
+ * A dotted string obeys `PATH_SEGMENT`; explicit segments may hold a dot
+ * (a template name like "v1.0") but nothing else the grammar refuses.
+ */
 export function checkedSegments(path: PathInput): string[] {
   const segments = pathSegments(path);
   const shown = segments.join(".");
   if (segments.length === 0 || segments.includes("")) {
     throw new Error(`Path "${shown}" has an empty segment`);
+  }
+  const explicit = typeof path !== "string";
+  const malformed = segments.find((segment) => !PATH_SEGMENT.test(explicit ? segment.replaceAll(".", "_") : segment));
+  if (malformed !== undefined) {
+    throw new Error(`Path "${shown}" has a segment that is not a path segment: ${JSON.stringify(malformed)}`);
   }
   const forbidden = segments.find((segment) => FORBIDDEN_SEGMENTS.has(segment));
   if (forbidden !== undefined) {

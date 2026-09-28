@@ -27,15 +27,13 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
-    "zod": "catalog:"
-  },
-  "peerDependencies": {
     "antd": "catalog:",
-    "react": "catalog:"
+    "react": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@storybook/react-vite": "^10.6.0",
@@ -44,13 +42,17 @@
     "@vitejs/plugin-react": "catalog:",
     "@wirework/engine": "workspace:*",
     "@wirework/events": "workspace:*",
+    "@wirework/react": "workspace:*",
+    "@wirework/schema": "workspace:*",
     "@wirework/store": "workspace:*",
+    "@wirework/widget-contracts": "workspace:*",
     "antd": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "storybook": "^10.6.0",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

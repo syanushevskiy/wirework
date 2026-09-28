@@ -28,28 +28,38 @@ const userSettingsSchema = z
     message: "user settings may not contain inputs or on (bindings belong to the page)",
   });
 
-/** User's customisation of a single widget instance (cell) on a page. */
-export const widgetUserViewModelSchema = z.object({
-  /** Selected view-model template for the widget (optional). */
-  view: z.string().min(1).optional(),
-  /** Per-template settings overrides, keyed by template name. */
-  settings: z.record(z.string(), userSettingsSchema).optional(),
-});
+/**
+ * User's customisation of a single widget instance (cell) on a page.
+ * STRICT, like every schema of this model: a misspelt key is a mistake the
+ * boot validation must report, never a key silently dropped.
+ */
+export const widgetUserViewModelSchema = z
+  .object({
+    /** Selected view-model template for the widget (optional). */
+    view: z.string().min(1).optional(),
+    /** Per-template settings overrides, keyed by template name. */
+    settings: z.record(z.string(), userSettingsSchema).optional(),
+  })
+  .strict();
 export type WidgetUserViewModel = z.infer<typeof widgetUserViewModelSchema>;
 
 /** User's customisation of a single page. */
-export const pageUserViewModelSchema = z.object({
-  /** Selected page layout template — base or user-owned. */
-  view: z.string().min(1).optional(),
-  /** User-owned page templates, layered over the base ones by name. */
-  templates: z.record(z.string(), pageViewModelSchema).optional(),
-  /** Widget customisations keyed by CELL id. */
-  cells: z.record(z.string(), widgetUserViewModelSchema).optional(),
-});
+export const pageUserViewModelSchema = z
+  .object({
+    /** Selected page layout template — base or user-owned. */
+    view: z.string().min(1).optional(),
+    /** User-owned page templates, layered over the base ones by name. */
+    templates: z.record(z.string(), pageViewModelSchema).optional(),
+    /** Widget customisations keyed by CELL id. */
+    cells: z.record(z.string(), widgetUserViewModelSchema).optional(),
+  })
+  .strict();
 export type PageUserViewModel = z.infer<typeof pageUserViewModelSchema>;
 
 /** Root user view model. */
-export const userViewModelsSchema = z.object({
-  pages: z.record(z.string(), pageUserViewModelSchema).optional(),
-});
+export const userViewModelsSchema = z
+  .object({
+    pages: z.record(z.string(), pageUserViewModelSchema).optional(),
+  })
+  .strict();
 export type UserViewModels = z.infer<typeof userViewModelsSchema>;

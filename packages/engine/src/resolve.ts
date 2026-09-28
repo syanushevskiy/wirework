@@ -31,7 +31,7 @@ import {
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
-import { errorText, issuesText } from "./messages";
+import { errorText, issuesText, problemText } from "./messages";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
 import { actionArguments } from "./reactions";
@@ -262,7 +262,7 @@ export function checkTemplate(
   try {
     viewModel = definition.viewModel.parse(deepMerge(template, userSettings));
   } catch (error) {
-    return { problem: { kind: "invalid-view-model", message: errorText(error) } };
+    return { problem: { kind: "invalid-view-model", message: problemText(error) } };
   }
   const unmet = contractProblems(definition, viewModel, actions);
   return unmet ? { problem: { kind: "unmet-contract", message: unmet } } : { viewModel };

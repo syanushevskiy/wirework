@@ -78,15 +78,19 @@ export function useWidgetBuilder(
     [form.reset, search.picked, registry, store, page],
   );
 
-  /** After an add everything starts over: no widget chosen, an empty form, an EMPTY search, the list closed. */
+  /**
+   * After an add everything starts over: no widget chosen, an empty form, an
+   * EMPTY search, the list closed. Gated HERE, not only on the button: a host
+   * that renders its own control gets the same refusal.
+   */
   const add = useCallback(() => {
-    if (!definition) return;
+    if (!definition || !form.valid || addLocked !== undefined) return;
     const { bindings, settings } = form.collect();
     onAdd(definition.type, bindings, settings);
     setWidgetType("");
     form.reset();
     search.clear();
-  }, [definition, form.collect, form.reset, search.clear, onAdd]);
+  }, [definition, form.valid, form.collect, form.reset, search.clear, onAdd, addLocked]);
 
   return {
     widgetGroups,

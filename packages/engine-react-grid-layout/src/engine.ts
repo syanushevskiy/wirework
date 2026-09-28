@@ -8,6 +8,7 @@ import { GridLayoutView } from "./GridLayoutView";
 import {
   DEFAULT_GRID_CELL_HEIGHT,
   gridPageSchema,
+  gridPlacementsSchema,
   gridSettings,
   type GridPage,
   type GridPlacements,
@@ -16,6 +17,7 @@ import {
 export const reactGridLayoutEngine = defineLayoutEngine<GridPage, GridPlacements>({
   name: "react-grid-layout",
   template: gridPageSchema,
+  change: gridPlacementsSchema,
   empty: () => ({ engine: "react-grid-layout", cells: [] }),
   cells: (template) => template.cells,
   /** Full-width band below every existing cell. */

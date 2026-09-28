@@ -16,7 +16,8 @@ export const gridPlacementSchema = z.object({
 });
 export type GridPlacement = z.infer<typeof gridPlacementSchema>;
 /** Placements keyed by cell id — the renderer's CHANGE payload. */
-export type GridPlacements = Record<string, GridPlacement>;
+export const gridPlacementsSchema = z.record(z.string(), gridPlacementSchema);
+export type GridPlacements = z.infer<typeof gridPlacementsSchema>;
 
 export const gridCellSchema = cellBaseSchema.extend(gridPlacementSchema.shape);
 export type GridCell = z.infer<typeof gridCellSchema>;

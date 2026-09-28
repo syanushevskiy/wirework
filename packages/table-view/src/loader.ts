@@ -19,6 +19,10 @@
  * `metadata` argument; without it: when the call declares the view (it has
  * a url) or nothing is known about the columns yet — so a plain re-request
  * (another page, a refresh, a filter) asks for rows only.
+ *
+ * Latest request wins, per store and view — and the superseded request is
+ * ABORTED, not merely ignored: paging quickly through a table or refreshing
+ * while a request is in flight never piles requests up on the server.
  */
 import { z } from "zod";
 import type { Store } from "@wirework/schema";
@@ -70,17 +74,36 @@ const orderSchema = z.record(z.string(), z.enum(["ASC", "DESC"]));
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
+/** Structural equality of plain JSON data — key order does not matter, as it must not for a declaration. */
+function equalJson(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => equalJson(item, b[index]));
+  }
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && equalJson(left[key], right[key]));
+}
+
+/** One request of a view: the newest of its store and `into` is the only one that may write. */
+interface Request {
+  isLatest: () => boolean;
+  signal: AbortSignal;
+}
+
 export function createTableViewLoader(transport: TableViewTransport): TableViewLoader {
-  // Only the newest request of a table view may write: page 2 then 3 must
-  // never end on page 2 because its answer arrived last. Per store, because
-  // a host may give every page visit its own.
-  const latest = new WeakMap<Store, Map<string, number>>();
-  const begin = (store: Store, into: string): (() => boolean) => {
-    const requests = latest.get(store) ?? new Map<string, number>();
-    latest.set(store, requests);
-    const request = (requests.get(into) ?? 0) + 1;
-    requests.set(into, request);
-    return () => requests.get(into) === request;
+  // Per store, because a host may give every page visit its own; per view,
+  // because two tables on a page must not supersede each other.
+  const inFlight = new WeakMap<Store, Map<string, AbortController>>();
+  const begin = (store: Store, into: string): Request => {
+    const requests = inFlight.get(store) ?? new Map<string, AbortController>();
+    inFlight.set(store, requests);
+    requests.get(into)?.abort();
+    const controller = new AbortController();
+    requests.set(into, controller);
+    return { isLatest: () => requests.get(into) === controller, signal: controller.signal };
   };
 
   return async (store, rawArgs) => {
@@ -97,7 +120,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
     if (declared.url !== undefined) {
       view = { ...declared, url: declared.url };
       const previous = store.getAs(at("view"), tableViewSchema);
-      if (JSON.stringify(previous) !== JSON.stringify(view)) store.set(at("view"), view);
+      if (!equalJson(previous, view)) store.set(at("view"), view);
       // The page size was DECLARED anew (an editor changed the reaction): the
       // declaration speaks again — not the size the last answer left in the
       // store, which would silently win — and the list starts at its first page.
@@ -114,7 +137,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
     // The call's own word wins; without one: when the view is being declared, or nothing describes it yet.
     const describe = metadata ?? (declared.url !== undefined || store.get(at("columns")) === undefined);
 
-    const isLatest = begin(store, into);
+    const { isLatest, signal } = begin(store, into);
     store.set(at("loading"), true);
     try {
       // Live store values are not validated; an inspector may hold anything.
@@ -124,7 +147,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         filterIn: store.getAs(at("filterIn"), chosenSchema) ?? {},
         orderBy: store.getAs(at("orderBy"), orderSchema),
       };
-      let answer = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, describe)));
+      let answer = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, describe), signal));
       if (!isLatest()) return;
 
       // The page asked for lies behind the last one (a filter shrank the
@@ -132,7 +155,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       const total = answer.totalRecords ?? undefined;
       if (total !== undefined && total > 0 && (query.page - 1) * query.pageSize >= total) {
         query.page = Math.ceil(total / query.pageSize);
-        const again = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, false)));
+        const again = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, false), signal));
         if (!isLatest()) return;
         answer = { ...answer, ...again, metadata: answer.metadata ?? again.metadata };
       }
@@ -147,7 +170,8 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       store.set(at("pageSize"), query.pageSize);
       store.set(at("error"), undefined);
     } catch (error) {
-      // The last good rows stay; the page can show what failed.
+      // The last good rows stay; the page can show what failed. A superseded
+      // request (aborted, or answered late) says nothing: it is not the latest.
       if (isLatest()) store.set(at("error"), messageOf(error));
     } finally {
       if (isLatest()) store.set(at("loading"), false);

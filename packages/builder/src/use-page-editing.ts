@@ -31,6 +31,7 @@ import {
 } from "@wirework/schema";
 import {
   pageTemplates,
+  problemText,
   removeUserCell,
   resolveTemplate,
   updatePageTemplate,
@@ -50,6 +51,14 @@ import type { WidgetSettings } from "./use-widget-form";
 export type EditTarget = "user" | "base";
 /** Name of the user's own page template (the sketch's "my own" pill). */
 export const USER_PAGE_TEMPLATE = "my-own";
+
+/**
+ * What Save did: the session's changes were COMMITTED (and handed to the
+ * host), there was nothing to commit (no session, or one that changed
+ * nothing), or the permission REFUSED it — the session ends either way, and
+ * the host decides what to say and whether to reload.
+ */
+export type SaveOutcome = "committed" | "unchanged" | "refused";
 
 /** One pure edit, replayed onto the store's current trees on every render and on Save. */
 type Op = (trees: EditableTrees) => EditableTrees;
@@ -187,7 +196,13 @@ export function usePageEditing({
     [activeView, target, page, layoutEngines],
   );
 
-  /** Ops apply only inside a session (chrome exists only in edit mode anyway). */
+  /**
+   * Every edit is gated the same way, whatever control triggered it: there
+   * must be an open session, and this user must be allowed to edit. `push`
+   * repeats the session check so that no op can ever land outside one.
+   */
+  const inSession = ops !== null;
+  const mayEdit = inSession && canEdit;
   const push = useCallback((op: Op) => setOps((current) => (current ? [...current, op] : current)), []);
 
   /* ---- session ---- */
@@ -197,14 +212,17 @@ export function usePageEditing({
     setSelected(null);
     setOps([]);
   }, [canEdit]);
-  const save = useCallback(() => {
+  const save = useCallback((): SaveOutcome => {
     // Gated here too: a session opened before the permission changed must
     // not be able to write after it. And only a session that CHANGED
     // something commits — an untouched one has nothing to ask the host to
     // persist (`ops` is `[]`, not null, while a session is open).
-    if (ops !== null && ops.length > 0 && canEdit) commit(shown);
+    const outcome: SaveOutcome =
+      ops === null || ops.length === 0 ? "unchanged" : canEdit ? "committed" : "refused";
+    if (outcome === "committed") commit(shown);
     setOps(null);
     setSelected(null);
+    return outcome;
   }, [ops, canEdit, shown, commit]);
   const cancel = useCallback(() => {
     setOps(null);
@@ -214,12 +232,30 @@ export function usePageEditing({
   /* ---- ops ---- */
 
   const changeLayout = useCallback(
-    (change: unknown) => push(pageOp((plugin, template) => plugin.applyChange(template, change))),
-    [push, pageOp],
+    (change: unknown) => {
+      if (!mayEdit) return;
+      push(
+        pageOp((plugin, template) => {
+          // The engine's own validator first: a payload that does not fit
+          // (a renderer's bug, a host's) is reported and changes nothing.
+          let checked: unknown;
+          try {
+            checked = plugin.change.parse(change);
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn(`Layout change ignored: it does not fit the "${plugin.name}" engine — ${problemText(error)}`);
+            return template;
+          }
+          return plugin.applyChange(template, checked);
+        }),
+      );
+    },
+    [mayEdit, push, pageOp],
   );
 
   const removeCellById = useCallback(
     (cellId: string) => {
+      if (!mayEdit) return;
       setSelected((current) => (current?.cellId === cellId ? null : current));
       const removed = cells.find((cell) => cell.key === cellId);
       const routing = target;
@@ -239,12 +275,12 @@ export function usePageEditing({
         return next;
       });
     },
-    [cells, target, page, layoutEngines, modelNamespace, pageOp, push],
+    [mayEdit, cells, target, page, layoutEngines, modelNamespace, pageOp, push],
   );
 
   const saveWidget = useCallback(
     (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => {
-      if (cell.template === undefined) return;
+      if (!mayEdit || cell.template === undefined) return;
       const routing = target;
       // The user overlay carries SETTINGS only: a user's view never rewires
       // inputs or reactions (doc/layout-engines-design.md, "Where edits go").
@@ -267,10 +303,15 @@ export function usePageEditing({
       );
       setSelected(null);
     },
-    [target, page, push],
+    [mayEdit, target, page, push],
   );
 
-  const selectCell = useCallback((cellId: string) => setSelected({ cellId, target }), [target]);
+  const selectCell = useCallback(
+    (cellId: string) => {
+      if (mayEdit) setSelected({ cellId, target });
+    },
+    [mayEdit, target],
+  );
   const clearCell = useCallback(() => setSelected(null), []);
 
   return {

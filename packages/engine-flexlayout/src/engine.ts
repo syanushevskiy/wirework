@@ -6,12 +6,13 @@
 import type { CellBase } from "@wirework/schema";
 import { defineLayoutEngine } from "@wirework/react";
 import { FlexLayoutView } from "./FlexLayoutView";
-import { flexLayoutPageSchema, type FlexLayoutModelJson, type FlexLayoutPage } from "./schema";
+import { flexLayoutModelSchema, flexLayoutPageSchema, type FlexLayoutModelJson, type FlexLayoutPage } from "./schema";
 import { addTab, emptyModel, reconcile, removeTab, tabIds } from "./tree";
 
 export const flexLayoutEngine = defineLayoutEngine<FlexLayoutPage, FlexLayoutModelJson>({
   name: "flexlayout",
   template: flexLayoutPageSchema,
+  change: flexLayoutModelSchema,
   empty: () => ({ engine: "flexlayout", cells: [], model: emptyModel() }),
   cells: (template) => template.cells,
   appendCell: (template, cell: CellBase) => ({

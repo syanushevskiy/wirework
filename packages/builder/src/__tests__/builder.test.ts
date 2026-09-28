@@ -175,6 +175,36 @@ describe("commitTrees — the one write path", () => {
     expect(error.mock.calls.map((call) => call[1])).toEqual(expect.arrayContaining([new Error("503"), new Error("sync")]));
   });
 
+  it("saves in commit order, one at a time, however slow the host is", async () => {
+    const store = createStore({ viewModels: { pages: {}, widgets: {} } });
+    const order: string[] = [];
+    let releaseFirst = (): void => undefined;
+    const first = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const save: SaveTrees = async (trees) => {
+      const tag = Object.keys(trees.viewModels.pages).join(",");
+      if (tag === "a") await first;
+      order.push(tag);
+    };
+    commitTrees(store, save, { viewModels: { pages: { a: {} }, widgets: {} } });
+    commitTrees(store, save, { viewModels: { pages: { b: {} }, widgets: {} } });
+    await tick();
+    // The second commit's save has not even started: it waits for the first.
+    expect(order).toEqual([]);
+    releaseFirst();
+    await tick();
+    expect(order).toEqual(["a", "b"]);
+  });
+
+  it("lets the host handle a failed save its own way", async () => {
+    const store = createStore({ viewModels: { pages: {}, widgets: {} } });
+    const failures: unknown[] = [];
+    commitTrees(store, () => Promise.reject(new Error("503")), { viewModels }, (error) => void failures.push(error));
+    await tick();
+    expect(failures).toEqual([new Error("503")]);
+  });
+
   it("gives the host valid trees even when the store holds none", async () => {
     const store = createStore({});
     const seen: EditableTrees[] = [];

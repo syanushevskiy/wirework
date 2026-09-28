@@ -108,6 +108,47 @@ describe("bindReactions", () => {
     expect(store.get("demo.n")).toBe(0);
   });
 
+  it("latest wins: a second occurrence of the same event aborts the chain still running for the first", async () => {
+    const signals: AbortSignal[] = [];
+    const releases: (() => void)[] = [];
+    const actions = createActions();
+    actions.register({
+      name: "runs/load",
+      handler: ({ signal }) => {
+        signals.push(signal);
+        return new Promise<void>((resolve) => releases.push(resolve));
+      },
+    });
+    const { store, bus } = bind({ changed: [{ call: "runs/load" }, { set: "demo.n", from: "value" }] }, actions);
+    emit(bus, { value: 1 });
+    emit(bus, { value: 2 });
+    expect(signals.map((signal) => signal.aborted)).toEqual([true, false]);
+    // The older answer arrives last — and writes nothing.
+    releases[1]?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releases[0]?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.get("demo.n")).toBe(2);
+  });
+
+  it("a chain aborted by unbind fails quietly: what its action rejected with is the abort, not a failure", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const actions = createActions();
+    actions.register({
+      name: "runs/load",
+      handler: ({ signal }) =>
+        new Promise<void>((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        }),
+    });
+    const { bus, unbind } = bind({ changed: [{ call: "runs/load" }] }, actions);
+    emit(bus, { value: 1 });
+    unbind();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   it("a rejected async action stops its chain", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const actions = createActions();

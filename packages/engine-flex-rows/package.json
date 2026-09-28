@@ -24,19 +24,20 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
+    "react": "catalog:",
     "zod": "catalog:"
-  },
-  "peerDependencies": {
-    "react": "catalog:"
   },
   "devDependencies": {
     "@types/react": "catalog:",
     "@wirework/engine": "workspace:*",
+    "@wirework/react": "workspace:*",
+    "@wirework/schema": "workspace:*",
     "react": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

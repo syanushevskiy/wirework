@@ -11,7 +11,7 @@ import {
   type CellBase,
   type PageViewModel,
 } from "@wirework/schema";
-import { errorText, issuesText } from "./messages";
+import { errorText, issuesText, problemText } from "./messages";
 import { createNamedRegistry, type NamedRegistry } from "./named-registry";
 
 export type LayoutEngineRegistry = NamedRegistry<AnyLayoutEngine>;
@@ -25,6 +25,7 @@ export function createLayoutEngines(): LayoutEngineRegistry {
     pattern: KEBAB_NAME,
     invariants: [
       (engine) => (typeof engine.template?.parse !== "function" ? "has no template validator" : undefined),
+      (engine) => (typeof engine.change?.parse !== "function" ? "has no change validator" : undefined),
       (engine) => OPERATIONS.filter((operation) => typeof engine[operation] !== "function")
         .map((operation) => `lacks the "${operation}" operation`)[0],
       (engine) => (engine.renderer === undefined || engine.renderer === null ? "has no renderer" : undefined),
@@ -67,7 +68,7 @@ export function resolveTemplate(engines: LayoutEngineRegistry, raw: unknown): Te
   try {
     template = engine.template.parse(raw) as PageViewModel;
   } catch (error) {
-    return { problem: `invalid "${engine.name}" page template: ${errorText(error)}` };
+    return { problem: `invalid "${engine.name}" page template: ${problemText(error)}` };
   }
   let cells: CellBase[];
   try {

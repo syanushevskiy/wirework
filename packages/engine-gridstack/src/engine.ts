@@ -10,6 +10,7 @@ import { GridstackView } from "./GridstackView";
 import {
   DEFAULT_GRIDSTACK_CELL_ROWS,
   gridstackPageSchema,
+  gridstackPlacementsSchema,
   gridstackSettings,
   type GridstackPage,
   type GridstackPlacements,
@@ -18,6 +19,7 @@ import {
 export const gridstackEngine = defineLayoutEngine<GridstackPage, GridstackPlacements>({
   name: "gridstack",
   template: gridstackPageSchema,
+  change: gridstackPlacementsSchema,
   empty: () => ({ engine: "gridstack", cells: [] }),
   cells: (template) => template.cells,
   appendCell: (template, cell: CellBase) => {

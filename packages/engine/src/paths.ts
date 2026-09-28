@@ -6,6 +6,7 @@
 import {
   CONFIG_ROOTS,
   FORBIDDEN_SEGMENTS,
+  PATH_SEGMENT,
   isPlainObject,
   type ReadableStore,
   type Validator,
@@ -14,8 +15,8 @@ import {
 /**
  * Enumerate every dot path reachable in a state tree (branches AND leaves),
  * for tooling such as path autocomplete. Array elements are addressed by
- * numeric segments; forbidden segments, and any key `storePathSchema`
- * would reject (dots, whitespace), are skipped — a suggestion the schema
+ * numeric segments; forbidden segments, and any key that is not a
+ * `PATH_SEGMENT` (dots, whitespace), are skipped — a suggestion the schema
  * refuses is worse than no suggestion.
  */
 export function collectPaths(root: unknown, maxDepth = 8): string[] {
@@ -26,7 +27,7 @@ export function collectPaths(root: unknown, maxDepth = 8): string[] {
       ? value.map((element, index) => [String(index), element] as const)
       : Object.entries(value);
     for (const [key, child] of entries) {
-      if (FORBIDDEN_SEGMENTS.has(key) || key === "" || /[.\s]/.test(key)) continue;
+      if (FORBIDDEN_SEGMENTS.has(key) || !PATH_SEGMENT.test(key)) continue;
       const path = prefix === "" ? key : `${prefix}.${key}`;
       paths.push(path);
       walk(child, path, depth + 1);

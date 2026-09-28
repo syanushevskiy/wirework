@@ -83,4 +83,27 @@ describe("layerStores", () => {
     expect(page.snapshot()).toEqual({ runs: { page: 4 }, extra: true });
     expect(shared.snapshot()).toEqual({ app: { user: { name: "Bob" } } });
   });
+
+  it("replace with a page-only tree leaves the shared layer alone — the user, the permissions, the overlay stay", () => {
+    const sharedState = { app: { user: { name: "Ann" }, permissions: { editPages: true } }, userViewModels: { pages: {} } };
+    const { page, shared, store } = layers({ runs: { page: 1 }, demo: { counter: 3 } }, sharedState);
+    const onRoot = vi.fn();
+    store.subscribe("", onRoot);
+    store.replace({ demo: { counter: 0 } });
+    expect(page.snapshot()).toEqual({ demo: { counter: 0 } });
+    expect(shared.snapshot()).toEqual(sharedState);
+    expect(store.get("app.permissions.editPages")).toBe(true);
+    // One layer written, one notification.
+    expect(onRoot).toHaveBeenCalledOnce();
+  });
+
+  it("replace with some shared roots keeps the shared roots it does not name", () => {
+    const { shared, store } = layers({}, { app: { user: { name: "Ann" } }, userViewModels: { pages: { runs: {} } } });
+    store.replace({ app: { user: { name: "Bob" } } });
+    expect(shared.snapshot()).toEqual({ app: { user: { name: "Bob" } }, userViewModels: { pages: { runs: {} } } });
+    // A named root is replaced whole, never merged.
+    store.replace({ app: { settings: { pageSize: 5 } } });
+    expect(store.get("app.user")).toBeUndefined();
+    expect(store.get("app.settings.pageSize")).toBe(5);
+  });
 });

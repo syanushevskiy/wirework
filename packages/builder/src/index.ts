@@ -25,13 +25,13 @@
  * @wirework/react adapter only, with react as a peer.
  */
 export { commitTrees, useCommit } from "./use-commit";
-export type { Commit, EditableTrees, SaveTrees, TreesChange } from "./use-commit";
+export type { Commit, EditableTrees, SaveError, SaveTrees, TreesChange } from "./use-commit";
 
 export { DEFAULT_BUILDER_NAMING, builderPage, modelNamespaceOf, numberedIds, useBuilder } from "./use-builder";
 export type { BuilderInput, BuilderNaming } from "./use-builder";
 
 export { USER_PAGE_TEMPLATE, usePageEditing } from "./use-page-editing";
-export type { EditTarget, PageEditingInput } from "./use-page-editing";
+export type { EditTarget, PageEditingInput, SaveOutcome } from "./use-page-editing";
 
 export { EMPTY_FORM, useWidgetForm, valuesFromViewModel } from "./use-widget-form";
 export type {

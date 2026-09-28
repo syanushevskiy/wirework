@@ -4,6 +4,7 @@
  * removing the last cell of a row removes the row. There is no
  * interactive change (nothing to drag), so `applyChange` is the identity.
  */
+import { z } from "zod";
 import type { CellBase } from "@wirework/schema";
 import { defineLayoutEngine } from "@wirework/react";
 import { FlexRowsView } from "./FlexRowsView";
@@ -12,6 +13,7 @@ import { flexRowsPageSchema, type FlexRowsPage } from "./schema";
 export const flexRowsEngine = defineLayoutEngine<FlexRowsPage, undefined>({
   name: "flex-rows",
   template: flexRowsPageSchema,
+  change: z.undefined(),
   empty: () => ({ engine: "flex-rows", rows: [] }),
   cells: (template) => template.rows.flat(),
   appendCell: (template, cell: CellBase) => ({

@@ -52,6 +52,14 @@ describe("setPath", () => {
     expect(() => setPath({}, "a..b", 1)).toThrow(/empty segment/);
   });
 
+  it("applies the schema's own path grammar: whitespace is refused, in a string and in an explicit segment", () => {
+    expect(() => setPath({}, "a b.c", 1)).toThrow(/not a path segment/);
+    expect(() => setPath({}, ["a", "b c"], 1)).toThrow(/not a path segment/);
+    expect(() => setPath({}, "a\t.c", 1)).toThrow(/not a path segment/);
+    // An explicit segment may still hold a dot — that is what explicit segments are for.
+    expect(setPath({}, ["templates", "v1.0"], 1)).toEqual({ templates: { "v1.0": 1 } });
+  });
+
   it("regression: refuses to write through a primitive", () => {
     expect(() => setPath({ a: 5 }, "a.b", 1)).toThrow(/holds a number/);
   });

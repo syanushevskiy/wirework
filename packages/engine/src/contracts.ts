@@ -11,8 +11,9 @@ import {
   type AnyWidgetContract,
   type EventDefinition,
   type PortDefinition,
+  PATH_SEGMENT,
 } from "@wirework/schema";
-import { errorText } from "./messages";
+import { problemText } from "./messages";
 import { createNamedRegistry, type Invariant, type NamedRegistry } from "./named-registry";
 
 export type ContractRegistry = NamedRegistry<AnyWidgetContract>;
@@ -29,14 +30,14 @@ function portsProblem(inputs: Record<string, unknown>): string | undefined {
     const port = raw as Partial<PortDefinition> | null;
     if (typeof port?.value?.parse !== "function") return `input port "${name}" has no value validator`;
     // It becomes the last segment of a generated path: a dot would nest it, a blank would end the path early.
-    if (port.suggestedName !== undefined && !/^[^.\s]+$/.test(String(port.suggestedName))) {
+    if (port.suggestedName !== undefined && !PATH_SEGMENT.test(String(port.suggestedName))) {
       return `input port "${name}" has a suggestedName that is not one path segment: ${JSON.stringify(port.suggestedName)}`;
     }
     if (port.default === undefined) continue;
     try {
       port.value.parse(port.default);
     } catch (error) {
-      return `input port "${name}" has a default its own validator rejects: ${errorText(error)}`;
+      return `input port "${name}" has a default its own validator rejects: ${problemText(error)}`;
     }
   }
   return undefined;

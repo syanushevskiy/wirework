@@ -16,6 +16,7 @@
  */
 import { z } from "zod";
 import type { ActionDefinition, Store } from "@wirework/schema";
+import { errorText } from "@wirework/engine";
 import type { RunsServer } from "../api/runs-server";
 import type { Navigator } from "./nav-actions";
 
@@ -52,6 +53,9 @@ export function createRunLoader(server: RunsServer): Loader {
       if (!isLatest()) return;
       if (run === undefined) store.set("run.error", `There is no run ${id}`);
       else store.set("run.data", run);
+    } catch (error) {
+      // A failed request is an answer too: the page says so instead of loading forever.
+      if (isLatest()) store.set("run.error", errorText(error));
     } finally {
       if (isLatest()) store.set("run.loading", false);
     }
@@ -72,6 +76,8 @@ export function createOverviewLoader(server: RunsServer): Loader {
         // Text for a widget to show: widgets and reactions never compute.
         notice: `${stats.failed} of ${stats.total} runs failed, ${stats.running} still running`,
       });
+    } catch (error) {
+      if (isLatest()) store.set("overview.error", errorText(error));
     } finally {
       if (isLatest()) store.set("overview.loading", false);
     }

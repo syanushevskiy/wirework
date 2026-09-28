@@ -14,8 +14,13 @@
  *    `[ load, navigate ]` navigates after the load (doc/actions-design.md);
  *  - a failing reaction is logged and stops that event's chain; it never
  *    takes the page down or throws at the emitting widget;
- *  - unbinding (the page goes away) aborts every chain still in flight: the
- *    rest never starts, and actions see it on `signal`.
+ *  - LATEST WINS: the reactions of an event describe what to do for its
+ *    most recent occurrence. A new occurrence aborts the chain still running
+ *    for the previous one (its later reactions never start, and an action
+ *    that honours `signal` stops) — two quick clicks, or a refresh while a
+ *    load is in flight, cannot leave the older answer written last;
+ *  - unbinding (the page goes away) aborts every chain still in flight the
+ *    same way. An aborted chain is not a failure: nothing is logged.
  *
  * Framework-agnostic: any adapter that renders a plan calls `bindReactions`
  * while the page is mounted.
@@ -103,6 +108,9 @@ function runAll(
   signal: AbortSignal,
 ): void {
   const fail = (error: unknown): void => {
+    // A chain that was aborted (superseded, or the page went away) did not
+    // fail: whatever its action rejected with is the abort itself.
+    if (signal.aborted) return;
     // eslint-disable-next-line no-console
     console.error(
       `Reaction on "${event.widget}/${event.name}" from cell "${event.source.cell}" failed:`,
@@ -131,25 +139,34 @@ function runAll(
   runFrom(0);
 }
 
-/** Subscribe ONE cell's declared reactions; the unsubscribe aborts its chains in flight. */
+/**
+ * Subscribe ONE cell's declared reactions. One chain per event occurrence,
+ * each with its own signal; the newest occurrence of an event aborts the
+ * chain before it (latest wins), and the unsubscribe aborts whatever is
+ * still in flight.
+ */
 export function bindCellReactions(
   bus: EventBus,
   store: Store,
   target: ReactionTarget,
   actions?: ActionRegistry,
 ): Unsubscribe {
-  const controller = new AbortController();
+  /** The chain most recently started per event — the only one allowed to finish. */
+  const latest = new Map<string, AbortController>();
   const unsubscribes = Object.entries(bindingsOf(target.viewModel)).flatMap(([name, reactions]) =>
     reactions === undefined || reactions.length === 0
       ? []
       : [
-          bus.subscribe({ page: target.page, cell: target.cell, name }, (event) =>
-            runAll(reactions, event, store, actions, controller.signal),
-          ),
+          bus.subscribe({ page: target.page, cell: target.cell, name }, (event) => {
+            latest.get(name)?.abort();
+            const controller = new AbortController();
+            latest.set(name, controller);
+            runAll(reactions, event, store, actions, controller.signal);
+          }),
         ],
   );
   return () => {
-    controller.abort();
+    for (const controller of latest.values()) controller.abort();
     unsubscribes.forEach((unsubscribe) => unsubscribe());
   };
 }

@@ -16,7 +16,8 @@ export const gridstackPlacementSchema = z.object({
 });
 export type GridstackPlacement = z.infer<typeof gridstackPlacementSchema>;
 /** Placements keyed by cell id — the renderer's CHANGE payload (gridstack's `change` nodes). */
-export type GridstackPlacements = Record<string, GridstackPlacement>;
+export const gridstackPlacementsSchema = z.record(z.string(), gridstackPlacementSchema);
+export type GridstackPlacements = z.infer<typeof gridstackPlacementsSchema>;
 
 export const gridstackCellSchema = cellBaseSchema.extend(gridstackPlacementSchema.shape);
 export type GridstackCell = z.infer<typeof gridstackCellSchema>;

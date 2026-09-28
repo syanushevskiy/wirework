@@ -84,11 +84,14 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   useDemoBridge(bus, store);
 
   /**
-   * GLOBAL state at work: what the user may do arrived with the session
-   * (app.permissions). Only an explicit `false` forbids — the builder has no
-   * global state, and the demo's is still on its way when a page first shows.
+   * GLOBAL state at work: what the user may do arrives with the session
+   * (app.permissions). It fails CLOSED: until the permission has arrived —
+   * and for good if the session request fails — nobody edits. The builder
+   * is not part of the application session and has no permission to wait
+   * for.
    */
-  const canEditPages = useStorePath<boolean>(store, "app.permissions.editPages") !== false;
+  const editPages = useStorePath<boolean>(store, "app.permissions.editPages");
+  const canEditPages = page === BUILDER_PAGE || editPages === true;
 
   /**
    * Where a real host PERSISTS its pages. This demo keeps nothing: every
@@ -167,10 +170,9 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     onAdded: loadAgain,
   });
 
-  /** Save page: commit the session, then the page loads again — by what was just saved. */
+  /** Save page: commit the session; if something was committed, the page loads again — by what was just saved. */
   const savePage = useCallback(() => {
-    editing.save();
-    loadAgain();
+    if (editing.save() === "committed") loadAgain();
   }, [editing.save, loadAgain]);
 
   return {

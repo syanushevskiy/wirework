@@ -51,6 +51,7 @@ const flexRows: AnyLayoutEngine = {
   cells: (template: RowsTemplate) => template.rows.flat(),
   appendCell: (template: RowsTemplate) => template,
   removeCell: (template: RowsTemplate) => template,
+  change: z.unknown(),
   applyChange: (template: RowsTemplate) => template,
   renderer: component,
 };

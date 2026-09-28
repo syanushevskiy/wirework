@@ -31,7 +31,14 @@ export interface LayoutEngine<
   /** A new cell placed somewhere sensible (builders append). */
   appendCell(template: T, cell: CellBase): T;
   removeCell(template: T, cellId: string): T;
-  /** Apply a renderer-reported change. Pure. */
+  /**
+   * Validator for the CHANGE payload. The core parses every reported change
+   * with it before `applyChange` sees it, so a payload nobody checked can
+   * never be spread into a template — a renderer's bug, or a host's, stops
+   * here and is reported, never written.
+   */
+  change: Validator<C>;
+  /** Apply a renderer-reported change, already validated by `change`. Pure. */
   applyChange(template: T, change: C): T;
   /** Engine-specific validation problems (e.g. a cell outside the grid). */
   validate?(template: T): string[];

@@ -12,7 +12,7 @@
  * `applyChange` payloads are engine-specific: each package tests its own.
  */
 import type { AnyLayoutEngine, CellBase, PageViewModel } from "@wirework/schema";
-import { errorText } from "./messages";
+import { errorText, problemText } from "./messages";
 
 const SAMPLE_CELLS: readonly CellBase[] = [
   { id: "first", widget: "sample-widget", model: "widgets.sample.first", template: "default" },
@@ -30,7 +30,7 @@ export function layoutEngineProblems(engine: AnyLayoutEngine): string[] {
     try {
       engine.template.parse(template);
     } catch (error) {
-      problems.push(`${step}: the result fails the engine's own template validator (${errorText(error)})`);
+      problems.push(`${step}: the result fails the engine's own template validator (${problemText(error)})`);
     }
     const warnings = engine.validate?.(template) ?? [];
     expect(warnings.length === 0, `${step}: the result has validation warnings: ${warnings.join("; ")}`);

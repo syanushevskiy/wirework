@@ -10,7 +10,7 @@
  * (doc/widget-events-design.md).
  */
 import { z } from "zod";
-import { hasForbiddenSegment, isConfigPath } from "./names";
+import { STORE_PATH, hasForbiddenSegment, isConfigPath } from "./names";
 import type { Validator } from "./widget";
 
 /** One store-binding port of a widget. */
@@ -49,7 +49,7 @@ export interface WidgetIO {
  */
 export const storePathSchema = z
   .string()
-  .regex(/^[^.\s]+(\.[^.\s]+)*$/, "must be a dot-separated store path")
+  .regex(STORE_PATH, "must be a dot-separated store path")
   .refine(
     (path) => !hasForbiddenSegment(path),
     "must not contain __proto__, prototype or constructor segments",
