@@ -25,7 +25,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "patchedDependencies": {
+      "playwright-core@1.55.0": "patches/playwright-core@1.55.0.patch"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

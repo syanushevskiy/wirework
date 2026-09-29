@@ -73,6 +73,11 @@ catalogs:
       specifier: ^5.0.15
       version: 5.0.15
 
+patchedDependencies:
+  playwright-core@1.55.0:
+    hash: b51cca2e9b078c9c20eeaae383a5cf09d48fb1fb558382349ef4ec107e936688
+    path: patches/playwright-core@1.55.0.patch
+
 importers:
 
   .:
@@ -5708,11 +5713,11 @@ snapshots:
       mime-types: 3.0.2
       xmlbuilder: 15.1.1
 
-  playwright-core@1.55.0: {}
+  playwright-core@1.55.0(patch_hash=b51cca2e9b078c9c20eeaae383a5cf09d48fb1fb558382349ef4ec107e936688): {}
 
   playwright@1.55.0:
     dependencies:
-      playwright-core: 1.55.0
+      playwright-core: 1.55.0(patch_hash=b51cca2e9b078c9c20eeaae383a5cf09d48fb1fb558382349ef4ec107e936688)
     optionalDependencies:
       fsevents: 2.3.2
 

@@ -3,8 +3,9 @@ import { defineConfig } from "vitest/config";
 
 /**
  * Two projects: the component tests in jsdom, and every story as a test in
- * a real Chromium — a story's `play` function is its assertion. `pnpm test`
- * runs both; CI installs the browser first (`playwright install chromium`).
+ * the installed Microsoft Edge (the one approved browser, Playwright's
+ * `msedge` channel) — a story's `play` function is its assertion. `pnpm
+ * test` runs both; CI installs Edge first (`playwright install msedge`).
  */
 export default defineConfig({
   test: {
@@ -35,7 +36,12 @@ export default defineConfig({
         },
         test: {
           name: "storybook",
-          browser: { enabled: true, headless: true, provider: "playwright", instances: [{ browser: "chromium" }] },
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: "playwright",
+            instances: [{ browser: "chromium", launch: { channel: "msedge" } }],
+          },
         },
       },
     ],

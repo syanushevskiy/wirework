@@ -26,7 +26,8 @@ Feature: A table the server describes (view table API)
     And the "Suite" filter offers "Nightly regression, Smoke suite, Migration check"
 
   Scenario: No filters and no rows until the server answers
-    Given I open the "runs" page
+    Given the server is slow to answer
+    And I open the "runs" page
     Then the filter bar offers the filters ""
     And the table has 0 rows
     When the server has had time to answer

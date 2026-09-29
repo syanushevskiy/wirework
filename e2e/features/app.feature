@@ -10,7 +10,8 @@ Feature: Demo application — routes and global state
   matched parameters at `route`.
 
   Scenario: The global state arrives with the application's session request
-    Given I open the "overview" page
+    Given the server is slow to answer
+    And I open the "overview" page
     Then the cell "label-user" reads "Signing in…"
     When the server has had time to answer
     Then the cell "label-user" reads "Alex Tester"
@@ -18,7 +19,8 @@ Feature: Demo application — routes and global state
     And the state JSON contains '"editPages": true'
 
   Scenario: The overview requests its own numbers when it opens
-    Given I open the "overview" page
+    Given the server is slow to answer
+    And I open the "overview" page
     Then the state JSON does not contain '"stats"'
     When the server has had time to answer
     Then the state JSON contains '"notice": "6 of 23 runs failed, 6 still running"'

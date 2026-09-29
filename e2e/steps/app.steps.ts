@@ -62,19 +62,35 @@ interface RequestCounts {
   answered: number;
 }
 
+/** The playground's console API, as the steps below see it. */
+type Console = Window & {
+  wireworkHoldAnswers?: boolean;
+  wirework?: { requests: () => RequestCounts; releaseAnswers: () => void };
+};
+
+/**
+ * The fake servers keep every answer back until "the server has had time to
+ * answer" — so a scenario can look at a page as it is BEFORE its data
+ * arrives (a loading label, an empty table) without racing the answer.
+ * Say it before opening the page.
+ */
+Given("the server is slow to answer", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as Console).wireworkHoldAnswers = true;
+  });
+});
+
 /**
  * Everything asked of the fake servers so far has been answered — a FACT the
  * application reports (`wirework.requests()`), not a sleep: for asserting
- * what arrived, and what must NOT have.
+ * what arrived, and what must NOT have. Answers a scenario held are let
+ * through first.
  */
 When("the server has had time to answer", async ({ page }) => {
+  await page.evaluate(() => (window as Console).wirework?.releaseAnswers());
   await expect
     .poll(
-      () =>
-        page.evaluate((): RequestCounts => {
-          const console = (window as Window & { wirework?: { requests: () => RequestCounts } }).wirework;
-          return console?.requests() ?? { pending: 0, answered: 0 };
-        }),
+      () => page.evaluate((): RequestCounts => (window as Console).wirework?.requests() ?? { pending: 0, answered: 0 }),
       { message: "the fake servers still have a request in flight" },
     )
     .toMatchObject({ pending: 0 });

@@ -28,7 +28,8 @@ export default defineConfig({
     // Reading the clipboard back (the Copy cell) needs the browser's leave — for every scenario, up front.
     permissions: ["clipboard-read", "clipboard-write"],
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Microsoft Edge is the one approved browser: the installed one, through Playwright's `msedge` channel (nothing is downloaded).
+  projects: [{ name: "edge", use: { ...devices["Desktop Edge"], channel: "msedge" } }],
   webServer: {
     // A direct node process: Playwright can kill it reliably. A package-
     // manager wrapper leaves an orphaned vite behind, which then serves

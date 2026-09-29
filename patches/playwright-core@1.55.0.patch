@@ -1,0 +1,16 @@
+diff --git a/lib/server/utils/processLauncher.js b/lib/server/utils/processLauncher.js
+index 954d5e6fbc527e640ccec5709263374101c6340b..178615eff5cebf6e7ae8771968d74d55db53e483 100644
+--- a/lib/server/utils/processLauncher.js
++++ b/lib/server/utils/processLauncher.js
+@@ -150,7 +150,10 @@ async function launchProcess(options) {
+   let fulfillCleanup = () => {
+   };
+   const waitForCleanup = new Promise((f) => fulfillCleanup = f);
+-  spawnedProcess.once("close", (exitCode, signal) => {
++  // Wirework patch: wait for the browser PROCESS to exit, not for its stdio pipes to close.
++  // Microsoft Edge's crash handler (msedge_crashpad_handler) is double-forked, inherits the
++  // browser's stderr and outlives it by up to five minutes; "close" waited for that helper.
++  spawnedProcess.once("exit", (exitCode, signal) => {
+     options.log(`[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`);
+     processClosed = true;
+     gracefullyCloseSet.delete(gracefullyClose);

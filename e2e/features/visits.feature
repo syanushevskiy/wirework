@@ -24,7 +24,8 @@ Feature: Page visits
     Then the state JSON contains '"count": 1'
 
   Scenario: The runs table is empty until the server answers
-    Given I open the "runs" page
+    Given the server is slow to answer
+    And I open the "runs" page
     Then the table is loading
     And the table has 0 rows
     And the state JSON contains '"loading": true'
@@ -57,7 +58,8 @@ Feature: Page visits
     And the state JSON does not contain '"soon gone"'
 
   Scenario: A server answer for a page the user has left never reaches the next page
-    Given I open the "runs" page
+    Given the server is slow to answer
+    And I open the "runs" page
     When I switch to the "settings" page
     And the server has had time to answer
     Then the state JSON does not contain '"data": ['

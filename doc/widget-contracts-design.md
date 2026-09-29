@@ -144,11 +144,11 @@ the palette renders it with); ports the preview leaves unbound get
 generated paths, so they have a control too. Events land in the Actions
 panel.
 
-Open gaps (team-tiger review, Sasha and Katya): nothing RUNS the play
-functions yet (no Storybook test runner in `pnpm test` or CI); pagination
-and refresher have no conformance set; the sets live in the antd package,
-so another implementation would depend on it — they belong next to the
-contracts.
+Every story runs as a browser test (its play function is the assertion)
+under vitest in Microsoft Edge, as part of `pnpm test:unit`, and every
+standard contract has a conformance set. One gap stays: the sets live in
+the antd package, so another implementation would depend on it — they
+belong next to the contracts.
 
 ## Not contracts
 

@@ -74,7 +74,7 @@ invariant or by a test — so a reviewer checks the exception, not the rule.
   logic is tested in vitest (node); hooks and components in jsdom with
   Testing Library (`renderHook`, `render`, `screen`), each package's
   `vitest.config.ts` naming the environment and `__tests__/setup.ts` the
-  cleanup; a story is a browser test in Chromium — its `play` function is
+  cleanup; a story is a browser test in Microsoft Edge (the one approved browser, for the e2e suite too) — its `play` function is
   the assertion — and every standard contract has a conformance set any
   implementation runs.
 - A test says what it pins: its name is the promise, and a test written for
