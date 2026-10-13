@@ -5,15 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { NO_EVENTS, defineContract } from "@wirework/schema";
-import {
-  createActions,
-  createContracts,
-  createLayoutEngines,
-  createNamedRegistry,
-  createRegistry,
-  layoutEngineProblems,
-  RegistrationError,
-} from "../index";
+import { createActions, createContracts, createLayoutEngines, createRegistry, layoutEngineProblems } from "../index";
+import { createNamedRegistry, RegistrationError } from "../named-registry";
 import { counter, listEngine, plain } from "./fixtures";
 
 describe("shared registry guarantees", () => {
@@ -33,16 +26,6 @@ describe("shared registry guarantees", () => {
     expect(() => registry.register(counter)).toThrow(/already registered/);
     expect(() => registry.register({ ...counter, type: "Not Kebab" })).toThrow(RegistrationError);
     expect(() => registry.register({ ...counter, type: "" })).toThrow(/not a valid identifier/);
-  });
-
-  it("names the registry and the key on the error", () => {
-    try {
-      createActions().register({ name: "Bad Name", handler: () => undefined });
-      expect.unreachable();
-    } catch (error) {
-      expect(error).toBeInstanceOf(RegistrationError);
-      expect(error).toMatchObject({ registry: "action", key: "Bad Name" });
-    }
   });
 
   it("refuses a registration once sealed — boot is over — and keeps what it has", () => {

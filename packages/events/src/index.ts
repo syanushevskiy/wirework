@@ -1,44 +1,15 @@
-/**
- * @wirework/events — default implementation of the EventBus contract.
- *
- * A synchronous, fire-and-forget bus for widget events:
- *  - `emit` stamps a monotonic `seq` and notifies every matching subscriber
- *    in registration order,
- *  - one throwing listener never starves the rest (mirrors the store),
- *  - a listener may (un)subscribe during notification — the set is
- *    snapshotted per emit,
- *  - nested emits beyond MAX_EMIT_DEPTH throw an EventLoopError that
- *    unwinds EVERY level up to the original emitter: a listener re-emitting
- *    in a loop is a bug, and it must fail loudly instead of hanging the page.
- *    (Caught and logged by the parent listener's isolation, as it once was,
- *    a loop that branched ran ~2^32 emits first.)
- *
- * This guard sees SYNCHRONOUS re-emits only. A loop through the store and a
- * re-render (write → render → emit) is outside the bus.
- */
+/** @wirework/events — default implementation of the EventBus contract (doc/widget-events-design.md). */
 import type { EventBus, EventFilter, EventListener, Unsubscribe, WidgetEvent } from "@wirework/schema";
 
-interface Subscription {
-  filter: EventFilter;
-  listener: EventListener;
-}
-
 /** Nested-emit limit before the bus assumes a loop. */
-export const MAX_EMIT_DEPTH = 32;
+const MAX_EMIT_DEPTH = 32;
 
 export class EventLoopError extends Error {
-  constructor(
-    message: string,
-    readonly widgetType: string,
-    readonly eventName: string,
-  ) {
-    super(message);
-    this.name = "EventLoopError";
-  }
+  override readonly name = "EventLoopError";
 }
 
 /** True when every SET field of the filter matches the event. */
-export function matchesFilter(filter: EventFilter, event: WidgetEvent): boolean {
+function matchesFilter(filter: EventFilter, event: WidgetEvent): boolean {
   return (
     (filter.widget === undefined || filter.widget === event.widget) &&
     (filter.name === undefined || filter.name === event.name) &&
@@ -47,19 +18,8 @@ export function matchesFilter(filter: EventFilter, event: WidgetEvent): boolean 
   );
 }
 
-function notify({ filter, listener }: Subscription, event: WidgetEvent): void {
-  try {
-    listener(event);
-  } catch (error) {
-    // Isolation is for listener BUGS; a detected loop must reach the emitter.
-    if (error instanceof EventLoopError) throw error;
-    // eslint-disable-next-line no-console
-    console.error(`Event listener for ${JSON.stringify(filter)} threw on "${event.widget}/${event.name}":`, error);
-  }
-}
-
 export function createEventBus(): EventBus {
-  const subscriptions = new Set<Subscription>();
+  const subscriptions = new Set<[EventFilter, EventListener]>();
   let seq = 0;
   let depth = 0;
 
@@ -68,16 +28,26 @@ export function createEventBus(): EventBus {
       if (depth >= MAX_EMIT_DEPTH) {
         throw new EventLoopError(
           `Event "${envelope.widget}/${envelope.name}" exceeded ${MAX_EMIT_DEPTH} nested emits — a listener is re-emitting in a loop`,
-          envelope.widget,
-          envelope.name,
         );
       }
       const event: WidgetEvent = { ...envelope, seq: ++seq };
       depth += 1;
       try {
-        [...subscriptions]
-          .filter((subscription) => matchesFilter(subscription.filter, event))
-          .forEach((subscription) => notify(subscription, event));
+        // Snapshot: a listener may (un)subscribe during notification.
+        for (const [filter, listener] of [...subscriptions]) {
+          if (!matchesFilter(filter, event)) continue;
+          try {
+            listener(event);
+          } catch (error) {
+            // Isolation is for listener BUGS; a detected loop must reach the emitter.
+            if (error instanceof EventLoopError) throw error;
+            // eslint-disable-next-line no-console
+            console.error(
+              `Event listener for ${JSON.stringify(filter)} threw on "${event.widget}/${event.name}":`,
+              error,
+            );
+          }
+        }
       } finally {
         depth -= 1;
       }
@@ -85,7 +55,7 @@ export function createEventBus(): EventBus {
 
     subscribe<T>(filter: EventFilter<T>, listener: EventListener<T>): Unsubscribe {
       // The phantom payload type is erased here; validation happened at emit.
-      const subscription: Subscription = { filter, listener: listener as EventListener };
+      const subscription: [EventFilter, EventListener] = [filter, listener as EventListener];
       subscriptions.add(subscription);
       return () => subscriptions.delete(subscription);
     },

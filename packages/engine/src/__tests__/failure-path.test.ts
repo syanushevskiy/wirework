@@ -11,7 +11,8 @@ import { z } from "zod";
 import type { AnyLayoutEngine, AnyWidgetDefinition, CellBase, PageViewModel } from "@wirework/schema";
 import { failurePathViewModels } from "@wirework/view-data-models-examples";
 import { buttonContract, labelContract } from "@wirework/widget-contracts";
-import { createActions, resolvePage, validateViewModels, type ResolvedPagePlan } from "../index";
+import { createActions, resolvePage, validateViewModels } from "../index";
+import type { ResolvedPagePlan } from "../resolve";
 import { enginesWith, registryWith } from "./fixtures";
 
 const component = () => null;

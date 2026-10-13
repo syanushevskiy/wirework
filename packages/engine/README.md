@@ -7,40 +7,36 @@ validation, reactions, tree editing. Depends on `@wirework/schema` (and
 ## Registries
 
 `createRegistry({ contracts? })` (widgets), `createContracts()`,
-`createActions()`, `createLayoutEngines()` — each a `NamedRegistry`:
-`register`, `get`, `keys`, `list`, and `seal()` once boot is over (a later
-registration throws). A definition that breaks the registry's invariants
-throws a `RegistrationError` naming the registry and the key; a widget
-claiming a contract `kind` is checked against that contract, and the
-message names the departing port or event. `createNamedRegistry` builds a
-host's own extension point the same way (`Invariant`,
-`NamedRegistryOptions`). `layoutEngineProblems` is the conformance check a
-layout-engine test runs.
+`createActions()`, `createLayoutEngines()` — each with `register`, `get`,
+`keys`, `list`, and `seal()` once boot is over (a later registration
+throws). A definition that breaks the registry's invariants throws a
+`RegistrationError` whose message names the registry and the key; a widget claiming a
+contract `kind` is checked against that contract, and the message names
+the departing port or event. `layoutEngineProblems` is the conformance
+check a layout-engine test runs.
 
 ## Resolution
 
 `resolvePage(input: ResolveInput): ResolvedPage` turns view models plus a
-user's overlay into the plan a renderer draws: a `ResolvedPagePlan` (the
-engine, its validated template, `ResolvedCell`s, warnings) or a
-`ResolvedPageProblem`; every cell is a `ResolvedCellOk` or a
-`ResolvedCellProblem` with a typed `CellProblem`, and an engaged fallback is
-a `FallbackNote`. `resolveTemplate` (a `TemplateResolution`) validates one
-page template with its engine.
+user's overlay into the plan a renderer draws: the engine, its validated
+template, `ResolvedCell`s and warnings, or a page problem; every cell is a
+`ResolvedCellOk` or carries a typed `CellProblem`, and an engaged fallback
+is reported. `resolveTemplate` (a `TemplateResolution`) validates one page
+template with its engine.
 
 ## Validation
 
-`validateViewModels(input: ValidateInput): ValidationReport` walks every
-template of both trees at boot and reports each `ValidationProblem` with a
-`ProblemSeverity`. `problemText`, `errorText` and `issuesText` turn thrown
-values and validator issues into sentences.
+`validateViewModels(input)` walks every template of both trees at boot and
+reports each problem with its location and severity. `problemText`,
+`errorText` and `issuesText` turn thrown values and validator issues into
+sentences.
 
 ## Events and reactions
 
-`createEmitter` (a cell-scoped, validating `emit`; `WidgetEventError` for a
-payload the declaration refuses), `bindReactions` / `bindCellReactions`
-(a page's or one cell's declared reactions on the bus, `ReactionTarget`),
-`checkPageReactions` and `emitPageLoad` (the page's own events,
-`PageReactions`), `readableStore` (the read side a widget receives).
+`createEmitter` (a cell-scoped, validating `emit`: an undeclared name or a
+refused payload throws), `bindReactions` / `bindCellReactions` (a page's or
+one cell's declared reactions on the bus), `emitPageLoad` (the page has
+opened), `readableStore` (the read side a widget receives).
 
 ## Trees and paths
 

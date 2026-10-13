@@ -1,6 +1,7 @@
 /** Boot validation: severity, and the same answers the renderer gives. */
 import { describe, expect, it } from "vitest";
-import { createActions, validateViewModels, type ValidationReport } from "../index";
+import { createActions, validateViewModels } from "../index";
+import type { ValidationReport } from "../validate";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
 const templates = {

@@ -1,7 +1,7 @@
 /** The event bus contract: order, filters, isolation and the loop guard. */
 import { describe, expect, it, vi } from "vitest";
 import type { WidgetEvent } from "@wirework/schema";
-import { createEventBus, EventLoopError, MAX_EMIT_DEPTH, matchesFilter } from "../index";
+import { createEventBus, EventLoopError } from "../index";
 
 type Envelope = Omit<WidgetEvent, "seq">;
 
@@ -13,16 +13,6 @@ const envelope = (overrides: Partial<Envelope> = {}): Envelope => ({
   ...overrides,
 });
 
-describe("matchesFilter", () => {
-  it("matches on every field that is set, and an empty filter matches everything", () => {
-    const event = { ...envelope(), seq: 1 };
-    expect(matchesFilter({}, event)).toBe(true);
-    expect(matchesFilter({ widget: "counter", name: "incremented", page: "demo", cell: "c1" }, event)).toBe(true);
-    expect(matchesFilter({ cell: "c2" }, event)).toBe(false);
-    expect(matchesFilter({ page: "other" }, event)).toBe(false);
-  });
-});
-
 describe("createEventBus", () => {
   it("stamps a monotonic seq and notifies matching subscribers in registration order", () => {
     const bus = createEventBus();
@@ -30,9 +20,11 @@ describe("createEventBus", () => {
     bus.subscribe({}, (event) => seen.push(`all#${event.seq}`));
     bus.subscribe({ cell: "c1" }, (event) => seen.push(`c1#${event.seq}`));
     bus.subscribe({ cell: "c2" }, () => seen.push("c2"));
+    bus.subscribe({ widget: "counter", name: "incremented", page: "demo", cell: "c1" }, () => seen.push("exact"));
+    bus.subscribe({ page: "other" }, () => seen.push("other"));
     bus.emit(envelope());
     bus.emit(envelope());
-    expect(seen).toEqual(["all#1", "c1#1", "all#2", "c1#2"]);
+    expect(seen).toEqual(["all#1", "c1#1", "exact", "all#2", "c1#2", "exact"]);
   });
 
   it("isolates a throwing listener from the rest", () => {
@@ -66,7 +58,7 @@ describe("createEventBus", () => {
     const listener = vi.fn((event: WidgetEvent) => bus.emit(event));
     bus.subscribe({}, listener);
     expect(() => bus.emit(envelope())).toThrow(EventLoopError);
-    expect(listener).toHaveBeenCalledTimes(MAX_EMIT_DEPTH);
+    expect(listener).toHaveBeenCalledTimes(32);
   });
 
   it("regression: a BRANCHING loop stops at the first trip instead of running 2^depth emits", () => {
@@ -78,7 +70,7 @@ describe("createEventBus", () => {
       bus.emit(event);
     });
     expect(() => bus.emit(envelope())).toThrow(EventLoopError);
-    expect(calls).toBe(MAX_EMIT_DEPTH);
+    expect(calls).toBe(32);
   });
 
   it("recovers after a loop: the depth counter is back to zero", () => {

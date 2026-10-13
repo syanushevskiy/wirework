@@ -78,7 +78,7 @@ interface EventBus {
 
 `@wirework/events` provides `createEventBus()`: synchronous, listener
 errors isolated, subscription set snapshotted per emit, nested emits past
-`MAX_EMIT_DEPTH` throw `EventLoopError` — which, unlike a listener bug, is
+32 throw `EventLoopError` — which, unlike a listener bug, is
 NOT isolated: it unwinds every level to the original emitter, so a
 branching loop stops at the first trip instead of running 2^depth emits.
 The guard sees synchronous re-emits only; a loop through the store and a

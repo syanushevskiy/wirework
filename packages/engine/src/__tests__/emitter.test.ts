@@ -1,7 +1,7 @@
 /** The per-cell emitter: what a widget's `emit` guarantees to every subscriber. */
 import { describe, expect, it, vi } from "vitest";
 import { createEventBus } from "@wirework/events";
-import { createEmitter, WidgetEventError } from "../index";
+import { createEmitter, WidgetEventError } from "../emitter";
 import { counter } from "./fixtures";
 
 const source = { page: "demo", cell: "c1" };

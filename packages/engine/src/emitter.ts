@@ -10,14 +10,7 @@ import type { AnyWidgetDefinition, Emit, EventBus, EventSource, WidgetEvents } f
 import { problemText } from "./messages";
 
 export class WidgetEventError extends Error {
-  constructor(
-    message: string,
-    readonly widgetType: string,
-    readonly eventName: string,
-  ) {
-    super(message);
-    this.name = "WidgetEventError";
-  }
+  override readonly name = "WidgetEventError";
 }
 
 export function createEmitter(bus: EventBus, definition: AnyWidgetDefinition, source: EventSource): Emit<WidgetEvents> {
@@ -31,19 +24,13 @@ export function createEmitter(bus: EventBus, definition: AnyWidgetDefinition, so
     if (!declared) {
       throw new WidgetEventError(
         `Widget "${widget}" does not declare event "${name}" (declared: ${Object.keys(events).join(", ") || "none"})`,
-        widget,
-        name,
       );
     }
     let valid: unknown;
     try {
       valid = declared.payload.parse(payload);
     } catch (error) {
-      throw new WidgetEventError(
-        `Widget "${widget}" event "${name}" payload rejected: ${problemText(error)}`,
-        widget,
-        name,
-      );
+      throw new WidgetEventError(`Widget "${widget}" event "${name}" payload rejected: ${problemText(error)}`);
     }
     bus.emit({ widget, name, payload: valid, source });
   };

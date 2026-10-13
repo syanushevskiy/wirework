@@ -9,16 +9,7 @@
  */
 
 export class RegistrationError extends Error {
-  constructor(
-    message: string,
-    /** Which registry rejected it ("widget", "layout engine", ...). */
-    readonly registry: string,
-    /** The offending key (widget type, engine name, action name, kind). */
-    readonly key: string,
-  ) {
-    super(message);
-    this.name = "RegistrationError";
-  }
+  override readonly name = "RegistrationError";
 }
 
 /** An invariant: returns a message when the item is invalid, else undefined. */
@@ -57,22 +48,21 @@ export function createNamedRegistry<T>({
 }: NamedRegistryOptions<T>): NamedRegistry<T> {
   const items = new Map<string, T>();
   let sealed = false;
-  const fail = (message: string, key: string): never => {
-    throw new RegistrationError(message, label.toLowerCase(), key);
+  const fail = (message: string): never => {
+    throw new RegistrationError(message);
   };
 
   return {
     register(item: T): void {
       const key = keyOf(item);
       if (!key || typeof key !== "string" || !pattern.test(key)) {
-        fail(`${label} name ${JSON.stringify(key)} is not a valid identifier`, String(key));
+        fail(`${label} name ${JSON.stringify(key)} is not a valid identifier`);
       }
-      if (sealed)
-        fail(`${label} "${key}" cannot be registered: the registry is sealed (registration happens at boot)`, key);
-      if (items.has(key)) fail(`${label} "${key}" is already registered`, key);
+      if (sealed) fail(`${label} "${key}" cannot be registered: the registry is sealed (registration happens at boot)`);
+      if (items.has(key)) fail(`${label} "${key}" is already registered`);
       for (const invariant of invariants) {
         const message = invariant(item, key);
-        if (message !== undefined) fail(`${label} "${key}" ${message}`, key);
+        if (message !== undefined) fail(`${label} "${key}" ${message}`);
       }
       items.set(key, item);
     },

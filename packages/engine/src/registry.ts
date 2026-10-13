@@ -21,15 +21,8 @@ import { createNamedRegistry, type NamedRegistry } from "./named-registry";
 
 export type WidgetRegistry = NamedRegistry<AnyWidgetDefinition>;
 
-export interface WidgetRegistryOptions {
-  /** When given, a widget's `kind` is checked against the registered contracts. */
-  contracts?: ContractRegistry;
-}
-
 const sameList = (a: readonly string[] | undefined, b: readonly string[] | undefined): boolean =>
-  a === undefined || b === undefined
-    ? a === b
-    : a.length === b.length && [...a].sort().every((item, index) => item === [...b].sort()[index]);
+  a === undefined || b === undefined ? a === b : JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 
 /** The names one side declares and the other does not, as a sentence — or undefined when they agree. */
 function namesDifference(what: string, own: object, contract: object): string | undefined {
@@ -88,7 +81,8 @@ function contractProblem(definition: AnyWidgetDefinition, contracts: ContractReg
   return difference === undefined ? undefined : `claims kind "${definition.kind}" but ${difference}`;
 }
 
-export function createRegistry({ contracts }: WidgetRegistryOptions = {}): WidgetRegistry {
+/** With `contracts`, a widget's `kind` is checked against the registered contracts. */
+export function createRegistry({ contracts }: { contracts?: ContractRegistry } = {}): WidgetRegistry {
   return createNamedRegistry<AnyWidgetDefinition>({
     label: "Widget",
     keyOf: (definition) => definition.type,
