@@ -55,7 +55,7 @@ export function createNamedRegistry<T>({
   return {
     register(item: T): void {
       const key = keyOf(item);
-      if (!key || typeof key !== "string" || !pattern.test(key)) {
+      if (typeof key !== "string" || !pattern.test(key)) {
         fail(`${label} name ${JSON.stringify(key)} is not a valid identifier`);
       }
       if (sealed) fail(`${label} "${key}" cannot be registered: the registry is sealed (registration happens at boot)`);

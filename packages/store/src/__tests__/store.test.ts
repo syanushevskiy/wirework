@@ -24,7 +24,7 @@ describe("get", () => {
   });
 
   it("rejects an empty path", () => {
-    expect(() => createStore({}).get("")).toThrow(/non-empty/);
+    expect(() => createStore({}).get("")).toThrow(/empty segment/);
   });
 
   it("getAs validates and returns undefined instead of a wrong shape", () => {
@@ -44,32 +44,14 @@ describe("set", () => {
     expect(store.get("changed.value")).toBe(2);
   });
 
-  it("regression: a missing container followed by index 0 starts a LIST", () => {
-    const store = createStore({});
+  it("regression: applies the schema's path rules (setPath, pinned in @wirework/schema) instead of its own", () => {
+    const store = createStore({ name: "Bob" });
     store.set("rows.0.name", "first");
-    expect(Array.isArray(store.get("rows"))).toBe(true);
     expect(store.get("rows")).toEqual([{ name: "first" }]);
-  });
-
-  it("regression: a missing container followed by a numeric id is a MAP, not a sparse array", () => {
-    const store = createStore({ runs: {} });
-    store.set("runs.byId.123456.name", "Nightly");
-    expect(Array.isArray(store.get("runs.byId"))).toBe(false);
-    expect(store.get("runs.byId")).toEqual({ "123456": { name: "Nightly" } });
-  });
-
-  it("regression: an array is addressed by canonical index only", () => {
-    const store = createStore({ rows: ["a", "b"] });
-    expect(store.get("rows.1")).toBe("b");
-    expect(store.get("rows.01")).toBeUndefined();
-    expect(store.get("rows.length")).toBeUndefined();
     expect(() => store.set("rows.01", "x")).toThrow(/numeric index/);
-  });
-
-  it("regression: never reads a missing child through the prototype chain", () => {
-    const store = createStore({});
-    store.set("toString.x", 1);
-    expect(store.get("toString")).toEqual({ x: 1 });
+    expect(() => store.set("name.first", "x")).toThrow(/holds a string/);
+    expect(() => store.set("__proto__.bad", 1)).toThrow(/forbidden segment/);
+    expect(({} as Record<string, unknown>)["bad"]).toBeUndefined();
   });
 
   it("writes through an existing array by index", () => {
@@ -78,29 +60,12 @@ describe("set", () => {
     expect(store.get("rows")).toEqual([{ name: "a" }, { name: "B" }]);
   });
 
-  it("refuses a non-numeric segment through an array", () => {
-    const store = createStore({ rows: [] });
-    expect(() => store.set("rows.first", 1)).toThrow(/numeric index/);
-  });
-
-  it("regression: refuses to silently replace a primitive parent", () => {
-    const store = createStore({ name: "Bob" });
-    expect(() => store.set("name.first", "x")).toThrow(/holds a string/);
-    expect(store.get("name")).toBe("Bob");
-  });
-
   it("regression: refuses configuration paths, which setConfig accepts", () => {
     const store = createStore({ viewModels: { pages: {} } });
     expect(() => store.set("viewModels.pages", {})).toThrow(/setConfig/);
     expect(() => store.set("userViewModels", {})).toThrow(/setConfig/);
     store.setConfig("viewModels.pages.demo", { default: { engine: "x" } });
     expect(store.get("viewModels.pages.demo")).toEqual({ default: { engine: "x" } });
-  });
-
-  it("blocks prototype-polluting writes", () => {
-    const store = createStore({});
-    expect(() => store.set("__proto__.bad", 1)).toThrow(/forbidden segment/);
-    expect(({} as Record<string, unknown>)["bad"]).toBeUndefined();
   });
 
   it("does nothing when the value is unchanged", () => {

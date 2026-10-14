@@ -157,6 +157,14 @@ describe("resolvePage", () => {
     expect(resolved.cells[0]?.problem?.kind).toBe("unmet-contract");
   });
 
+  it("regression: a reaction list left explicitly undefined is no reaction — a problem, never a crash", () => {
+    const resolved = plan({
+      viewModels: page([cell()], { counter: { default: { inputs: { value: "demo.n" }, on: { changed: undefined } } } }),
+    });
+    if (resolved.problem !== undefined) throw new Error("expected a plan");
+    expect(resolved.cells[0]?.problem?.kind).toBe("unmet-contract");
+  });
+
   it("regression: an engine that throws while listing cells is a page problem", () => {
     const broken = {
       ...listEngine,

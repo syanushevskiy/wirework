@@ -25,7 +25,7 @@ export interface StoreLayers {
   sharedRoots: readonly string[];
 }
 
-type StateObject = Record<string, unknown>;
+export type StateObject = Record<string, unknown>;
 
 export function layerStores({ page, shared, sharedRoots }: StoreLayers): Store {
   const isShared = (root: string): boolean => sharedRoots.includes(root);

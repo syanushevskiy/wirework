@@ -4,7 +4,14 @@
  * them (doc/layout-engines-design.md).
  * Every function is pure and returns a NEW tree.
  */
-import { getPath, setPath, type PageViewModel, type UserViewModels, type ViewModels } from "@wirework/schema";
+import {
+  getPath,
+  setPath,
+  type PageUserViewModel,
+  type PageViewModel,
+  type UserViewModels,
+  type ViewModels,
+} from "@wirework/schema";
 
 /**
  * Page templates as the user sees them: base templates with the user's own
@@ -38,6 +45,18 @@ export function updatePageTemplate(
   };
 }
 
+/** One page of the USER overlay, rebuilt immutably (created when absent). */
+function updateUserPage(
+  userViewModels: UserViewModels,
+  page: string,
+  update: (userPage: PageUserViewModel) => PageUserViewModel,
+): UserViewModels {
+  return {
+    ...userViewModels,
+    pages: { ...userViewModels.pages, [page]: update(userViewModels.pages?.[page] ?? {}) },
+  };
+}
+
 /**
  * Route a page edit into the USER overlay and select the user's template
  * `name` as the page view. The edit applies to what the user SEES: the
@@ -52,20 +71,11 @@ export function updateUserPageTemplate(
   shown: PageViewModel,
   update: (template: PageViewModel) => PageViewModel,
 ): UserViewModels {
-  const userPage = userViewModels.pages?.[page] ?? {};
-  const templates = userPage.templates ?? {};
-  const own = userPage.view === name ? templates[name] : undefined;
-  return {
-    ...userViewModels,
-    pages: {
-      ...userViewModels.pages,
-      [page]: {
-        ...userPage,
-        view: name,
-        templates: { ...templates, [name]: update(own ?? shown) },
-      },
-    },
-  };
+  return updateUserPage(userViewModels, page, (userPage) => {
+    const templates = userPage.templates ?? {};
+    const own = userPage.view === name ? templates[name] : undefined;
+    return { ...userPage, view: name, templates: { ...templates, [name]: update(own ?? shown) } };
+  });
 }
 
 /** Set one cell's settings overlay for one widget template in the USER overlay. */
@@ -76,30 +86,23 @@ export function updateUserCellSettings(
   template: string,
   overrides: Record<string, unknown>,
 ): UserViewModels {
-  const userPage = userViewModels.pages?.[page] ?? {};
-  const cells = userPage.cells ?? {};
-  const cell = cells[cellId] ?? {};
-  return {
-    ...userViewModels,
-    pages: {
-      ...userViewModels.pages,
-      [page]: {
-        ...userPage,
-        cells: {
-          ...cells,
-          [cellId]: { ...cell, settings: { ...cell.settings, [template]: overrides } },
-        },
-      },
-    },
-  };
+  return updateUserPage(userViewModels, page, (userPage) => {
+    const cells = userPage.cells ?? {};
+    const cell = cells[cellId] ?? {};
+    return {
+      ...userPage,
+      cells: { ...cells, [cellId]: { ...cell, settings: { ...cell.settings, [template]: overrides } } },
+    };
+  });
 }
 
 /** Drop one cell's customisation from the USER overlay (after the cell is removed). */
 export function removeUserCell(userViewModels: UserViewModels, page: string, cellId: string): UserViewModels {
-  const userPage = userViewModels.pages?.[page];
-  if (!userPage?.cells?.[cellId]) return userViewModels;
-  const { [cellId]: _removed, ...cells } = userPage.cells;
-  return { ...userViewModels, pages: { ...userViewModels.pages, [page]: { ...userPage, cells } } };
+  if (!userViewModels.pages?.[page]?.cells?.[cellId]) return userViewModels;
+  return updateUserPage(userViewModels, page, (userPage) => {
+    const { [cellId]: _removed, ...cells } = userPage.cells ?? {};
+    return { ...userPage, cells };
+  });
 }
 
 /**

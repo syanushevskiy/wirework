@@ -177,8 +177,6 @@ export function pickTemplate(
   return undefined;
 }
 
-type ReactionList = readonly unknown[] | undefined;
-
 /**
  * Contract check independent of the widget's own schema: every required
  * input port must be bound to a path, every REQUIRED event must have at
@@ -193,41 +191,38 @@ export function contractProblems(
   viewModel: unknown,
   actions?: ActionRegistry,
 ): string | undefined {
-  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Record<string, ReactionList> } | null;
+  // The one cast: the widget's own schema parsed `viewModel` a moment ago. `Partial`,
+  // because zod keeps a reaction list left explicitly `undefined` under its key.
+  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Partial<EventBindings> } | null;
   const events = definition.events as WidgetEvents;
-  const reactions = Object.entries(vm?.on ?? {}).flatMap(([event, list]) =>
-    (list ?? []).map((reaction) => ({ event, reaction: reaction as { call?: unknown; from?: unknown } | null })),
-  );
-
-  const unknownActions =
-    actions === undefined
-      ? []
-      : reactions.flatMap(({ reaction }) =>
-          typeof reaction?.call === "string" && !actions.get(reaction.call) ? [reaction.call] : [],
-        );
-  // An action that declares parameters gets its `with` checked here, so a
-  // missing or mistyped argument is a problem on the page — not an error in
-  // the console the first time somebody clicks.
-  const invalidArguments =
-    actions === undefined
-      ? []
-      : reactions.flatMap(({ reaction }) => {
-          const action = typeof reaction?.call === "string" ? actions.get(reaction.call) : undefined;
-          if (!action?.params) return [];
-          try {
-            actionArguments(action, (reaction as { with?: Record<string, unknown> }).with);
-            return [];
-          } catch (error) {
-            return [errorText(error)];
-          }
-        });
-  const unknownFields = reactions.flatMap(({ event, reaction }) => {
-    const fields = events[event] ? validatorKeys(events[event].payload) : undefined;
-    const head = typeof reaction?.from === "string" ? reaction.from.split(".")[0] : undefined;
-    return fields !== undefined && head !== undefined && !fields.includes(head)
-      ? [`${event} from "${reaction?.from as string}" (payload fields: ${fields.join(", ") || "none"})`]
-      : [];
-  });
+  const unknownActions: string[] = [];
+  const invalidArguments: string[] = [];
+  const unknownFields: string[] = [];
+  for (const [event, reactions] of Object.entries(vm?.on ?? {})) {
+    for (const reaction of reactions ?? []) {
+      if (!("call" in reaction)) {
+        const from = reaction.from;
+        const fields = events[event] ? validatorKeys(events[event].payload) : undefined;
+        const head = from?.split(".")[0];
+        if (from !== undefined && fields !== undefined && head !== undefined && !fields.includes(head)) {
+          unknownFields.push(`${event} from "${from}" (payload fields: ${fields.join(", ") || "none"})`);
+        }
+      } else if (actions !== undefined) {
+        const action = actions.get(reaction.call);
+        if (!action) {
+          unknownActions.push(reaction.call);
+          continue;
+        }
+        // `with` is checked here, so a missing or mistyped argument is a problem
+        // on the page — not an error in the console the first time somebody clicks.
+        try {
+          actionArguments(action, reaction.with);
+        } catch (error) {
+          invalidArguments.push(errorText(error));
+        }
+      }
+    }
+  }
   const unboundPorts = Object.entries(definition.io.inputs).flatMap(([name, port]) =>
     port.required !== false && typeof vm?.inputs?.[name] !== "string" ? [`inputs.${name}`] : [],
   );

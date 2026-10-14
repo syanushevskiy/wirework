@@ -31,8 +31,7 @@
 import { createStore as createZustandStore, type StoreApi } from "zustand/vanilla";
 import type { Store, Unsubscribe, Validator } from "@wirework/schema";
 import { checkedSegments, getPath, isConfigPath, setPath } from "@wirework/schema";
-
-type StateObject = Record<string, unknown>;
+import type { StateObject } from "./layers";
 
 /**
  * A Zustand store holding the state tree — plain, or wrapped in middleware.
@@ -43,18 +42,10 @@ export type StateApi = Pick<StoreApi<StateObject>, "getState" | "subscribe"> & {
   setState: (state: StateObject, replace: true, action?: string) => void;
 };
 
-/** Store paths are dot strings with no empty or prototype segment. */
-function splitPath(path: string): string[] {
-  if (!path) {
-    throw new Error("Store path must be a non-empty dot-separated string");
-  }
-  return checkedSegments(path);
-}
-
 /** The Store contract over a Zustand store the caller created. */
 export function fromZustand(api: StateApi): Store {
   const write = (path: string, value: unknown): void => {
-    const segments = splitPath(path);
+    const segments = checkedSegments(path);
     const state = api.getState();
     if (Object.is(getPath(state, segments), value)) return;
     api.setState(setPath(state, segments, value), true, `set ${path}`);
@@ -62,11 +53,11 @@ export function fromZustand(api: StateApi): Store {
 
   return {
     get<T>(path: string): T | undefined {
-      return getPath(api.getState(), splitPath(path)) as T | undefined;
+      return getPath(api.getState(), checkedSegments(path)) as T | undefined;
     },
 
     getAs<T>(path: string, validator: Validator<T>): T | undefined {
-      const value = getPath(api.getState(), splitPath(path));
+      const value = getPath(api.getState(), checkedSegments(path));
       if (value === undefined) return undefined;
       try {
         return validator.parse(value);
@@ -88,7 +79,7 @@ export function fromZustand(api: StateApi): Store {
 
     subscribe(path: string, listener: () => void): Unsubscribe {
       // "" subscribes to the root; any other path must be valid.
-      const segments = path === "" ? [] : splitPath(path);
+      const segments = path === "" ? [] : checkedSegments(path);
       // Read the CURRENT state, not the one Zustand hands the listener: a
       // listener that writes re-enters the notification, and the outer round
       // must not announce the same change a second time.
