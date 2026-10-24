@@ -2,8 +2,10 @@
  * Table — the antd implementation of the generic `table` contract: an antd
  * Table over the array of records at the `rows` port, keyed by each row's
  * `rowKey` property, with the configured columns (or one per field of the
- * first row), each cell shown as its column's `cell` says. A click on a row
- * emits `row-selected`, a plain click on a link cell `link-clicked` — intents,
+ * first row), each cell shown as its column's `cell` says — and, with the
+ * `headerFilters` setting on, each column's filter and sorting in its
+ * header, as the infinite table has them. A click on a row emits
+ * `row-selected`, a plain click on a link cell `link-clicked` — intents,
  * not state: a reaction or the host decides what they mean. Render-only:
  * logic in useTable.
  *
@@ -29,12 +31,19 @@ export interface AntdTableOptions {
 
 export function createAntdTable({ cells }: AntdTableOptions = {}) {
   function AntdTable({ viewModel, store, emit }: ContractProps<typeof tableContract>) {
-    const { columns, rows, loading, rowProps } = useTable(
+    const { columns, rows, loading, rowProps, change } = useTable(
       store,
       emit,
-      { rows: viewModel.inputs.rows, loading: viewModel.inputs.loading, columns: viewModel.inputs.columns },
+      {
+        rows: viewModel.inputs.rows,
+        loading: viewModel.inputs.loading,
+        columns: viewModel.inputs.columns,
+        filterIn: viewModel.inputs.filterIn,
+        filterLike: viewModel.inputs.filterLike,
+        orderBy: viewModel.inputs.orderBy,
+      },
       tableContract.io.inputs,
-      { columns: viewModel.columns, rowKey: viewModel.rowKey },
+      { columns: viewModel.columns, rowKey: viewModel.rowKey, headerFilters: viewModel.headerFilters },
       cells,
     );
 
@@ -49,6 +58,7 @@ export function createAntdTable({ cells }: AntdTableOptions = {}) {
           rowKey="key"
           locale={{ emptyText: viewModel.emptyText }}
           onRow={rowProps}
+          onChange={change}
         />
       </div>
     );

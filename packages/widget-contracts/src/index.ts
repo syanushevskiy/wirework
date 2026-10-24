@@ -25,14 +25,23 @@ export type { ProgressTone } from "./progress";
 export { alertContract, ALERT_TONES } from "./alert";
 export type { AlertTone } from "./alert";
 export { multiSelectContract } from "./multi-select";
-export { tableContract, tableColumnSchema, columnFilterSchema, tableRowsSchema, tableEvents } from "./table";
-export type { TableColumn, ColumnFilter, TableRow } from "./table";
+export {
+  tableContract,
+  tableColumnSchema,
+  columnFilterSchema,
+  tableRowsSchema,
+  tableEvents,
+  tableHeaderEvents,
+  tableHeaderPorts,
+  searchValuesSchema,
+  columnOrderSchema,
+} from "./table";
+export type { TableColumn, ColumnFilter, TableRow, SearchValues, ColumnOrder } from "./table";
 export { tableCellSchema, appPathSchema, cellText, cellTone, cellHref } from "./table-cell";
 export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
-export { infiniteTableContract, searchValuesSchema, columnOrderSchema } from "./infinite-table";
-export type { SearchValues, ColumnOrder } from "./infinite-table";
+export { infiniteTableContract } from "./infinite-table";
 
 import { alertContract } from "./alert";
 import { buttonContract } from "./button";

@@ -1,7 +1,7 @@
 /**
  * ALL header-search logic lives here (guidelines: render-only components):
- * the search box a TEXT filter opens from a column header of the infinite
- * table. antd hands the box its selected keys and the confirm/clear
+ * the search box a TEXT filter opens from a column header of a table
+ * (use-table-headers.ts). antd hands the box its selected keys and the confirm/clear
  * callbacks (a filter dropdown's props); the text is the one key, Enter or
  * Search confirms it, Reset clears AND confirms, and the box takes focus
  * whenever it opens.

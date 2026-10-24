@@ -1,9 +1,9 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-two stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21) and one
-on 24 October 2026 (WW-22), six to do (WW-15 to WW-20). Written for
+One epic, twenty-three stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21) and two
+on 24 October 2026 (WW-22, WW-23), six to do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 and WW-22) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-23) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -553,3 +553,38 @@ stored. Designed with the tiger team (`doc/page-views-design.md`).
 **Verified by:** `page-views.feature` (10 scenarios), the `PageViews` stories (choosing, saving as, sharing and
 importing, without permission, overlay off), the `usePageViews` hook tests (14), the pure view-list and file-format
 tests, the tree-function tests in the engine, the numbered-copy test of `usePageEditing`.
+
+### WW-23 · Xsight Wirework - The infinite list as a virtual list, and header filters on the paged table too
+
+**Type:** User feature · **Status:** Done · **Delivered:** 24 Oct
+
+**Short description:** As a dashboard user, I scroll a list of thousands of rows as smoothly as one of ten: the
+infinite list keeps every row it has fetched but draws only the ones around what I see — twice the height of its box
+— with blank space standing in for the rest, so the scrollbar, the end of the list and "load more" behave exactly as
+before. As a page builder, I turn on the same header filters and header sorting the infinite list has for an ordinary
+paged table with one setting, and a value ticked in a header shows in the filter bar beside it, and the other way
+round: one choice, two places to make it. Designed with the tiger team (`doc/row-window-design.md`).
+
+**Acceptance criteria:**
+
+- **Given** the History page with 23 runs loaded, **when** I look at what is drawn, **then** fewer rows are in the
+  page than the list holds, the status line still says "23 of 23", and **when** I scroll back to the top, **then** the
+  first row is the first run again.
+- **Given** the History page, **when** it opens and I scroll to its end twice, **then** the list grows to 20 and 23
+  rows exactly as before — the window changes nothing about when more rows are asked for.
+- **Given** a list of two hundred rows in a 240-pixel box, **when** it shows, **then** the first row is on screen and the
+  last is not; **when** I scroll to the end, **then** the last row is on screen and the first is not, and never more
+  than a few dozen rows are drawn.
+- **Given** the runs page, **when** I look at its table, **then** Name and Status carry a filter icon in their headers
+  (Name offering the page's three suites, as the filter bar's Suite does) and Reference none.
+- **Given** the runs page on its second page, **when** I tick Failed in the Status header and press OK, **then** the
+  filter bar's Status shows Failed too, the list is back on page 1 and counts the failed runs; **when** I unpick Failed
+  in the bar, **then** all runs are back.
+- **Given** the runs page, **when** I click the Name header, **then** the server is asked for the list by name,
+  ascending.
+- **Given** a paged table without the setting, **when** its columns say what they filter by, **then** its headers are
+  plain: no icon, no sorting — every page built so far looks as it did.
+
+**Verified by:** `infinite-table.feature` (the window scenario), `table-view.feature` ("A header filter on the paged
+table"), the `antd-infinite-table` `Window` story, the `antd-table` `HeaderFilters` and `HeadersOff` stories, the
+`rowWindow` unit tests (8).

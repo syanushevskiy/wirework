@@ -32,6 +32,27 @@ When("I scroll the infinite table to its end", async ({ page }) => {
     });
 });
 
+When("I scroll the infinite table to its top", async ({ page }) => {
+  await infiniteTable(page)
+    .getByTestId("infinite-table-scroll")
+    .evaluate((box) => {
+      box.scrollTop = 0;
+    });
+});
+
+/** The rows the list HOLDS (`data-held`) — more than it renders once they outgrow its window. */
+Then("the list holds {int} rows", async ({ page }, count: number) => {
+  await expect(infiniteTable(page)).toHaveAttribute("data-held", String(count));
+});
+
+/** A virtual list: of the rows held only those around the visible part of the box are in the DOM. */
+Then("the infinite table renders only a window of its rows", async ({ page }) => {
+  const held = Number(await infiniteTable(page).getAttribute("data-held"));
+  const rendered = infiniteTable(page).getByTestId("table-row");
+  await expect.poll(() => rendered.count()).toBeLessThan(held);
+  await expect.poll(() => rendered.count()).toBeGreaterThan(0);
+});
+
 /** A column whose header filters by a list of values shows a filter icon; one filtering by text a SEARCH icon. */
 Then("the {string} column header has a {word} icon", async ({ page }, title: string, icon: string) => {
   await expect(columnHeader(page, title).getByRole("img", { name: icon })).toBeVisible();

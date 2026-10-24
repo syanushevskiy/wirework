@@ -182,6 +182,81 @@ export const CustomRowKey: Story = {
   ),
 };
 
+/** Columns as a loader derives them: what each header filters by, and which the server sorts by. */
+const headerColumns = [
+  { title: "#", property: "id", sortable: true },
+  { title: "Name", property: "name", filter: { kind: "text" } },
+  { title: "Team", property: "owner.team" },
+  {
+    title: "Status",
+    property: "status",
+    filter: { kind: "values", options: [{ value: "Success" }, { value: "Failed" }] },
+  },
+];
+
+/**
+ * HEADER FILTERS on the paged table — the same ones the infinite table has,
+ * turned on with the `headerFilters` setting: a values column's list to
+ * tick, a text column's SEARCH icon, a sortable header. The choice reaches
+ * the store whole, under the request's own names (the reactions store it).
+ */
+export const HeaderFilters: Story = {
+  render: () => (
+    <WidgetStory
+      key="header-filters"
+      definition={antdTable}
+      seed={{ demo: { rows, filterIn: {}, filterLike: {}, orderBy: {} } }}
+      viewModel={{
+        inputs: {
+          rows: "demo.rows",
+          filterIn: "demo.filterIn",
+          filterLike: "demo.filterLike",
+          orderBy: "demo.orderBy",
+        },
+        on: {
+          "filter-changed": [
+            { set: "demo.filterIn", from: "filterIn" },
+            { set: "demo.filterLike", from: "filterLike" },
+          ],
+          "sort-changed": [{ set: "demo.orderBy", from: "orderBy" }],
+        },
+        columns: headerColumns,
+        headerFilters: true,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const status = canvas.getByRole("columnheader", { name: /Status/ });
+    await expect(within(status).getByRole("img", { name: "filter" })).toBeVisible();
+    await expect(
+      within(canvas.getByRole("columnheader", { name: /Name/ })).getByRole("img", { name: "search" }),
+    ).toBeVisible();
+    await userEvent.click(within(status).getByRole("button"));
+    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Failed" }));
+    await userEvent.click(within(document.body).getByRole("button", { name: "OK" }));
+    const store = canvas.getByTestId("story-store");
+    await expect(store).toHaveTextContent('"filterIn": { "status": [ "Failed" ] }');
+    await userEvent.click(within(canvas.getByRole("columnheader", { name: /#/ })).getByText("#"));
+    await expect(store).toHaveTextContent('"orderBy": { "id": "ASC" }');
+  },
+};
+
+/** Without the setting (the default) the same columns are plain headers: no trigger, no sorting. */
+export const HeadersOff: Story = {
+  render: () => (
+    <WidgetStory
+      key="headers-off"
+      definition={antdTable}
+      seed={{ demo: { rows } }}
+      viewModel={{ inputs: { rows: "demo.rows" }, columns: headerColumns }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(within(canvas.getByRole("columnheader", { name: "Status" })).queryByRole("button")).toBeNull();
+    await expect(within(canvas.getByRole("columnheader", { name: "Name" })).queryByRole("img")).toBeNull();
+  },
+};
+
 /** Columns from the STORE (a table the server describes): the port wins over the setting. */
 export const ColumnsFromTheStore: Story = {
   render: () => (

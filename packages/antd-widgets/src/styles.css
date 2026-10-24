@@ -32,8 +32,17 @@
   text-align: center;
 }
 
-/* The search box a text filter opens from a column header. */
-.ww-infinite-table__search {
+/* The blank rows above and below the window of rendered rows: height only, nothing to see or hover. */
+.ww-table .ww-infinite-table__spacer,
+.ww-table .ww-infinite-table__spacer > td {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
+/* The search box a text filter opens from a column header (both tables). */
+.ww-table__search {
   display: grid;
   gap: 0.5rem;
   padding: 0.5rem;

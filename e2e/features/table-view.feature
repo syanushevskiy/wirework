@@ -49,6 +49,26 @@ Feature: A table the server describes (view table API)
     # 6 runs fail from the start; by this third request the 5 queued ones have run and failed too.
     And the pagination counts 11 rows
 
+  Scenario: A header filter on the paged table works like the bar's filter — one choice, shown in both
+    Given I open the "runs" page
+    # The runs table offers its headers too (headerFilters). Name is a LIST here, not a search: the page gives it values of its own.
+    Then the "Name" column header has a filter icon
+    And the "Status" column header has a filter icon
+    And the "Reference" column header has no filter
+    When I go to page 2 of the pagination
+    And I open the header filter of the "Status" column
+    And I tick "Failed" in the header filter
+    And I apply the header filter
+    Then the "Status" filter holds "Failed"
+    And the pagination shows page 1
+    And the table row "123456" shows "Failed" for "state"
+    # The same third request as through the bar: 11 failed runs by now.
+    And the pagination counts 11 rows
+    When I pick "Failed" in the "Status" filter
+    Then the pagination counts 23 rows
+    When I click the "Name" column header
+    Then the state JSON contains '"name": "ASC"'
+
   Scenario: A filter of the page's own values works like the server's
     Given I open the "runs" page
     When I pick "Nightly regression" in the "Suite" filter

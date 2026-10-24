@@ -566,8 +566,18 @@ export const demoViewModels: ViewModels = {
         default: {
           // A table the server describes: rows AND columns are store paths,
           // both written by table-view/load. Keyed by each row's `id` (the
-          // default rowKey).
-          inputs: { rows: "runs.data", loading: "runs.loading", columns: "runs.columns" },
+          // default rowKey). Its HEADERS filter and sort too (headerFilters):
+          // they read the same runs.filterIn the filter bar does, so a value
+          // ticked in a header shows in the bar and the other way round.
+          inputs: {
+            rows: "runs.data",
+            loading: "runs.loading",
+            columns: "runs.columns",
+            filterIn: "runs.filterIn",
+            filterLike: "runs.filterLike",
+            orderBy: "runs.orderBy",
+          },
+          headerFilters: true,
           // When the table appears it asks for its data: `load` DECLARES the
           // table view (@wirework/table-view). The URL is all the action
           // needs; the rest is what THIS page wants different from the
@@ -612,6 +622,17 @@ export const demoViewModels: ViewModels = {
                   },
                 },
               },
+            ],
+            // A header filter or sort: the bar's rule — store the choice, back to the first page, re-request.
+            "filter-changed": [
+              { set: "runs.filterIn", from: "filterIn" },
+              { set: "runs.filterLike", from: "filterLike" },
+              { set: "runs.page", value: 1 },
+              { call: "table-view/load", with: { into: "runs" } },
+            ],
+            "sort-changed": [
+              { set: "runs.orderBy", from: "orderBy" },
+              { call: "table-view/load", with: { into: "runs" } },
             ],
             "link-clicked": [{ call: "nav/follow" }],
           },

@@ -11,13 +11,22 @@
  *   value is shown (table-cell.ts: text, a tag, a link, or a renderer the
  *   host registered). `filter` says what the column can be filtered by —
  *   a list of values, or free text — and `sortable` that the server sorts
- *   by it: DATA a loader derives from the server's description, for an
- *   implementation that offers filtering and sorting in its headers (the
- *   `infinite-table` kind does; this one shows the columns and ignores
- *   both). They come from the optional `columns` port — a store path, so a
- *   host can load them (a table the server describes) — and fall back to
- *   the `columns` setting. Without either, one column per top-level field
- *   of the first row.
+ *   by it: DATA a loader derives from the server's description. They come
+ *   from the optional `columns` port — a store path, so a host can load
+ *   them (a table the server describes) — and fall back to the `columns`
+ *   setting. Without either, one column per top-level field of the first
+ *   row.
+ * - With the `headerFilters` setting on (off here, on for `infinite-table`),
+ *   a column's `filter` is offered IN ITS HEADER — a list of values to tick,
+ *   or, for free text, a search icon opening a box to type in — and a
+ *   `sortable` column sorts on a header click: ascending, descending, then
+ *   not at all. What is chosen is CONTROLLED: the values at the `filterIn`
+ *   port (`{ <property>: [values] }`, the filter bar's shape), the texts at
+ *   `filterLike` (`{ <property>: "text" }`), the order at `orderBy`
+ *   (`{ <property>: "ASC" | "DESC" }`). Every change EMITS `filter-changed`
+ *   with both filters, whole — empty ones left out, so they go into a
+ *   request as they are — or `sort-changed` with the whole order; the
+ *   reactions write them back and re-request.
  * - A click on a row EMITS `row-selected` with the row's key and the row
  *   itself, so a reaction stores either (`from: "key"`, `from: "row.name"`).
  * - A plain click on a LINK cell EMITS `link-clicked` with the address
@@ -31,14 +40,24 @@
  *
  * Implementations render a table and expose each row's key as
  * `data-row-key`, each cell's property as `data-property` and its kind as
- * `data-cell`; a tag cell exposes its tone as `data-tone`. They emit `load`
- * AFTER mounting — once the page has bound its reactions — and only once
- * per mount (React's StrictMode mounts twice).
+ * `data-cell`; a tag cell exposes its tone as `data-tone`; the filter
+ * trigger of a values column shows a filter icon, that of a text column a
+ * SEARCH icon. They emit `load` AFTER mounting — once the page has bound
+ * its reactions — and only once per mount (React's StrictMode mounts twice).
  */
 import { z } from "zod";
 import { defineContract, type WidgetEvents, type WidgetIO } from "@wirework/schema";
+import { filterValuesSchema } from "./filter-bar";
 import { choiceOptionsSchema } from "./select";
 import { appPathSchema, tableCellSchema } from "./table-cell";
+
+/** Free text per column, the request's `filterLike`. */
+export const searchValuesSchema = z.record(z.string(), z.string());
+export type SearchValues = z.infer<typeof searchValuesSchema>;
+
+/** The sort order per column, the request's `orderBy`. */
+export const columnOrderSchema = z.record(z.string(), z.enum(["ASC", "DESC"]));
+export type ColumnOrder = z.infer<typeof columnOrderSchema>;
 
 /**
  * What a column can be filtered by: one or more of a list of VALUES (the
@@ -98,6 +117,44 @@ export const tablePorts = {
   },
 } satisfies WidgetIO["inputs"];
 
+/** What a table's HEADERS read when they filter and sort: the choice, controlled (shared by every table kind). */
+export const tableHeaderPorts = {
+  filterIn: {
+    description: "Store path holding the values chosen in the headers, { <property>: [values] } (optional)",
+    value: filterValuesSchema,
+    required: false,
+    default: {},
+  },
+  filterLike: {
+    description: "Store path holding the texts searched for in the headers, { <property>: text } (optional)",
+    value: searchValuesSchema,
+    required: false,
+    default: {},
+  },
+  orderBy: {
+    description: 'Store path holding the sort order, { <property>: "ASC" | "DESC" } (optional)',
+    value: columnOrderSchema,
+    required: false,
+    default: {},
+  },
+} satisfies WidgetIO["inputs"];
+
+/** What a table's HEADERS emit: the whole filter choice, the whole order (shared by every table kind). */
+export const tableHeaderEvents = {
+  "filter-changed": {
+    description:
+      "Fired when a header filter changes, with everything chosen: filterIn { <property>: [values] } and filterLike { <property>: text } (empty ones left out)",
+    payload: z.object({ filterIn: filterValuesSchema, filterLike: searchValuesSchema }),
+    primary: "filterIn",
+  },
+  "sort-changed": {
+    description:
+      'Fired when a header is clicked to sort, with the whole order: { <property>: "ASC" | "DESC" } ({} = none)',
+    payload: z.object({ orderBy: columnOrderSchema }),
+    primary: "orderBy",
+  },
+} satisfies WidgetEvents;
+
 /** What every table kind EMITS: its appearance, a row click, a link click. */
 export const tableEvents = {
   load: {
@@ -131,13 +188,18 @@ export const tableSettings = {
     ),
   rowKey: z.string().min(1).default("id").describe("Row property holding each row's stable identity"),
   emptyText: z.string().default("No rows").describe("Shown when there are no rows"),
+  headerFilters: z
+    .boolean()
+    .default(false)
+    .describe("Offer each column's filter and sorting in its header (what the column's filter and sortable say)"),
 };
 
 export const tableContract = defineContract({
   kind: "table",
-  description: "Rows from the store in columns; emits the row a user clicks",
-  io: { inputs: tablePorts },
-  events: tableEvents,
+  description:
+    "Rows from the store in columns; emits the row a user clicks; filters and sorting in the headers on request",
+  io: { inputs: { ...tablePorts, ...tableHeaderPorts } },
+  events: { ...tableEvents, ...tableHeaderEvents },
   settings: z.object(tableSettings),
   preview: {
     seed: {

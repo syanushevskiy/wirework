@@ -2,29 +2,35 @@ Feature: Infinite list — a table that grows as you scroll, with its filters in
   The History page shows the same runs as the runs page, but as ONE widget:
   the rows scroll inside the table, and when its end comes into view the
   table asks the server for the rows after the ones it holds and appends
-  them — no pagination. Filtering and sorting live in the column headers:
-  a column the server offers VALUES for shows a filter icon opening a list
-  to tick; a column the server calls filterable without values shows a
-  SEARCH icon opening a box to type in; a sortable column sorts on a click
-  of its header — ascending, descending, then not at all. Every choice is a
-  request to the server (the view table API's filterIn, filterLike and
-  orderBy), never a sort or a filter of the rows on screen. The fake server
-  moves unfinished runs one step after every answer of the list, as on the
-  runs page.
+  them — no pagination. It is a VIRTUAL list: of the rows it holds only
+  those around the visible part of its box are rendered (twice the box's
+  height), with blank space of the right height standing in for the rest,
+  so a list of thousands stays smooth. Filtering and sorting live in the
+  column headers: a column the server offers VALUES for shows a filter icon
+  opening a list to tick; a column the server calls filterable without
+  values shows a SEARCH icon opening a box to type in; a sortable column
+  sorts on a click of its header — ascending, descending, then not at all.
+  Every choice is a request to the server (the view table API's filterIn,
+  filterLike and orderBy), never a sort or a filter of the rows on screen.
+  The fake server moves unfinished runs one step after every answer of the
+  list, as on the runs page.
 
-  Scenario: The list grows as I scroll, never all at once
+  Scenario: The list grows as I scroll, never all at once, and renders only a window of what it holds
     Given I open the "history" page
     Then the table has 10 rows
     And the infinite table shows "10 of 23"
     And the state JSON contains '"total": 23'
     When I scroll the infinite table to its end
-    Then the table has 20 rows
+    Then the list holds 20 rows
     And the infinite table shows "20 of 23"
     When I scroll the infinite table to its end
-    Then the table has 23 rows
+    Then the list holds 23 rows
     And the infinite table shows "23 of 23"
-    # The first rows are the ones loaded first: appended, not replaced.
-    And the first table row is "123456"
+    # The box is 320 px tall: of the 23 rows held, fewer are in the DOM — the ones around the view.
+    And the infinite table renders only a window of its rows
+    # The first rows are the ones loaded first: appended, not replaced — back at the top the window shows them.
+    When I scroll the infinite table to its top
+    Then the first table row is "123456"
 
   Scenario: Nothing is shown until the server answers, and the end asks for nothing yet
     Given the server is slow to answer

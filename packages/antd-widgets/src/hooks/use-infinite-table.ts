@@ -1,16 +1,9 @@
 /**
  * ALL antd-infinite-table logic lives here (guidelines: render-only
  * components) — the antd Table configuration out of what the tables share
- * (use-table-rows.ts), plus what makes this one an INFINITE LIST with its
- * filters and sorting IN THE HEADERS:
+ * (use-table-rows.ts; the header filters of use-table-headers.ts, on by
+ * default here), plus what makes this one an INFINITE LIST:
  *
- *  - Every column whose `filter` is a list of VALUES gets antd's own header
- *    filter (a list to tick, OK and Reset); one whose filter is TEXT gets a
- *    search icon opening the HeaderSearch box. What is chosen is read from
- *    the `filterIn` and `filterLike` ports (controlled), and every change
- *    EMITS `filter-changed` with both, whole — empty ones left out.
- *  - A `sortable` column sorts on a header click, ascending then descending
- *    then not at all, read from the `orderBy` port; a click EMITS `sort-changed`.
  *  - MORE: the rows scroll inside a box of the widget's own; a line under
  *    them (the END) says "<held> of <total>". Whenever the end comes into
  *    view — the user scrolled, or the rows do not fill the box — and the
@@ -19,36 +12,31 @@
  *    so a server that has nothing more cannot be asked in a loop), and
  *    never while loading. Whether the end is in view is MEASURED when the
  *    decision is made, never remembered: an observer only says "look again".
+ *  - The WINDOW (use-row-window.ts): of the rows held only those around the
+ *    visible part of the box render, twice the box's height in all; blank
+ *    rows of the right height stand in for the rest, so the scrollbar and
+ *    the end are where they would be with every row rendered.
  */
-import { createElement, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { SearchOutlined } from "@ant-design/icons";
-import type { TableColumnsType, TableColumnType, TableProps } from "antd";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import type { TableProps } from "antd";
 import type { Emit, PortDefinition, ReadableStore } from "@wirework/schema";
 import { useAfterMount, usePort } from "@wirework/react";
-import type { ColumnOrder, FilterValues, SearchValues, TableColumn, TableRow } from "@wirework/widget-contracts";
+import type { TableRow } from "@wirework/widget-contracts";
 import type { InfiniteTableEvents } from "../widgets/antd-infinite-table";
-import { HeaderSearch } from "../widgets/header-search";
+import { SPACED_BODY, type RowSpace } from "../widgets/row-spacers";
+import { useRowWindow } from "./use-row-window";
 import type { TableCellRenderers } from "./use-table-cell";
-import {
-  NO_CELLS,
-  NO_ROWS,
-  antdColumnOf,
-  useRenderedRows,
-  useRowProps,
-  useTableColumns,
-  type RenderedRow,
-} from "./use-table-rows";
+import type { TablePaths, TablePorts, TableSettings, TableView } from "./use-table";
+import { useTableHeaders } from "./use-table-headers";
+import { NO_CELLS, NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
 /** What the antd Table and the box around it are given (see use-table.ts on naming antd's public types). */
-export interface InfiniteTableView {
-  columns: TableColumnsType<RenderedRow>;
-  rows: RenderedRow[];
-  loading: boolean;
-  rowProps: NonNullable<TableProps<RenderedRow>["onRow"]>;
-  /** antd's one callback for header filters and sorting. */
-  change: NonNullable<TableProps<RenderedRow>["onChange"]>;
+export interface InfiniteTableView extends TableView {
   /** The header stays in view inside the widget's own scroll box. */
   sticky: NonNullable<TableProps<RenderedRow>["sticky"]>;
+  /** The table body that leaves blank space around the window, and how much (for RowSpaceProvider). */
+  components: NonNullable<TableProps<RenderedRow>["components"]>;
+  space: RowSpace;
   /** The scroll box, and the end of the list inside it. */
   scrollRef: RefObject<HTMLDivElement | null>;
   endRef: RefObject<HTMLDivElement | null>;
@@ -56,11 +44,9 @@ export interface InfiniteTableView {
   held: number;
   total: number | undefined;
   status: string;
+  /** The rows rendered, as "<start>-<end>" of the rows held — a fact for tests. */
+  window: string;
 }
-
-const NOTHING_CHOSEN: FilterValues = {};
-const NOTHING_SEARCHED: SearchValues = {};
-const NO_ORDER: ColumnOrder = {};
 
 /** Whether `end` lies within the visible part of `box` — measured now. */
 function inView(box: HTMLElement | null, end: HTMLElement | null): boolean {
@@ -70,58 +56,12 @@ function inView(box: HTMLElement | null, end: HTMLElement | null): boolean {
   return endRect.top < boxRect.bottom && endRect.bottom > boxRect.top;
 }
 
-/** The antd filter and sorter props of one column, from what its `filter` and `sortable` say and what is chosen. */
-function headerOf(
-  column: TableColumn,
-  chosen: FilterValues,
-  searched: SearchValues,
-  order: ColumnOrder,
-): Partial<TableColumnType<RenderedRow>> {
-  const header: Partial<TableColumnType<RenderedRow>> = {};
-  if (column.sortable === true) {
-    const direction = order[column.property];
-    header.sorter = true;
-    header.sortDirections = ["ascend", "descend"];
-    header.sortOrder = direction === "ASC" ? "ascend" : direction === "DESC" ? "descend" : null;
-  }
-  if (column.filter?.kind === "values") {
-    header.filters = column.filter.options.map((option) => ({
-      text: option.label ?? option.value,
-      value: option.value,
-    }));
-    header.filteredValue = chosen[column.property] ?? null;
-  } else if (column.filter?.kind === "text") {
-    const text = searched[column.property] ?? "";
-    header.filterDropdown = (props) => createElement(HeaderSearch, { ...props, title: column.title });
-    // The search icon: what tells a text filter from a list of values.
-    header.filterIcon = createElement(SearchOutlined);
-    header.filteredValue = text === "" ? null : [text];
-  }
-  return header;
-}
-
 export function useInfiniteTable(
   store: ReadableStore,
   emit: Emit<InfiniteTableEvents>,
-  paths: {
-    rows: string;
-    loading?: string | undefined;
-    columns?: string | undefined;
-    total?: string | undefined;
-    filterIn?: string | undefined;
-    filterLike?: string | undefined;
-    orderBy?: string | undefined;
-  },
-  ports: {
-    rows: PortDefinition<TableRow[]>;
-    loading: PortDefinition<boolean>;
-    columns: PortDefinition<TableColumn[]>;
-    total: PortDefinition<number>;
-    filterIn: PortDefinition<FilterValues>;
-    filterLike: PortDefinition<SearchValues>;
-    orderBy: PortDefinition<ColumnOrder>;
-  },
-  settings: { columns: TableColumn[]; rowKey: string },
+  paths: TablePaths & { total?: string | undefined },
+  ports: TablePorts & { total: PortDefinition<number> },
+  settings: TableSettings & { height: number },
   cells: TableCellRenderers = NO_CELLS,
 ): InfiniteTableView {
   // The table appeared: `load`, once — the reaction calls whatever fetches its
@@ -132,52 +72,9 @@ export function useInfiniteTable(
   const rows = usePort(store, paths.rows, ports.rows) ?? NO_ROWS;
   const loading = usePort(store, paths.loading, ports.loading) === true;
   const total = usePort(store, paths.total, ports.total);
-  const chosen = usePort(store, paths.filterIn, ports.filterIn) ?? NOTHING_CHOSEN;
-  const searched = usePort(store, paths.filterLike, ports.filterLike) ?? NOTHING_SEARCHED;
-  const order = usePort(store, paths.orderBy, ports.orderBy) ?? NO_ORDER;
   const columns = useTableColumns(store, paths.columns, ports.columns, settings.columns, rows);
   const renderedRows = useRenderedRows(rows, settings.rowKey);
-
-  // The antd columns, and the way back from antd's column key to the column.
-  const { tableColumns, byKey } = useMemo(() => {
-    const byKey = new Map<string, TableColumn>();
-    const tableColumns = columns.map((column, index) => {
-      const base = antdColumnOf(column, index, cells);
-      byKey.set(base.key, column);
-      return { ...base, ...headerOf(column, chosen, searched, order) };
-    });
-    return { tableColumns, byKey };
-  }, [columns, cells, chosen, searched, order]);
-
-  // antd reports every filter and the sorter at once; what is emitted is the
-  // whole choice, in the request's own groups, nothing empty in it.
-  const change = useCallback<NonNullable<TableProps<RenderedRow>["onChange"]>>(
-    (_, filters, sorter, extra) => {
-      if (extra.action === "filter") {
-        const filterIn: FilterValues = {};
-        const filterLike: SearchValues = {};
-        for (const [key, values] of Object.entries(filters)) {
-          const column = byKey.get(key);
-          if (column?.filter === undefined || values === null || values.length === 0) continue;
-          if (column.filter.kind === "values") {
-            filterIn[column.property] = values.map(String);
-          } else {
-            const text = String(values[0] ?? "").trim();
-            if (text !== "") filterLike[column.property] = text;
-          }
-        }
-        emit("filter-changed", { filterIn, filterLike });
-      } else if (extra.action === "sort") {
-        const first = Array.isArray(sorter) ? sorter[0] : sorter;
-        const column = first?.columnKey === undefined ? undefined : byKey.get(String(first.columnKey));
-        const orderBy: ColumnOrder =
-          column === undefined || !first?.order ? {} : { [column.property]: first.order === "ascend" ? "ASC" : "DESC" };
-        emit("sort-changed", { orderBy });
-      }
-    },
-    [byKey, emit],
-  );
-
+  const headers = useTableHeaders(store, emit, paths, ports, columns, cells, settings.headerFilters);
   const rowProps = useRowProps(emit);
 
   // The scroll box of the widget's own; the header sticks to its top.
@@ -186,6 +83,14 @@ export function useInfiniteTable(
   const sticky = useMemo<NonNullable<TableProps<RenderedRow>["sticky"]>>(
     () => ({ getContainer: () => scrollRef.current ?? window }),
     [],
+  );
+
+  // The window: which of the held rows render, and the blank space around them.
+  const shown = useRowWindow(scrollRef, renderedRows.length, settings.height);
+  const windowRows = useMemo(() => renderedRows.slice(shown.start, shown.end), [renderedRows, shown.start, shown.end]);
+  const space = useMemo<RowSpace>(
+    () => ({ above: shown.above, below: shown.below, columns: Math.max(1, columns.length) }),
+    [shown.above, shown.below, columns.length],
   );
 
   // "Look again": the end entered or left the visible part of the box. The
@@ -216,16 +121,19 @@ export function useInfiniteTable(
   const status = total === undefined ? `${rows.length} rows` : `${rows.length} of ${total}`;
 
   return {
-    columns: tableColumns,
-    rows: renderedRows,
+    columns: headers.columns,
+    rows: windowRows,
     loading,
     rowProps,
-    change,
+    change: headers.change,
     sticky,
+    components: SPACED_BODY,
+    space,
     scrollRef,
     endRef,
     held: rows.length,
     total,
     status,
+    window: `${shown.start}-${shown.end}`,
   };
 }

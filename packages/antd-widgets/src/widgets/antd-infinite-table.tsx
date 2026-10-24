@@ -1,10 +1,11 @@
 /**
  * Infinite table — the antd implementation of the `infinite-table`
  * contract: the `table` as a scrolling list that asks for MORE rows when
- * its end comes into view, with the filters and the sorting in the column
- * headers — a list of values to tick, or a SEARCH icon opening a box for
- * free text — instead of a filter bar and a pagination beside it.
- * Render-only: logic in useInfiniteTable.
+ * its end comes into view, renders only a WINDOW of the rows it holds (a
+ * virtual list), and has the filters and the sorting in the column headers
+ * — a list of values to tick, or a SEARCH icon opening a box for free text
+ * — instead of a filter bar and a pagination beside it. Render-only: logic
+ * in useInfiniteTable.
  *
  * Like the table, a factory: `createAntdInfiniteTable({ cells })` for a
  * host's own cell renderers (`createAntdWidgets({ tableCells })` makes both
@@ -16,6 +17,7 @@ import { implementContract } from "@wirework/react";
 import { infiniteTableContract } from "@wirework/widget-contracts";
 import { useInfiniteTable } from "../hooks/use-infinite-table";
 import type { AntdTableOptions } from "./antd-table";
+import { RowSpaceProvider } from "./row-spacers";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
 export type InfiniteTableEvents = (typeof infiniteTableContract)["events"];
@@ -35,7 +37,12 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         orderBy: viewModel.inputs.orderBy,
       },
       infiniteTableContract.io.inputs,
-      { columns: viewModel.columns, rowKey: viewModel.rowKey },
+      {
+        columns: viewModel.columns,
+        rowKey: viewModel.rowKey,
+        headerFilters: viewModel.headerFilters,
+        height: viewModel.height,
+      },
       cells,
     );
 
@@ -47,6 +54,7 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         data-loading={view.loading}
         data-held={view.held}
         data-total={view.total}
+        data-window={view.window}
       >
         {/* The box the rows scroll in: as tall as the setting says, at most. */}
         <div
@@ -55,18 +63,21 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
           data-testid="infinite-table-scroll"
           style={{ maxHeight: viewModel.height }}
         >
-          <Table
-            size="small"
-            pagination={false}
-            loading={view.loading}
-            columns={view.columns}
-            dataSource={view.rows}
-            rowKey="key"
-            locale={{ emptyText: viewModel.emptyText }}
-            onRow={view.rowProps}
-            onChange={view.change}
-            sticky={view.sticky}
-          />
+          <RowSpaceProvider value={view.space}>
+            <Table
+              size="small"
+              pagination={false}
+              loading={view.loading}
+              columns={view.columns}
+              dataSource={view.rows}
+              rowKey="key"
+              locale={{ emptyText: viewModel.emptyText }}
+              onRow={view.rowProps}
+              onChange={view.change}
+              sticky={view.sticky}
+              components={view.components}
+            />
+          </RowSpaceProvider>
           <div ref={view.endRef} className="ww-infinite-table__end" data-testid="infinite-table-status">
             <Typography.Text type="secondary">{view.status}</Typography.Text>
           </div>

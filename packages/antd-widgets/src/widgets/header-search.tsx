@@ -1,7 +1,7 @@
 /**
- * The search box a TEXT filter opens from a column header (antd-infinite-
- * table): one input, Search and Reset — the standard antd "custom filter
- * panel". Render-only: logic in useHeaderSearch.
+ * The search box a TEXT filter opens from a column header (both tables,
+ * use-table-headers.ts): one input, Search and Reset — the standard antd
+ * "custom filter panel". Render-only: logic in useHeaderSearch.
  */
 import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Space } from "antd";
@@ -11,7 +11,7 @@ import { useHeaderSearch } from "../hooks/use-header-search";
 export function HeaderSearch({ title, ...dropdown }: FilterDropdownProps & { title: string }) {
   const { inputRef, text, type, search, reset } = useHeaderSearch(dropdown);
   return (
-    <div className="ww-infinite-table__search" data-testid="header-search" data-column={title}>
+    <div className="ww-table__search" data-testid="header-search" data-column={title}>
       <Input
         ref={inputRef}
         aria-label={`Search ${title}`}

@@ -165,6 +165,48 @@ export const AsksForMore: Story = {
   },
 };
 
+/** Two hundred rows a loader might have appended by now. */
+const manyRows = Array.from({ length: 200 }, (_, index) => ({
+  id: String(index + 1),
+  name: `Run ${index + 1}`,
+  owner: { team: index % 2 === 0 ? "Core" : "Web" },
+  status: index % 3 === 0 ? "Failed" : "Success",
+}));
+
+/**
+ * The WINDOW: of two hundred rows held, only those around the visible part
+ * of the box render — twice the box's height — and the window follows the
+ * scroll: at the end the last row is on screen and the first is not; back
+ * at the top it is the other way round. The status line counts what is
+ * held, not what is rendered.
+ */
+export const Window: Story = {
+  render: () => (
+    <WidgetStory
+      key="window"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows, total: 200 } }}
+      viewModel={{ inputs: { rows: "demo.rows", total: "demo.total" }, columns: headerColumns, height: 240 }}
+      showStore={false}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    const rendered = () => canvas.getAllByTestId("table-row").length;
+    await expect(canvas.getByTestId("infinite-table-status")).toHaveTextContent("200 of 200");
+    await expect(canvas.getByText("Run 1")).toBeVisible();
+    expect(rendered()).toBeLessThan(60);
+    expect(canvas.queryByText("Run 200")).toBeNull();
+    box.scrollTop = box.scrollHeight;
+    await expect(canvas.findByText("Run 200")).resolves.toBeVisible();
+    expect(canvas.queryByText("Run 1")).toBeNull();
+    expect(rendered()).toBeLessThan(60);
+    box.scrollTop = 0;
+    await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
+    expect(canvas.queryByText("Run 200")).toBeNull();
+  },
+};
+
 /** Nothing more to ask for: as many rows held as the server has — `more` never goes out. */
 export const Complete: Story = {
   render: () => (
