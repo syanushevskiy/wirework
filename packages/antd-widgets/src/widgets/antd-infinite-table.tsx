@@ -56,13 +56,19 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         data-total={view.total}
         data-window={view.window}
       >
-        {/* The box the rows scroll in: as tall as the setting says, at most. Focusable, so the keyboard scrolls it too (Page Down, End, Home). */}
+        {/*
+          The box the rows scroll in: as tall as the setting says, at most. It is the element that HOLDS the focus for
+          keyboard scrolling (Page Down, End, Home), named by the line under the rows: a row is focusable too, but a
+          row leaves the DOM when the window moves past it, and the focus would fall to the page with it.
+        */}
         <div
           ref={view.scrollRef}
           className="ww-infinite-table__scroll"
           data-testid="infinite-table-scroll"
           style={{ maxHeight: viewModel.height }}
           tabIndex={0}
+          role="region"
+          aria-label={view.status}
         >
           <RowSpaceProvider value={view.space}>
             <Table

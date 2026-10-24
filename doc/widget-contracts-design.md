@@ -133,8 +133,10 @@ The basics every UI library has:
   twice its height in all, the rest blank space of their height — so it is
   a virtual list (doc/row-window-design.md). Implementations expose the
   scroll box as `infinite-table-scroll`, the rows held as `data-held` and a
-  line "held of total" under the rows; the `table` conformance set runs
-  against them unchanged.
+  line "held of total" under the rows; the box takes the keyboard focus (a
+  region named by that line) so End, Home and Page Down scroll it — a
+  focused row would leave the DOM with the window. The `table` conformance
+  set runs against them unchanged.
 
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and

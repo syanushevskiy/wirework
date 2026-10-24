@@ -24,7 +24,10 @@
  * Implementations render the table inside a scrolling box of `height`
  * pixels with its header staying in view, expose what `table` exposes plus
  * the box as `data-testid="infinite-table-scroll"`, the rows held as
- * `data-held` and a line under the rows reading "<held> of <total>".
+ * `data-held` and a line under the rows reading "<held> of <total>". The
+ * box itself takes the keyboard focus (a region named by that line), so End,
+ * Home and Page Down scroll it — a focused ROW would leave the DOM with the
+ * window and drop the focus.
  */
 import { z } from "zod";
 import { defineContract } from "@wirework/schema";

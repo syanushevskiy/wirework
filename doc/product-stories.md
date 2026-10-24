@@ -575,6 +575,9 @@ round: one choice, two places to make it. Designed with the tiger team (`doc/row
 - **Given** a list of two hundred rows in a 240-pixel box, **when** it shows, **then** the first row is on screen and the
   last is not; **when** I scroll to the end, **then** the last row is on screen and the first is not, and never more
   than a few dozen rows are drawn.
+- **Given** the History page, **when** I press End with the list focused, **then** it scrolls to its bottom and asks
+  for more rows like a mouse scroll does; **when** I press End again at the real end, **then** the last run is the last
+  row drawn; **when** I press Home, **then** the first run is back — the keyboard works the list without a mouse.
 - **Given** the runs page, **when** I look at its table, **then** Name and Status carry a filter icon in their headers
   (Name offering the page's three suites, as the filter bar's Suite does) and Reference none.
 - **Given** the runs page on its second page, **when** I tick Failed in the Status header and press OK, **then** the
@@ -585,6 +588,7 @@ round: one choice, two places to make it. Designed with the tiger team (`doc/row
 - **Given** a paged table without the setting, **when** its columns say what they filter by, **then** its headers are
   plain: no icon, no sorting — every page built so far looks as it did.
 
-**Verified by:** `infinite-table.feature` (the window scenario), `table-view.feature` ("A header filter on the paged
-table"), the `antd-infinite-table` `Window` story, the `antd-table` `HeaderFilters` and `HeadersOff` stories, the
+**Verified by:** `infinite-table.feature` (the window scenario and "The keyboard scrolls the list too"),
+`table-view.feature` ("A header filter on the paged table"), the `antd-infinite-table` `Window` story (the box takes
+the focus), the `antd-table` `HeaderFilters` and `HeadersOff` stories, the
 `rowWindow` unit tests (8).

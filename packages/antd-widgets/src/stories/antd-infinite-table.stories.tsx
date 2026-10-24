@@ -204,6 +204,10 @@ export const Window: Story = {
     box.scrollTop = 0;
     await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
     expect(canvas.queryByText("Run 200")).toBeNull();
+    // The box is what HOLDS the keyboard focus (a row would leave the DOM with the window), a region named by the
+    // status line. The keys themselves (End, Home) scroll only under a real keyboard: infinite-table.feature.
+    box.focus();
+    await expect(canvas.getByRole("region", { name: "200 of 200" })).toHaveFocus();
   },
 };
 

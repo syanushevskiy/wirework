@@ -27,7 +27,8 @@ import "@wirework/antd-widgets/styles.css";
   inside its own box, asks for more rows at its end, and renders only a
   WINDOW of the rows it holds — twice the box's height, the rest blank space
   of the right height (doc/row-window-design.md) — so it is a virtual list;
-  `data-held` says how many rows it holds, `data-window` which render. The
+  `data-held` says how many rows it holds, `data-window` which render. Its
+  box takes the keyboard focus, so End, Home and Page Down scroll it. The
   events each widget emits are exported as types (`ButtonEvents`,
   `InputEvents`, `TableEvents`, `InfiniteTableEvents`, …). Peer:
   `@ant-design/icons` (the search icon), antd's own icon set.

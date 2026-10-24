@@ -35,7 +35,7 @@ Feature: Infinite list — a table that grows as you scroll, with its filters in
   Scenario: The keyboard scrolls the list too — End asks for more, End again reaches the end, Home goes back
     Given I open the "history" page
     Then the table has 10 rows
-    # The box takes the focus; End scrolls it to its bottom, where the end line asks for more.
+    # The BOX takes the focus — a focused row would leave the DOM with the window and drop it; End scrolls to the bottom, where the end line asks for more.
     When I press "End" in the infinite table
     Then the list holds 20 rows
     When I press "End" in the infinite table
