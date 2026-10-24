@@ -40,6 +40,7 @@
     "build-storybook": "storybook build"
   },
   "peerDependencies": {
+    "@ant-design/icons": "catalog:",
     "@storybook/react-vite": "^10.6.0",
     "@wirework/react": "workspace:*",
     "@wirework/schema": "workspace:*",
@@ -58,6 +59,7 @@
     }
   },
   "devDependencies": {
+    "@ant-design/icons": "catalog:",
     "@storybook/addon-vitest": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
     "@types/react": "catalog:",

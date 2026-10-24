@@ -71,7 +71,7 @@ Feature: A table the server describes (view table API)
     And I set the reaction for "refresh" to call "reset-counter"
     Then the reaction for "refresh" asks for no action parameters
     When I set the reaction for "refresh" to call "table-view/load"
-    Then the action parameters for "refresh" include "url, into, metadata, pageSize, columns, filters, request"
+    Then the action parameters for "refresh" include "url, into, metadata, more, pageSize, columns, filters, request"
 
   Scenario: The metadata flag is a checkbox of the load action: not set, yes or no
     Given I open the "builder" page

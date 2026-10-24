@@ -53,6 +53,10 @@ export function demoPages(runsServer: RunsServer): Record<DemoPage, PlaygroundPa
         store.set("runs.autoRefresh", { enabled: true, interval: 5 });
       }
     }),
+    // The same list as an INFINITE one (widgets.history.table): loaded by the
+    // table's `load`, grown by its `more`. The server starts over with every
+    // visit here too, so the rows scrolled into view are always the same.
+    history: demoPage("history", () => runsServer.reset()),
     // The run is loaded by the PAGE's `load` reaction (viewModels.on.run);
     // which run: the router's parameter, at route.params.runId.
     run: demoPage("run"),

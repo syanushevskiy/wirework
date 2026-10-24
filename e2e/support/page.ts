@@ -5,6 +5,7 @@ import type { Page } from "@playwright/test";
 export const PAGE_PATHS: Record<string, string> = {
   overview: "/demo",
   runs: "/demo/runs",
+  history: "/demo/history",
   settings: "/demo/settings",
   builder: "/builder",
 };

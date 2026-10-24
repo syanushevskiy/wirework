@@ -3,7 +3,8 @@
  * and data modelled on the Xsight sketch.
  *
  * The DEMO is a small multi-page application ("test runs"): an overview, the
- * runs list, one run's details and the user's settings. A host (the
+ * runs list, the same runs as an infinite list (history), one run's details
+ * and the user's settings. A host (the
  * playground) keeps the application's configuration and its GLOBAL state
  * (`demoAppState`: who the user is, what they may do, their settings, lists
  * every page needs) for as long as the user stays in the application, and
@@ -34,7 +35,7 @@ export const builderViewModels: ViewModels = {
 };
 
 /** The demo application's pages, in menu order. "run" is reached from the runs list, not the menu. */
-export const DEMO_PAGES = ["overview", "runs", "run", "settings"] as const;
+export const DEMO_PAGES = ["overview", "runs", "history", "run", "settings"] as const;
 export type DemoPage = (typeof DEMO_PAGES)[number];
 
 /**
@@ -245,6 +246,46 @@ export const demoViewModels: ViewModels = {
             y: 6,
             w: 3,
             h: 2,
+          },
+        ],
+      },
+    },
+    /** The same runs as an INFINITE list: it grows as the user scrolls, and its filters and sorting live in the column headers. */
+    history: {
+      default: {
+        engine: "react-grid-layout",
+        cells: [
+          {
+            id: "label-history",
+            widget: "antd-label",
+            model: "widgets.history.title",
+            template: "default",
+            x: 0,
+            y: 0,
+            w: 12,
+            h: 1,
+          },
+          // A table the server DESCRIBES, as on the runs page — but one
+          // widget does it all: no filter bar, no pagination beside it.
+          {
+            id: "table-history",
+            widget: "antd-infinite-table",
+            model: "widgets.history.table",
+            template: "default",
+            x: 0,
+            y: 1,
+            w: 12,
+            h: 10,
+          },
+          {
+            id: "label-history-error",
+            widget: "antd-label",
+            model: "widgets.history.error",
+            template: "default",
+            x: 0,
+            y: 11,
+            w: 12,
+            h: 1,
           },
         ],
       },
@@ -581,6 +622,72 @@ export const demoViewModels: ViewModels = {
         default: { label: "Open run", on: { clicked: [{ call: "runs/open-selected" }] } },
       },
     },
+    history: {
+      title: {
+        default: { text: "Run history — scroll for more; filter and sort in the column headers", tone: "accent" },
+      },
+      table: {
+        default: {
+          // Everything the list shows and chooses lives under ONE root, at the
+          // loader's fixed places: the rows, the columns (each saying what its
+          // header filters by and whether it sorts), the count — and what the
+          // headers chose: filterIn, filterLike, orderBy.
+          inputs: {
+            rows: "history.data",
+            loading: "history.loading",
+            columns: "history.columns",
+            total: "history.total",
+            filterIn: "history.filterIn",
+            filterLike: "history.filterLike",
+            orderBy: "history.orderBy",
+          },
+          on: {
+            // The same view API as the runs page; ten rows a request. The
+            // server offers values for Inbound and Status and calls Name
+            // filterable without values — so Name gets a SEARCH in its
+            // header, nothing is overridden here.
+            load: [
+              {
+                call: "table-view/load",
+                with: {
+                  url: "/api/v1/view/runs",
+                  into: "history",
+                  metadata: true,
+                  pageSize: 10,
+                  columns: {
+                    id: { cell: { kind: "link", to: "/demo/runs/{id}" } },
+                    name: { cell: { kind: "link", to: "/demo/runs/{id}" } },
+                    state: {
+                      cell: {
+                        kind: "tag",
+                        tones: { Success: "success", Failed: "danger", Running: "info", Queued: "default" },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+            // The end of the list came into view: the rows after the ones held, appended.
+            more: [{ call: "table-view/load", with: { into: "history", more: true } }],
+            // A header filter or sort: store the whole choice, then re-request from the start.
+            "filter-changed": [
+              { set: "history.filterIn", from: "filterIn" },
+              { set: "history.filterLike", from: "filterLike" },
+              { call: "table-view/load", with: { into: "history" } },
+            ],
+            "sort-changed": [
+              { set: "history.orderBy", from: "orderBy" },
+              { call: "table-view/load", with: { into: "history" } },
+            ],
+            "link-clicked": [{ call: "nav/follow" }],
+          },
+          height: 320,
+        },
+      },
+      error: {
+        default: { inputs: { text: "history.error" }, text: "", tone: "danger" },
+      },
+    },
     run: {
       name: {
         default: { inputs: { text: "run.data.name" }, text: "Loading the run…", tone: "accent" },
@@ -837,6 +944,7 @@ export const demoPageData: Record<DemoPage, Record<string, unknown>> = {
   overview: { demo: { counter: 0 } },
   // Nothing chosen yet, so no suites on offer.
   runs: { filters: { applications: [], suiteOptions: [], suites: [] } },
+  history: {},
   run: {},
   settings: {},
 };

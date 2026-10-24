@@ -7,7 +7,7 @@
  *
  * The runs LIST is served through the VIEW TABLE API (doc/tableApi/,
  * @wirework/table-view): `fetchView` answers a request's `dataFilter`
- * (filterIn, orderBy, limit/offset) with flat rows, counts them when asked
+ * (filterIn, filterLike, orderBy, limit/offset) with flat rows, counts them when asked
  * (`totalRecords`) and DESCRIBES the table when asked (`metadata: true`):
  * the columns, which of them the server hides, and the values some can be
  * filtered by — all in ONE answer.
@@ -141,14 +141,21 @@ const describeRuns = (rows: readonly ViewRow[]): NonNullable<TableViewResponse["
   enableSorting: true,
 });
 
-/** The rows a request's `dataFilter` selects, in its order — before paging. */
-function select(rows: readonly ViewRow[], { filterIn, orderBy }: TableViewRequest["dataFilter"]): ViewRow[] {
+/** The rows a request's `dataFilter` selects, in its order — before paging. `filterLike` is a case-blind "contains". */
+function select(
+  rows: readonly ViewRow[],
+  { filterIn, filterLike, orderBy }: TableViewRequest["dataFilter"],
+): ViewRow[] {
   const field = (row: ViewRow, column: string): string | undefined =>
     (row as Record<string, string | undefined>)[column];
-  const selected = rows.filter((row) =>
-    Object.entries(filterIn).every(
-      ([column, values]) => values.length === 0 || values.map(String).includes(field(row, column) ?? ""),
-    ),
+  const selected = rows.filter(
+    (row) =>
+      Object.entries(filterIn).every(
+        ([column, values]) => values.length === 0 || values.map(String).includes(field(row, column) ?? ""),
+      ) &&
+      Object.entries(filterLike).every(([column, text]) =>
+        (field(row, column) ?? "").toLowerCase().includes(String(text).toLowerCase()),
+      ),
   );
   // Later keys break the ties of earlier ones; the sort is stable.
   return Object.entries(orderBy).reduceRight<ViewRow[]>(

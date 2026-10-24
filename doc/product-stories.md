@@ -1,8 +1,9 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty stories: fourteen done between 15 and 29 September 2026, six to do (WW-15 to WW-20). Written for
-managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11 and
-WW-16 to WW-20) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+One epic, twenty-one stories: fourteen done between 15 and 29 September 2026 and one on 23 October 2026 (WW-21), six
+to do (WW-15 to WW-20). Written for
+managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
+WW-16 to WW-20 and WW-21) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -481,3 +482,35 @@ such views ready-made with the page.
   Views list.
 - **Given** a saved view with a filter value the server no longer offers, **when** I pick it, **then** the list applies
   what still exists and tells me which filter was dropped.
+
+### WW-21 · Xsight Wirework - Infinite list: a table that grows as you scroll, with its filters in the column headers
+
+**Type:** User feature · **Status:** Done · **Delivered:** 23 Oct
+
+**Short description:** As a dashboard user, I read a long list by scrolling — the table fetches the next rows from the
+server when I reach its end, with no page numbers — and I filter and sort it from the column headers: a column with a
+known set of values offers them as a list to tick, a free-text column shows a search icon that opens a box to type in,
+and a click on a sortable header orders the list. As a page builder, I get all of this from one widget wired to the same
+server data address as the paged table, so that a long list needs no filter bar and no pagination beside it.
+
+**Acceptance criteria:**
+
+- **Given** the History page, **when** it opens, **then** the first ten runs show with "10 of 23" under them; **when** I
+  scroll to the end, **then** the next ten are appended ("20 of 23"), then the last three, and the first rows are still
+  the first rows.
+- **Given** the server describes Status and Inbound with values and calls Name filterable without values, **when** the
+  table shows, **then** Status and Inbound carry a filter icon in their header, Name a search icon, and # and Reference
+  no filter at all.
+- **Given** the Status header's filter, **when** I tick Failed and press OK, **then** only failed runs are requested and
+  shown with their count; **when** I reset it, **then** the whole list is back from its first rows.
+- **Given** the Name header's search, **when** I type "suite" and press Enter, **then** the server is asked for names
+  containing it and the one matching run shows; Reset brings the list back.
+- **Given** the Name header, **when** I click it once, twice, three times, **then** the list is requested ascending,
+  descending, then unordered, and the first row changes accordingly.
+- **Given** the builder, **when** I add an infinite table wired to the runs data address with "more" set to append,
+  **then** it loads by itself and grows when scrolled, like the one on the History page.
+- **Given** a server that has no more rows than the table holds, **when** I reach the end, **then** nothing is asked for.
+
+**Verified by:** `infinite-table.feature` (8 scenarios), the `antd-infinite-table` stories (the `table` conformance set
+plus header filter, search, sort and "more"), the loader unit tests for `more` and `filterLike`, `columnsOf` tests for
+what a header filters and sorts by.

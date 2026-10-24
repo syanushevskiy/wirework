@@ -1,0 +1,186 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { antdInfiniteTable } from "../widgets/antd-infinite-table";
+import { tableConformance } from "./conformance";
+import { WidgetStory } from "./harness";
+import { playground } from "./playground";
+
+/** A dropdown opens in a portal outside the story's canvas. */
+const page = () => within(document.body);
+
+const rows = [
+  { id: "1", name: "Nightly", owner: { team: "Core" }, status: "Success" },
+  { id: "2", name: "Smoke", owner: { team: "Web" }, status: "Failed" },
+  { id: "3", name: "Regression", owner: { team: "Core" }, status: "Success" },
+];
+
+/** Columns as a loader derives them: what each header filters by, and which the server sorts by. */
+const headerColumns = [
+  { title: "#", property: "id", sortable: true },
+  { title: "Name", property: "name", filter: { kind: "text" }, sortable: true },
+  { title: "Team", property: "owner.team" },
+  {
+    title: "Status",
+    property: "status",
+    cell: { kind: "tag", tones: { Success: "success", Failed: "danger" } },
+    filter: { kind: "values", options: [{ value: "Success" }, { value: "Failed" }] },
+  },
+];
+
+/** The wiring a page gives the list: what the headers choose goes to the store, and the end asks for more. */
+const reactions = {
+  "row-selected": [{ set: "demo.selected", from: "key" }],
+  "filter-changed": [
+    { set: "demo.filterIn", from: "filterIn" },
+    { set: "demo.filterLike", from: "filterLike" },
+  ],
+  "sort-changed": [{ set: "demo.orderBy", from: "orderBy" }],
+  more: [{ set: "demo.asked", from: "offset" }],
+};
+
+const meta = {
+  title: "Widgets/antd-infinite-table",
+  render: () => (
+    <WidgetStory
+      key="headers"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows, total: 3 } }}
+      viewModel={{
+        inputs: {
+          rows: "demo.rows",
+          total: "demo.total",
+          filterIn: "demo.filterIn",
+          filterLike: "demo.filterLike",
+          orderBy: "demo.orderBy",
+        },
+        on: reactions,
+        columns: headerColumns,
+        height: 240,
+      }}
+    />
+  ),
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/**
+ * Rows, total, columns and what the headers chose are DATA: edit them as a
+ * loader would. Lower `total` to the rows held and the list asks for nothing;
+ * raise it and `more` goes out at once — the end is in view.
+ */
+export const Playground: Story = playground(antdInfiniteTable, {
+  seed: { demo: { rows, total: 3, filterIn: {}, filterLike: {}, orderBy: {} } },
+  viewModel: {
+    inputs: {
+      rows: "demo.rows",
+      total: "demo.total",
+      filterIn: "demo.filterIn",
+      filterLike: "demo.filterLike",
+      orderBy: "demo.orderBy",
+    },
+    on: reactions,
+    columns: headerColumns,
+  },
+});
+
+// Everything the `table` contract promises holds for the infinite table too.
+const conformance = tableConformance(antdInfiniteTable);
+export const Rows: Story = conformance.Rows;
+export const RowSelected: Story = conformance.RowSelected;
+export const LoadsOnAppearance: Story = conformance.LoadsOnAppearance;
+export const BoundToEmptyPath: Story = conformance.BoundToEmptyPath;
+
+/** A values filter lives in its column header: tick a value, OK — the whole choice reaches the store under the request's own name. */
+export const HeaderFilter: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const header = canvas.getByRole("columnheader", { name: /Status/ });
+    await expect(within(header).getByRole("img", { name: "filter" })).toBeVisible();
+    await userEvent.click(within(header).getByRole("button"));
+    await userEvent.click(await page().findByRole("menuitem", { name: "Failed" }));
+    await userEvent.click(page().getByRole("button", { name: "OK" }));
+    const store = canvas.getByTestId("story-store");
+    await expect(store).toHaveTextContent('"filterIn": { "status": [ "Failed" ] }');
+    await expect(store).toHaveTextContent('"filterLike": {}');
+  },
+};
+
+/** A text filter is a SEARCH icon in its column header: type, Enter — the text reaches the store as `filterLike`; Reset clears it. */
+export const HeaderSearch: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const header = canvas.getByRole("columnheader", { name: /Name/ });
+    await expect(within(header).getByRole("img", { name: "search" })).toBeVisible();
+    // A column without a filter has no trigger at all.
+    await expect(within(canvas.getByRole("columnheader", { name: /Team/ })).queryByRole("button")).toBeNull();
+    await userEvent.click(within(header).getByRole("button"));
+    const box = await page().findByRole("textbox", { name: "Search Name" });
+    await userEvent.type(box, "smo{Enter}");
+    const store = canvas.getByTestId("story-store");
+    await expect(store).toHaveTextContent('"filterLike": { "name": "smo" }');
+    await expect(store).toHaveTextContent('"filterIn": {}');
+    await userEvent.click(within(header).getByRole("button"));
+    await userEvent.click(await page().findByRole("button", { name: "Reset" }));
+    await expect(store).toHaveTextContent('"filterLike": {}');
+  },
+};
+
+/** A sortable header sorts on click — ascending, descending, then not at all — and the order reaches the store as `orderBy`. */
+export const HeaderSort: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const header = canvas.getByRole("columnheader", { name: /Name/ });
+    const store = canvas.getByTestId("story-store");
+    await userEvent.click(within(header).getByText("Name"));
+    await expect(store).toHaveTextContent('"orderBy": { "name": "ASC" }');
+    await userEvent.click(within(header).getByText("Name"));
+    await expect(store).toHaveTextContent('"orderBy": { "name": "DESC" }');
+    await userEvent.click(within(header).getByText("Name"));
+    await expect(store).toHaveTextContent('"orderBy": {}');
+    // A column the server does not sort by is not clickable into an order.
+    await userEvent.click(within(canvas.getByRole("columnheader", { name: /Team/ })).getByText("Team"));
+    await expect(store).toHaveTextContent('"orderBy": {}');
+  },
+};
+
+/**
+ * MORE: the server has 10 rows, 3 are held, and the end of the list is in
+ * view from the start — so `more` is emitted at once with the offset of the
+ * next row, and only once for these rows.
+ */
+export const AsksForMore: Story = {
+  render: () => (
+    <WidgetStory
+      key="more"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows, total: 10 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        on: { more: [{ set: "demo.asked", from: "offset" }] },
+        columns: headerColumns,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"asked": 3');
+    await expect(canvas.getByTestId("infinite-table-status")).toHaveTextContent("3 of 10");
+  },
+};
+
+/** Nothing more to ask for: as many rows held as the server has — `more` never goes out. */
+export const Complete: Story = {
+  render: () => (
+    <WidgetStory
+      key="complete"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows, total: 3 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        on: { more: [{ set: "demo.asked", from: "offset" }] },
+        columns: headerColumns,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("infinite-table-status")).toHaveTextContent("3 of 3");
+    await expect(canvas.getByTestId("story-store")).not.toHaveTextContent("asked");
+  },
+};

@@ -8,9 +8,9 @@
  * them). If a widget ever needs engine, store or bus internals, the widget
  * contract has leaked. No widget writes the store — every state change is
  * an emitted event plus a reaction. Label, button, input, pagination,
- * refresher, select, multi-select, filter-bar, tag, checkbox, progress, alert and table
- * IMPLEMENT the standard contracts; counter, echo and crash are demo/test
- * widgets.
+ * refresher, select, multi-select, filter-bar, tag, checkbox, progress,
+ * alert, table and infinite-table IMPLEMENT the standard contracts; counter,
+ * echo and crash are demo/test widgets.
  */
 import { z } from "zod";
 import type { AnyWidgetDefinition } from "@wirework/schema";
@@ -21,6 +21,7 @@ import { antdCounter } from "./widgets/antd-counter";
 import { antdCrash } from "./widgets/antd-crash";
 import { antdEcho } from "./widgets/antd-echo";
 import { antdFilterBar } from "./widgets/antd-filter-bar";
+import { antdInfiniteTable, createAntdInfiniteTable } from "./widgets/antd-infinite-table";
 import { antdInput } from "./widgets/antd-input";
 import { antdLabel } from "./widgets/antd-label";
 import { antdMultiSelect } from "./widgets/antd-multi-select";
@@ -39,6 +40,7 @@ export {
   antdCrash,
   antdEcho,
   antdFilterBar,
+  antdInfiniteTable,
   antdInput,
   antdLabel,
   antdMultiSelect,
@@ -48,9 +50,11 @@ export {
   antdSelect,
   antdTable,
   antdTag,
+  createAntdInfiniteTable,
   createAntdTable,
 };
 export type { AntdTableOptions };
+export type { InfiniteTableEvents } from "./widgets/antd-infinite-table";
 export type { TableCellProps, TableCellRenderer, TableCellRenderers } from "./hooks/use-table-cell";
 export { validate } from "./validation";
 export type { ValidationRule, ValidationResult } from "./validation";
@@ -67,7 +71,7 @@ export type { MultiSelectEvents } from "./widgets/antd-multi-select";
 export type { FilterBarEvents } from "./widgets/antd-filter-bar";
 
 export interface AntdWidgetsOptions {
-  /** Cell renderers the host's table offers by name (see createAntdTable). */
+  /** Cell renderers the host's tables offer by name (see createAntdTable). */
   tableCells?: AntdTableOptions["cells"];
 }
 
@@ -79,6 +83,7 @@ export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyW
     antdFilterBar,
     antdCounter,
     tableCells === undefined ? antdTable : createAntdTable({ cells: tableCells }),
+    tableCells === undefined ? antdInfiniteTable : createAntdInfiniteTable({ cells: tableCells }),
     antdButton,
     antdInput,
     antdPagination,

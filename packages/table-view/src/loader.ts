@@ -4,21 +4,24 @@
  * call names (`into`), so nobody invents paths per table:
  *
  *   <into>.view       the declaration: url and the page's changes (written by a call that has a url)
- *   <into>.columns    [{ title, property }]            -> the table's `columns` port
+ *   <into>.columns    [{ title, property, filter?, sortable? }] -> the table's `columns` port
  *   <into>.filters    [{ id, label, options }]         -> the filter bar's `filters` port
  *   <into>.data       the rows                         -> the table's `rows` port
- *   <into>.total      all rows on the server           -> the pagination's `total` port
+ *   <into>.total      all rows on the server           -> the pagination's / infinite table's `total` port
  *   <into>.loading    true while a request is in flight
  *   <into>.error      what failed (the last good rows stay)
  *
  * and what the USER asked for, written by the widgets' reactions and read
- * here: <into>.page, <into>.pageSize, <into>.filterIn, <into>.orderBy.
+ * here: <into>.page, <into>.pageSize, <into>.filterIn, <into>.filterLike,
+ * <into>.orderBy.
  *
  * Results travel through the store one visible step at a time. Whether the
  * server is asked to DESCRIBE the table (`metadata: true`) is the call's
  * `metadata` argument; without it: when the call declares the view (it has
  * a url) or nothing is known about the columns yet — so a plain re-request
- * (another page, a refresh, a filter) asks for rows only.
+ * (another page, a refresh, a filter) asks for rows only. A call with
+ * `more: true` asks for the rows AFTER the ones held and appends them —
+ * an infinite list growing as the user scrolls; the page stays what it is.
  *
  * Latest request wins, per store and view — and the superseded request is
  * ABORTED, not merely ignored: paging quickly through a table or refreshing
@@ -26,8 +29,17 @@
  */
 import { z } from "zod";
 import type { Store } from "@wirework/schema";
+import { columnOrderSchema, filterValuesSchema, searchValuesSchema, tableRowsSchema } from "@wirework/widget-contracts";
 import { tableViewResponseSchema, type TableViewTransport } from "./api";
-import { DEFAULT_PAGE_SIZE, columnsOf, filtersOf, requestOf, tableViewSchema, type TableView } from "./view";
+import {
+  DEFAULT_PAGE_SIZE,
+  columnsOf,
+  filtersOf,
+  requestOf,
+  tableViewSchema,
+  type TableView,
+  type TableViewQuery,
+} from "./view";
 
 /**
  * A call's arguments: where in the store, whether to ask for the table's
@@ -58,6 +70,15 @@ export const tableViewArgsSchema = z
       .describe(
         "Send metadata: true — the server describes the table (columns, filter values). Off: rows only. Not set: automatic (asked with a url, or while no columns are known)",
       ),
+    /**
+     * Per CALL too: ask for the rows AFTER the ones held and append them —
+     * what an infinite list's `more` reaction does. Off or not given: the
+     * rows are replaced by the page asked for.
+     */
+    more: z
+      .boolean()
+      .optional()
+      .describe("More: append the rows after those held (an infinite list's `more`). Off or not set: replace them"),
     pageSize: tableViewSchema.shape.pageSize,
     columns: tableViewSchema.shape.columns,
     filters: tableViewSchema.shape.filters,
@@ -69,8 +90,10 @@ export type TableViewArgs = z.infer<typeof tableViewArgsSchema>;
 export type TableViewLoader = (store: Store, args: unknown) => Promise<void>;
 
 const positiveInt = z.number().int().min(1);
-const chosenSchema = z.record(z.string(), z.array(z.string()));
-const orderSchema = z.record(z.string(), z.enum(["ASC", "DESC"]));
+const chosenSchema = filterValuesSchema;
+const searchedSchema = searchValuesSchema;
+const orderSchema = columnOrderSchema;
+const rowsSchema = tableRowsSchema;
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
@@ -121,8 +144,8 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         `table-view/load: ${parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`,
       );
     }
-    // `metadata` belongs to this call; everything else but `into` declares the view.
-    const { into, metadata, ...declared } = parsed.data;
+    // `metadata` and `more` belong to this call; everything else but `into` declares the view.
+    const { into, metadata, more, ...declared } = parsed.data;
     const at = (name: string): string => `${into}.${name}`;
 
     // A call with a url DECLARES the view; one without re-requests the declared one.
@@ -151,10 +174,15 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
     store.set(at("loading"), true);
     try {
       // Live store values are not validated; an inspector may hold anything.
-      const query = {
-        page: store.getAs(at("page"), positiveInt) ?? 1,
-        pageSize: store.getAs(at("pageSize"), positiveInt) ?? view.pageSize ?? DEFAULT_PAGE_SIZE,
+      let page = store.getAs(at("page"), positiveInt) ?? 1;
+      const pageSize = store.getAs(at("pageSize"), positiveInt) ?? view.pageSize ?? DEFAULT_PAGE_SIZE;
+      // MORE: the rows after the ones held, which the answer is appended to.
+      const held = more ? (store.getAs(at("data"), rowsSchema) ?? []) : undefined;
+      const query: TableViewQuery = {
+        offset: held === undefined ? (page - 1) * pageSize : held.length,
+        limit: pageSize,
         filterIn: store.getAs(at("filterIn"), chosenSchema) ?? {},
+        filterLike: store.getAs(at("filterLike"), searchedSchema),
         orderBy: store.getAs(at("orderBy"), orderSchema),
       };
       let answer = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, describe), signal));
@@ -163,8 +191,9 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       // The page asked for lies behind the last one (a filter shrank the
       // table): ask once more, for the last page there is.
       const total = answer.totalRecords ?? undefined;
-      if (total !== undefined && total > 0 && (query.page - 1) * query.pageSize >= total) {
-        query.page = Math.ceil(total / query.pageSize);
+      if (held === undefined && total !== undefined && total > 0 && query.offset >= total) {
+        page = Math.ceil(total / pageSize);
+        query.offset = (page - 1) * pageSize;
         const again = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, false), signal));
         if (!isLatest()) return;
         answer = { ...answer, ...again, metadata: answer.metadata ?? again.metadata };
@@ -174,11 +203,16 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         store.set(at("columns"), columnsOf(answer.metadata, view));
         store.set(at("filters"), filtersOf(answer.metadata, view));
       }
-      if (answer.data) store.set(at("data"), answer.data);
+      if (answer.data) {
+        // Nothing more to append leaves the rows as they are — the same
+        // array, so a list watching them knows nothing came.
+        if (held === undefined) store.set(at("data"), answer.data);
+        else if (answer.data.length > 0) store.set(at("data"), [...held, ...answer.data]);
+      }
       if (answer.totalRecords !== undefined && answer.totalRecords !== null)
         store.set(at("total"), answer.totalRecords);
-      store.set(at("page"), query.page);
-      store.set(at("pageSize"), query.pageSize);
+      if (held === undefined) store.set(at("page"), page);
+      store.set(at("pageSize"), pageSize);
       store.set(at("error"), undefined);
     } catch (error) {
       // The last good rows stay; the page can show what failed. A superseded

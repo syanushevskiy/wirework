@@ -21,6 +21,25 @@
   text-decoration: underline;
 }
 
+/* The infinite table scrolls inside its own box; the header sticks to its top. */
+.ww-infinite-table__scroll {
+  overflow: auto;
+}
+
+/* The end of the list: what is held of what there is, and the place a scroll reaches. */
+.ww-infinite-table__end {
+  padding: 0.5rem;
+  text-align: center;
+}
+
+/* The search box a text filter opens from a column header. */
+.ww-infinite-table__search {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  min-width: 14rem;
+}
+
 /* A select fills its cell, like an input does. */
 .ww-select {
   width: 100%;

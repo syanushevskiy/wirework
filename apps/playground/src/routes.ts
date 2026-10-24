@@ -20,6 +20,7 @@ export const DEMO_HOME = "/demo";
 export const PAGE_ROUTES: readonly PageRoute[] = [
   { page: "overview", path: DEMO_HOME, title: "Overview", menu: true },
   { page: "runs", path: "/demo/runs", title: "Runs", menu: true },
+  { page: "history", path: "/demo/history", title: "History", menu: true },
   { page: "run", path: "/demo/runs/:runId", title: "Run", menu: false },
   { page: "settings", path: "/demo/settings", title: "Settings", menu: true },
   { page: "builder", path: "/builder", title: "Builder", menu: true },

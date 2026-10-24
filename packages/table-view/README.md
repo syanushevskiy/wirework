@@ -23,9 +23,18 @@ on: {
 ```
 
 Every other reaction of the page (a page change, a filter, a refresh) only
-names the view: `with: { into: "runs" }`. The transport is the host's:
-`fetchTransport` POSTs JSON; pass your own to add headers, auth or a fake
-server.
+names the view: `with: { into: "runs" }`. An INFINITE list appends instead
+of paging: its `more` reaction says `with: { into: "runs", more: true }` and
+the rows after the ones held are added to `<into>.data`. The transport is
+the host's: `fetchTransport` POSTs JSON; pass your own to add headers, auth
+or a fake server.
+
+What the loader writes under `<into>`: `view`, `columns` (each column saying
+what its header can `filter` by — the server's values, or free text where it
+calls the column filterable without values — and whether it is `sortable`),
+`filters` (the filter bar's), `data`, `total`, `loading`, `error`. What it
+reads there, written by the widgets' reactions: `page`, `pageSize`,
+`filterIn`, `filterLike`, `orderBy`.
 
 ## Exports
 

@@ -1,11 +1,88 @@
-/** The table the server describes, and its companions: the pagination and the filter bar. */
+/** The table the server describes, and its companions: the pagination and the filter bar — and the infinite table with its header filters. */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { option } from "../support/antd";
+import { headerFilterDropdown, headerFilterValue, option } from "../support/antd";
 import { live } from "../support/page";
 import { tableCell, tableRow } from "../support/table";
 
 const { When, Then } = createBdd();
+
+/* --------------------------- infinite table --------------------------- */
+
+const infiniteTable = (page: Page) => live(page).getByTestId("antd-infinite-table");
+
+/** A column header of the live page's table, by its title (the header holds its filter and sort triggers too). */
+const columnHeader = (page: Page, title: string) =>
+  live(page).getByRole("columnheader", { name: title, exact: false }).filter({ hasText: title });
+
+Then("the first table row is {string}", async ({ page }, key: string) => {
+  await expect(live(page).getByTestId("table-row").first()).toHaveAttribute("data-row-key", key);
+});
+
+/** "<held> of <total>": the line under the rows. */
+Then("the infinite table shows {string}", async ({ page }, status: string) => {
+  await expect(infiniteTable(page).getByTestId("infinite-table-status")).toHaveText(status);
+});
+
+When("I scroll the infinite table to its end", async ({ page }) => {
+  await infiniteTable(page)
+    .getByTestId("infinite-table-scroll")
+    .evaluate((box) => {
+      box.scrollTop = box.scrollHeight;
+    });
+});
+
+/** A column whose header filters by a list of values shows a filter icon; one filtering by text a SEARCH icon. */
+Then("the {string} column header has a {word} icon", async ({ page }, title: string, icon: string) => {
+  await expect(columnHeader(page, title).getByRole("img", { name: icon })).toBeVisible();
+});
+
+Then("the {string} column header has no filter", async ({ page }, title: string) => {
+  await expect(columnHeader(page, title)).toBeVisible();
+  await expect(columnHeader(page, title).getByRole("button")).toHaveCount(0);
+});
+
+When("I open the header filter of the {string} column", async ({ page }, title: string) => {
+  await columnHeader(page, title).getByRole("button").click();
+  await expect(headerFilterDropdown(page)).toBeVisible();
+});
+
+/** The values on offer, in order: "Queued, Running, Success, Failed". */
+Then("the header filter offers {string}", async ({ page }, values: string) => {
+  await expect(headerFilterDropdown(page).getByRole("menuitem")).toHaveText(values.split(", "));
+});
+
+When("I tick {string} in the header filter", async ({ page }, value: string) => {
+  await headerFilterValue(page, value).click();
+});
+
+When("I apply the header filter", async ({ page }) => {
+  await headerFilterDropdown(page).getByRole("button", { name: "OK" }).click();
+});
+
+/** antd's Reset only unticks the list; OK applies it. */
+When("I reset the header filter", async ({ page }) => {
+  await headerFilterDropdown(page).getByRole("button", { name: "Reset" }).click();
+  await headerFilterDropdown(page).getByRole("button", { name: "OK" }).click();
+});
+
+/** The search icon of a text column opens a box; Enter searches. */
+When("I search the {string} column for {string}", async ({ page }, title: string, text: string) => {
+  await columnHeader(page, title).getByRole("button").click();
+  const box = headerFilterDropdown(page).getByRole("textbox", { name: `Search ${title}` });
+  await box.fill(text);
+  await box.press("Enter");
+});
+
+When("I clear the search of the {string} column", async ({ page }, title: string) => {
+  await columnHeader(page, title).getByRole("button").click();
+  await headerFilterDropdown(page).getByRole("button", { name: "Reset" }).click();
+});
+
+/** A click on the header's title sorts: ascending, then descending, then not at all. */
+When("I click the {string} column header", async ({ page }, title: string) => {
+  await columnHeader(page, title).getByText(title, { exact: true }).click();
+});
 
 /* ------------------------------- table ------------------------------- */
 
@@ -84,12 +161,16 @@ Then("the table is loading", async ({ page }) => {
   await expect(live(page).getByTestId("antd-table")).toHaveAttribute("data-loading", "true");
 });
 
+/** Whichever table kind the page shows: the table, or the infinite table. */
+const tableWidget = (page: Page) =>
+  live(page).locator('[data-testid="antd-table"], [data-testid="antd-infinite-table"]');
+
 Then("the table has a column {string}", async ({ page }, title: string) => {
-  await expect(live(page).getByTestId("antd-table").getByRole("columnheader", { name: title })).toBeVisible();
+  await expect(tableWidget(page).getByRole("columnheader", { name: title })).toBeVisible();
 });
 
 Then("the table has the columns {string}", async ({ page }, titles: string) => {
-  const headers = live(page).getByTestId("antd-table").getByRole("columnheader");
+  const headers = tableWidget(page).getByRole("columnheader");
   await expect(headers).toHaveText(titles.split(", "));
 });
 

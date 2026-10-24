@@ -300,9 +300,11 @@ Feature: Widget builder
     Given I open the "builder" page
     When I open the widget palette
     Then the palette shows a preview of every registered widget
+    # Two table kinds: the table and the infinite table.
     When I search the palette for "table"
-    Then the palette shows 1 widget preview
+    Then the palette shows 2 widget previews
     And the preview of "antd-table" reads "Nightly"
+    And the preview of "antd-infinite-table" reads "Nightly"
     When I search the palette for "nothing-like-this"
     Then the palette shows 0 widget previews
     And the palette reports no matches

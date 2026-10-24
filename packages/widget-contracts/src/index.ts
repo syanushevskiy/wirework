@@ -25,17 +25,20 @@ export type { ProgressTone } from "./progress";
 export { alertContract, ALERT_TONES } from "./alert";
 export type { AlertTone } from "./alert";
 export { multiSelectContract } from "./multi-select";
-export { tableContract, tableColumnSchema, tableRowsSchema } from "./table";
-export type { TableColumn, TableRow } from "./table";
+export { tableContract, tableColumnSchema, columnFilterSchema, tableRowsSchema, tableEvents } from "./table";
+export type { TableColumn, ColumnFilter, TableRow } from "./table";
 export { tableCellSchema, appPathSchema, cellText, cellTone, cellHref } from "./table-cell";
 export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
+export { infiniteTableContract, searchValuesSchema, columnOrderSchema } from "./infinite-table";
+export type { SearchValues, ColumnOrder } from "./infinite-table";
 
 import { alertContract } from "./alert";
 import { buttonContract } from "./button";
 import { checkboxContract } from "./checkbox";
 import { filterBarContract } from "./filter-bar";
+import { infiniteTableContract } from "./infinite-table";
 import { inputContract } from "./input";
 import { labelContract } from "./label";
 import { multiSelectContract } from "./multi-select";
@@ -61,4 +64,5 @@ export const standardContracts = [
   multiSelectContract,
   tableContract,
   filterBarContract,
+  infiniteTableContract,
 ];

@@ -93,9 +93,13 @@ The basics every UI library has:
   (`info`, `success`, `warning`, `danger`) / `showIcon`; role=alert.
 - `table` — `rows` port (array of objects, default [], suggested path name
   `data`), optional `loading` and `columns` ports; settings `columns`
-  (`{ title, property, cell? }`), `rowKey`, `emptyText`; events `load` (once
-  when it appears), `row-selected { key, row }`, `link-clicked { href, key,
-property, row }`. A column's `cell` is one of the CONTRACT's predefined
+  (`{ title, property, cell?, filter?, sortable? }`), `rowKey`, `emptyText`;
+  events `load` (once when it appears), `row-selected { key, row }`,
+  `link-clicked { href, key, property, row }`. A column's `filter` (a list
+  of `values`, or `text`) and `sortable` are DATA a loader derives from the
+  server's description, for a kind that offers them in its headers (the
+  infinite table does; the table shows the columns and ignores both). A
+  column's `cell` is one of the CONTRACT's predefined
   kinds (`table-cell.ts`: `text`, `tag { tones }`, `link { to }`, `custom
 { name, params }`), so every implementation shows them the same; the
   helpers `cellText`, `cellTone`, `cellHref` are shared and unit-tested.
@@ -111,6 +115,22 @@ property, row }`. A column's `cell` is one of the CONTRACT's predefined
   table are in `packages/table-view/src/index.ts`).
 - `filter-bar` — `filters` port (`[{ id, label, options }]`, data the
   server describes) and `value` port; required `changed { value }`.
+- `infinite-table` — the `table` as an INFINITE LIST (its ports, events and
+  settings plus): the rows scroll inside the widget (`height` setting) and
+  when the end of the list comes into view while the `total` port says the
+  server has more, it emits `more { offset }` — once per set of rows, never
+  while loading — for a reaction to append the next rows (`table-view/load`
+  with `more: true`). Filtering and sorting live IN THE HEADERS: a column
+  whose `filter` is a list of values gets a list to tick (a filter icon),
+  one whose filter is text gets a SEARCH icon opening a box to type in; what
+  is chosen is controlled through the `filterIn` (`{ property: [values] }`)
+  and `filterLike` (`{ property: text }`) ports and every change emits
+  `filter-changed { filterIn, filterLike }` whole, empty ones left out — the
+  request's own groups. A `sortable` column sorts on a header click
+  (ascending, descending, none), controlled through `orderBy`, emitting
+  `sort-changed { orderBy }`. Implementations expose the scroll box as
+  `infinite-table-scroll` and a line "held of total" under the rows; the
+  `table` conformance set runs against them unchanged.
 
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and

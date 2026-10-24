@@ -31,8 +31,42 @@ describe("columnsOf", () => {
   it("shows the server's columns, in the server's order, under the server's headers", () => {
     const columns = columnsOf(metadata, {});
     expect(columns).toHaveLength(12);
-    expect(columns[0]).toEqual({ title: "Job ID", property: "job_id" });
-    expect(columns[1]).toEqual({ title: "Host", property: "host_name" });
+    expect(columns[0]).toMatchObject({ title: "Job ID", property: "job_id" });
+    expect(columns[1]).toMatchObject({ title: "Host", property: "host_name" });
+  });
+
+  it("says what each column's header can filter by, and whether the server sorts by it", () => {
+    const columns = columnsOf(metadata, {});
+    // Filterable with values: the values, as the filter bar offers them.
+    expect(columns[1]).toEqual({
+      title: "Host",
+      property: "host_name",
+      sortable: true,
+      filter: {
+        kind: "values",
+        options: ["DEHOSTQA401118", "local", "invalidCredentials", "DEHOSTQD401877", "FRNODEKP2XT5"].map((value) => ({
+          value,
+        })),
+      },
+    });
+    // Filterable without values: free text, searched with `filterLike`.
+    expect(columns[0]).toEqual({ title: "Job ID", property: "job_id", filter: { kind: "text" }, sortable: true });
+    // The server says nothing: no filter, no sorting.
+    expect(columns[2]).toEqual({ title: "State", property: "state" });
+  });
+
+  it("follows the page's word on filters in the headers too, and the server's on what is not filterable or sortable", () => {
+    const columns = columnsOf(metadata, {
+      filters: { job_id: false, state: { values: ["RUNNING", "STOPPING"] } },
+    });
+    expect(columns[0]).toEqual({ title: "Job ID", property: "job_id", sortable: true });
+    expect(columns[2]?.filter).toEqual({ kind: "values", options: [{ value: "RUNNING" }, { value: "STOPPING" }] });
+    const off = tableMetadataSchema.parse({
+      columnDefinitions: [{ id: "a", filterValues: ["x"], isFilterable: true, isSortable: true }],
+      enableFilter: false,
+      enableSorting: false,
+    });
+    expect(columnsOf(off, {})).toEqual([{ title: "a", property: "a" }]);
   });
 
   it("leaves out what the server hides, unless the page shows it", () => {
@@ -67,7 +101,7 @@ describe("columnsOf", () => {
         state: { title: "Result", cell: { kind: "tag", tones: { FAILED: "danger" } } },
       },
     });
-    expect(columns.find((column) => column.property === "job_id")).toEqual({
+    expect(columns.find((column) => column.property === "job_id")).toMatchObject({
       title: "Job ID",
       property: "job_id",
       cell: { kind: "link", to: "/jobs/{job_id}" },
@@ -77,7 +111,7 @@ describe("columnsOf", () => {
       property: "state",
       cell: { kind: "tag", tones: { FAILED: "danger" } },
     });
-    expect(columns.find((column) => column.property === "host_name")).toEqual({ title: "Host", property: "host_name" });
+    expect(columns.find((column) => column.property === "host_name")).not.toHaveProperty("cell");
   });
 });
 
@@ -122,24 +156,36 @@ describe("requestOf", () => {
         url: "/api/v1/view/jobs",
         request: { filterIn: exampleRequest.dataFilter.filterIn, orderBy: { job_id: "DESC" } },
       },
-      { page: 1, pageSize: 50, filterIn: {} },
+      { offset: 0, limit: 50, filterIn: {} },
       false,
     );
     expect(request).toEqual(exampleRequest);
   });
 
-  it("pages by limit and offset, and what the user chose replaces the declaration's for that column", () => {
+  it("asks by limit and offset, and what the user chose replaces the declaration's for that column", () => {
     const request = requestOf(
-      { url: "/x", request: { filterIn: { state: ["RUNNING", "STOPPING"], service: ["A"] } } },
-      { page: 3, pageSize: 20, filterIn: { state: ["RUNNING"] }, orderBy: { created_at: "ASC" } },
+      {
+        url: "/x",
+        request: { filterIn: { state: ["RUNNING", "STOPPING"], service: ["A"] }, filterLike: { build: "3." } },
+      },
+      {
+        offset: 40,
+        limit: 20,
+        filterIn: { state: ["RUNNING"] },
+        filterLike: { host_name: "qa", service: "" },
+        orderBy: { created_at: "ASC" },
+      },
       true,
     );
     expect(request.dataFilter).toMatchObject({
       limit: 20,
       offset: 40,
       filterIn: { state: ["RUNNING"], service: ["A"] },
+      // What the user typed joins the declaration's; an emptied box is not sent.
+      filterLike: { build: "3.", host_name: "qa" },
       orderBy: { created_at: "ASC" },
     });
+    expect(request.dataFilter.filterLike).not.toHaveProperty("service");
     expect(request.metadata).toBe(true);
   });
 });
@@ -294,6 +340,42 @@ describe("the loader", () => {
     expect(requests.map((request) => request.dataFilter.offset)).toEqual([20, 10]);
     expect(store.get("t.page")).toBe(3);
     expect(store.get("t.data")).toEqual([{ id: "row" }]);
+  });
+
+  it("sends what the headers searched for, from <into>.filterLike", async () => {
+    const { requests, transport } = exampleServer();
+    const store = createStore({ jobs: { filterLike: { host_name: "qa" } } });
+    await createTableViewLoader(transport)(store, { url: "/api/v1/view/jobs", into: "jobs" });
+    expect(requests[0]?.dataFilter.filterLike).toEqual({ host_name: "qa" });
+  });
+
+  it("with more: asks for the rows after the ones held and appends them; the page stays", async () => {
+    const all = Array.from({ length: 12 }, (_, index) => ({ id: String(index + 1) }));
+    const requests: TableViewRequest[] = [];
+    const transport: TableViewTransport = async (_url, request) => {
+      requests.push(request);
+      const { offset, limit } = request.dataFilter;
+      return { totalRecords: all.length, data: all.slice(offset, offset + limit) };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    await load(store, { url: "/x", into: "t", pageSize: 5 });
+    expect(store.get<unknown[]>("t.data")).toHaveLength(5);
+    await load(store, { into: "t", more: true });
+    expect(requests[1]?.dataFilter).toMatchObject({ offset: 5, limit: 5 });
+    expect(store.get<unknown[]>("t.data")).toHaveLength(10);
+    await load(store, { into: "t", more: true });
+    expect(store.get<unknown[]>("t.data")).toHaveLength(12);
+    expect(store.get("t.total")).toBe(12);
+    expect(store.get("t.page")).toBe(1);
+    // Nothing more: the rows stay the very same array, so a list watching them asks no further.
+    const held = store.get("t.data");
+    await load(store, { into: "t", more: true });
+    expect(requests[3]?.dataFilter.offset).toBe(12);
+    expect(store.get("t.data")).toBe(held);
+    // A plain re-request replaces them, from the first page.
+    await load(store, { into: "t" });
+    expect(store.get<unknown[]>("t.data")).toHaveLength(5);
   });
 });
 

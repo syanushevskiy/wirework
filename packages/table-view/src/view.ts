@@ -6,8 +6,13 @@
  * (reactions and configuration only select).
  */
 import { z } from "zod";
-import { tableCellSchema, type FilterDefinition, type TableColumn } from "@wirework/widget-contracts";
-import type { SortDirection, TableMetadata, TableViewRequest } from "./api";
+import {
+  tableCellSchema,
+  type ColumnFilter,
+  type FilterDefinition,
+  type TableColumn,
+} from "@wirework/widget-contracts";
+import type { ColumnDefinition, SortDirection, TableMetadata, TableViewRequest } from "./api";
 
 const columnOverrideSchema = z
   .object({
@@ -72,32 +77,19 @@ export type TableView = z.infer<typeof tableViewSchema>;
 
 /** What the user asked for, as the widgets' reactions left it in the store under `<into>`. */
 export interface TableViewQuery {
-  /** 1-based. */
-  page: number;
-  pageSize: number;
-  /** Chosen in the filter bar: { <column id>: [values] }. */
+  /** Rows to skip: a page's first row, or the rows an infinite list already holds. */
+  offset: number;
+  /** Rows to ask for. */
+  limit: number;
+  /** Chosen in the filter bar or the column headers: { <column id>: [values] }. */
   filterIn: Record<string, string[]>;
+  /** Typed in the column headers: { <column id>: "text" }; empty texts are not sent. */
+  filterLike?: Record<string, string> | undefined;
   orderBy?: Record<string, SortDirection> | undefined;
 }
 
 /** Rows per request when neither the store nor the declaration says. */
 export const DEFAULT_PAGE_SIZE = 50;
-
-/** The columns a table shows: the server's, in the server's order, as the declaration changes them. */
-export function columnsOf(metadata: TableMetadata, view: Pick<TableView, "columns">): TableColumn[] {
-  return metadata.columnDefinitions
-    .filter((definition) => !(view.columns?.[definition.id]?.hidden ?? definition.isHidden === true))
-    .map((definition) => {
-      const override = view.columns?.[definition.id];
-      return {
-        title: override?.title ?? definition.headerName ?? definition.id,
-        // The table reads a row by dot path; a column id is a plain field name.
-        property: definition.id,
-        // How the cells are shown is the page's word alone: the server describes data, not looks.
-        ...(override?.cell === undefined ? {} : { cell: override.cell }),
-      };
-    });
-}
 
 /** Values a filter can offer: text, without the server's null ("no value") and without repeats. */
 function offered(values: readonly unknown[] | null | undefined): string[] {
@@ -108,41 +100,99 @@ function offered(values: readonly unknown[] | null | undefined): string[] {
 }
 
 /**
+ * The VALUES a column can be filtered by, as the declaration changes them:
+ * the page's own, else the server's `filterValues` unless it says the
+ * column, or the table, is not filterable. Empty: no values filter.
+ */
+function valuesOf(metadata: TableMetadata, definition: ColumnDefinition, view: Pick<TableView, "filters">): string[] {
+  const override = view.filters?.[definition.id];
+  if (override === false) return [];
+  const fromServer =
+    metadata.enableFilter === false || definition.isFilterable === false ? [] : offered(definition.filterValues);
+  return override?.values ?? fromServer;
+}
+
+/**
+ * What a column's HEADER can filter by (the infinite table): the values
+ * where there are any; else free text where the server calls the column
+ * filterable without offering values (`filterLike`) and the page did not
+ * drop the filter; else nothing.
+ */
+function headerFilterOf(
+  metadata: TableMetadata,
+  definition: ColumnDefinition,
+  view: Pick<TableView, "filters">,
+): ColumnFilter | undefined {
+  const values = valuesOf(metadata, definition, view);
+  if (values.length > 0) return { kind: "values", options: values.map((value) => ({ value })) };
+  const text =
+    view.filters?.[definition.id] !== false && metadata.enableFilter !== false && definition.isFilterable === true;
+  return text ? { kind: "text" } : undefined;
+}
+
+/**
+ * The columns a table shows: the server's, in the server's order, as the
+ * declaration changes them — each saying what its header can filter by and
+ * whether the server sorts by it, for a table that offers both there.
+ */
+export function columnsOf(metadata: TableMetadata, view: Pick<TableView, "columns" | "filters">): TableColumn[] {
+  return metadata.columnDefinitions
+    .filter((definition) => !(view.columns?.[definition.id]?.hidden ?? definition.isHidden === true))
+    .map((definition) => {
+      const override = view.columns?.[definition.id];
+      const filter = headerFilterOf(metadata, definition, view);
+      const sortable = metadata.enableSorting !== false && definition.isSortable === true;
+      return {
+        title: override?.title ?? definition.headerName ?? definition.id,
+        // The table reads a row by dot path; a column id is a plain field name.
+        property: definition.id,
+        // How the cells are shown is the page's word alone: the server describes data, not looks.
+        ...(override?.cell === undefined ? {} : { cell: override.cell }),
+        ...(filter === undefined ? {} : { filter }),
+        ...(sortable ? { sortable } : {}),
+      };
+    });
+}
+
+/**
  * The filters a filter bar shows: one per column the server gives
  * `filterValues` for (unless it says the column, or the table, is not
  * filterable), as the declaration changes them — removed, relabelled, or
- * with values of the page's own (also where the server offers none).
+ * with values of the page's own (also where the server offers none). A
+ * text filter has no place in a bar: it lives in a column header.
  */
 export function filtersOf(metadata: TableMetadata, view: Pick<TableView, "columns" | "filters">): FilterDefinition[] {
   return metadata.columnDefinitions.flatMap((definition) => {
-    const override = view.filters?.[definition.id];
-    if (override === false) return [];
-    const fromServer =
-      metadata.enableFilter === false || definition.isFilterable === false ? [] : offered(definition.filterValues);
-    const values = override?.values ?? fromServer;
+    const values = valuesOf(metadata, definition, view);
     if (values.length === 0) return [];
+    const override = view.filters?.[definition.id];
     return [
       {
         id: definition.id,
-        label: override?.label ?? view.columns?.[definition.id]?.title ?? definition.headerName ?? definition.id,
+        label:
+          (override === false ? undefined : override?.label) ??
+          view.columns?.[definition.id]?.title ??
+          definition.headerName ??
+          definition.id,
         options: values.map((value) => ({ value })),
       },
     ];
   });
 }
 
-/** The request for one page of the view. What the user chose for a column replaces the declaration's for it. */
+/** The request for some rows of the view. What the user chose for a column replaces the declaration's for it. */
 export function requestOf(view: TableView, query: TableViewQuery, withMetadata: boolean): TableViewRequest {
   const base = view.request ?? {};
+  const searched = Object.fromEntries(Object.entries(query.filterLike ?? {}).filter(([, text]) => text !== ""));
   return {
     dataFilter: {
       filterBetween: base.filterBetween ?? {},
       filterEqual: base.filterEqual ?? {},
       filterIn: { ...base.filterIn, ...query.filterIn },
-      filterLike: base.filterLike ?? {},
+      filterLike: { ...base.filterLike, ...searched },
       filterTimeDiffGt: base.filterTimeDiffGt ?? {},
-      limit: query.pageSize,
-      offset: (query.page - 1) * query.pageSize,
+      limit: query.limit,
+      offset: query.offset,
       orderBy: query.orderBy ?? base.orderBy ?? {},
     },
     metadata: withMetadata,

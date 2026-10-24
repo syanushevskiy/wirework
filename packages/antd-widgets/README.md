@@ -16,11 +16,16 @@ import "@wirework/antd-widgets/styles.css";
 - One export per widget: `antdLabel`, `antdTag`, `antdAlert`,
   `antdProgress`, `antdButton`, `antdCheckbox`, `antdInput`, `antdSelect`,
   `antdMultiSelect`, `antdPagination`, `antdRefresher`, `antdTable`,
-  `antdFilterBar`, plus `antdCounter` and `antdEcho` (this package's own
-  kinds); `createAntdTable({ cells })` (`AntdTableOptions`) is the table
-  with your renderers (`TableCellProps`, `TableCellRenderer`,
-  `TableCellRenderers`). The events each widget emits are exported as types
-  (`ButtonEvents`, `InputEvents`, `TableEvents`, …).
+  `antdInfiniteTable`, `antdFilterBar`, plus `antdCounter` and `antdEcho`
+  (this package's own kinds); `createAntdTable({ cells })` and
+  `createAntdInfiniteTable({ cells })` (`AntdTableOptions`) are the two
+  tables with your renderers (`TableCellProps`, `TableCellRenderer`,
+  `TableCellRenderers`). The infinite table scrolls inside its own box, asks
+  for more rows at its end, and offers each column's filter in its header —
+  antd's list of values, or a search icon for free text — and sorting on a
+  header click. The events each widget emits are exported as types
+  (`ButtonEvents`, `InputEvents`, `TableEvents`, `InfiniteTableEvents`, …).
+  Peer: `@ant-design/icons` (the search icon), antd's own icon set.
 - `validate` (`ValidationRule`, `ValidationResult`) — the input contract's
   rules as this package applies them; `LABEL_TONES` and `VALIDATION_RULES`
   re-exported for convenience.

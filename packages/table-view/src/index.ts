@@ -3,7 +3,9 @@
  * doc/tableApi/): a table whose columns, and the filters that go with it,
  * are DESCRIBED BY THE SERVER. A page declares only the URL (plus what it
  * wants different); the action asks the server, and the table, the filter
- * bar and the pagination bind plain store paths.
+ * bar and the pagination bind plain store paths — or the infinite table
+ * alone, whose headers filter (`filterIn`, `filterLike`) and sort
+ * (`orderBy`) and whose end asks for `more` rows to append.
  *
  * Customizing such a table has levels, from nothing to code:
  *  0. automatic — order, headers and hidden columns from the metadata;

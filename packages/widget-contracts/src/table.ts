@@ -6,12 +6,18 @@
  * - Each row's identity is the value of its `rowKey` property (default
  *   "id") — never its position, so a re-sorted or re-fetched page keeps
  *   rows apart. A row without that property falls back to its position.
- * - Columns are `{ title, property, cell? }`, the property a dot path into
- *   the row ("status.state"), the cell how its value is shown (table-cell.ts:
- *   text, a tag, a link, or a renderer the host registered). They come from
- *   the optional `columns` port — a store path, so a host can load them (a
- *   table the server describes) — and fall back to the `columns` setting.
- *   Without either, one column per top-level field of the first row.
+ * - Columns are `{ title, property, cell?, filter?, sortable? }`, the
+ *   property a dot path into the row ("status.state"), the cell how its
+ *   value is shown (table-cell.ts: text, a tag, a link, or a renderer the
+ *   host registered). `filter` says what the column can be filtered by —
+ *   a list of values, or free text — and `sortable` that the server sorts
+ *   by it: DATA a loader derives from the server's description, for an
+ *   implementation that offers filtering and sorting in its headers (the
+ *   `infinite-table` kind does; this one shows the columns and ignores
+ *   both). They come from the optional `columns` port — a store path, so a
+ *   host can load them (a table the server describes) — and fall back to
+ *   the `columns` setting. Without either, one column per top-level field
+ *   of the first row.
  * - A click on a row EMITS `row-selected` with the row's key and the row
  *   itself, so a reaction stores either (`from: "key"`, `from: "row.name"`).
  * - A plain click on a LINK cell EMITS `link-clicked` with the address
@@ -30,8 +36,20 @@
  * per mount (React's StrictMode mounts twice).
  */
 import { z } from "zod";
-import { defineContract } from "@wirework/schema";
+import { defineContract, type WidgetEvents, type WidgetIO } from "@wirework/schema";
+import { choiceOptionsSchema } from "./select";
 import { appPathSchema, tableCellSchema } from "./table-cell";
+
+/**
+ * What a column can be filtered by: one or more of a list of VALUES (the
+ * request's `filterIn`), or free TEXT the user types (`filterLike`) — the
+ * two groups of the view table API a header can ask for.
+ */
+export const columnFilterSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("values"), options: choiceOptionsSchema }).strict(),
+  z.object({ kind: z.literal("text") }).strict(),
+]);
+export type ColumnFilter = z.infer<typeof columnFilterSchema>;
 
 export const tableColumnSchema = z
   .object({
@@ -41,6 +59,10 @@ export const tableColumnSchema = z
     property: z.string().min(1),
     /** How the value is shown; text when absent. */
     cell: tableCellSchema.optional(),
+    /** What the column can be filtered by; nothing when absent. */
+    filter: columnFilterSchema.optional(),
+    /** Whether the server sorts by this column; not when absent. */
+    sortable: z.boolean().optional(),
   })
   .strict();
 export type TableColumn = z.infer<typeof tableColumnSchema>;
@@ -48,65 +70,75 @@ export type TableColumn = z.infer<typeof tableColumnSchema>;
 export const tableRowsSchema = z.array(z.record(z.string(), z.unknown()));
 export type TableRow = z.infer<typeof tableRowsSchema>[number];
 
+/**
+ * What every table kind READS — shared with `infinite-table`, which adds
+ * ports of its own, so a loader pointed at one root fills either.
+ */
+export const tablePorts = {
+  rows: {
+    description: "Store path holding the rows (an array of objects)",
+    value: tableRowsSchema,
+    default: [],
+    // A generated path ends in `data`, not `rows`: loaders put rows at
+    // `<into>.data` (next to `.columns` and `.loading`, which already
+    // match), so a loader pointed at `<page>.table` fills this table.
+    suggestedName: "data",
+  },
+  loading: {
+    description: "Store path that is true while rows are being fetched (optional; shows a spinner over them)",
+    value: z.boolean(),
+    required: false,
+    default: false,
+  },
+  columns: {
+    description:
+      "Store path holding the columns [{ title, property }] (optional; falls back to the setting) — for a table the SERVER describes",
+    value: z.array(tableColumnSchema),
+    required: false,
+  },
+} satisfies WidgetIO["inputs"];
+
+/** What every table kind EMITS: its appearance, a row click, a link click. */
+export const tableEvents = {
+  load: {
+    description: "Fired once when the table appears — call the action that loads its data",
+    payload: z.object({}),
+  },
+  "row-selected": {
+    description: "Fired when the user clicks a row; carries its key and the row",
+    payload: z.object({ key: z.string(), row: z.record(z.string(), z.unknown()) }),
+    primary: "key",
+  },
+  "link-clicked": {
+    description: "Fired when the user clicks a link cell; carries the address — call nav/follow",
+    payload: z.object({
+      href: appPathSchema,
+      key: z.string(),
+      property: z.string(),
+      row: z.record(z.string(), z.unknown()),
+    }),
+    primary: "href",
+  },
+} satisfies WidgetEvents;
+
+/** The settings every table kind has. */
+export const tableSettings = {
+  columns: z
+    .array(tableColumnSchema)
+    .default([])
+    .describe(
+      'Columns { title, property, cell? }; empty = one per field of the first row. cell: { "kind": "tag", "tones": { "Failed": "danger" } } or { "kind": "link", "to": "/demo/runs/{id}" }',
+    ),
+  rowKey: z.string().min(1).default("id").describe("Row property holding each row's stable identity"),
+  emptyText: z.string().default("No rows").describe("Shown when there are no rows"),
+};
+
 export const tableContract = defineContract({
   kind: "table",
   description: "Rows from the store in columns; emits the row a user clicks",
-  io: {
-    inputs: {
-      rows: {
-        description: "Store path holding the rows (an array of objects)",
-        value: tableRowsSchema,
-        default: [],
-        // A generated path ends in `data`, not `rows`: loaders put rows at
-        // `<into>.data` (next to `.columns` and `.loading`, which already
-        // match), so a loader pointed at `<page>.table` fills this table.
-        suggestedName: "data",
-      },
-      loading: {
-        description: "Store path that is true while rows are being fetched (optional; shows a spinner over them)",
-        value: z.boolean(),
-        required: false,
-        default: false,
-      },
-      columns: {
-        description:
-          "Store path holding the columns [{ title, property }] (optional; falls back to the setting) — for a table the SERVER describes",
-        value: z.array(tableColumnSchema),
-        required: false,
-      },
-    },
-  },
-  events: {
-    load: {
-      description: "Fired once when the table appears — call the action that loads its data",
-      payload: z.object({}),
-    },
-    "row-selected": {
-      description: "Fired when the user clicks a row; carries its key and the row",
-      payload: z.object({ key: z.string(), row: z.record(z.string(), z.unknown()) }),
-      primary: "key",
-    },
-    "link-clicked": {
-      description: "Fired when the user clicks a link cell; carries the address — call nav/follow",
-      payload: z.object({
-        href: appPathSchema,
-        key: z.string(),
-        property: z.string(),
-        row: z.record(z.string(), z.unknown()),
-      }),
-      primary: "href",
-    },
-  },
-  settings: z.object({
-    columns: z
-      .array(tableColumnSchema)
-      .default([])
-      .describe(
-        'Columns { title, property, cell? }; empty = one per field of the first row. cell: { "kind": "tag", "tones": { "Failed": "danger" } } or { "kind": "link", "to": "/demo/runs/{id}" }',
-      ),
-    rowKey: z.string().min(1).default("id").describe("Row property holding each row's stable identity"),
-    emptyText: z.string().default("No rows").describe("Shown when there are no rows"),
-  }),
+  io: { inputs: tablePorts },
+  events: tableEvents,
+  settings: z.object(tableSettings),
   preview: {
     seed: {
       preview: {

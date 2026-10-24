@@ -25,6 +25,7 @@
     "@wirework/table-view": "workspace:*",
     "@wirework/view-data-models-examples": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
+    "@ant-design/icons": "catalog:",
     "antd": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
