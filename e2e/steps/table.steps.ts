@@ -40,6 +40,15 @@ When("I scroll the infinite table to its top", async ({ page }) => {
     });
 });
 
+/** The keyboard scrolls the box too: End, Home, PageDown, PageUp — the box is focusable. */
+When("I press {string} in the infinite table", async ({ page }, key: string) => {
+  await infiniteTable(page).getByTestId("infinite-table-scroll").press(key);
+});
+
+Then("the last table row is {string}", async ({ page }, key: string) => {
+  await expect(live(page).getByTestId("table-row").last()).toHaveAttribute("data-row-key", key);
+});
+
 /** The rows the list HOLDS (`data-held`) — more than it renders once they outgrow its window. */
 Then("the list holds {int} rows", async ({ page }, count: number) => {
   await expect(infiniteTable(page)).toHaveAttribute("data-held", String(count));

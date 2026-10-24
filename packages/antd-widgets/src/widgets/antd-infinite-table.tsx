@@ -56,12 +56,13 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         data-total={view.total}
         data-window={view.window}
       >
-        {/* The box the rows scroll in: as tall as the setting says, at most. */}
+        {/* The box the rows scroll in: as tall as the setting says, at most. Focusable, so the keyboard scrolls it too (Page Down, End, Home). */}
         <div
           ref={view.scrollRef}
           className="ww-infinite-table__scroll"
           data-testid="infinite-table-scroll"
           style={{ maxHeight: viewModel.height }}
+          tabIndex={0}
         >
           <RowSpaceProvider value={view.space}>
             <Table

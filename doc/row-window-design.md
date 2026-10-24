@@ -122,14 +122,14 @@ groups. `useTable` and `useInfiniteTable` both call it.
 
 ## Follow-up (not built)
 
-A row height per row (measured and remembered) for lists whose rows wrap;
-keyboard scrolling of the window (Page Down moves the box, the window
-follows — it works, but no scenario says so).
+A row height per row (measured and remembered) for lists whose rows wrap.
 
 ## Tested
 
 `e2e/features/infinite-table.feature` (the window: held vs rendered, back
-to the top); `table-view.feature` ("A header filter on the paged table");
+to the top; the keyboard: the box is focusable, End asks for more and
+reaches the end, Home goes back); `table-view.feature` ("A header filter on
+the paged table");
 `row-window.test.ts` (the pure function); the `antd-infinite-table` stories
 (`Window`: two hundred rows, fewer rendered, the window follows the
 scroll) and the `antd-table` stories (`HeaderFilters`).

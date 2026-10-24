@@ -32,6 +32,21 @@ Feature: Infinite list — a table that grows as you scroll, with its filters in
     When I scroll the infinite table to its top
     Then the first table row is "123456"
 
+  Scenario: The keyboard scrolls the list too — End asks for more, End again reaches the end, Home goes back
+    Given I open the "history" page
+    Then the table has 10 rows
+    # The box takes the focus; End scrolls it to its bottom, where the end line asks for more.
+    When I press "End" in the infinite table
+    Then the list holds 20 rows
+    When I press "End" in the infinite table
+    Then the list holds 23 rows
+    # The real end now: the last run held is the last one rendered, and the window is still a window.
+    When I press "End" in the infinite table
+    Then the last table row is "123478"
+    And the infinite table renders only a window of its rows
+    When I press "Home" in the infinite table
+    Then the first table row is "123456"
+
   Scenario: Nothing is shown until the server answers, and the end asks for nothing yet
     Given the server is slow to answer
     And I open the "history" page
