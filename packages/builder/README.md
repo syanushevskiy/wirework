@@ -28,13 +28,14 @@ store from them — nothing in this package restores anything.
 
 ## What a host provides
 
-| To                                                       | What                                                                                                                                                       |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useCommit`                                              | the store, `save`                                                                                                                                          |
-| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace` |
-| `useBuilder`                                             | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded`                                                      |
-| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions (and, for the builder, `addLock`: why Add is not offered)                                                           |
-| `usePageToolbar`                                         | the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target |
+| To                                                       | What                                                                                                                                                        |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useCommit`                                              | the store, `save`                                                                                                                                           |
+| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace`  |
+| `useBuilder`                                             | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded`                                                       |
+| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions (and, for the builder, `addLock`: why Add is not offered)                                                            |
+| `usePageToolbar`                                         | the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target  |
+| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, whether the overlay is on, the shown view (`plan.view`), `cancelEditing` |
 
 Every hook takes ONE input object. `canEdit` is required everywhere a hook
 can write: the builder never assumes this user may change pages, and it
@@ -51,9 +52,26 @@ engine's lock (`EngineLock`: `"widgets-placed"`, `"no-template"`,
 `"configured"`), the host tells `useWidgetBuilder` why Add is locked
 (`AddLock`: `"permission"`, `"editing"`, `"user-view"`) and `usePageToolbar`
 why the page cannot be edited (`EditLock`: `"permission"`, `"loading"`) or
-the overlay cannot be turned on (`OverlayLock`: `"no-widgets"`). The UI says
-them in its own words; `@wirework/antd-builder` ships English defaults a host
-can replace.
+the overlay cannot be turned on (`OverlayLock`: `"no-widgets"`), and
+`usePageViews` why no view can be chosen (`ViewsLock`: `"overlay-off"`,
+`"no-page"`) and why a view could not be made (`ViewProblem`: an empty,
+dotted or taken name, not a view file, another page's, a template the
+engine refuses). The UI says them in its own words; `@wirework/antd-builder`
+ships English defaults a host can replace.
+
+## Page views
+
+A page's VIEWS (doc/page-views-design.md) are its templates as the user sees
+them: the prebuilt ones under `viewModels.pages.<page>` and the user's own
+under `userViewModels.pages.<page>.templates`; the kind is where a view
+lives, nothing is stored. `pageViews(trees, page)` lists them; `usePageViews`
+chooses one (a preference — no permission), and makes, renames, deletes,
+shares and imports them (gated by the edit lock). Save as and Import write
+where the edit target says: the user's own with the overlay on, a prebuilt
+view with it off. A view travels as a JSON file — `pageViewFile`,
+`exportPageView`, `parsePageViewFile` (`PageViewFile`: kind
+`wirework-page-view`, version 1, page, name, template) — so users share
+layouts and your application decides where the files go.
 
 ## Hooks
 
@@ -71,4 +89,7 @@ can replace.
 - `usePageToolbar` — what the toolbar above a page offers: the engine
   choice, Edit / Save / Cancel with the pending count, the overlay switch and
   where edits go, each lock as a reason.
+- `usePageViews` — the page's views: the list with each one's kind, the
+  shown one, choosing another, Save as / Rename / Delete / Share / Import and
+  the panel they open.
 - `usePathCombobox` — autocomplete over existing store paths.

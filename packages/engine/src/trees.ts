@@ -45,6 +45,16 @@ export function updatePageTemplate(
   };
 }
 
+/** Write one BASE page template (a prebuilt view), creating the page's template map when absent. */
+export function putPageTemplate(
+  viewModels: ViewModels,
+  page: string,
+  name: string,
+  template: PageViewModel,
+): ViewModels {
+  return { ...viewModels, pages: { ...viewModels.pages, [page]: { ...viewModels.pages?.[page], [name]: template } } };
+}
+
 /** One page of the USER overlay, rebuilt immutably (created when absent). */
 function updateUserPage(
   userViewModels: UserViewModels,
@@ -75,6 +85,58 @@ export function updateUserPageTemplate(
     const templates = userPage.templates ?? {};
     const own = userPage.view === name ? templates[name] : undefined;
     return { ...userPage, view: name, templates: { ...templates, [name]: update(own ?? shown) } };
+  });
+}
+
+/** Write one of the user's OWN page templates and select it as the page view. */
+export function putUserPageTemplate(
+  userViewModels: UserViewModels,
+  page: string,
+  name: string,
+  template: PageViewModel,
+): UserViewModels {
+  return updateUserPage(userViewModels, page, (userPage) => ({
+    ...userPage,
+    view: name,
+    templates: { ...userPage.templates, [name]: template },
+  }));
+}
+
+/** Select the page view (a base or a user template by name); `undefined` goes back to the page's default. */
+export function selectUserPageView(
+  userViewModels: UserViewModels,
+  page: string,
+  name: string | undefined,
+): UserViewModels {
+  return updateUserPage(userViewModels, page, ({ view: _previous, ...userPage }) => ({
+    ...userPage,
+    ...(name === undefined ? {} : { view: name }),
+  }));
+}
+
+/** Rename one of the user's OWN templates; the selection follows it. Unknown name -> same tree. */
+export function renameUserPageTemplate(
+  userViewModels: UserViewModels,
+  page: string,
+  from: string,
+  to: string,
+): UserViewModels {
+  const templates = userViewModels.pages?.[page]?.templates;
+  const moved = templates?.[from];
+  if (templates === undefined || moved === undefined) return userViewModels;
+  return updateUserPage(userViewModels, page, (userPage) => {
+    const { [from]: _renamed, ...rest } = templates;
+    return { ...userPage, ...(userPage.view === from ? { view: to } : {}), templates: { ...rest, [to]: moved } };
+  });
+}
+
+/** Drop one of the user's OWN templates; a page that showed it goes back to its default. Unknown name -> same tree. */
+export function removeUserPageTemplate(userViewModels: UserViewModels, page: string, name: string): UserViewModels {
+  const templates = userViewModels.pages?.[page]?.templates;
+  if (templates?.[name] === undefined) return userViewModels;
+  return updateUserPage(userViewModels, page, ({ view, ...userPage }) => {
+    const { [name]: _removed, ...rest } = templates;
+    return { ...userPage, ...(view === undefined || view === name ? {} : { view }), templates: rest };
   });
 }
 

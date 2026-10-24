@@ -19,7 +19,12 @@ export { boundPaths, compatibleStorePaths, suggestedInputPaths } from "./paths";
 export { errorText, issuesText, problemText } from "./messages";
 export {
   pageTemplates,
+  putPageTemplate,
+  putUserPageTemplate,
   removeUserCell,
+  removeUserPageTemplate,
+  renameUserPageTemplate,
+  selectUserPageView,
   updatePageTemplate,
   updateUserCellSettings,
   updateUserPageTemplate,

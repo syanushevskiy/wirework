@@ -8,7 +8,7 @@
  * comes from the headless package's hooks (doc/guidelines.md).
  *
  * A host that has its own design system uses @wirework/builder directly and
- * writes these five components itself; this package is then the reference
+ * writes these six components itself; this package is then the reference
  * implementation of what they must do.
  *
  * Import `@wirework/antd-builder/styles.css` once, after antd's reset and
@@ -25,6 +25,9 @@ export type { WidgetBuilderProps } from "./widget-builder";
 
 export { DEFAULT_PAGE_TOOLBAR_TEXTS, PageToolbar } from "./page-toolbar";
 export type { PageToolbarProps, PageToolbarTexts } from "./page-toolbar";
+
+export { DEFAULT_PAGE_VIEW_TEXTS, PageViews, viewProblemText } from "./page-views";
+export type { PageViewsProps, PageViewTexts } from "./page-views";
 
 export { WidgetPalette } from "./widget-palette";
 export type { WidgetPaletteProps } from "./widget-palette";

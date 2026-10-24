@@ -136,10 +136,12 @@ The playground routes every op by an EDIT TARGET:
 
 - **user** (a page with the user overlay on — the demo as it opens; the
   builder once it holds a widget and the visitor turns the overlay on):
-  page-template ops edit what the user SEES — the user's OWN template
-  (`userViewModels.pages.<page>.templates["my-own"]`, the sketch's "my own"
-  pill) while it is the page `view`, otherwise a fresh copy of the shown
-  template, selected as the view. Widget edits become per-cell SETTINGS
+  page-template ops edit what the user SEES — one of the user's OWN
+  templates (`userViewModels.pages.<page>.templates.<name>`) in place while
+  it is the page `view`, otherwise a fresh copy of the shown prebuilt
+  template named "my-own" (the sketch's "my own" pill; "my-own-2", … when
+  taken), selected as the view (doc/page-views-design.md: the views list,
+  Save as, Rename, Delete, Share, Import). Widget edits become per-cell SETTINGS
   overlays (`...cells[<cellId>].settings[<template>]`). The overlay never
   carries `inputs` or `on` — the schema rejects them — so a user's view
   cannot rebind a widget, call an action or write a data path the page
@@ -156,9 +158,9 @@ On the builder the overlay is UNAVAILABLE until the shared page holds a
 widget (an empty page has nothing to personalise), and a visit starts with
 it off: building is work on the shared page. ADDING a widget always changes
 the shared page, so Add waits while the overlay is on — the overlay carries
-settings, view and layout only. Known consequence: "my-own" is a COPY of
-the layout, so a widget added to the shared page afterwards does not show
-in it ("personal views are copies").
+settings, view and layout only. Known consequence: a user's view is a COPY
+of the layout, so a widget added to the shared page afterwards does not
+show in it ("personal views are copies").
 
 `pageTemplates(viewModels, userViewModels, page)` layers user templates over
 base ones (same name → user wins), and both resolve and boot validation use

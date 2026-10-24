@@ -11,9 +11,11 @@
  * Edit target (doc/layout-engines-design.md, "Where edits go"):
  *  - "user": a page with the user overlay on — the demo as it opens, the
  *    builder once it holds a widget and the visitor turns the overlay on.
- *    Page-template ops copy the shown template into the user's OWN template
- *    (USER_PAGE_TEMPLATE) and edit that; widget edits become per-cell
- *    settings overlays. The base view models stay untouched.
+ *    Page-template ops edit what the user SEES: one of their own views in
+ *    place, or a prebuilt one as a fresh copy named USER_PAGE_TEMPLATE (the
+ *    first free "my-own", "my-own-2", …) that becomes the page view
+ *    (doc/page-views-design.md); widget edits become per-cell settings
+ *    overlays. The base view models stay untouched.
  *  - "base": the overlay is off (how the builder opens). Ops rewrite the
  *    view models — the shared page.
  *
@@ -43,13 +45,28 @@ import {
   type WidgetRegistry,
 } from "@wirework/engine";
 import { usePagePlan } from "@wirework/react";
+import { freeTemplateName } from "./page-views";
 import type { Commit, EditableTrees } from "./use-commit";
 import type { EditableCell } from "./use-widget-editor";
 import type { WidgetSettings } from "./form-drafts";
 
 export type EditTarget = "user" | "base";
-/** Name of the user's own page template (the sketch's "my own" pill). */
+/** Name of the user's own copy of a prebuilt page template (the sketch's "my own" pill); numbered when taken. */
 export const USER_PAGE_TEMPLATE = "my-own";
+
+/**
+ * Where a user-target page op lands: the shown view itself when it is one
+ * of the user's own, else a free name for the copy it makes of the shown
+ * prebuilt one.
+ */
+function userTemplateFor(trees: EditableTrees, page: string, shown: string): string {
+  const own = trees.userViewModels.pages?.[page]?.templates ?? {};
+  if (Object.hasOwn(own, shown)) return shown;
+  return freeTemplateName(
+    USER_PAGE_TEMPLATE,
+    Object.keys(pageTemplates(trees.viewModels, trees.userViewModels, page) ?? {}),
+  );
+}
 
 /**
  * What Save did: the session's changes were COMMITTED (and handed to the
@@ -180,7 +197,7 @@ export function usePageEditing({
           userViewModels: updateUserPageTemplate(
             source.userViewModels,
             page,
-            USER_PAGE_TEMPLATE,
+            userTemplateFor(source, page, view),
             current.template,
             update,
           ),

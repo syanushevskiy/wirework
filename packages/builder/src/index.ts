@@ -24,7 +24,7 @@
  * Contract proof: depends on @wirework/schema, @wirework/engine and the
  * @wirework/react adapter only, with react as a peer.
  */
-export type { AddLock, EditLock, EngineLock, OverlayLock } from "./locks";
+export type { AddLock, EditLock, EngineLock, OverlayLock, ViewProblem, ViewsLock } from "./locks";
 
 export { commitTrees, useCommit } from "./use-commit";
 export type { Commit, CommitInput, EditableTrees, SaveError, SaveTrees, TreesChange } from "./use-commit";
@@ -37,6 +37,20 @@ export type { EditTarget, PageEditingInput, SaveOutcome } from "./use-page-editi
 
 export { usePageToolbar } from "./use-page-toolbar";
 export type { PageToolbarInput, PageToolbarState } from "./use-page-toolbar";
+
+export {
+  PAGE_VIEW_FILE_KIND,
+  PAGE_VIEW_FILE_VERSION,
+  exportPageView,
+  freeTemplateName,
+  pageViewFile,
+  pageViews,
+  parsePageViewFile,
+  templateNameProblem,
+} from "./page-views";
+export type { PageViewChoice, PageViewFile, PageViewKind } from "./page-views";
+export { usePageViews } from "./use-page-views";
+export type { PageViewPanel, PageViewPanelKind, PageViewsInput, PageViewsState } from "./use-page-views";
 
 export { useWidgetForm } from "./use-widget-form";
 export type { WidgetFormInput, WidgetFormState } from "./use-widget-form";

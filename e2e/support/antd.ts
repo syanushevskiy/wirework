@@ -46,3 +46,13 @@ export const headerFilterDropdown = (page: Page) =>
 /** One value of the open filter dropdown's list: antd renders each as a menu item holding a checkbox and the text. */
 export const headerFilterValue = (page: Page, text: string) =>
   headerFilterDropdown(page).getByRole("menuitem", { name: text });
+
+/** A button of the open Popconfirm (a question asked before a destructive click); it lives outside the trigger. */
+export const confirmButton = (page: Page, label: string) =>
+  page.locator(".ant-popconfirm:not(.ant-popover-hidden)").getByRole("button", { name: label });
+
+/** Close an open Select's popup without choosing. */
+export const closeDropdown = async (page: Page) => {
+  await page.keyboard.press("Escape");
+  await dropdown(page).waitFor({ state: "hidden" });
+};

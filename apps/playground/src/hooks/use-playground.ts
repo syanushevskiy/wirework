@@ -4,8 +4,9 @@
  * the permission, this demo's stand-in for persistence, and the reload key.
  * The builder itself is @wirework/builder — `usePageEditing` (the edit
  * session), `useBuilder` (placing widgets), `usePageToolbar` (what the
- * toolbar offers) and `useCommit` (the one write path) — composed here with
- * what only this application knows. One-time boot (registries, pages,
+ * toolbar offers), `usePageViews` (the page's prebuilt and own views) and
+ * `useCommit` (the one write path) — composed here with what only this
+ * application knows. One-time boot (registries, pages,
  * rejection proof) is `boot.ts`; this demo's own event wiring is
  * use-demo-bridge.
  *
@@ -32,6 +33,7 @@ import {
   useCommit,
   usePageEditing,
   usePageToolbar,
+  usePageViews,
   type AddLock,
   type EditLock,
   type EditTarget,
@@ -203,6 +205,23 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     target,
   });
 
+  /**
+   * The page's VIEWS (doc/page-views-design.md): the team's prebuilt
+   * templates and the user's own, chosen in the overlay; Save as and Import
+   * write where the edit target says — the overlay, or the shared page.
+   */
+  const views = usePageViews({
+    commit,
+    editLock,
+    layoutEngines,
+    page,
+    trees,
+    target,
+    withUserOverlay,
+    shown: editing.activeView,
+    cancelEditing,
+  });
+
   return {
     registry,
     contracts,
@@ -217,6 +236,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     addLock,
     addWidget,
     toolbar,
+    views,
     ...editing,
     reloadKey,
   };

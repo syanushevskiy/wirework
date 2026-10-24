@@ -136,6 +136,46 @@ export const demoViewModels: ViewModels = {
           },
         ],
       },
+      /**
+       * A second PREBUILT view of the same page (doc/page-views-design.md):
+       * the title and the counter only. The user picks it from the view
+       * list, where it is labelled as prebuilt, like "default".
+       */
+      compact: {
+        engine: "react-grid-layout",
+        cells: [
+          {
+            id: "label-main",
+            widget: "antd-label",
+            model: "widgets.overview.title",
+            template: "default",
+            x: 0,
+            y: 0,
+            w: 12,
+            h: 1,
+          },
+          {
+            id: "counter-main",
+            widget: "antd-counter",
+            model: "widgets.overview.counter",
+            template: "default",
+            x: 0,
+            y: 1,
+            w: 6,
+            h: 2,
+          },
+          {
+            id: "echo-counter",
+            widget: "antd-echo",
+            model: "widgets.overview.echo",
+            template: "default",
+            x: 6,
+            y: 1,
+            w: 6,
+            h: 2,
+          },
+        ],
+      },
     },
     /** The runs list: server-side paging, refresh, dependent filters, a row opened by a button. */
     runs: {

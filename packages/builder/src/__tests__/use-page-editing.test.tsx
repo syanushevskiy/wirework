@@ -200,6 +200,40 @@ describe("usePageEditing — the ops", () => {
     expect(shown).toEqual({ inputs: { value: "demo.count" }, on: { changed: [{ set: "demo.count" }] }, label: "Mine" });
   });
 
+  it("copies a shown PREBUILT view into the user's own 'my-own' — numbered when that name is taken", () => {
+    const { result } = setup({ target: "user", withUserOverlay: true });
+    act(() => result.current.startEditing());
+    act(() => result.current.changeLayout(emptyList));
+    expect(result.current.shownUserViewModels?.pages?.["demo"]).toEqual({
+      view: "my-own",
+      templates: { "my-own": emptyList },
+    });
+
+    const trees = treesWithCounter();
+    trees.userViewModels = { pages: { demo: { view: "default", templates: { "my-own": emptyList } } } };
+    const taken = setup({ target: "user", withUserOverlay: true, trees });
+    act(() => taken.result.current.startEditing());
+    act(() => taken.result.current.changeLayout(emptyList));
+    expect(taken.result.current.shownUserViewModels?.pages?.["demo"]).toMatchObject({
+      view: "my-own-2",
+      templates: { "my-own": emptyList, "my-own-2": emptyList },
+    });
+  });
+
+  it("edits a shown USER view in place", () => {
+    const trees = treesWithCounter();
+    const mine = { engine: "list", cells: [cell()] };
+    trees.userViewModels = { pages: { demo: { view: "mine", templates: { mine } } } };
+    const { result } = setup({ target: "user", withUserOverlay: true, trees });
+    act(() => result.current.startEditing());
+    act(() => result.current.removeCellById("custom-1"));
+    expect(result.current.shownUserViewModels?.pages?.["demo"]).toMatchObject({
+      view: "mine",
+      templates: { mine: emptyList },
+    });
+    expect(Object.keys(result.current.shownUserViewModels?.pages?.["demo"]?.templates ?? {})).toEqual(["mine"]);
+  });
+
   it("closes the editor when the edit target changes under it", () => {
     const { result, rerender, initialProps } = setup();
     act(() => result.current.startEditing());

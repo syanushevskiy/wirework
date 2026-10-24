@@ -46,6 +46,30 @@
   margin-left: auto;
 }
 
+/* ---- page views ---- */
+
+.ww-builder-views {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ww-builder-view-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The kind tag sits inside a select option: no trailing margin of its own. */
+.ww-builder-view-kind.ww-builder-view-kind {
+  margin-inline-end: 0;
+}
+
+.ww-builder-view-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
 /* ---- widget palette ---- */
 
 .ww-builder-palette {

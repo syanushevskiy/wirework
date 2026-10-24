@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { UserViewModels, ViewModels } from "@wirework/schema";
 import {
   pageTemplates,
+  putPageTemplate,
+  putUserPageTemplate,
   removeUserCell,
+  removeUserPageTemplate,
+  renameUserPageTemplate,
+  selectUserPageView,
   updatePageTemplate,
   updateUserCellSettings,
   updateUserPageTemplate,
@@ -66,6 +71,47 @@ describe("updateUserPageTemplate", () => {
     const next = updateUserPageTemplate(stale, "demo", "my-own", shown, mark);
     expect(next.pages?.["demo"]?.templates?.["my-own"]).toMatchObject({ cells: [{ id: "shown" }] });
     expect(next.pages?.["demo"]?.view).toBe("my-own");
+  });
+});
+
+describe("page views: putPageTemplate / putUserPageTemplate / selectUserPageView / rename / remove", () => {
+  const template = { engine: "list", cells: [] };
+
+  it("adds a prebuilt template to a page, and creates the page's map when there is none", () => {
+    expect(putPageTemplate(base, "demo", "compact", template).pages?.["demo"]).toMatchObject({
+      default: {},
+      wide: {},
+      compact: template,
+    });
+    expect(putPageTemplate(base, "fresh", "default", template).pages?.["fresh"]).toEqual({ default: template });
+  });
+
+  it("adds the user's own template and selects it", () => {
+    const next = putUserPageTemplate({}, "demo", "mine", template);
+    expect(next.pages?.["demo"]).toEqual({ view: "mine", templates: { mine: template } });
+  });
+
+  it("selects a view, and unselects it back to the default", () => {
+    const chosen = selectUserPageView({}, "demo", "wide");
+    expect(chosen.pages?.["demo"]).toEqual({ view: "wide" });
+    expect(selectUserPageView(chosen, "demo", undefined).pages?.["demo"]).toEqual({});
+  });
+
+  it("renames the user's template and the selection follows; an unknown name changes nothing", () => {
+    const mine = putUserPageTemplate({}, "demo", "mine", template);
+    const renamed = renameUserPageTemplate(mine, "demo", "mine", "kept");
+    expect(renamed.pages?.["demo"]).toEqual({ view: "kept", templates: { kept: template } });
+    expect(renameUserPageTemplate(mine, "demo", "nope", "kept")).toBe(mine);
+    const other = selectUserPageView(mine, "demo", "default");
+    expect(renameUserPageTemplate(other, "demo", "mine", "kept").pages?.["demo"]?.view).toBe("default");
+  });
+
+  it("removes the user's template, dropping the selection only when it showed it", () => {
+    const mine = putUserPageTemplate({}, "demo", "mine", template);
+    expect(removeUserPageTemplate(mine, "demo", "mine").pages?.["demo"]).toEqual({ templates: {} });
+    const other = selectUserPageView(mine, "demo", "default");
+    expect(removeUserPageTemplate(other, "demo", "mine").pages?.["demo"]).toEqual({ view: "default", templates: {} });
+    expect(removeUserPageTemplate(mine, "demo", "nope")).toBe(mine);
   });
 });
 

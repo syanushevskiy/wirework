@@ -1,9 +1,9 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-one stories: fourteen done between 15 and 29 September 2026 and one on 23 October 2026 (WW-21), six
-to do (WW-15 to WW-20). Written for
+One epic, twenty-two stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21) and one
+on 24 October 2026 (WW-22), six to do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20 and WW-21) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 and WW-22) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -514,3 +514,42 @@ server data address as the paged table, so that a long list needs no filter bar 
 **Verified by:** `infinite-table.feature` (8 scenarios), the `antd-infinite-table` stories (the `table` conformance set
 plus header filter, search, sort and "more"), the loader unit tests for `more` and `filterLike`, `columnsOf` tests for
 what a header filters and sorts by.
+
+### WW-22 · Xsight Wirework - Several views of a page: the team's prebuilt layouts and my own, chosen from one list, shared as JSON
+
+**Type:** User feature · **Status:** Done · **Delivered:** 24 Oct
+
+**Short description:** As a dashboard user, I pick the view of a page from one list — the layouts the team ships
+("prebuilt") and the ones I saved for myself ("mine"), each labelled so I see which is which — and I keep as many of my
+own as I like: Save as copies the view on screen under a name, Rename and Delete tend my own, Share shows a view as a
+text I send to a colleague, who imports it with Import. As an administrator, I ship an alternative layout of a page by
+saving a view with the personal overlay off: it appears as prebuilt for everyone. As a team embedding Wirework, I get
+the list, the actions and the file format as a hook, a component and plain functions, and decide myself where views are
+stored. Designed with the tiger team (`doc/page-views-design.md`).
+
+**Acceptance criteria:**
+
+- **Given** the overview page, **when** I open the view list, **then** it offers "default" and "compact", both labelled
+  prebuilt; **when** I choose "compact", **then** the page shows that layout, and "default" brings the full page back.
+- **Given** a view on screen, **when** I press Save as and give it a name, **then** the page shows my new view, labelled
+  mine, and my later edits change it alone; switching to a team view and back keeps both as they were, also after a
+  visit to another page.
+- **Given** my own view on screen, **when** I rename it, **then** the list shows the new name only; **when** I delete
+  it, **then** the page shows the team's default again. A team view can be neither renamed nor deleted.
+- **Given** a name another view already has, or one with a dot, **when** I save, **then** the panel says why and nothing
+  changes.
+- **Given** a view on screen, **when** I press Share, **then** I see it as a JSON text that names its page, its name and
+  its layout; **when** a colleague pastes that text under Import, **then** it becomes one of their own views, under the
+  file's name or one they type.
+- **Given** a text that is not a view, a view of another page, or a name in use, **when** I import it, **then** the
+  panel says which it is and nothing changes.
+- **Given** the builder with the personal overlay off, **when** I save the page as a view, **then** it is prebuilt: with
+  the overlay on it is in the list for everyone, labelled prebuilt.
+- **Given** a user without the editing permission, **when** they look at the view list, **then** they can choose any
+  view but Save as and Import are unavailable, with the reason.
+- **Given** I edit a prebuilt view with my overlay on while I already have a "my-own" view, **when** I save the page,
+  **then** my edit becomes "my-own-2" and "my-own" is untouched.
+
+**Verified by:** `page-views.feature` (10 scenarios), the `PageViews` stories (choosing, saving as, sharing and
+importing, without permission, overlay off), the `usePageViews` hook tests (14), the pure view-list and file-format
+tests, the tree-function tests in the engine, the numbered-copy test of `usePageEditing`.

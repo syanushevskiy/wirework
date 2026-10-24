@@ -8,7 +8,7 @@
  */
 import { Typography } from "antd";
 import { PageView } from "@wirework/react";
-import { PageToolbar, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
+import { PageToolbar, PageViews, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 import type { PageVisit, Playground } from "../boot";
 import { BUILDER_PAGE, usePlayground } from "../hooks/use-playground";
 import { CollapsibleCard } from "./collapsible-card";
@@ -35,6 +35,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     addLock,
     addWidget,
     toolbar,
+    views,
     shownViewModels,
     shownUserViewModels,
     editing,
@@ -98,6 +99,8 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
       <div>
         {/* Page toolbar: engine of the shown template, the edit session, the edit target. */}
         <PageToolbar toolbar={toolbar} />
+        {/* The page's views: prebuilt and the user's own, chosen, saved, shared as JSON. */}
+        <PageViews views={views} />
         <Typography.Paragraph type="secondary" data-testid="visit-note" className="pg-note">
           {page === BUILDER_PAGE
             ? "Opening this page starts it from its initial state: no data at all."
