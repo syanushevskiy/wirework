@@ -17,7 +17,9 @@ declares:
   `VALIDATION_RULES`, `ValidationRule`), `selectContract` and
   `multiSelectContract` (`choiceOptionSchema`, `choiceOptionsSchema`,
   `ChoiceOption`) — controls whose state lives in the store and reaches it
-  through a reaction.
+  through a reaction: their `changed` writes back to the port it changes by
+  default (`writesBack`), so a template binds the port and adds only what
+  should follow.
 - `paginationContract` (`PAGINATION_SIZES`, `PaginationSize`),
   `refresherContract` (`refreshScheduleSchema`, `RefreshSchedule`,
   `REFRESH_INTERVAL`, `REFRESH_TRIGGERS`, `RefreshTrigger`) — the page's

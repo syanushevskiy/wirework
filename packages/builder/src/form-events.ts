@@ -1,15 +1,15 @@
 /**
  * The EVENT fields of the widget form: every event the widget declares,
- * each with its reaction draft as the form shows it — the verb, the path
- * and payload field of a `set`, the action of a `call` with its declared
- * parameters read out of the drafts and checked by the action itself. A
- * pure derivation of the form's state; the hook memoizes it.
+ * with the write-back it does by default (the port's path as bound right
+ * now) and its reaction drafts as the form shows them — per row the verb,
+ * the path and payload field of a `set`, the action of a `call` with its
+ * declared parameters read out of the drafts and checked by the action
+ * itself. A pure derivation of the form's state; the hook memoizes it.
  */
 import {
   validatorKeys,
   type ActionDefinition,
   type AnyWidgetDefinition,
-  type EventBindings,
   type EventDefinition,
   type SettingField,
   type WidgetEvents,
@@ -17,12 +17,15 @@ import {
 import { problemText } from "@wirework/engine";
 import {
   argumentsOf,
+  EMPTY_REACTION,
   isBlank,
   optionChoices,
   WHOLE_PAYLOAD,
+  writeBackOf,
   type Choice,
   type EventField,
   type ReactionDraft,
+  type ReactionField,
   type ReactionKind,
 } from "./form-drafts";
 
@@ -34,10 +37,10 @@ export interface ActionParameters {
 
 export interface EventFieldsInput {
   definition: AnyWidgetDefinition | undefined;
-  /** The reaction drafts, by event. */
-  reactions: Record<string, ReactionDraft>;
-  /** The reactions as loaded: the form edits the first of each event and keeps the rest. */
-  loaded: EventBindings;
+  /** The port paths as the form holds them: where a default write-back goes. */
+  paths: Record<string, string>;
+  /** The reaction drafts, by event, in order. */
+  reactions: Record<string, ReactionDraft[]>;
   /** The host's actions, as a `call` may pick them. */
   actions: { name: string; description?: string | undefined }[];
   kindChoices: Choice<ReactionKind>[];
@@ -47,14 +50,50 @@ export interface EventFieldsInput {
 }
 
 /**
- * `from` defaults to the event's primary field, else the payload's ONLY
- * field — and stays so until the user picks another: writing a `{ value }`
- * object into a number-typed path is the classic wiring trap.
+ * One row. `from` defaults to the event's primary field, else the payload's
+ * ONLY field — and stays so until the user picks another: writing a
+ * `{ value }` object into a number-typed path is the classic wiring trap.
  */
+function reactionFieldOf(
+  index: number,
+  draft: ReactionDraft,
+  event: EventDefinition,
+  fields: string[] | undefined,
+  parametersOf: ReadonlyMap<string, ActionParameters>,
+): ReactionField {
+  const called = draft.kind === "call" ? parametersOf.get(draft.call) : undefined;
+  const { params, values } = argumentsOf(called?.fields ?? [], draft.with ?? {});
+  // The action's own check, once every field can be read and the
+  // required ones are filled — it knows rules no field does.
+  let argumentsError: string | undefined;
+  const readable = params.every((param) => !param.error && !(param.required && isBlank(param.value)));
+  if (called?.validator && readable) {
+    try {
+      called.validator.parse(values);
+    } catch (error) {
+      argumentsError = problemText(error);
+    }
+  }
+  const from = draft.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : "");
+  return {
+    index,
+    kind: draft.kind,
+    set: draft.set,
+    from,
+    fromChoice: from === "" ? WHOLE_PAYLOAD : from,
+    call: draft.call,
+    ...(draft.call === "" ? {} : { callChoice: draft.call }),
+    params,
+    arguments: values,
+    ...(argumentsError === undefined ? {} : { argumentsError }),
+    filled: draft.kind === "call" ? draft.call !== "" : draft.set.trim() !== "",
+  };
+}
+
 export function eventFieldsOf({
   definition,
+  paths,
   reactions,
-  loaded,
   actions,
   kindChoices,
   actionChoices,
@@ -62,43 +101,24 @@ export function eventFieldsOf({
 }: EventFieldsInput): EventField[] {
   return Object.entries((definition?.events ?? {}) as WidgetEvents).map(([name, event]: [string, EventDefinition]) => {
     const fields = validatorKeys(event.payload);
-    const draft = reactions[name];
-    const called = draft?.kind === "call" ? parametersOf.get(draft.call) : undefined;
-    const { params, values } = argumentsOf(called?.fields ?? [], draft?.with ?? {});
-    // The action's own check, once every field can be read and the
-    // required ones are filled — it knows rules no field does.
-    let argumentsError: string | undefined;
-    const readable = params.every((param) => !param.error && !(param.required && isBlank(param.value)));
-    if (called?.validator && readable) {
-      try {
-        called.validator.parse(values);
-      } catch (error) {
-        argumentsError = problemText(error);
-      }
-    }
-    const from = draft?.from ?? event.primary ?? (fields?.length === 1 ? (fields[0] ?? "") : "");
-    const call = draft?.call ?? "";
+    const writesBack = writeBackOf(event, paths);
+    // An event that writes nothing back offers a blank row to fill; one that
+    // does starts with its default alone and takes rows on request.
+    const drafts = reactions[name] ?? [];
+    const rows = drafts.length > 0 || writesBack !== undefined ? drafts : [EMPTY_REACTION];
     return {
       name,
       description: event.description,
       required: event.required === true,
       fields,
       actions,
-      kind: draft?.kind ?? "set",
       kindChoices,
-      set: draft?.set ?? "",
-      from,
-      fromChoice: from === "" ? WHOLE_PAYLOAD : from,
       ...(fields === undefined
         ? {}
         : { fromChoices: [...optionChoices(fields), { value: WHOLE_PAYLOAD, label: "whole payload" }] }),
-      call,
-      ...(call === "" ? {} : { callChoice: call }),
       actionChoices,
-      params,
-      arguments: values,
-      ...(argumentsError === undefined ? {} : { argumentsError }),
-      kept: Math.max(0, (loaded[name]?.length ?? 0) - 1),
+      ...(writesBack === undefined ? {} : { writesBack }),
+      reactions: rows.map((draft, index) => reactionFieldOf(index, draft, event, fields, parametersOf)),
     };
   });
 }

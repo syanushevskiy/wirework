@@ -5,7 +5,13 @@
  * miniature.
  */
 import { z } from "zod";
-import { createActions, createContracts, createRegistry, type ResolvedCellOk } from "@wirework/engine";
+import {
+  createActions,
+  createContracts,
+  createRegistry,
+  withDefaultReactions,
+  type ResolvedCellOk,
+} from "@wirework/engine";
 import { createStore } from "@wirework/store";
 import { antdWidgets } from "@wirework/antd-widgets";
 import { standardContracts } from "@wirework/widget-contracts";
@@ -37,15 +43,14 @@ export function actions() {
 /** Store paths the port fields can offer as suggestions. */
 export const store = () => createStore({ demo: { count: 3, text: "hello", flag: true } });
 
-/** The antd counter placed on a page, wired to `demo.count`, as an editor finds it. */
+/** The antd counter placed on a page, wired to `demo.count`, as an editor finds it: resolved, its default write-back in place. */
 export function placedCounter(): EditableCell {
   const definition = antdWidgets.find((widget) => widget.type === "antd-counter");
   if (!definition) throw new Error("antd-counter is not among the antd widgets");
-  const viewModel = definition.viewModel.parse({
-    inputs: { value: "demo.count" },
-    on: { incremented: [{ set: "demo.count", from: "value" }] },
-    label: "Hits",
-  });
+  const viewModel = withDefaultReactions(
+    definition,
+    definition.viewModel.parse({ inputs: { value: "demo.count" }, label: "Hits" }),
+  );
   const cell: ResolvedCellOk = {
     key: "custom-1",
     widget: "antd-counter",

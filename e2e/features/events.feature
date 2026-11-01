@@ -52,11 +52,9 @@ Feature: Widget events
     And I expand the "events" panel
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
-    And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
     And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.b"
-    And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
     And I click the counter in cell "custom-2" 1 time
     # The builder page's own load event — when it opened, and again after each Add — then the click.
@@ -70,9 +68,11 @@ Feature: Widget events
     And I clear the event log
     Then the event log is empty
 
-  Scenario: The counter's own write is a declared reaction, not widget code
+  Scenario: The counter's own write is its default reaction, not widget code
     Given I open the "overview" page
-    Then the state JSON contains '"set": "demo.counter"'
+    # Nothing in the page's configuration writes demo.counter: the counter's
+    # `incremented` writes its value back to its port by default.
+    Then the state JSON does not contain '"set": "demo.counter"'
     And the echo widget at "demo.counter" shows "0"
     When I click the counter 2 times
     Then the echo widget at "demo.counter" shows "2"
@@ -124,7 +124,9 @@ Feature: Widget events
     When I disable the user overlay
     And I edit the page
     And I edit the cell "pagination-runs"
-    Then the reaction for "changed" keeps 2 more reactions
+    # The page is written back by default; the page size and the request follow, as configured.
+    Then the event "changed" writes "page" back to "runs.page" by default
+    And the event "changed" has 2 more reactions
     When I set the setting "size" to "small"
     And I save the widget
     And I save the page
@@ -139,7 +141,6 @@ Feature: Widget events
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.counter"
-    And I set the reaction for "incremented" to set "demo.counter" from "value"
     And I add the widget
     And I choose the "antd-button" widget
     And I set the setting "label" to "Reset"

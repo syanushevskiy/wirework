@@ -1,4 +1,8 @@
-/** The smallest registries a builder needs: a list engine (no renderer) and a counter widget with a required event. */
+/**
+ * The smallest registries a builder needs: a list engine (no renderer), a
+ * counter widget with a required event, and a dial whose event writes its
+ * value back by default.
+ */
 import { z } from "zod";
 import {
   widgetBindingsSchema,
@@ -21,6 +25,25 @@ export const counter: AnyWidgetDefinition = {
   io: counterIo,
   events: counterEvents,
   viewModel: widgetBindingsSchema(counterIo, counterEvents).extend({ label: z.string().default("Count") }),
+  component: () => null,
+};
+
+/** A CONTROLLED widget: `turned` writes the new level back to `value` by default. */
+const dialEvents = {
+  turned: {
+    description: "the new level",
+    payload: z.object({ value: z.number() }),
+    primary: "value",
+    writesBack: "value",
+  },
+} satisfies WidgetEvents;
+
+export const dial: AnyWidgetDefinition = {
+  type: "dial",
+  description: "a level to turn",
+  io: counterIo,
+  events: dialEvents,
+  viewModel: widgetBindingsSchema(counterIo, dialEvents).extend({ label: z.string().default("Level") }),
   component: () => null,
 };
 

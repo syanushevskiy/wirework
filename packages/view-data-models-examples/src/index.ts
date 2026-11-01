@@ -425,7 +425,7 @@ export const demoViewModels: ViewModels = {
             w: 12,
             h: 1,
           },
-          // A controlled input: the text lives at app.settings.displayName, written by the reaction.
+          // A controlled input: the text lives at app.settings.displayName, written back by its default reaction.
           {
             id: "input-name",
             widget: "antd-input",
@@ -499,8 +499,8 @@ export const demoViewModels: ViewModels = {
         default: {
           inputs: { value: "demo.counter" },
           // The counter's WRITE is a reaction: the widget emits the next
-          // value, this line stores it (no output ports).
-          on: { incremented: [{ set: "demo.counter", from: "value" }] },
+          // value and its DEFAULT reaction (`incremented` writes back to
+          // `value`) stores it at demo.counter — nothing to declare here.
           step: 1,
           label: "Increment",
         },
@@ -537,9 +537,9 @@ export const demoViewModels: ViewModels = {
         default: {
           // The schedule { enabled, interval } lives at runs.autoRefresh;
           // while runs.loading is true the button spins and ticks are skipped.
+          // A change of the schedule is written back whole by default.
           inputs: { schedule: "runs.autoRefresh", busy: "runs.loading" },
           on: {
-            changed: [{ set: "runs.autoRefresh" }],
             // Re-request the table view as it is on screen (page, filters).
             refresh: [{ call: "table-view/load", with: { into: "runs" } }],
           },
@@ -550,11 +550,11 @@ export const demoViewModels: ViewModels = {
           // Which filters there are is DATA (runs.filters, from the server's
           // metadata); what is chosen goes into the request as `filterIn`.
           inputs: { filters: "runs.filters", value: "runs.filterIn" },
-          // In order: store the choice, go back to the first page (the
-          // table just got shorter), THEN re-request.
+          // In order: the choice is stored by the default write-back first,
+          // then go back to the first page (the table just got shorter),
+          // THEN re-request.
           on: {
             changed: [
-              { set: "runs.filterIn", from: "value" },
               { set: "runs.page", value: 1 },
               { call: "table-view/load", with: { into: "runs" } },
             ],
@@ -641,11 +641,11 @@ export const demoViewModels: ViewModels = {
       pagination: {
         default: {
           inputs: { page: "runs.page", total: "runs.total", pageSize: "runs.pageSize" },
-          // In order, each awaited: store what the user asked for, then
-          // re-request (the action writes runs.data and runs.total).
+          // In order, each awaited: the page is stored by the default
+          // write-back first, then the page size, then re-request (the
+          // action writes runs.data and runs.total).
           on: {
             changed: [
-              { set: "runs.page", from: "page" },
               { set: "runs.pageSize", from: "pageSize" },
               { call: "table-view/load", with: { into: "runs" } },
             ],
@@ -658,11 +658,10 @@ export const demoViewModels: ViewModels = {
       applicationsFilter: {
         default: {
           inputs: { value: "filters.applications", options: "app.lists.applications" },
-          // In order: store the choice, THEN recompute what the suites filter
-          // offers (and drop chosen suites of applications no longer chosen).
-          on: {
-            changed: [{ set: "filters.applications", from: "value" }, { call: "filters/sync-suites" }],
-          },
+          // In order: the choice is stored by the default write-back, THEN
+          // recompute what the suites filter offers (and drop chosen suites
+          // of applications no longer chosen).
+          on: { changed: [{ call: "filters/sync-suites" }] },
           label: "Applications",
           placeholder: "choose applications",
         },
@@ -671,7 +670,6 @@ export const demoViewModels: ViewModels = {
         default: {
           // Its options are WRITTEN by filters/sync-suites, not configured here.
           inputs: { value: "filters.suites", options: "filters.suiteOptions" },
-          on: { changed: [{ set: "filters.suites", from: "value" }] },
           label: "Test suites",
           placeholder: "choose applications first",
         },
@@ -779,7 +777,6 @@ export const demoViewModels: ViewModels = {
       nameInput: {
         default: {
           inputs: { value: "app.settings.displayName" },
-          on: { changed: [{ set: "app.settings.displayName", from: "value" }] },
           label: "Your name",
           placeholder: "type a name",
           validation: "required",
@@ -788,7 +785,6 @@ export const demoViewModels: ViewModels = {
       pageSize: {
         default: {
           inputs: { value: "app.settings.pageSize" },
-          on: { changed: [{ set: "app.settings.pageSize", from: "value" }] },
           label: "Runs per page",
           options: [{ value: "5" }, { value: "10" }, { value: "20" }],
           allowClear: false,
@@ -797,7 +793,6 @@ export const demoViewModels: ViewModels = {
       autoRefresh: {
         default: {
           inputs: { checked: "app.settings.autoRefresh" },
-          on: { changed: [{ set: "app.settings.autoRefresh", from: "checked" }] },
           label: "Auto-refresh the runs list",
         },
       },
@@ -872,7 +867,7 @@ export const failurePathViewModels: ViewModels = {
             // 9. required event with no reaction bound -> problem
             {
               id: "unreacted",
-              widget: "antd-counter",
+              widget: "antd-refresher",
               model: "widgets.demo.unreacted",
               template: "default",
               width: "m-6/12",
@@ -896,10 +891,7 @@ export const failurePathViewModels: ViewModels = {
         default: { text: "Wirework playground", tone: "accent" },
       },
       counter: {
-        default: {
-          inputs: { value: "demo.counter" },
-          on: { incremented: [{ set: "demo.counter", from: "value" }] },
-        },
+        default: { inputs: { value: "demo.counter" } },
       },
       badLabel: {
         // antd-label requires `text: string` — this must fail validation
@@ -920,8 +912,9 @@ export const failurePathViewModels: ViewModels = {
         },
       },
       unreacted: {
-        // `incremented` is REQUIRED — a template without a reaction is reported
-        default: { inputs: { value: "demo.counter" } },
+        // `refresh` is REQUIRED and writes nothing back by default (`changed`
+        // does) — a template without a reaction to it is reported
+        default: { inputs: { schedule: "demo.schedule" } },
       },
       badAction: {
         // no host registers "nope" — reported at boot, logged (not thrown) at runtime

@@ -8,7 +8,8 @@
  * - CONTROLLED like `multi-select`: what is chosen lives at the `value` port
  *   as ONE object `{ <filter id>: [values] }`. Every change EMITS `changed`
  *   with the whole object — filters with nothing chosen left out, so it can
- *   go into a request as it is — and the required reaction writes it back.
+ *   go into a request as it is — and the default reaction writes it back
+ *   (`writesBack`); a template adds what follows (a reload).
  *
  * Implementations render one multi-choice combobox per filter, named by its
  * label (else its id), and expose the filter ids as `data-filters`.
@@ -52,8 +53,8 @@ export const filterBarContract = defineContract({
     changed: {
       description: "Fired on every change, with everything chosen: { <filter id>: [values] } (empty filters left out)",
       payload: z.object({ value: filterValuesSchema }),
-      required: true,
       primary: "value",
+      writesBack: "value",
     },
   },
   settings: z.object({
@@ -72,7 +73,6 @@ export const filterBarContract = defineContract({
     },
     viewModel: {
       inputs: { filters: "preview.filters", value: "preview.chosen" },
-      on: { changed: [{ set: "preview.chosen", from: "value" }] },
     },
   },
 });

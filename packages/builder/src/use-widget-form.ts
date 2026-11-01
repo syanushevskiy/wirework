@@ -1,20 +1,24 @@
 /**
  * The widget form — shared by "Add widget" (builder) and "Edit widget"
  * (editor). Generic over a definition: one path field per input port, one
- * field per primitive setting, and per event a REACTION — either "set a
- * store path from a payload field" or "call a host action" (picked from
- * the action registry) — optional unless the event is `required`, in which
- * case it gates submit exactly like a required port. An action that DECLARES
+ * field per primitive setting, and per event its REACTIONS — a list, in
+ * the order they run, each either "set a store path from a payload field"
+ * or "call a host action" (picked from the action registry), rows added
+ * and removed at will. An event that writes back by default (a controlled
+ * widget's `changed`) shows that default first, read-only, following the
+ * port's path as the user types it; it needs no row. An event marked
+ * `required` (it carries state and has no default) needs one filled row,
+ * which gates submit exactly like a required port. An action that DECLARES
  * parameters (doc/actions-design.md) gets one field per parameter — objects
  * and lists as JSON — saved as the reaction's `with`; its required ones gate
  * submit too. `collect()` turns the drafts into bindings + settings for the
  * host to write into a template.
  *
- * The form edits the FIRST reaction of an event. Everything it does not
- * show survives a save: the reactions after the first, the `value` of a
- * `set`, and the `with` of an action that declares no parameters, while the
- * reaction's target is unchanged — saving a widget must never silently
- * shorten a chain (a pagination once lost its load call that way).
+ * What a row does not show survives a save while its target is unchanged:
+ * the `value` of a `set`, the `with` of an action that declares no
+ * parameters. A row identical to the event's default write-back is not
+ * saved: the engine puts the default in place from the port's path, so a
+ * copy would only go stale when the port moves.
  *
  * This hook holds the STATE and the callbacks; what the fields are is
  * derived in form-drafts.ts (the drafts) and form-events.ts (the events).
@@ -25,12 +29,14 @@ import {
   type AnyWidgetDefinition,
   type EventBindings,
   type PortDefinition,
+  type Reaction,
   type Store,
   type WidgetBindings,
 } from "@wirework/schema";
-import { compatibleStorePaths, type ActionRegistry } from "@wirework/engine";
+import { compatibleStorePaths, sameReaction, type ActionRegistry } from "@wirework/engine";
 import {
   EMPTY_FORM,
+  EMPTY_REACTION,
   editedReaction,
   isBlank,
   nextParamValue,
@@ -57,11 +63,22 @@ export interface WidgetFormInput {
   initial?: WidgetFormValues | undefined;
 }
 
+/** The event's rows with the one at `index` replaced — rows up to it created blank when it is past the end. */
+function withRow(
+  rows: readonly ReactionDraft[],
+  index: number,
+  change: (row: ReactionDraft) => ReactionDraft,
+): ReactionDraft[] {
+  const next = [...rows];
+  while (next.length <= index) next.push(EMPTY_REACTION);
+  next[index] = change(next[index] ?? EMPTY_REACTION);
+  return next;
+}
+
 export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM }: WidgetFormInput) {
   const [paths, setPaths] = useState(initial.paths);
   const [reactions, setReactions] = useState(initial.reactions);
   const [settingValues, setSettingValues] = useState(initial.settings);
-  const [loaded, setLoaded] = useState(initial.loaded);
   /** Generated paths the port fields started from (a builder's defaults): see `reset`. */
   const [suggested, setSuggested] = useState<Record<string, string>>({});
 
@@ -140,11 +157,11 @@ export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM
       ),
     [actions],
   );
-  /** Events the widget declares, each with its reaction draft. */
+  /** Events the widget declares, each with its default write-back and its reaction rows. */
   const events = useMemo(
     () =>
-      eventFieldsOf({ definition, reactions, loaded, actions: actionList, kindChoices, actionChoices, parametersOf }),
-    [definition, reactions, loaded, actionList, kindChoices, actionChoices, parametersOf],
+      eventFieldsOf({ definition, paths, reactions, actions: actionList, kindChoices, actionChoices, parametersOf }),
+    [definition, paths, reactions, actionList, kindChoices, actionChoices, parametersOf],
   );
 
   /**
@@ -158,7 +175,6 @@ export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM
     setSuggested(suggestedPaths);
     setReactions({});
     setSettingValues({});
-    setLoaded({});
   }, []);
 
   const setPortPath = useCallback((name: string, value: string) => {
@@ -175,35 +191,53 @@ export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM
     [setSetting],
   );
 
+  /** One field of one row; the row (and blank ones before it) is created on first touch. */
   const setReaction = useCallback(
-    <K extends keyof ReactionDraft>(event: string, field: K, value: NonNullable<ReactionDraft[K]>) => {
+    <K extends keyof ReactionDraft>(event: string, index: number, field: K, value: NonNullable<ReactionDraft[K]>) => {
+      // No `from` in the starting draft: absent keeps the event's default.
       setReactions((prev) => ({
         ...prev,
-        // No `from` in the starting draft: absent keeps the event's default.
-        [event]: { kind: "set", set: "", call: "", ...prev[event], [field]: value },
+        [event]: withRow(prev[event] ?? [], index, (row) => ({ ...row, [field]: value })),
       }));
     },
     [],
   );
 
+  /** Another row under the event, blank, after the ones there. */
+  const addReaction = useCallback((event: string) => {
+    setReactions((prev) => ({ ...prev, [event]: [...(prev[event] ?? []), EMPTY_REACTION] }));
+  }, []);
+
+  /** The row at `index` goes; the ones after it move up. */
+  const removeReaction = useCallback((event: string, index: number) => {
+    setReactions((prev) => ({ ...prev, [event]: (prev[event] ?? []).filter((_row, at) => at !== index) }));
+  }, []);
+
   /** What a payload-field dropdown answered — "whole payload" means no field. */
   const chooseFrom = useCallback(
-    (event: string, choice: string) => setReaction(event, "from", choice === WHOLE_PAYLOAD ? "" : choice),
+    (event: string, index: number, choice: string) =>
+      setReaction(event, index, "from", choice === WHOLE_PAYLOAD ? "" : choice),
     [setReaction],
   );
 
-  /** One parameter of the action an event calls; undefined clears it (not set). */
-  const setReactionParam = useCallback((event: string, name: string, value: string | boolean | undefined) => {
-    setReactions((prev) => {
-      const current = prev[event] ?? { kind: "call" as const, set: "", call: "" };
-      const { [name]: _cleared, ...others } = current.with ?? {};
-      return { ...prev, [event]: { ...current, with: value === undefined ? others : { ...others, [name]: value } } };
-    });
-  }, []);
+  /** One parameter of the action a row calls; undefined clears it (not set). */
+  const setReactionParam = useCallback(
+    (event: string, index: number, name: string, value: string | boolean | undefined) => {
+      setReactions((prev) => ({
+        ...prev,
+        [event]: withRow(prev[event] ?? [], index, (row) => {
+          const { [name]: _cleared, ...others } = row.with ?? {};
+          return { ...row, kind: "call", with: value === undefined ? others : { ...others, [name]: value } };
+        }),
+      }));
+    },
+    [],
+  );
 
   /** A click on a yes/no parameter moves it to its next answer. */
   const cycleParam = useCallback(
-    (event: string, param: ParamDraft) => setReactionParam(event, param.name, nextParamValue(param)),
+    (event: string, index: number, param: ParamDraft) =>
+      setReactionParam(event, index, param.name, nextParamValue(param)),
     [setReactionParam],
   );
 
@@ -223,30 +257,36 @@ export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM
   const valid =
     definition !== undefined &&
     fields.every((field) => !field.required || field.value.trim() !== "") &&
-    events.every(
-      (event) =>
-        !event.required || event.kept > 0 || (event.kind === "call" ? event.call !== "" : event.set.trim() !== ""),
-    ) &&
+    events.every((event) => !event.required || event.reactions.some((reaction) => reaction.filled)) &&
     // A chosen action must get what it asks for: required parameters, readable drafts.
-    events.every(
-      (event) =>
-        event.kind !== "call" ||
-        event.call === "" ||
-        (event.argumentsError === undefined &&
-          event.params.every((param) => !param.error && !(param.required && isBlank(param.value)))),
+    events.every((event) =>
+      event.reactions.every(
+        (reaction) =>
+          reaction.kind !== "call" ||
+          reaction.call === "" ||
+          (reaction.argumentsError === undefined &&
+            reaction.params.every((param) => !param.error && !(param.required && isBlank(param.value)))),
+      ),
     ) &&
     settings.every((setting) => !setting.required || !isBlank(settingValues[setting.name]));
 
-  /** Drafts -> bindings + settings. Blank settings are omitted so defaults apply. */
+  /** Drafts -> bindings + settings. Blank rows and settings are omitted so defaults apply. */
   const collect = useCallback((): { bindings: WidgetBindings; settings: WidgetSettings } => {
     const inputs = Object.fromEntries(
       fields.flatMap((field) => (field.value.trim() === "" ? [] : [[field.name, field.value.trim()]])),
     );
     const on: EventBindings = Object.fromEntries(
       events.flatMap((event) => {
-        const [original, ...rest] = loaded[event.name] ?? [];
-        const edited = editedReaction(event, original);
-        const list = edited ? [edited, ...rest] : rest;
+        const fallback: Reaction | undefined =
+          event.writesBack === undefined || event.writesBack.path === ""
+            ? undefined
+            : event.writesBack.from === undefined
+              ? { set: event.writesBack.path }
+              : { set: event.writesBack.path, from: event.writesBack.from };
+        const list = event.reactions.flatMap((reaction) => {
+          const edited = editedReaction(reaction, reactions[event.name]?.[reaction.index]?.original);
+          return edited === undefined || (fallback !== undefined && sameReaction(edited, fallback)) ? [] : [edited];
+        });
         return list.length > 0 ? [[event.name, list]] : [];
       }),
     );
@@ -258,7 +298,7 @@ export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM
       }),
     );
     return { bindings: { inputs, on }, settings: collected };
-  }, [fields, events, settings, settingValues, loaded]);
+  }, [fields, events, reactions, settings, settingValues]);
 
   return {
     definition,
@@ -269,6 +309,8 @@ export function useWidgetForm({ definition, store, actions, initial = EMPTY_FORM
     setSetting,
     chooseSetting,
     setReaction,
+    addReaction,
+    removeReaction,
     chooseFrom,
     setReactionParam,
     cycleParam,

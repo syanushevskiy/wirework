@@ -9,9 +9,12 @@ import {
   settingFields,
   type AnyWidgetDefinition,
   type EventBindings,
+  type EventDefinition,
   type Reaction,
   type SettingField,
+  type WidgetEvents,
 } from "@wirework/schema";
+import { defaultReaction, sameReaction } from "@wirework/engine";
 
 /**
  * A dropdown option cannot carry "", so the two "nothing chosen" answers
@@ -44,38 +47,61 @@ export interface PortField {
 
 export type ReactionKind = "set" | "call";
 
-export interface EventField {
-  name: string;
-  description?: string | undefined;
-  /** A required event must have a reaction (it carries state). */
-  required: boolean;
-  /** Top-level payload fields a reaction can pick with `from` (undefined: not an object payload). */
-  fields?: string[] | undefined;
-  /** Host actions a `call` reaction may pick. */
-  actions: { name: string; description?: string | undefined }[];
-  /** Reaction draft. */
+/** The write-back an event does by default (the contract's `writesBack`), as the form shows it. */
+export interface WriteBack {
+  /** The input port written back to. */
+  port: string;
+  /** Its path as bound right now ("" while the port field is blank: the default waits for it). */
+  path: string;
+  /** The payload field written (absent: the whole payload). */
+  from?: string;
+}
+
+/** One reaction of an event, as the form shows it. */
+export interface ReactionField {
+  /** Its place in the event's list (0 first); part of its field ids. */
+  index: number;
   kind: ReactionKind;
-  /** The two verbs, with `call` disabled while the host registered no actions. */
-  kindChoices: Choice<ReactionKind>[];
   /** `set`: store path to write (empty = no reaction) + payload field ("" = whole payload). */
   set: string;
   from: string;
-  /** The payload field as its dropdown shows it, and what it offers (absent: not an object payload). */
+  /** The payload field as its dropdown shows it. */
   fromChoice: string;
-  fromChoices?: Choice[];
   /** `call`: action name (empty = no reaction). */
   call: string;
-  /** The action as its dropdown shows it (undefined shows the placeholder), and what it offers. */
+  /** The action as its dropdown shows it (undefined shows the placeholder). */
   callChoice?: string;
-  actionChoices: Choice[];
   /** `call`: the chosen action's declared parameters, with the user's drafts (none: the action declares none). */
   params: ParamDraft[];
   /** `call`: the drafts as the reaction's `with` — what `collect()` saves. */
   arguments: Record<string, unknown>;
   /** `call`: why the arguments as a whole do not fit the action (its own validation), once every field is fine. */
   argumentsError?: string;
-  /** Reactions after the first: not editable here, kept on save. */
-  kept: number;
+  /** A target is named: the row is a reaction, not a blank the form offers. */
+  filled: boolean;
+}
+
+export interface EventField {
+  name: string;
+  description?: string | undefined;
+  /** A required event must have a reaction (it carries state and writes nothing back by default). */
+  required: boolean;
+  /** Top-level payload fields a reaction can pick with `from` (undefined: not an object payload). */
+  fields?: string[] | undefined;
+  /** Host actions a `call` reaction may pick. */
+  actions: { name: string; description?: string | undefined }[];
+  /** The two verbs, with `call` disabled while the host registered no actions. */
+  kindChoices: Choice<ReactionKind>[];
+  /** What a payload-field dropdown offers (absent: not an object payload). */
+  fromChoices?: Choice[];
+  actionChoices: Choice[];
+  /** What the event does BY DEFAULT, before the reactions below; absent when it writes nothing back. */
+  writesBack?: WriteBack;
+  /**
+   * The reactions configured, in order — never the default write-back. An
+   * event without one shows a blank row to fill; one with it starts empty.
+   */
+  reactions: ReactionField[];
 }
 
 /** One parameter of the chosen action, with the user's draft (text for text, number and JSON fields). */
@@ -116,17 +142,21 @@ export interface ReactionDraft {
   call: string;
   /** Drafts of the called action's parameters, by name. */
   with?: Record<string, string | boolean>;
+  /** The reaction as loaded, for what the form does not show (a set's `value`, a parameterless call's `with`). */
+  original?: Reaction;
 }
+
+/** A row the form offers to fill: no target yet. */
+export const EMPTY_REACTION: ReactionDraft = { kind: "set", set: "", call: "" };
 
 export interface WidgetFormValues {
   paths: Record<string, string>;
-  reactions: Record<string, ReactionDraft>;
+  /** The reaction drafts per event, in order — the CONFIGURED ones; a default write-back is never among them. */
+  reactions: Record<string, ReactionDraft[]>;
   settings: Record<string, string | boolean>;
-  /** The reactions as loaded; the form edits the first of each event and keeps the rest. */
-  loaded: EventBindings;
 }
 
-export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, settings: {}, loaded: {} };
+export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, settings: {} };
 
 export const isBlank = (value: string | boolean | undefined): boolean =>
   value === undefined || (typeof value === "string" && value.trim() === "");
@@ -208,24 +238,34 @@ export function nextParamValue(param: ParamDraft): string | boolean | undefined 
   return param.required ? true : undefined;
 }
 
-/** Prefill from a RESOLVED (validated) view model — the editor's starting point. */
+/** A saved reaction as the form edits it. */
+export function draftOf(reaction: Reaction): ReactionDraft {
+  return "call" in reaction
+    ? { kind: "call", set: "", call: reaction.call, with: draftsOfArguments(reaction.with), original: reaction }
+    : { kind: "set", set: reaction.set, from: reaction.from ?? "", call: "", original: reaction };
+}
+
+/**
+ * Prefill from a RESOLVED (validated) view model — the editor's starting
+ * point. Resolve put every default write-back FIRST under its event
+ * (`withDefaultReactions`); the form shows it as the default, not as a row,
+ * so a leading one is left out of the drafts.
+ */
 export function valuesFromViewModel(definition: AnyWidgetDefinition, viewModel: unknown): WidgetFormValues {
   const vm = (viewModel ?? {}) as Record<string, unknown>;
+  const inputs = (vm["inputs"] ?? {}) as Record<string, unknown>;
   const paths = Object.fromEntries(
-    Object.entries((vm["inputs"] ?? {}) as Record<string, unknown>).flatMap(([port, path]) =>
-      typeof path === "string" ? [[port, path] as [string, string]] : [],
-    ),
+    Object.entries(inputs).flatMap(([port, path]) => (typeof path === "string" ? [[port, path] as const] : [])),
   );
-  const loaded = (vm["on"] ?? {}) as EventBindings;
+  const events = definition.events as WidgetEvents;
   const reactions = Object.fromEntries(
-    Object.entries(loaded).flatMap(([event, list]) => {
-      const first = list?.[0];
-      if (!first) return [];
-      const draft: ReactionDraft =
-        "call" in first
-          ? { kind: "call", set: "", call: first.call, with: draftsOfArguments(first.with) }
-          : { kind: "set", set: first.set, from: first.from ?? "", call: "" };
-      return [[event, draft]];
+    Object.entries((vm["on"] ?? {}) as EventBindings).flatMap(([event, list]) => {
+      const declared = events[event];
+      const fallback = declared === undefined ? undefined : defaultReaction(declared, inputs);
+      const [first, ...rest] = list ?? [];
+      const configured =
+        first !== undefined && fallback !== undefined && sameReaction(first, fallback) ? rest : (list ?? []);
+      return configured.length > 0 ? [[event, configured.map(draftOf)]] : [];
     }),
   );
   const settings = Object.fromEntries(
@@ -235,30 +275,40 @@ export function valuesFromViewModel(definition: AnyWidgetDefinition, viewModel: 
       return [[field.name, field.kind === "boolean" ? value === true : String(value)]];
     }),
   );
-  return { paths, reactions, settings, loaded };
+  return { paths, reactions, settings };
+}
+
+/** The write-back an event does by default, with the port's path as the form holds it now. */
+export function writeBackOf(event: EventDefinition, paths: Record<string, string>): WriteBack | undefined {
+  if (event.writesBack === undefined) return undefined;
+  return {
+    port: event.writesBack,
+    path: paths[event.writesBack]?.trim() ?? "",
+    ...(event.primary === undefined ? {} : { from: event.primary }),
+  };
 }
 
 /**
- * The first reaction as the form now describes it. What the form does not
- * show (`with` of a call, `value` of a set) is kept while the user left the
- * reaction's target alone; undefined when the user cleared it.
+ * One reaction as the form now describes it. What the form does not show
+ * (`with` of a call, `value` of a set) is kept while the user left the
+ * reaction's target alone; undefined when the row is blank.
  */
-export function editedReaction(event: EventField, original: Reaction | undefined): Reaction | undefined {
-  if (event.kind === "call") {
-    if (event.call === "") return undefined;
+export function editedReaction(reaction: ReactionField, original: Reaction | undefined): Reaction | undefined {
+  if (reaction.kind === "call") {
+    if (reaction.call === "") return undefined;
     // An action that declares parameters shows its whole `with`: what the
     // form holds is what is saved. One that declares none keeps a `with`
     // the form cannot show.
-    if (event.params.length > 0) {
-      return Object.keys(event.arguments).length > 0
-        ? { call: event.call, with: event.arguments }
-        : { call: event.call };
+    if (reaction.params.length > 0) {
+      return Object.keys(reaction.arguments).length > 0
+        ? { call: reaction.call, with: reaction.arguments }
+        : { call: reaction.call };
     }
-    return original && "call" in original && original.call === event.call ? original : { call: event.call };
+    return original && "call" in original && original.call === reaction.call ? original : { call: reaction.call };
   }
-  const set = event.set.trim();
+  const set = reaction.set.trim();
   if (set === "") return undefined;
-  const from = event.from.trim();
+  const from = reaction.from.trim();
   if (original && "set" in original && original.set === set && (original.from ?? "") === from) return original;
   return from === "" ? { set } : { set, from };
 }

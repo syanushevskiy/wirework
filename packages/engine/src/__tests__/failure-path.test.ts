@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { AnyLayoutEngine, AnyWidgetDefinition, CellBase, PageViewModel } from "@wirework/schema";
 import { failurePathViewModels } from "@wirework/view-data-models-examples";
-import { buttonContract, labelContract } from "@wirework/widget-contracts";
+import { buttonContract, labelContract, refresherContract } from "@wirework/widget-contracts";
 import { createActions, resolvePage, validateViewModels } from "../index";
 import type { ResolvedPagePlan } from "../resolve";
 import { enginesWith, registryWith } from "./fixtures";
@@ -18,8 +18,11 @@ import { enginesWith, registryWith } from "./fixtures";
 const component = () => null;
 const label: AnyWidgetDefinition = { ...labelContract, type: "antd-label", component };
 const button: AnyWidgetDefinition = { ...buttonContract, type: "antd-button", component };
+const refresher: AnyWidgetDefinition = { ...refresherContract, type: "antd-refresher", component };
 const counterIo = { inputs: { value: { value: z.number(), default: 0 } } };
-const counterEvents = { incremented: { payload: z.object({ value: z.number() }), required: true, primary: "value" } };
+const counterEvents = {
+  incremented: { payload: z.object({ value: z.number() }), primary: "value", writesBack: "value" },
+};
 const counter: AnyWidgetDefinition = {
   type: "antd-counter",
   io: counterIo,
@@ -65,7 +68,7 @@ const flexRows: AnyLayoutEngine = {
 const input = () => ({
   viewModels: failurePathViewModels,
   page: "broken",
-  registry: registryWith(label, button, counter, crash),
+  registry: registryWith(label, button, counter, refresher, crash),
   layoutEngines: enginesWith(flexRows),
   actions: createActions(),
 });

@@ -33,6 +33,25 @@ export const counter: AnyWidgetDefinition = {
   component: () => null,
 };
 
+/** A CONTROLLED widget: `turned` writes the new level back to `value` by default. */
+const dialEvents = {
+  turned: {
+    description: "the new level",
+    payload: z.object({ value: z.number() }),
+    primary: "value",
+    writesBack: "value",
+  },
+} satisfies WidgetEvents;
+
+export const dial: AnyWidgetDefinition = {
+  type: "dial",
+  description: "a level to turn",
+  io: counterIo,
+  events: dialEvents,
+  viewModel: widgetBindingsSchema(counterIo, dialEvents).extend({ label: z.string().default("Level") }),
+  component: () => null,
+};
+
 export const registryWith = (...widgets: AnyWidgetDefinition[]) => {
   const registry = createRegistry();
   for (const widget of widgets) registry.register(widget);

@@ -3,8 +3,11 @@
  * invariants that used to hold only by convention.
  */
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import type { AnyWidgetDefinition } from "@wirework/schema";
 import { createActions, resolvePage, type ResolveInput } from "../index";
-import { pickTemplate } from "../resolve";
+import { defaultReaction, sameReaction, withDefaultReactions } from "../reactions";
+import { checkTemplate, pickTemplate } from "../resolve";
 import { cell, counter, enginesWith, listEngine, page, plain, registryWith } from "./fixtures";
 
 const templates = {
@@ -34,6 +37,53 @@ describe("pickTemplate", () => {
   it("regression: never resolves an inherited member as a template", () => {
     expect(pickTemplate({ default: {} }, ["valueOf", "default"])?.name).toBe("default");
     expect(pickTemplate({}, ["toString"])).toBeUndefined();
+  });
+});
+
+describe("default write-back — an event that writesBack to a port", () => {
+  /** The counter as a CONTROLLED widget: `changed` writes the value back to `value` by default. */
+  const dial: AnyWidgetDefinition = {
+    ...counter,
+    type: "dial",
+    events: { changed: { payload: z.object({ value: z.number() }), primary: "value", writesBack: "value" } },
+  };
+  const fallback = { set: "demo.n", from: "value" };
+  const on = (template: Record<string, unknown>) =>
+    (checkTemplate(dial, template, undefined).viewModel as { on: Record<string, unknown[]> }).on;
+
+  it("needs no reaction in the template: the default is in the resolved view model, first", () => {
+    expect(checkTemplate(dial, { inputs: { value: "demo.n" } }, undefined).problem).toBeUndefined();
+    expect(on({ inputs: { value: "demo.n" } })).toEqual({ changed: [fallback] });
+    expect(on({ inputs: { value: "demo.n" }, on: { changed: [{ call: "runs/load" }] } })).toEqual({
+      changed: [fallback, { call: "runs/load" }],
+    });
+  });
+
+  it("is not doubled when the template spells it out — wherever it placed it", () => {
+    expect(on({ inputs: { value: "demo.n" }, on: { changed: [fallback] } })).toEqual({ changed: [fallback] });
+    const placed = { changed: [{ call: "runs/load" }, fallback] };
+    expect(on({ inputs: { value: "demo.n" }, on: placed })).toEqual(placed);
+  });
+
+  it("follows the port: the path bound, the primary field, the whole payload without one", () => {
+    const changed = dial.events["changed"];
+    if (!changed) throw new Error("dial declares changed");
+    expect(defaultReaction(changed, { value: "demo.n" })).toEqual(fallback);
+    expect(defaultReaction({ ...changed, primary: undefined }, { value: "demo.n" })).toEqual({ set: "demo.n" });
+    expect(defaultReaction(changed, {})).toBeUndefined();
+    expect(defaultReaction({ payload: changed.payload }, { value: "demo.n" })).toBeUndefined();
+    // A widget without one is left exactly as parsed.
+    const parsed = { inputs: { value: "demo.n" }, on: { changed: [fallback] } };
+    expect(withDefaultReactions(counter, parsed)).toBe(parsed);
+  });
+
+  it("sameReaction: the same write, or the same call with the same arguments", () => {
+    expect(sameReaction({ set: "a", from: "v" }, { set: "a", from: "v" })).toBe(true);
+    expect(sameReaction({ set: "a" }, { set: "a", from: "v" })).toBe(false);
+    expect(sameReaction({ set: "a", value: 1 }, { set: "a", value: 1 })).toBe(true);
+    expect(sameReaction({ set: "a", value: 1 }, { set: "a" })).toBe(false);
+    expect(sameReaction({ call: "x", with: { a: 1 } }, { call: "x", with: { a: 1 } })).toBe(true);
+    expect(sameReaction({ call: "x" }, { set: "x" })).toBe(false);
   });
 });
 

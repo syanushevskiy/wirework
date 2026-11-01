@@ -28,11 +28,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Prefilled from the cell: the port path, the reaction, the label. */
+/** Prefilled from the cell: the port path, the default write-back (not a row of its own), the label. */
 export const Prefilled: Story = {
   play: async ({ canvas }) => {
     await expect(portInput(canvas)).toHaveValue("demo.count");
-    await expect(canvas.getByTestId("reaction-incremented-set")).toHaveValue("demo.count");
+    await expect(canvas.getByTestId("reaction-incremented-default")).toHaveAttribute("data-path", "demo.count");
+    await expect(canvas.queryByTestId("reaction-incremented-set")).toBeNull();
     await expect(canvas.getByTestId("setting-label")).toHaveValue("Hits");
   },
 };
@@ -58,7 +59,7 @@ export const BindingsLocked: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("bindings-locked")).toBeVisible();
     await expect(portInput(canvas)).toBeDisabled();
-    await expect(canvas.getByTestId("reaction-incremented-set")).toBeDisabled();
+    await expect(canvas.getByTestId("reaction-incremented-add")).toBeDisabled();
     await expect(canvas.getByTestId("setting-label")).toBeEnabled();
   },
 };

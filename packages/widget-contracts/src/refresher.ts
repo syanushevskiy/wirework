@@ -3,8 +3,8 @@
  *
  * The widget OWNS nothing and fetches nothing. Its schedule (auto-refresh
  * on/off + interval) lives at a store path it reads; every user change
- * EMITS `changed` with the whole schedule and the required reaction writes
- * it back (one `set`, no `from`). A Refresh click, or a tick while
+ * EMITS `changed` with the whole schedule and the default reaction writes
+ * it back (`writesBack`: one `set`, no `from`). A Refresh click, or a tick while
  * auto-refresh is on, EMITS `refresh`; the reaction decides WHAT is
  * refreshed — a `call` to a host action.
  *
@@ -50,8 +50,8 @@ export const refresherContract = defineContract({
     changed: {
       description: "Fired when the user turns auto-refresh on/off or edits the interval; carries the whole schedule",
       payload: refreshScheduleSchema,
-      // The schedule is state the widget shows; without a reaction nothing moves.
-      required: true,
+      // The schedule is state the widget shows: written back whole by default.
+      writesBack: "schedule",
     },
     refresh: {
       description: "Fired on a Refresh click and on every tick while auto-refresh is on",
@@ -69,7 +69,6 @@ export const refresherContract = defineContract({
     seed: { preview: { schedule: { enabled: false, interval: 30 } } },
     viewModel: {
       inputs: { schedule: "preview.schedule" },
-      on: { changed: [{ set: "preview.schedule" }] },
     },
   },
 });

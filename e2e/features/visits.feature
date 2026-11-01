@@ -17,7 +17,6 @@ Feature: Page visits
     And the state JSON does not contain '"route"'
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "form.count"
-    And I set the reaction for "incremented" to set "form.count" from "value"
     And I add the widget
     Then the state JSON does not contain '"count":'
     When I click the counter 1 time

@@ -170,10 +170,6 @@ independent.
 
 ## Known limitations (decisions pending)
 
-- The widget editor EDITS one reaction per event (the first). The rest of
-  the chain is kept and listed ("then 2 more reactions"), and the first
-  reaction keeps its `with` / `value` while its target is unchanged — a
-  save never shortens a chain. Editing the others is a UI decision.
 - Saving materialises defaulted settings (the form is prefilled from the
   resolved view model), so "blank means default" holds for the builder
   only; an overlay becomes a full copy rather than a diff.

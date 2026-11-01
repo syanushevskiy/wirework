@@ -43,13 +43,18 @@ function portsProblem(inputs: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-function eventsProblem(events: Record<string, unknown>): string | undefined {
-  for (const [name, event] of Object.entries(events)) {
+function eventsProblem(events: Record<string, unknown>, inputs: Record<string, unknown>): string | undefined {
+  for (const [name, raw] of Object.entries(events)) {
     if (!KEBAB_NAME.test(name)) {
       return `event ${JSON.stringify(name)} is not a valid kebab-case identifier`;
     }
-    if (typeof (event as Partial<EventDefinition> | null)?.payload?.parse !== "function") {
+    const event = raw as Partial<EventDefinition> | null;
+    if (typeof event?.payload?.parse !== "function") {
       return `event "${name}" has no payload validator`;
+    }
+    // The default write-back goes to that port's path: a port nobody declared has none.
+    if (event.writesBack !== undefined && !Object.hasOwn(inputs, event.writesBack)) {
+      return `event "${name}" writes back to "${event.writesBack}", which is not one of its input ports`;
     }
   }
   return undefined;
@@ -58,14 +63,17 @@ function eventsProblem(events: Record<string, unknown>): string | undefined {
 /**
  * What every declaration must carry: a view-model validator, input ports
  * that each have a value validator (and a default that passes it), and
- * kebab-case events with payload validators.
+ * kebab-case events with payload validators that write back, if they do,
+ * to a declared port. Checked in order, so the events may trust the ports.
  */
 export const declarationInvariants: readonly Invariant<Declaration>[] = [
   ({ viewModel }) => (typeof viewModel?.parse !== "function" ? "has no view-model validator" : undefined),
   ({ io }) =>
     !isPlainObject(io) || !isPlainObject(io.inputs) ? "has no IO declaration ({ inputs })" : portsProblem(io.inputs),
-  ({ events }) =>
-    !isPlainObject(events) ? "has no events declaration (use NO_EVENTS for none)" : eventsProblem(events),
+  ({ events, io }) =>
+    !isPlainObject(events)
+      ? "has no events declaration (use NO_EVENTS for none)"
+      : eventsProblem(events, (io as { inputs: Record<string, unknown> }).inputs),
 ];
 
 export function createContracts(): ContractRegistry {

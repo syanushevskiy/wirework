@@ -3,8 +3,8 @@
  *  - a fresh store seeded per story (inputs read from it),
  *  - a bus whose every event lands in Storybook's Actions panel,
  *  - a cell-scoped, payload-validating `emit` from the engine,
- *  - the view model's own reactions bound, so a counter increments and an
- *    input stores its text exactly as on a page,
+ *  - the view model's reactions bound, the default write-backs among them,
+ *    so a counter increments and an input stores its text exactly as on a page,
  *  - the per-cell error boundary, so a crashing widget shows the placeholder,
  *  - a live readout of the store underneath,
  *  - optionally DRIVEN store values (`data` / `onData`) and a cell width —
@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentType } from "react"
 import { action } from "storybook/actions";
 import type { AnyWidgetDefinition, WidgetProps } from "@wirework/schema";
 import { settingFields } from "@wirework/schema";
-import { bindCellReactions, createEmitter, errorText, readableStore } from "@wirework/engine";
+import { bindCellReactions, createEmitter, errorText, readableStore, withDefaultReactions } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
 import { useStoreSnapshot, WidgetErrorBoundary } from "@wirework/react";
 import { createStore } from "@wirework/store";
@@ -105,9 +105,11 @@ export function WidgetStory({
     return () => stops.forEach((stop) => stop());
   }, [store, drivenPaths]);
 
+  // Parsed and completed as resolve does it: a controlled widget's default
+  // write-back is in place without the story spelling it out.
   const parsed = useMemo(() => {
     try {
-      return { viewModel: definition.viewModel.parse(viewModel) as unknown };
+      return { viewModel: withDefaultReactions(definition, definition.viewModel.parse(viewModel)) };
     } catch (error) {
       return { problem: errorText(error) };
     }

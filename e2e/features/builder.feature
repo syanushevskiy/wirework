@@ -1,10 +1,12 @@
 Feature: Widget builder
   Widgets can be added to a page at runtime from a palette of live widget
   previews. Each widget declares typed input ports and typed events; the
-  builder asks for a store path per input, a reaction per event (required
-  when the event carries state), and the widget's primitive settings
-  (required ones gate Add), then writes it all into the view models —
-  wiring the widgets together through the store.
+  builder asks for a store path per input, the reactions of each event — a
+  list, run in order; a controlled widget's event writes its value back by
+  default, so it needs none; an event that carries state and has no default
+  is required —, and the widget's primitive settings (required ones gate
+  Add), then writes it all into the view models — wiring the widgets
+  together through the store.
 
   Scenario: The builder page starts empty
     Given I open the "builder" page
@@ -14,8 +16,9 @@ Feature: Widget builder
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.custom"
-    And I set the reaction for "incremented" to set "demo.custom" from "value"
-    And I add the widget
+    # The counter's `incremented` writes its value back to the port by default: nothing to wire.
+    Then the event "incremented" writes "value" back to "demo.custom" by default
+    When I add the widget
     And I choose the "antd-echo" widget
     And I set the "input" port "value" to "demo.custom"
     And I add the widget
@@ -27,15 +30,48 @@ Feature: Widget builder
 
   Scenario: A widget cannot be added until required ports and reactions are bound
     Given I open the "builder" page
-    When I choose the "antd-counter" widget
-    # The port comes with a suggested path; the required reaction is still missing.
-    Then the add widget button is disabled
-    When I set the reaction for "incremented" to set "demo.custom" from "value"
+    When I choose the "antd-refresher" widget
+    # The ports come with suggested paths and `changed` writes the schedule
+    # back by default; `refresh` is required and still has nothing to do.
+    Then the event "changed" writes "whole payload" back to "builder.refresher.schedule" by default
+    And the add widget button is disabled
+    When I set the reaction for "refresh" to call "log-event"
     Then the add widget button is enabled
-    When I clear the "input" port "value"
+    When I clear the "input" port "schedule"
     Then the add widget button is disabled
-    When I set the "input" port "value" to "demo.custom"
+    When I set the "input" port "schedule" to "demo.schedule"
     Then the add widget button is enabled
+
+  Scenario: A text field needs nothing but its suggested port
+    Given I open the "builder" page
+    When I choose the "antd-input" widget
+    Then the event "changed" writes "value" back to "builder.input.value" by default
+    And the add widget button is enabled
+    When I add the widget
+    And I type "hi" into the input
+    Then the state JSON contains '"value": "hi"'
+
+  Scenario: A controlled widget stores its value by default, and more reactions follow in order
+    Given I open the "builder" page
+    When I choose the "antd-checkbox" widget
+    Then the event "changed" writes "checked" back to "builder.checkbox.checked" by default
+    And the event "changed" has 0 more reactions
+    And the add widget button is enabled
+    When I add a reaction for "changed"
+    And I set the reaction for "changed" to call "log-event"
+    And I add a reaction for "changed"
+    And I set reaction 2 for "changed" to set "demo.touched" from "checked"
+    And I add a reaction for "changed"
+    And I remove reaction 3 for "changed"
+    Then the event "changed" has 2 more reactions
+    When I add the widget
+    And I tick the checkbox
+    Then the checkbox is checked
+    And the state JSON contains '"checked": true'
+    And the state JSON contains '"touched": true'
+    # The page's configuration holds the two reactions added, not the default write.
+    And the state JSON contains '"call": "log-event"'
+    And the state JSON does not contain '"set": "builder.checkbox.checked"'
 
   Scenario: Input ports come with suggested paths: page, widget, port
     Given I open the "builder" page
@@ -78,7 +114,6 @@ Feature: Widget builder
     Given I open the "builder" page
     Then the state JSON does not contain '"counter"'
     When I choose the "antd-counter" widget
-    And I set the reaction for "incremented" to set "builder.counter.value" from "value"
     And I add the widget
     And I click the counter 2 times
     Then the counter shows "(2)"
@@ -174,11 +209,9 @@ Feature: Widget builder
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
-    And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
     And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.b"
-    And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
     Then the cell "custom-2" is placed at x 0 y 2 w 12 h 2
     When I edit the page
@@ -193,12 +226,14 @@ Feature: Widget builder
   Scenario: A reaction defaults to the payload's only field
     Given I open the "builder" page
     When I choose the "antd-counter" widget
+    And I add a reaction for "incremented"
     Then the reaction for "incremented" takes "value" from the payload
 
   Scenario: The payload field default survives typing the reaction's path
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.typed"
+    And I add a reaction for "incremented"
     And I set the reaction for "incremented" to set "demo.typed"
     Then the reaction for "incremented" takes "value" from the payload
     When I add the widget
@@ -219,6 +254,7 @@ Feature: Widget builder
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.whole"
+    And I add a reaction for "incremented"
     And I set the reaction for "incremented" to set "demo.whole" from ""
     And I add the widget
     And I click the counter 1 time
@@ -229,10 +265,10 @@ Feature: Widget builder
     Given I open the "builder" page
     When I choose the "antd-input" widget
     Then the builder shows a setting "validation"
-    And the reaction for "changed" takes "value" from the payload
+    And the event "changed" writes "value" back to "builder.input.value" by default
     When I set the "input" port "value" to "demo.email"
-    And I set the setting "validation" to "email"
-    And I set the reaction for "changed" to set "demo.email" from "value"
+    Then the event "changed" writes "value" back to "demo.email" by default
+    When I set the setting "validation" to "email"
     And I add the widget
     And I choose the "antd-echo" widget
     And I set the "input" port "value" to "demo.email"
@@ -250,7 +286,6 @@ Feature: Widget builder
     And I set the "input" port "value" to "demo.code"
     And I set the setting "pattern" to "^[A-Z]{3}-[0-9]+$"
     And I set the setting "patternMessage" to "use the form ABC-123"
-    And I set the reaction for "changed" to set "demo.code" from "value"
     And I add the widget
     And I type "abc" into the input
     Then the input is invalid with "use the form ABC-123"

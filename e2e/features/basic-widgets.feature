@@ -18,7 +18,6 @@ Feature: Basic widgets
     Given I open the "builder" page
     When I choose the "antd-select" widget
     And I set the "input" port "value" to "form.environment"
-    And I set the reaction for "changed" to set "form.environment" from "value"
     And I add the widget
     And I choose the "antd-tag" widget
     And I set the "input" port "text" to "form.environment"
@@ -34,7 +33,6 @@ Feature: Basic widgets
     Given I open the "builder" page
     When I choose the "antd-checkbox" widget
     And I set the "input" port "checked" to "form.confirmed"
-    And I set the reaction for "changed" to set "form.confirmed" from "checked"
     And I add the widget
     Then the checkbox is unchecked
     When I tick the checkbox
@@ -50,7 +48,6 @@ Feature: Basic widgets
     And I add the widget
     And I choose the "antd-counter" widget
     And I set the "input" port "value" to "form.percent"
-    And I set the reaction for "incremented" to set "form.percent" from "value"
     And I set the setting "step" to "30"
     And I add the widget
     Then the progress shows 0 percent

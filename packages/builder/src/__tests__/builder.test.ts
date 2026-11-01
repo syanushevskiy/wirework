@@ -1,17 +1,26 @@
 /**
  * The builder's pure logic: ids derived from what is taken, the yes/no/not-set
  * cycle, argument drafts, what a save keeps of a reaction it does not show,
- * and the one write path — the store first, then the host with what the
- * store holds.
+ * what the editor starts from (the default write-back left out), and the one
+ * write path — the store first, then the host with what the store holds.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import type { SettingField } from "@wirework/schema";
+import type { EventDefinition, SettingField } from "@wirework/schema";
 import { createStore } from "@wirework/store";
 import type { EditableTrees, SaveTrees } from "../use-commit";
 import { commitTrees } from "../use-commit";
 import { DEFAULT_BUILDER_NAMING, modelNamespaceOf, numberedIds } from "../use-builder";
-import { argumentsOf, editedReaction, nextParamValue, type EventField, type ParamDraft } from "../form-drafts";
+import {
+  argumentsOf,
+  editedReaction,
+  nextParamValue,
+  valuesFromViewModel,
+  writeBackOf,
+  type ParamDraft,
+  type ReactionField,
+} from "../form-drafts";
+import { counter, dial } from "./fixtures";
 
 describe("numberedIds", () => {
   const next = numberedIds("custom");
@@ -103,27 +112,23 @@ describe("argumentsOf", () => {
 });
 
 describe("editedReaction — what a save keeps of a reaction the form does not show", () => {
-  const event = (draft: Partial<EventField>): EventField => ({
-    name: "clicked",
-    required: false,
-    actions: [],
+  const row = (draft: Partial<ReactionField>): ReactionField => ({
+    index: 0,
     kind: "set",
-    kindChoices: [],
     set: "",
     from: "",
     fromChoice: "",
     call: "",
-    actionChoices: [],
     params: [],
     arguments: {},
-    kept: 0,
+    filled: false,
     ...draft,
   });
 
   it("keeps a call's `with` the form cannot show while the action is unchanged, and drops it when it changed", () => {
     const original = { call: "runs/load", with: { page: 2 } };
-    expect(editedReaction(event({ kind: "call", call: "runs/load" }), original)).toBe(original);
-    expect(editedReaction(event({ kind: "call", call: "nav/go" }), original)).toEqual({ call: "nav/go" });
+    expect(editedReaction(row({ kind: "call", call: "runs/load" }), original)).toBe(original);
+    expect(editedReaction(row({ kind: "call", call: "nav/go" }), original)).toEqual({ call: "nav/go" });
   });
 
   it("saves exactly the form's arguments when the action declares parameters", () => {
@@ -131,25 +136,70 @@ describe("editedReaction — what a save keeps of a reaction the form does not s
       { name: "into", kind: "text", required: true, value: "runs", unset: false, state: "no", stateLabel: "" },
     ] as ParamDraft[];
     expect(
-      editedReaction(event({ kind: "call", call: "table-view/load", params, arguments: { into: "runs" } }), {
+      editedReaction(row({ kind: "call", call: "table-view/load", params, arguments: { into: "runs" } }), {
         call: "table-view/load",
         with: { into: "old" },
       }),
     ).toEqual({ call: "table-view/load", with: { into: "runs" } });
-    expect(editedReaction(event({ kind: "call", call: "table-view/load", params, arguments: {} }), undefined)).toEqual({
+    expect(editedReaction(row({ kind: "call", call: "table-view/load", params, arguments: {} }), undefined)).toEqual({
       call: "table-view/load",
     });
   });
 
   it("keeps a set's `value` while its target is unchanged, and clears the reaction when the path is blank", () => {
     const original = { set: "demo.count", value: 0 };
-    expect(editedReaction(event({ kind: "set", set: "demo.count", from: "" }), original)).toBe(original);
-    expect(editedReaction(event({ kind: "set", set: "demo.other", from: "value" }), original)).toEqual({
+    expect(editedReaction(row({ kind: "set", set: "demo.count", from: "" }), original)).toBe(original);
+    expect(editedReaction(row({ kind: "set", set: "demo.other", from: "value" }), original)).toEqual({
       set: "demo.other",
       from: "value",
     });
-    expect(editedReaction(event({ kind: "set", set: "   " }), original)).toBeUndefined();
-    expect(editedReaction(event({ kind: "call", call: "" }), original)).toBeUndefined();
+    expect(editedReaction(row({ kind: "set", set: "   " }), original)).toBeUndefined();
+    expect(editedReaction(row({ kind: "call", call: "" }), original)).toBeUndefined();
+  });
+});
+
+describe("valuesFromViewModel — the editor's starting point", () => {
+  it("drafts every reaction of an event, in order, with the original kept for what the form does not show", () => {
+    const on = {
+      changed: [
+        { set: "demo.count", value: 0 },
+        { call: "runs/load", with: { page: 2 } },
+      ],
+    };
+    const values = valuesFromViewModel(counter, { inputs: { value: "demo.count" }, on, label: "Hits" });
+    expect(values.paths).toEqual({ value: "demo.count" });
+    expect(values.settings).toEqual({ label: "Hits" });
+    expect(values.reactions["changed"]?.map((draft) => [draft.kind, draft.set || draft.call])).toEqual([
+      ["set", "demo.count"],
+      ["call", "runs/load"],
+    ]);
+    expect(values.reactions["changed"]?.[0]?.original).toBe(on.changed[0]);
+    expect(values.reactions["changed"]?.[1]?.with).toEqual({ page: "2" });
+  });
+
+  it("leaves the default write-back out when resolve put it first — and keeps one the template placed elsewhere", () => {
+    const fallback = { set: "demo.level", from: "value" };
+    const resolved = { inputs: { value: "demo.level" }, on: { turned: [fallback, { call: "levels/apply" }] } };
+    expect(valuesFromViewModel(dial, resolved).reactions).toEqual({
+      turned: [{ kind: "call", set: "", call: "levels/apply", with: {}, original: { call: "levels/apply" } }],
+    });
+    const placed = { inputs: { value: "demo.level" }, on: { turned: [{ call: "levels/apply" }, fallback] } };
+    expect(valuesFromViewModel(dial, placed).reactions["turned"]?.map((draft) => draft.kind)).toEqual(["call", "set"]);
+    // The default alone: nothing to edit.
+    expect(
+      valuesFromViewModel(dial, { inputs: { value: "demo.level" }, on: { turned: [fallback] } }).reactions,
+    ).toEqual({});
+  });
+
+  it("writeBackOf follows the port's path as the form holds it, and says when the port is not bound yet", () => {
+    const turned = dial.events["turned"] as EventDefinition;
+    expect(writeBackOf(turned, { value: " demo.level " })).toEqual({
+      port: "value",
+      path: "demo.level",
+      from: "value",
+    });
+    expect(writeBackOf(turned, {})).toEqual({ port: "value", path: "", from: "value" });
+    expect(writeBackOf(counter.events["changed"] as EventDefinition, { value: "x" })).toBeUndefined();
   });
 });
 

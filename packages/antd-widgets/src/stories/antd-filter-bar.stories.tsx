@@ -19,15 +19,13 @@ const filters = [
 const meta = {
   title: "Widgets/antd-filter-bar",
   render: () => (
-    // Which filters there are is DATA; every change emits everything chosen.
+    // Which filters there are is DATA; every change emits everything chosen,
+    // and the default reaction stores it.
     <WidgetStory
       key="filters"
       definition={antdFilterBar}
       seed={{ demo: { filters, chosen: { state: ["Running"] } } }}
-      viewModel={{
-        inputs: { filters: "demo.filters", value: "demo.chosen" },
-        on: { changed: [{ set: "demo.chosen", from: "value" }] },
-      }}
+      viewModel={{ inputs: { filters: "demo.filters", value: "demo.chosen" } }}
     />
   ),
 } satisfies Meta;

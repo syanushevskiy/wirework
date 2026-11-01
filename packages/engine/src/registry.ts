@@ -37,7 +37,7 @@ function namesDifference(what: string, own: object, contract: object): string | 
  * Where a definition departs from the contract it claims: a port or event
  * the contract has not (or one it lacks), a port that is required on one
  * side and optional on the other, an event whose `required`, `primary`
- * field or payload fields differ. Named, so the widget author sees WHAT to
+ * field, `writesBack` port or payload fields differ. Named, so the widget author sees WHAT to
  * fix — not only that something differs.
  */
 function declarationDifference(definition: AnyWidgetDefinition, contract: AnyWidgetContract): string | undefined {
@@ -63,6 +63,9 @@ function declarationDifference(definition: AnyWidgetDefinition, contract: AnyWid
     }
     if (own.primary !== event.primary) {
       return `has the event "${name}" with primary field ${JSON.stringify(own.primary)}, the contract ${JSON.stringify(event.primary)}`;
+    }
+    if (own.writesBack !== event.writesBack) {
+      return `has the event "${name}" writing back to ${JSON.stringify(own.writesBack)}, the contract ${JSON.stringify(event.writesBack)}`;
     }
     if (!sameList(validatorKeys(own.payload), validatorKeys(event.payload))) {
       return `has the event "${name}" carrying ${JSON.stringify(validatorKeys(own.payload) ?? "a non-object payload")}, the contract ${JSON.stringify(validatorKeys(event.payload) ?? "a non-object payload")}`;

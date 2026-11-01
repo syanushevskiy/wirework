@@ -13,7 +13,7 @@ export type { CellProblem, ResolvedCell, ResolvedCellOk, ResolvedPage, ResolveIn
 export { validateViewModels } from "./validate";
 export { createEmitter } from "./emitter";
 export { readableStore } from "./readable";
-export { bindCellReactions, bindReactions } from "./reactions";
+export { bindCellReactions, bindReactions, defaultReaction, sameReaction, withDefaultReactions } from "./reactions";
 export { emitPageLoad } from "./page-events";
 export { boundPaths, compatibleStorePaths, suggestedInputPaths } from "./paths";
 export { errorText, issuesText, problemText } from "./messages";

@@ -38,7 +38,6 @@ Feature: User overlay on the builder page
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
-    And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
     And I enable the user overlay
     And I edit the page
@@ -49,11 +48,9 @@ Feature: User overlay on the builder page
     Given I open the "builder" page
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
-    And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
     And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.b"
-    And I set the reaction for "incremented" to set "demo.b" from "value"
     And I add the widget
     And I enable the user overlay
     And I edit the page

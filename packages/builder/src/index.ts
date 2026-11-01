@@ -61,10 +61,12 @@ export type {
   ParamDraft,
   PortField,
   ReactionDraft,
+  ReactionField,
   ReactionKind,
   SettingDraft,
   WidgetFormValues,
   WidgetSettings,
+  WriteBack,
 } from "./form-drafts";
 
 export { useWidgetBuilder } from "./use-widget-builder";

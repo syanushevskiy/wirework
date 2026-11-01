@@ -24,7 +24,8 @@ export interface EventDefinition<T = unknown> {
   /**
    * The event carries STATE others depend on (what an output port used to
    * be): at least one reaction must be bound in the view model, or boot
-   * validation and resolve report the cell. Default: false.
+   * validation and resolve report the cell. Default: false. An event with
+   * `writesBack` always has one (its default), so it needs no `required`.
    */
   required?: boolean;
   /**
@@ -32,6 +33,19 @@ export interface EventDefinition<T = unknown> {
    * counter or an input). Builders default a `set` reaction's `from` to it.
    */
   primary?: string;
+  /**
+   * The event CHANGES the state an input port shows — a CONTROLLED widget:
+   * the input's `value`, the checkbox's `checked`, the pagination's `page`.
+   * Names that port. The widget then writes back BY DEFAULT: a `set` to
+   * the port's bound path from the `primary` field (the whole payload
+   * without one) runs FIRST, before whatever the view model declares, so
+   * nothing has to be configured for the widget to work; the view model
+   * adds reactions (a call that reloads a table) and may place that same
+   * write itself, which is then not doubled. Must name a declared input
+   * port (a registration invariant); the engine puts the default in place
+   * when it resolves a template (`withDefaultReactions`).
+   */
+  writesBack?: string;
 }
 
 /** Event name -> definition. Names are kebab-case like widget types. */

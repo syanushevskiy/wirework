@@ -61,6 +61,10 @@ describe("widget registry", () => {
       /kebab-case/,
     );
     expect(() => registry.register({ ...counter, events: { ok: {} as never } })).toThrow(/payload validator/);
+    // The default write-back goes to a port's path: the port must exist.
+    expect(() =>
+      registry.register({ ...counter, events: { ok: { payload: z.object({}), writesBack: "nope" } } }),
+    ).toThrow(/event "ok" writes back to "nope", which is not one of its input ports/);
   });
 
   it("regression: every input port needs a value validator, and its default must pass it", () => {
@@ -139,6 +143,13 @@ describe("widget registry", () => {
           events: { changed: { ...gauge.events.changed, payload: z.object({ value: z.number(), at: z.number() }) } },
         }),
       ).toThrow(/has the event "changed" carrying \["value","at"\], the contract \["value"\]/);
+      expect(() =>
+        registry.register({
+          ...base,
+          type: "f",
+          events: { changed: { ...gauge.events.changed, writesBack: "value" } },
+        }),
+      ).toThrow(/has the event "changed" writing back to "value", the contract undefined/);
     });
   });
 });

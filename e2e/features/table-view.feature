@@ -140,7 +140,6 @@ Feature: A table the server describes (view table API)
     Given I open the "builder" page
     When I choose the "antd-refresher" widget
     And I set the "input" port "schedule" to "jobs.autoRefresh"
-    And I set the reaction for "changed" to set "jobs.autoRefresh" from ""
     And I set the reaction for "refresh" to call "table-view/load"
     Then the add widget button is disabled
     When I set the action parameter "into" for "refresh" to "jobs"
@@ -155,7 +154,6 @@ Feature: A table the server describes (view table API)
     When I choose the "antd-refresher" widget
     And I set the "input" port "schedule" to "jobs.autoRefresh"
     And I set the "input" port "busy" to "jobs.loading"
-    And I set the reaction for "changed" to set "jobs.autoRefresh" from ""
     And I set the reaction for "refresh" to call "table-view/load"
     And I set the action parameter "url" for "refresh" to "/api/v1/view/runs"
     And I set the action parameter "into" for "refresh" to "jobs"
@@ -177,7 +175,6 @@ Feature: A table the server describes (view table API)
     Given I open the "builder" page
     When I choose the "antd-refresher" widget
     And I set the "input" port "schedule" to "jobs.autoRefresh"
-    And I set the reaction for "changed" to set "jobs.autoRefresh" from ""
     And I set the reaction for "refresh" to call "table-view/load"
     And I set the action parameter "url" for "refresh" to "/api/v1/view/runs"
     And I set the action parameter "into" for "refresh" to "jobs"

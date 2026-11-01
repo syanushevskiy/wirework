@@ -107,6 +107,13 @@
   gap: 0.5rem;
 }
 
+/* The reactions of one event: a plain list, in the order they run. */
+.ww-builder-reactions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 /* The parameters of the action a reaction calls: indented under the reaction. */
 .ww-builder-params {
   margin-left: 1rem;

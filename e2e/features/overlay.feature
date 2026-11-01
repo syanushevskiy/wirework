@@ -35,7 +35,7 @@ Feature: User view models
     When I edit the page
     And I edit the cell "pagination-runs"
     Then the widget editor keeps inputs and reactions read-only
-    And the reaction for "changed" keeps 2 more reactions
+    And the event "changed" has 2 more reactions
     When I set the setting "size" to "small"
     And I save the widget
     And I save the page

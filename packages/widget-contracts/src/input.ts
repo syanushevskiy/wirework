@@ -1,7 +1,9 @@
 /**
  * Input contract: a CONTROLLED text field. The text lives at the `value`
  * port; every change EMITS `changed` with the text and its validity, and
- * the required reaction writes the text back. Validation configuration is
+ * the DEFAULT reaction writes the text back to that port's path
+ * (`writesBack`) — a template adds reactions, it need not declare the
+ * write. Validation configuration is
  * part of the contract (builders must render it uniformly): a premade rule
  * from a closed set and/or a custom regular expression. Implementations
  * render a textbox with `aria-invalid` reflecting validity and, when
@@ -31,8 +33,8 @@ export const inputContract = defineContract({
         valid: z.boolean(),
         message: z.string().optional(),
       }),
-      required: true,
       primary: "value",
+      writesBack: "value",
     },
   },
   settings: z.object({
@@ -47,7 +49,6 @@ export const inputContract = defineContract({
     seed: { preview: { text: "Sample" } },
     viewModel: {
       inputs: { value: "preview.text" },
-      on: { changed: [{ set: "preview.text", from: "value" }] },
       label: "Name",
       placeholder: "type here",
     },

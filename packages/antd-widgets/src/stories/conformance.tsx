@@ -290,11 +290,7 @@ export function checkboxConformance(
       key={key}
       definition={definition}
       seed={{ demo: { agreed: checked } }}
-      viewModel={{
-        inputs: { checked: "demo.agreed" },
-        on: { changed: [{ set: "demo.agreed", from: "checked" }] },
-        label: "I agree",
-      }}
+      viewModel={{ inputs: { checked: "demo.agreed" }, label: "I agree" }}
     />
   );
   return {
@@ -492,7 +488,6 @@ export function multiSelectConformance(definition: AnyWidgetDefinition): Record<
       seed={{ demo: { picks } }}
       viewModel={{
         inputs: { value: "demo.picks" },
-        on: { changed: [{ set: "demo.picks", from: "value" }] },
         label: "Choose several",
         options: CHOICES,
         // Every chosen value shown as it is — collapsing is the implementation's affair.
@@ -617,10 +612,7 @@ const FILTERS = [
 export function filterBarConformance(
   definition: AnyWidgetDefinition,
 ): Record<"FromStore" | "Chosen" | "NoFilters", Story> {
-  const viewModel = {
-    inputs: { filters: "demo.filters", value: "demo.chosen" },
-    on: { changed: [{ set: "demo.chosen", from: "value" }] },
-  };
+  const viewModel = { inputs: { filters: "demo.filters", value: "demo.chosen" } };
   return {
     FromStore: {
       render: () => (

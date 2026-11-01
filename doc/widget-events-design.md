@@ -149,12 +149,14 @@ log, wireable by users. So:
 - an `EventDefinition` may be `required: true`: the event carries state,
   so boot validation and resolve report a cell whose view model binds no
   reaction to it (`contractProblems`, the same check as required ports);
+  an event that `writesBack` to a port ("Default write-back" below) always
+  has one and needs no `required`;
 - the builder marks required events with `*` and gates Add on their
-  reaction path, so the common case ("counter stores its value") is still
-  one input field + one reaction field. For object payloads the `from`
-  field is a select of the payload's top-level keys (plus "whole payload")
-  and DEFAULTS to the only key — writing `{ value }` into a number-typed
-  path was the classic wiring trap.
+  reaction path, so the common case ("counter stores its value") is one
+  input field and nothing else: the event's default write-back follows
+  it. For object payloads the `from` field is a select of the payload's
+  top-level keys (plus "whole payload") and DEFAULTS to the only key —
+  writing `{ value }` into a number-typed path was the classic wiring trap.
 
 Ren's two conditions are policy: reactions never transform (`from` selects,
 `value` is a literal — no expressions), and a noisy emitter is a widget
@@ -172,9 +174,11 @@ handler)` or `bus.subscribe(...)`: for behaviour the application owns and
    its events DO, with exactly two verbs:
    - `{ set, from?, value? }` writes the store (state changes);
    - `{ call, with? }` runs a host-registered ACTION by name.
-     The builder offers both per event: a store path + payload field, or a
+     The builder offers both per event, as a LIST of rows run in order
+     (added and removed at will): a store path + payload field, or a
      dropdown of the registered actions with their descriptions. Required
-     events must have one of them.
+     events must have one of them; an event that writes back by default
+     ("Default write-back" below) has its default first, above the rows.
 3. **Host actions (`ActionDefinition`)** — the escape hatch for everything
    that is not a store write: refresh the runs, reset a counter, open a
    dialog. Registered with `createActions()` under a kebab-case name and a
@@ -191,8 +195,9 @@ field, else to the whole payload).
 
 A text input is a CONTROLLED widget: the text lives in the store (input
 port `value`), each keystroke emits `changed { value, valid, message? }`,
-and the required reaction writes `value` back. Validity travels in the
-payload so a second reaction can store the message somewhere.
+and the DEFAULT reaction writes `value` back (`writesBack: "value"`,
+below). Validity travels in the payload so a second reaction can store
+the message somewhere.
 
 - **Premade rules** are a closed enum setting (`validation`: none,
   required, email, integer, url) — the builder shows it as a select because
@@ -247,16 +252,76 @@ starts, and the action's `signal` is aborted).
 - `bindReactions(bus, store, plan)` (engine) subscribes every resolved
   cell's reactions to THAT cell's events and returns one unsubscribe;
   `useReactions` keeps them bound while `PageView` is mounted.
-- The builder shows, per event, "on <event>: set <store path> from <payload
-  field>"; a non-empty path becomes a reaction in the new template. That is
-  the user-level subscription: no code, saved in the view model, visible in
-  the state inspector.
+- The builder shows, per event, its reactions as rows — "on <event>: set
+  <store path> from <payload field>", or "call <action>" with the action's
+  parameters —, "+ reaction" adding one and × removing one; the filled rows
+  become the event's list in the template, in that order. That is the
+  user-level subscription: no code, saved in the view model, visible in the
+  state inspector. What a row does not show (a set's `value`, a
+  parameterless call's `with`) survives a save while the row's target is
+  unchanged.
 - Tested in e2e/features/events.feature (fixture reaction on the counter;
   builder-wired reaction on a table). The "reaction to an undeclared
   event is rejected at boot" case lives in `failurePathViewModels`
   (@wirework/view-data-models-examples, cell `bad-reaction`), resolved cell
   by cell in packages/engine/src/**tests**/failure-path.test.ts — it is no
   longer on a playground page.
+
+## Default write-back (built)
+
+Every controlled widget — input, checkbox, select, multi-select,
+filter-bar, pagination, refresher, the counter — used to need the same
+line in every template: `on: { changed: [{ set: <the path its value port
+reads>, from: "value" }] }`. The builder gated Add on it, every fixture
+repeated it, and a template that forgot it was a broken widget. The path
+is already in the template: it is the port's. So the CONTRACT says what
+the event does by default, and the engine does it:
+
+```ts
+events: {
+  changed: {
+    payload: z.object({ value: z.string(), valid: z.boolean(), message: z.string().optional() }),
+    primary: "value",
+    writesBack: "value", // the INPUT PORT whose state this event changes
+  },
+},
+```
+
+- `EventDefinition.writesBack` names an input port (a registration
+  invariant: a port nobody declared fails the widget and the contract at
+  boot; an implementation must say the same port as its contract). The
+  default reaction is `{ set: <the port's bound path>, from: <primary> }` —
+  `{ set: <path> }`, the whole payload, for an event without a primary field
+  (the refresher's schedule).
+- The engine puts it in place when it RESOLVES a template
+  (`withDefaultReactions`, inside `checkTemplate`): FIRST under its event,
+  before whatever the template declares — so a `call` that reloads a table
+  runs after the value is stored, and a template that declares only the
+  call does not break the widget. A template that declares that same write
+  itself (`sameReaction`) is left alone: it runs where it was placed, once.
+  The plan, boot validation, `bindReactions` and the editor all see one
+  list; a caller binding a view model of its own (the story harness) calls
+  `withDefaultReactions` itself. The rule is the same for an unbound port:
+  no path, no default — and the port is required, so that is a problem
+  already reported.
+- `required: true` is left to events that carry state and have NO default
+  — the refresher's `refresh` ("a refresher that refreshes nothing is a
+  mistake"). The table's `filter-changed` has no default on purpose: it
+  carries two ports' state (`filterIn`, `filterLike`) and a default for one
+  of them would be half a default; its templates declare both writes.
+- The builder shows the default above the event's rows — "on changed: by
+  default sets `demo.text` from payload `value`" — following the port field
+  as the user types, read-only; Add needs no row. A row the user fills
+  that equals the default is NOT saved (`collect`), and the editor leaves a
+  leading default out of its rows (`valuesFromViewModel`): a saved copy
+  would only go stale when the port is moved, while the default follows it.
+- Tested in packages/engine/src/**tests**/resolve.test.ts ("default
+  write-back"), the builder's and antd-builder's form tests, the
+  `WritesBackByDefault` story, and the scenarios "Added widgets are wired
+  together through inputs and reactions" and "A controlled widget stores
+  its value by default, and more reactions follow in order"
+  (e2e/features/builder.feature); every input, select, checkbox and counter
+  scenario stopped wiring the write by hand.
 
 ## Page events and load events (built)
 

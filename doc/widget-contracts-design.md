@@ -31,7 +31,11 @@ const buttonContract = defineContract({
 ```
 
 Contracts are data (zod + the contract types). `ContractProps<typeof c>`
-gives an implementation its typed view model and `emit`.
+gives an implementation its typed view model and `emit`. A CONTROLLED
+kind's event names the port it changes — `changed: { ..., primary:
+"value", writesBack: "value" }` — and the engine writes the value back to
+that port's path by default, so a template binds the port and nothing else
+(doc/widget-events-design.md, "Default write-back").
 
 ## Implementing (`@wirework/react`)
 
@@ -61,32 +65,35 @@ not when its first widget does.
   never raw colours); implementations render the text and expose the tone.
 - `button` — `clicked { label }`; implementations render role=button with
   the caption as its accessible name.
-- `input` — controlled: `value` port (default ""), required `changed
-{ value, valid, message? }` (primary `value`), settings label /
-  placeholder / type / validation (closed rule set) / pattern /
-  patternMessage; implementations render a textbox with `aria-invalid`
-  and an `alert` holding the message.
+- `input` — controlled: `value` port (default ""), `changed
+{ value, valid, message? }` (primary `value`, writes back to `value`),
+  settings label / placeholder / type / validation (closed rule set) /
+  pattern / patternMessage; implementations render a textbox with
+  `aria-invalid` and an `alert` holding the message.
 - `pagination` — `page` and `total` ports, optional `pageSize` port
-  (falling back to the `pageSize` setting), required `changed { page,
-pageSize }` (primary `page`); settings showSizeChanger / showTotal / size.
+  (falling back to the `pageSize` setting), `changed { page, pageSize }`
+  (primary `page`, writes back to `page`; the page size is a template's
+  own reaction); settings showSizeChanger / showTotal / size.
 - `refresher` — `schedule` port `{ enabled, interval }` (default off, 5 s),
-  optional `busy` port, required `changed` (the whole schedule) and required
-  `refresh { trigger }`; implementations tick only while enabled and skip a
-  tick while busy or hidden.
+  optional `busy` port, `changed` (the whole schedule, written back to
+  `schedule`) and required `refresh { trigger }`; implementations tick only
+  while enabled and skip a tick while busy or hidden.
 
 The basics every UI library has:
 
 - `select` — controlled: `value` port (default "" = nothing chosen),
-  optional `options` port falling back to the `options` setting, required
-  `changed { value }`; a combobox named by `label`, clearing emits "".
+  optional `options` port falling back to the `options` setting, `changed
+{ value }` writing back to `value`; a combobox named by `label`, clearing
+  emits "".
 - `multi-select` — like `select` with a string-array `value` (default []),
-  required `changed { value }` carrying every chosen value; a chosen value
-  no longer on offer is shown as it is (pruning it is the job of whoever
-  changed the options — the demo's dependent filters do it in an action).
+  `changed { value }` carrying every chosen value, written back; a chosen
+  value no longer on offer is shown as it is (pruning it is the job of
+  whoever changed the options — the demo's dependent filters do it in an
+  action).
 - `tag` — optional `text` port, `text` + `tone` settings (`default`, `info`,
   `success`, `warning`, `danger`); an empty bound value shows the static text.
-- `checkbox` — controlled: `checked` port (default false), required
-  `changed { checked }`; role=checkbox named by `label`.
+- `checkbox` — controlled: `checked` port (default false), `changed
+{ checked }` writing back to `checked`; role=checkbox named by `label`.
 - `progress` — `percent` port shown clamped to 0–100, `label`, `tone`,
   `showValue`; role=progressbar named by `label`.
 - `alert` — optional `title` port, `title` / `description` / `tone`
@@ -122,7 +129,8 @@ The basics every UI library has:
   without a contract change (the levels of customizing a server-described
   table are in `packages/table-view/src/index.ts`).
 - `filter-bar` — `filters` port (`[{ id, label, options }]`, data the
-  server describes) and `value` port; required `changed { value }`.
+  server describes) and `value` port; `changed { value }` writing back to
+  `value`.
 - `infinite-table` — the `table` as an INFINITE LIST (its ports, events and
   settings plus; `headerFilters` on by default): the rows scroll inside the
   widget (`height` setting) and when the end of the list comes into view

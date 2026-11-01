@@ -11,16 +11,12 @@ const meta = {
   argTypes: { ...storyArgTypes(antdCounter), initial: { control: "number", description: "Seeded store value" } },
   args: { ...storyArgs(antdCounter), initial: 0 } as Args,
   render: ({ initial, ...settings }) => (
-    // Its own reaction stores the emitted value, exactly as on a page.
+    // Its default reaction stores the emitted value, exactly as on a page.
     <WidgetStory
       key={String(initial)}
       definition={antdCounter}
       seed={{ demo: { counter: initial } }}
-      viewModel={{
-        ...settings,
-        inputs: { value: "demo.counter" },
-        on: { incremented: [{ set: "demo.counter", from: "value" }] },
-      }}
+      viewModel={{ ...settings, inputs: { value: "demo.counter" } }}
     />
   ),
 } satisfies Meta<Args>;
@@ -35,7 +31,7 @@ export const Default: Story = {};
 
 export const StepOfFive: Story = { args: { step: 5, initial: 10 } };
 
-/** Interaction test: two clicks -> the reaction wrote 2 back into the store. */
+/** Interaction test: two clicks -> the default reaction wrote 2 back into the store. */
 export const Clicks: Story = {
   play: async ({ canvas, userEvent }) => {
     const button = canvas.getByTestId("antd-counter");
@@ -51,12 +47,7 @@ export const EmptyPath: Story = {
     <WidgetStory
       key="empty"
       definition={antdCounter}
-      viewModel={{
-        step: args.step,
-        label: args.label,
-        inputs: { value: "demo.missing" },
-        on: { incremented: [{ set: "demo.missing", from: "value" }] },
-      }}
+      viewModel={{ step: args.step, label: args.label, inputs: { value: "demo.missing" } }}
     />
   ),
 };

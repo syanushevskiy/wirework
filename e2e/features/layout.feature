@@ -83,7 +83,6 @@ Feature: Layout engines
     When I select the "gridstack" layout engine
     And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.a"
-    And I set the reaction for "incremented" to set "demo.a" from "value"
     And I add the widget
     And I choose the "antd-label" widget
     And I set the setting "text" to "second"
@@ -107,7 +106,6 @@ Feature: Layout engines
     When I select the "flexlayout" layout engine
     And I choose the "antd-counter" widget
     And I set the "input" port "value" to "demo.f"
-    And I set the reaction for "incremented" to set "demo.f" from "value"
     And I add the widget
     And I choose the "antd-echo" widget
     And I set the "input" port "value" to "demo.f"

@@ -1,6 +1,6 @@
 /** Counter — reads its value from an input port and EMITS the next value;
- *  the view model's reaction writes it to the store (widgets never write).
- *  Proves the widget -> bus -> reaction -> store -> widget loop.
+ *  its DEFAULT reaction writes it back to that port's path (widgets never
+ *  write). Proves the widget -> bus -> reaction -> store -> widget loop.
  *  An antd Button. Render-only: all logic in useCounter. */
 import { Button } from "antd";
 import { z } from "zod";
@@ -16,11 +16,11 @@ const io = {
 
 const events = {
   incremented: {
-    description: "The next value; bind a reaction to store it",
+    description: "The next value; written back to the value port by default",
     payload: z.object({ value: z.number() }),
-    // State others depend on: a reaction MUST write it somewhere.
-    required: true,
+    // State others depend on: written back to `value` unless a template says otherwise.
     primary: "value",
+    writesBack: "value",
   },
 } satisfies WidgetEvents;
 
@@ -50,7 +50,6 @@ export const antdCounter = defineWidget({
     seed: { preview: { count: 3 } },
     viewModel: {
       inputs: { value: "preview.count" },
-      on: { incremented: [{ set: "preview.count", from: "value" }] },
     },
   },
   io,

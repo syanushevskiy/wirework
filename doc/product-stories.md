@@ -1,9 +1,9 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-three stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21) and two
-on 24 October 2026 (WW-22, WW-23), six to do (WW-15 to WW-20). Written for
+One epic, twenty-four stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+on 24 October 2026 (WW-22, WW-23) and one on 1 November 2026 (WW-24), six to do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-23) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-24) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -592,3 +592,40 @@ round: one choice, two places to make it. Designed with the tiger team (`doc/row
 `table-view.feature` ("A header filter on the paged table"), the `antd-infinite-table` `Window` story (the box takes
 the focus), the `antd-table` `HeaderFilters` and `HeadersOff` stories, the
 `rowWindow` unit tests (8).
+
+### WW-24 · Xsight Wirework - A control stores its own value without wiring; several reactions per event, in order
+
+**Type:** User feature · **Status:** Done · **Delivered:** 1 Nov
+
+**Short description:** As a page builder, I add a text field, a checkbox, a dropdown, a pager or a counter and it
+works at once: what the user types or picks is stored where the widget reads it, by default, with nothing to wire — the
+builder shows me that default and lets me add what should happen NEXT. Every event now takes a list of reactions I
+can add to, reorder by adding in order, and remove one by one, in the builder and when editing a placed widget; the
+old editor showed one and only kept the rest. A widget's specification says which of its inputs an event writes back
+to, so every implementation behaves the same and a configuration that forgets the write can no longer break a widget.
+
+**Acceptance criteria:**
+
+- **Given** the builder, **when** I choose a counter, **then** the form says its `incremented` event sets the counter's
+  own path by default, offers no reaction to fill, and Add is enabled; **when** I add it and click it twice, **then** it
+  shows 2.
+- **Given** the builder, **when** I choose a checkbox and add two reactions after its default — an application action,
+  then a write of the choice to a second path — and remove a third, blank one, **then** the form lists two reactions;
+  **when** I add the widget and tick it, **then** the box is checked, both paths hold true, and the saved page holds the
+  two reactions and not the default write.
+- **Given** the builder, **when** I choose a refresher, **then** its schedule is written back by default but Add stays
+  disabled until its `refresh` event, which has no default, calls an action.
+- **Given** the runs page with the overlay off, **when** I edit the pager, **then** the editor shows "page" written back
+  by default and the two reactions that follow (the page size, the request); **when** I save, **then** page 2 still
+  requests page 2.
+- **Given** a text field whose port I move to another path in the builder, **then** the default follows the new path
+  at once; a reaction I typed that repeats the default is not saved, so the page cannot write a stale path later.
+- **Given** a widget specification whose event claims to write back to an input it does not have, **when** the
+  application starts, **then** it is refused with the port named; an implementation that disagrees with its
+  specification on that point is refused too.
+
+**Verified by:** `builder.feature` ("Added widgets are wired together through inputs and reactions", "A widget cannot
+be added until required ports and reactions are bound", "A controlled widget stores its value by default, and more
+reactions follow in order"), `events.feature` ("The counter's own write is its default reaction, not widget code",
+"Editing the paginator on the shared page keeps its whole reaction chain"), the `WidgetBuilder` `WritesBackByDefault`
+and `WaitsForTheWiring` stories, the engine's "default write-back" and registry tests, the builder's form tests.

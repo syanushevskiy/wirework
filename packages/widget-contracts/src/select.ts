@@ -2,8 +2,8 @@
  * `select` contract — one choice from a dropdown.
  *
  * CONTROLLED like `input`: the chosen value lives at the `value` port ("" =
- * nothing chosen); every pick EMITS `changed` and the required reaction
- * writes it back. The options come from the optional `options` port — a
+ * nothing chosen); every pick EMITS `changed` and the default reaction
+ * writes it back (`writesBack`). The options come from the optional `options` port — a
  * store path, so a host can load them (the applications a filter offers) —
  * and fall back to the `options` setting. Implementations render a
  * combobox named by `label` (else `placeholder`); clearing emits "".
@@ -50,8 +50,8 @@ export const selectContract = defineContract({
     changed: {
       description: 'Fired when the user picks an option, or clears the choice ("")',
       payload: z.object({ value: z.string() }),
-      required: true,
       primary: "value",
+      writesBack: "value",
     },
   },
   settings: z.object({
@@ -64,7 +64,6 @@ export const selectContract = defineContract({
     seed: { preview: { choice: "two" } },
     viewModel: {
       inputs: { value: "preview.choice" },
-      on: { changed: [{ set: "preview.choice", from: "value" }] },
       label: "Choose one",
     },
   },

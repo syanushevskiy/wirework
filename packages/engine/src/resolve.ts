@@ -34,7 +34,7 @@ import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { errorText, issuesText, problemText } from "./messages";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
-import { actionArguments } from "./reactions";
+import { actionArguments, withDefaultReactions } from "./reactions";
 import type { WidgetRegistry } from "./registry";
 import { pageTemplates } from "./trees";
 
@@ -246,8 +246,9 @@ export function contractProblems(
 
 /**
  * ONE template of a widget with the user's settings for it: parsed by the
- * widget's own schema, then contract-checked. Resolve runs it on the picked
- * template; boot validation on every template a cell could pick.
+ * widget's own schema, completed with the default write-backs its events
+ * declare, then contract-checked. Resolve runs it on the picked template;
+ * boot validation on every template a cell could pick.
  */
 export function checkTemplate(
   definition: AnyWidgetDefinition,
@@ -257,7 +258,7 @@ export function checkTemplate(
 ): { viewModel: unknown; problem?: undefined } | { viewModel?: undefined; problem: CellProblem } {
   let viewModel: unknown;
   try {
-    viewModel = definition.viewModel.parse(deepMerge(template, userSettings));
+    viewModel = withDefaultReactions(definition, definition.viewModel.parse(deepMerge(template, userSettings)));
   } catch (error) {
     return { problem: { kind: "invalid-view-model", message: problemText(error) } };
   }

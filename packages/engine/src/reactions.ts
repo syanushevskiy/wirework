@@ -29,13 +29,16 @@ import {
   getPath,
   pageEventSource,
   type ActionDefinition,
+  type AnyWidgetDefinition,
   type EventBindings,
   type EventBus,
+  type EventDefinition,
   type Reaction,
   type SetReaction,
   type Store,
   type Unsubscribe,
   type WidgetEvent,
+  type WidgetEvents,
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
 import { problemText } from "./messages";
@@ -45,6 +48,54 @@ import type { ResolvedPage } from "./resolve";
 export function reactionValue(reaction: SetReaction, payload: unknown): unknown {
   if (reaction.value !== undefined) return reaction.value;
   return reaction.from ? getPath(payload, reaction.from) : payload;
+}
+
+/**
+ * The write-back an event does BY DEFAULT (`EventDefinition.writesBack`): a
+ * `set` to the path its port is bound to, from the event's primary field —
+ * the whole payload without one. Undefined when the event writes nothing
+ * back or the port is not bound to a path.
+ */
+export function defaultReaction(
+  event: EventDefinition,
+  inputs: Record<string, unknown> | undefined,
+): SetReaction | undefined {
+  if (event.writesBack === undefined) return undefined;
+  const path = inputs?.[event.writesBack];
+  if (typeof path !== "string" || path === "") return undefined;
+  return event.primary === undefined ? { set: path } : { set: path, from: event.primary };
+}
+
+/** Two reactions that do the same thing: a `set` of one path, field and literal, or a `call` of one action with the same arguments. */
+export function sameReaction(a: Reaction, b: Reaction): boolean {
+  if ("set" in a && "set" in b) {
+    return a.set === b.set && (a.from ?? "") === (b.from ?? "") && JSON.stringify(a.value) === JSON.stringify(b.value);
+  }
+  if ("call" in a && "call" in b) return a.call === b.call && JSON.stringify(a.with) === JSON.stringify(b.with);
+  return false;
+}
+
+/**
+ * A parsed view model with every default write-back in place: FIRST under
+ * its event, before what the view model declares — unless the view model
+ * declares that same write itself (then it runs where it was placed, once).
+ * Resolve applies it to every template (`checkTemplate`), so the plan, boot
+ * validation and the editor see one list; a caller binding a view model of
+ * its own (a story harness) applies it itself.
+ */
+export function withDefaultReactions(definition: AnyWidgetDefinition, viewModel: unknown): unknown {
+  // The one cast: the widget's own schema parsed `viewModel` a moment ago.
+  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Partial<EventBindings> } | null;
+  if (vm === null || typeof vm !== "object") return viewModel;
+  let on: Partial<EventBindings> | undefined;
+  for (const [name, event] of Object.entries(definition.events as WidgetEvents)) {
+    const fallback = defaultReaction(event, vm.inputs);
+    if (fallback === undefined) continue;
+    const declared = vm.on?.[name] ?? [];
+    if (declared.some((reaction) => sameReaction(reaction, fallback))) continue;
+    on = { ...(on ?? vm.on ?? {}), [name]: [fallback, ...declared] };
+  }
+  return on === undefined ? viewModel : { ...vm, on };
 }
 
 /** What `bindCellReactions` needs of a cell: where its events come from and its view model. */

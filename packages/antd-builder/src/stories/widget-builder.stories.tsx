@@ -52,14 +52,39 @@ export const AddsAButton: Story = {
   },
 };
 
-/** A widget with a required event waits until its reaction is wired. */
-export const WaitsForTheWiring: Story = {
+/**
+ * A controlled widget writes its value back by default: the form says so
+ * (following the port's path) and Add is offered at once; a reaction added
+ * on top is what FOLLOWS.
+ */
+export const WritesBackByDefault: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Show widgets" }));
     await userEvent.click(canvas.getByRole("button", { name: /antd-counter/ }));
+    const fallback = canvas.getByTestId("reaction-incremented-default");
+    await expect(fallback).toHaveAttribute("data-path", "builder.counter.value");
+    await expect(canvas.queryByTestId("reaction-incremented-set")).toBeNull();
+    await expect(canvas.getByRole("button", { name: "Add widget" })).toBeEnabled();
+    await userEvent.click(canvas.getByTestId("reaction-incremented-add"));
+    await expect(canvas.getByText("then:")).toBeVisible();
+    await userEvent.type(canvas.getByTestId("reaction-incremented-set"), "demo.log");
+    await expect(canvas.getByTestId("reaction-incremented-set")).toHaveValue("demo.log");
+  },
+};
+
+/** A widget with a required event that writes nothing back waits until its reaction is wired. */
+export const WaitsForTheWiring: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Show widgets" }));
+    await userEvent.click(canvas.getByRole("button", { name: /antd-refresher/ }));
     const add = canvas.getByRole("button", { name: "Add widget" });
+    // `changed` writes the schedule back by default; `refresh` has nothing to do yet.
+    await expect(canvas.getByTestId("reaction-changed-default")).toHaveAttribute(
+      "data-path",
+      "builder.refresher.schedule",
+    );
     await expect(add).toBeDisabled();
-    await userEvent.type(canvas.getByTestId("reaction-incremented-set"), "demo.count");
+    await userEvent.type(canvas.getByTestId("reaction-refresh-set"), "demo.refreshed");
     await expect(add).toBeEnabled();
   },
 };

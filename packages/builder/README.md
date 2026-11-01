@@ -76,8 +76,11 @@ layouts and your application decides where the files go.
 ## Hooks
 
 - `useWidgetForm` — one field per input port, per primitive setting, and per
-  event a reaction (`set` a path from a payload field, or `call` an action
-  with its declared parameters); `collect()` gives bindings and settings.
+  event its reactions: the write-back the event does by default (shown,
+  following the port's path) and a list of rows, run in order, each `set` a
+  path from a payload field or `call` an action with its declared
+  parameters (`addReaction`, `removeReaction`); `collect()` gives bindings
+  and settings, the default never among them.
 - `useWidgetBuilder` — a widget choice with generated input paths on top of
   the form; `add` hands the result to the host.
 - `useWidgetSearch`, `usePalettePress` — the palette's search and card presses.

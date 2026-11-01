@@ -18,13 +18,12 @@ const meta = {
   argTypes: storyArgTypes(antdInput),
   args: { ...storyArgs(antdInput), label: "Your name", placeholder: "type here" } as Args,
   render: (args) => (
-    // Its own reaction stores every keystroke, exactly as on a page.
+    // Its default reaction stores every keystroke, exactly as on a page.
     <WidgetStory
       definition={antdInput}
       viewModel={{
         ...Object.fromEntries(Object.entries(args).filter(([, value]) => value !== "" && value !== undefined)),
         inputs: { value: "form.text" },
-        on: { changed: [{ set: "form.text", from: "value" }] },
       }}
     />
   ),

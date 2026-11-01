@@ -3,7 +3,7 @@
  *
  * CONTROLLED like `select`: the chosen values live at the `value` port (an
  * array, default []); every change EMITS `changed` with ALL chosen values
- * and the required reaction writes them back. The options come from the
+ * and the default reaction writes them back (`writesBack`). The options come from the
  * optional `options` port — a store path, so they can depend on another
  * widget's choice — and fall back to the `options` setting. A chosen value
  * that is no longer among the options is shown as it is; removing it is the
@@ -41,8 +41,8 @@ export const multiSelectContract = defineContract({
     changed: {
       description: "Fired when the user adds or removes a choice; carries every chosen value",
       payload: z.object({ value: z.array(z.string()) }),
-      required: true,
       primary: "value",
+      writesBack: "value",
     },
   },
   settings: z.object({
@@ -55,7 +55,6 @@ export const multiSelectContract = defineContract({
     seed: { preview: { choices: ["one", "three"] } },
     viewModel: {
       inputs: { value: "preview.choices" },
-      on: { changed: [{ set: "preview.choices", from: "value" }] },
       label: "Choose several",
     },
   },

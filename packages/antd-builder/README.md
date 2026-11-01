@@ -2,8 +2,9 @@
 
 The Wirework page builder as Ant Design components: the page toolbar, the
 page's views, a palette of live widget previews, the shared widget form
-(input ports, settings, one reaction per event with the chosen action's
-parameters), and a panel that edits a placed widget. Render-only throughout — every piece of
+(input ports, settings, per event the write-back it does by default and
+its list of reactions, each with the chosen action's parameters), and a
+panel that edits a placed widget. Render-only throughout — every piece of
 state comes from `@wirework/builder`'s hooks, which this package is the
 reference implementation of.
 

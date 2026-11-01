@@ -2,7 +2,7 @@
  * `checkbox` contract — a yes/no choice.
  *
  * CONTROLLED: whether it is checked lives at the `checked` port; every
- * change EMITS `changed` and the required reaction writes it back.
+ * change EMITS `changed` and the default reaction writes it back (`writesBack`).
  * Implementations render role=checkbox named by `label`.
  */
 import { z } from "zod";
@@ -20,8 +20,8 @@ export const checkboxContract = defineContract({
     changed: {
       description: "Fired when the user checks or unchecks it",
       payload: z.object({ checked: z.boolean() }),
-      required: true,
       primary: "checked",
+      writesBack: "checked",
     },
   },
   settings: z.object({
@@ -31,7 +31,6 @@ export const checkboxContract = defineContract({
     seed: { preview: { checked: true } },
     viewModel: {
       inputs: { checked: "preview.checked" },
-      on: { changed: [{ set: "preview.checked", from: "checked" }] },
       label: "Remember me",
     },
   },

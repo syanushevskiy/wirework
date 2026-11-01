@@ -8,11 +8,18 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useWidgetForm } from "@wirework/builder";
 import { createStore } from "@wirework/store";
+import type { AnyWidgetDefinition } from "@wirework/schema";
 import { WidgetForm, portFieldId, reactionFieldId, settingFieldId } from "../widget-form";
-import { actions, counter } from "./fixtures";
+import { actions, counter, dial } from "./fixtures";
 
-function Harness({ bindingsLocked = false }: { bindingsLocked?: boolean }) {
-  const form = useWidgetForm({ definition: counter, store: createStore({}), actions: actions() });
+function Harness({
+  bindingsLocked = false,
+  definition = counter,
+}: {
+  bindingsLocked?: boolean;
+  definition?: AnyWidgetDefinition;
+}) {
+  const form = useWidgetForm({ definition, store: createStore({}), actions: actions() });
   return (
     <>
       <WidgetForm form={form} bindingsLocked={bindingsLocked} />
@@ -62,6 +69,36 @@ describe("WidgetForm", () => {
     expect(screen.getByTestId("bindings-locked")).toBeTruthy();
     expect(portInput("value").disabled).toBe(true);
     expect(screen.getByTestId<HTMLInputElement>(reactionFieldId("changed", "set")).disabled).toBe(true);
+    expect(screen.getByTestId<HTMLButtonElement>(reactionFieldId("changed", "add")).disabled).toBe(true);
     expect(screen.getByTestId<HTMLInputElement>(settingFieldId("label")).disabled).toBe(false);
+  });
+
+  it("shows an event's default write-back following the port's path, with no row to fill, and is complete at once", () => {
+    render(<Harness definition={dial} />);
+    expect(screen.getByTestId("valid").textContent).toBe("false");
+    const fallback = screen.getByTestId(reactionFieldId("turned", "default"));
+    expect(fallback.textContent).toContain("bind it above");
+    expect(screen.queryByTestId("widget-reaction")).toBeNull();
+
+    fireEvent.change(portInput("value"), { target: { value: "demo.level" } });
+    expect(fallback.getAttribute("data-path")).toBe("demo.level");
+    expect(fallback.textContent).toContain("demo.level");
+    expect(screen.getByTestId("valid").textContent).toBe("true");
+  });
+
+  it("adds rows under an event, each under its own ids, and removes the one asked", () => {
+    render(<Harness definition={dial} />);
+    fireEvent.click(screen.getByTestId(reactionFieldId("turned", "add")));
+    fireEvent.click(screen.getByTestId(reactionFieldId("turned", "add")));
+    expect(screen.getAllByTestId("widget-reaction").map((row) => row.getAttribute("data-index"))).toEqual(["0", "1"]);
+    expect(screen.getByTestId(reactionFieldId("turned", "set")).getAttribute("id")).toBe("reaction-turned-set");
+    expect(screen.getByTestId(reactionFieldId("turned", "set", 1)).getAttribute("id")).toBe("reaction-turned-2-set");
+    // Under a default write-back every row is what FOLLOWS it.
+    expect(screen.getAllByText("then:")).toHaveLength(2);
+
+    fireEvent.change(screen.getByTestId(reactionFieldId("turned", "set", 1)), { target: { value: "demo.log" } });
+    fireEvent.click(screen.getByTestId(reactionFieldId("turned", "remove")));
+    expect(screen.getAllByTestId("widget-reaction")).toHaveLength(1);
+    expect(screen.getByTestId<HTMLInputElement>(reactionFieldId("turned", "set")).value).toBe("demo.log");
   });
 });

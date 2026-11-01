@@ -35,6 +35,10 @@ When("I choose the {string} widget", async ({ page }, widget: string) => {
   const card = widgetCard(page, widget);
   await card.click();
   await expect(card).toHaveAttribute("aria-pressed", "true");
+  // Move on, as a user does: the catalog closes when the card loses the
+  // focus, and it must close NOW — a click on the form below while it is
+  // closing (between mouse down and up) lands where the control no longer is.
+  await card.blur();
 });
 
 When("I search the palette for {string}", async ({ page }, query: string) => {
@@ -212,36 +216,86 @@ Then("the builder shows a setting {string}", async ({ page }, name: string) => {
 
 /* ----------------------------- reactions ----------------------------- */
 
+/**
+ * An event has a LIST of reactions, run in order. "The reaction" is the
+ * first row; "reaction 2" the next one (`reactionFieldId` counts from 0). A
+ * controlled widget's event writes its port back BY DEFAULT — shown above
+ * the rows, never a row itself — so its first row is what follows.
+ */
+
+async function setReactionPath(page: Page, event: string, path: string, from: string | undefined, index = 0) {
+  await page.getByTestId(reactionFieldId(event, "set", index)).fill(path);
+  if (from === undefined) return;
+  const fromControl = page.getByTestId(reactionFieldId(event, "from", index));
+  if (await isSelect(fromControl)) {
+    // Object payloads offer their fields; "" means the whole payload.
+    await chooseOption(page, reactionFieldId(event, "from", index), from === "" ? "whole payload" : from);
+  } else {
+    await fromControl.fill(from);
+  }
+}
+
+async function setReactionCall(page: Page, event: string, action: string, index = 0) {
+  await chooseOption(page, reactionFieldId(event, "kind", index), "call action");
+  await chooseOption(page, reactionFieldId(event, "call", index), action, "prefix");
+}
+
 /** Only the path: the payload field stays whatever the builder defaulted it to. */
 When("I set the reaction for {string} to set {string}", async ({ page }, event: string, path: string) => {
-  await page.getByTestId(reactionFieldId(event, "set")).fill(path);
+  await setReactionPath(page, event, path, undefined);
 });
 
 When(
   "I set the reaction for {string} to set {string} from {string}",
   async ({ page }, event: string, path: string, from: string) => {
-    await page.getByTestId(reactionFieldId(event, "set")).fill(path);
-    const fromControl = page.getByTestId(reactionFieldId(event, "from"));
-    if (await isSelect(fromControl)) {
-      // Object payloads offer their fields; "" means the whole payload.
-      await chooseOption(page, reactionFieldId(event, "from"), from === "" ? "whole payload" : from);
-    } else {
-      await fromControl.fill(from);
-    }
+    await setReactionPath(page, event, path, from);
   },
 );
 
 When("I set the reaction for {string} to call {string}", async ({ page }, event: string, action: string) => {
-  await chooseOption(page, reactionFieldId(event, "kind"), "call action");
-  await chooseOption(page, reactionFieldId(event, "call"), action, "prefix");
+  await setReactionCall(page, event, action);
+});
+
+/** Another row under the event — the first one for an event that writes back by default. */
+When("I add a reaction for {string}", async ({ page }, event: string) => {
+  await page.getByTestId(reactionFieldId(event, "add")).click();
+});
+
+When(
+  "I set reaction {int} for {string} to set {string} from {string}",
+  async ({ page }, ordinal: number, event: string, path: string, from: string) => {
+    await setReactionPath(page, event, path, from, ordinal - 1);
+  },
+);
+
+When(
+  "I set reaction {int} for {string} to call {string}",
+  async ({ page }, ordinal: number, event: string, action: string) => {
+    await setReactionCall(page, event, action, ordinal - 1);
+  },
+);
+
+When("I remove reaction {int} for {string}", async ({ page }, ordinal: number, event: string) => {
+  await page.getByTestId(reactionFieldId(event, "remove", ordinal - 1)).click();
 });
 
 Then("the reaction for {string} takes {string} from the payload", async ({ page }, event: string, from: string) => {
   await expect(page.getByTestId(reactionFieldId(event, "from"))).toHaveText(from);
 });
 
-Then("the reaction for {string} keeps {int} more reaction(s)", async ({ page }, event: string, count: number) => {
-  await expect(page.getByTestId(reactionFieldId(event, "kept"))).toContainText(`then ${count} more reaction`);
+/** What the event does before any row: the write-back its contract declares, following the port's path. */
+Then(
+  "the event {string} writes {string} back to {string} by default",
+  async ({ page }, event: string, from: string, path: string) => {
+    const fallback = page.getByTestId(reactionFieldId(event, "default"));
+    await expect(fallback).toHaveAttribute("data-path", path);
+    await expect(fallback).toContainText(from);
+  },
+);
+
+/** The rows configured under the event (the default write-back is not one of them). */
+Then("the event {string} has {int} more reaction(s)", async ({ page }, event: string, count: number) => {
+  await expect(page.locator(`[data-testid="widget-reaction"][data-event="${event}"]`)).toHaveCount(count);
 });
 
 Then("the widget events list includes {string}", async ({ page }, name: string) => {
@@ -316,9 +370,10 @@ Then("the cell {string} has no edit chrome", async ({ page }, id: string) => {
 
 Then("the widget editor keeps inputs and reactions read-only", async ({ page }) => {
   await expect(page.getByTestId("bindings-locked")).toBeVisible();
-  await expect(
-    page.locator('[data-testid^="reaction-"][data-testid$="-kind"]').first().getByRole("combobox"),
-  ).toBeDisabled();
+  // No reaction can be added — the one control every event has, rows or not.
+  await expect(page.locator('[data-testid^="reaction-"][data-testid$="-add"]').first()).toBeDisabled();
+  const kinds = page.locator('[data-testid^="reaction-"][data-testid$="-kind"]');
+  if ((await kinds.count()) > 0) await expect(kinds.first().getByRole("combobox")).toBeDisabled();
 });
 
 When("I save the widget", async ({ page }) => {

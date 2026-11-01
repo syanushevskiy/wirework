@@ -11,8 +11,8 @@ const meta = {
   argTypes: storyArgTypes(antdRefresher),
   args: storyArgs(antdRefresher) as Args,
   render: (settings) => (
-    // `changed` stores the whole schedule; `refresh` stores its trigger, so
-    // the store readout shows every click and tick.
+    // `changed` stores the whole schedule by default; `refresh` stores its
+    // trigger, so the store readout shows every click and tick.
     <WidgetStory
       key="default"
       definition={antdRefresher}
@@ -20,10 +20,7 @@ const meta = {
       viewModel={{
         ...settings,
         inputs: { schedule: "demo.schedule" },
-        on: {
-          changed: [{ set: "demo.schedule" }],
-          refresh: [{ set: "demo.lastTrigger", from: "trigger" }],
-        },
+        on: { refresh: [{ set: "demo.lastTrigger", from: "trigger" }] },
       }}
     />
   ),

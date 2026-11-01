@@ -35,8 +35,11 @@ sentences.
 
 `createEmitter` (a cell-scoped, validating `emit`: an undeclared name or a
 refused payload throws), `bindReactions` / `bindCellReactions` (a page's or
-one cell's declared reactions on the bus), `emitPageLoad` (the page has
-opened), `readableStore` (the read side a widget receives).
+one cell's declared reactions on the bus), `withDefaultReactions` /
+`defaultReaction` / `sameReaction` (the write-back an event does by
+default, in place first under its event — what `checkTemplate` applies to
+every resolved view model), `emitPageLoad` (the page has opened),
+`readableStore` (the read side a widget receives).
 
 ## Trees and paths
 
