@@ -4,7 +4,7 @@
  * list for screen readers), so picking one goes by the popup's title
  * attributes. Everything else in the suite uses roles and test ids.
  */
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * The open antd dropdown (a Select or an AutoComplete popup). Excludes one
@@ -26,18 +26,36 @@ export const option = (page: Page, label: string, match: "exact" | "prefix" = "e
     match === "exact" ? `.ant-select-item-option[title="${label}"]` : `.ant-select-item-option[title^="${label}"]`,
   );
 
+/** The option antd has highlighted in the open dropdown — where Enter would land. */
+const activeOption = (page: Page) => dropdown(page).locator(".ant-select-item-option-active");
+
 /**
- * Open an antd Select by its test id and pick one option. The control is
- * brought to the MIDDLE of the viewport first: a Select at the bottom edge
- * opens its popup upwards and partly outside the viewport, Playwright then
- * scrolls the page to reach the option, antd re-aligns the popup on the
- * scroll, and the two chase each other until the click times out.
+ * Open an antd Select by its test id and pick one option — with the
+ * KEYBOARD, as a person who cannot reach the mouse would: Down until the
+ * highlighted option is the one wanted, then Enter. A mouse click on the
+ * option is what a Select near the bottom of a long page cannot take: its
+ * popup opens partly outside the viewport, Playwright scrolls the page to
+ * reach the option, antd re-aligns and re-creates the popup on the scroll,
+ * and the two chase each other until the click times out. The keyboard
+ * needs no scrolling and antd keeps the highlighted option rendered.
  */
 export async function chooseOption(page: Page, testId: string, label: string, match: "exact" | "prefix" = "exact") {
   const control = page.getByTestId(testId);
-  await control.evaluate((element) => element.scrollIntoView({ block: "center" }));
   await control.click();
-  await option(page, label, match).click();
+  await expect(dropdown(page)).toBeVisible();
+  const wanted = (title: string | null): boolean =>
+    title !== null && (match === "exact" ? title === label : title.startsWith(label));
+  // One step per option at most, then one more to see that nothing matched.
+  const options = await dropdown(page).locator(".ant-select-item-option").count();
+  for (let step = 0; step <= options; step += 1) {
+    if (wanted(await activeOption(page).getAttribute("title"))) {
+      await control.press("Enter");
+      await expect(dropdown(page)).toHaveCount(0);
+      return;
+    }
+    await control.press("ArrowDown");
+  }
+  throw new Error(`no option "${label}" in the dropdown of "${testId}"`);
 }
 
 /** A form control that is a dropdown (its box is a combobox); a plain field is the input itself. */

@@ -6,7 +6,7 @@
  * aria-invalid, alert), never implementation test ids.
  */
 import type { StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, fireEvent, within } from "storybook/test";
 import type { AnyWidgetDefinition } from "@wirework/schema";
 import { WidgetStory } from "./harness";
 
@@ -655,6 +655,202 @@ export function filterBarConformance(
       ),
       play: async ({ canvas }) => {
         await expect(canvas.getByText("No filters")).toBeVisible();
+      },
+    },
+  };
+}
+
+/** `switch` contract: role=switch named by the label, off and on from the store, a flip stored by the default reaction. */
+export function switchConformance(definition: AnyWidgetDefinition): Record<"Off" | "Flips" | "FromStore", Story> {
+  const story = (key: string, on: boolean) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ demo: { on } }}
+      viewModel={{ inputs: { checked: "demo.on" }, label: "Notifications" }}
+    />
+  );
+  return {
+    Off: {
+      render: () => story("off", false),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("switch", { name: "Notifications" })).not.toBeChecked();
+      },
+    },
+    Flips: {
+      render: () => story("flips", false),
+      play: async ({ canvas, userEvent }) => {
+        const toggle = canvas.getByRole("switch", { name: "Notifications" });
+        await userEvent.click(toggle);
+        await expect(toggle).toBeChecked();
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"on": true');
+      },
+    },
+    FromStore: {
+      render: () => story("from-store", true),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("switch", { name: "Notifications" })).toBeChecked();
+      },
+    },
+  };
+}
+
+/** `slider` contract: role=slider named by the label with the range and the value, a keyboard move stored by the default reaction. */
+export function sliderConformance(definition: AnyWidgetDefinition): Record<"Value" | "Moves", Story> {
+  const story = (key: string) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ demo: { volume: 40 } }}
+      viewModel={{ inputs: { value: "demo.volume" }, label: "Volume", min: 0, max: 100, step: 5 }}
+    />
+  );
+  return {
+    Value: {
+      render: () => story("value"),
+      play: async ({ canvas }) => {
+        const handle = canvas.getByRole("slider", { name: "Volume" });
+        await expect(handle).toHaveAttribute("aria-valuenow", "40");
+        await expect(handle).toHaveAttribute("aria-valuemin", "0");
+        await expect(handle).toHaveAttribute("aria-valuemax", "100");
+      },
+    },
+    Moves: {
+      render: () => story("moves"),
+      play: async ({ canvas }) => {
+        const handle = canvas.getByRole("slider", { name: "Volume" });
+        // The arrow key as the handle receives it — antd reads the key CODE (the e2e suite presses the real key in Edge).
+        await fireEvent.keyDown(handle, { key: "ArrowRight", code: "ArrowRight", keyCode: 39, which: 39 });
+        await expect(handle).toHaveAttribute("aria-valuenow", "45");
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"volume": 45');
+      },
+    },
+  };
+}
+
+/** `radio-group` contract: role=radiogroup named by the label, one radio per option, a pick stored by the default reaction. */
+export function radioGroupConformance(definition: AnyWidgetDefinition): Record<"Picks" | "FromStore", Story> {
+  const story = (key: string, priority: string) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ demo: { priority } }}
+      viewModel={{
+        inputs: { value: "demo.priority" },
+        label: "Priority",
+        options: [
+          { value: "low", label: "Low" },
+          { value: "high", label: "High" },
+        ],
+      }}
+    />
+  );
+  return {
+    Picks: {
+      render: () => story("picks", ""),
+      play: async ({ canvas, userEvent }) => {
+        const group = canvas.getByRole("radiogroup", { name: "Priority" });
+        await expect(within(group).getByRole("radio", { name: "Low" })).not.toBeChecked();
+        await userEvent.click(within(group).getByRole("radio", { name: "High" }));
+        await expect(within(group).getByRole("radio", { name: "High" })).toBeChecked();
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"priority": "high"');
+      },
+    },
+    FromStore: {
+      render: () => story("from-store", "low"),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("radio", { name: "Low" })).toBeChecked();
+      },
+    },
+  };
+}
+
+/** `rate` contract: a group named by the label with one radio per star, the chosen ones checked, a pick stored by the default reaction. */
+export function rateConformance(definition: AnyWidgetDefinition): Record<"Value" | "Picks", Story> {
+  const story = (key: string, stars: number) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ demo: { stars } }}
+      viewModel={{ inputs: { value: "demo.stars" }, label: "Quality", count: 5 }}
+    />
+  );
+  const checked = (canvas: ReturnType<typeof within>) =>
+    within(canvas.getByRole("group", { name: "Quality" }))
+      .getAllByRole("radio")
+      .filter((star) => star.getAttribute("aria-checked") === "true").length;
+  return {
+    Value: {
+      render: () => story("value", 3),
+      play: async ({ canvas }) => {
+        await expect(within(canvas.getByRole("group", { name: "Quality" })).getAllByRole("radio")).toHaveLength(5);
+        expect(checked(canvas)).toBe(3);
+      },
+    },
+    Picks: {
+      render: () => story("picks", 0),
+      play: async ({ canvas, userEvent }) => {
+        const stars = within(canvas.getByRole("group", { name: "Quality" })).getAllByRole("radio");
+        const fourth = stars[3];
+        if (!fourth) throw new Error("the rating has fewer than four stars");
+        await userEvent.click(fourth);
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"stars": 4');
+        expect(checked(canvas)).toBe(4);
+      },
+    },
+  };
+}
+
+/** `statistic` contract: the title and the value from the store, digits grouped, with prefix and suffix; `data-value` holds the value. */
+export function statisticConformance(definition: AnyWidgetDefinition): Record<"Number" | "Text", Story> {
+  return {
+    Number: {
+      render: () => (
+        <WidgetStory
+          key="number"
+          definition={definition}
+          seed={{ demo: { total: 1128.5 } }}
+          viewModel={{ inputs: { value: "demo.total" }, title: "Active runs", suffix: "runs", precision: 1 }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Active runs")).toBeVisible();
+        await expect(canvas.getByText("runs")).toBeVisible();
+        // The digits grouped, the decimals to the precision given.
+        await expect(canvas.getByText("1,128")).toBeVisible();
+        await expect(canvas.getByText(".5")).toBeVisible();
+      },
+    },
+    Text: {
+      render: () => (
+        <WidgetStory
+          key="text"
+          definition={definition}
+          seed={{ demo: { state: "Healthy" } }}
+          viewModel={{ inputs: { value: "demo.state" }, title: "Cluster", prefix: "●" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Healthy")).toBeVisible();
+        await expect(canvas.getByText("●")).toBeVisible();
+      },
+    },
+  };
+}
+
+/** `divider` contract: role=separator, with the title on it or plain. */
+export function dividerConformance(definition: AnyWidgetDefinition): Record<"Titled" | "Plain", Story> {
+  return {
+    Titled: {
+      render: () => <WidgetStory key="titled" definition={definition} viewModel={{ text: "Details" }} />,
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("separator")).toHaveTextContent("Details");
+      },
+    },
+    Plain: {
+      render: () => <WidgetStory key="plain" definition={definition} viewModel={{ dashed: true }} />,
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("separator")).toBeEmptyDOMElement();
       },
     },
   };

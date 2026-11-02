@@ -87,8 +87,10 @@ layouts and your application decides where the files go.
   `TreeEdit`) and saved as the words the engine reads —, the value it
   takes and when/unless (`conditions`, `predicateChoices`, `testChoices`,
   `conditionPaths`, `addCondition`, `removeCondition`, `setCondition`),
-  every row gating submit until it holds together; `collect()` gives
-  bindings (`inputs`, `on`, `when`) and settings, the default never among
+  every row gating submit until it holds together, and how the widget
+  appears when the condition turns true (`appear`, `appearChoices`,
+  `setAppear` — saved only with a condition); `collect()` gives bindings
+  (`inputs`, `on`, `when`, `appear`) and settings, the default never among
   them, and `templateOf` writes them into a template.
 - `useWidgetBuilder` — a widget choice with generated input paths on top of
   the form; `add` hands the result to the host.

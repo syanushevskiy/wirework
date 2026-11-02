@@ -13,13 +13,17 @@ declares:
 - `labelContract` (`LABEL_TONES`, `LabelTone`), `tagContract` (`TAG_TONES`,
   `TagTone`), `alertContract` (`ALERT_TONES`, `AlertTone`),
   `progressContract` (`PROGRESS_TONES`, `ProgressTone`) — display.
-- `buttonContract`, `checkboxContract`, `inputContract` (`INPUT_TYPES`,
-  `VALIDATION_RULES`, `ValidationRule`), `selectContract` and
-  `multiSelectContract` (`choiceOptionSchema`, `choiceOptionsSchema`,
-  `ChoiceOption`) — controls whose state lives in the store and reaches it
-  through a reaction: their `changed` writes back to the port it changes by
-  default (`writesBack`), so a template binds the port and adds only what
-  should follow.
+- `buttonContract`, `checkboxContract`, `switchContract`, `inputContract`
+  (`INPUT_TYPES`, `VALIDATION_RULES`, `ValidationRule`), `selectContract`,
+  `multiSelectContract` and `radioGroupContract` (`choiceOptionSchema`,
+  `choiceOptionsSchema`, `ChoiceOption`), `sliderContract`, `rateContract`
+  — controls whose state lives in the store and reaches it through a
+  reaction: their `changed` writes back to the port it changes by default
+  (`writesBack`), so a template binds the port and adds only what should
+  follow.
+- `statisticContract` (one number, large, with its title) and
+  `dividerContract` (`DIVIDER_ORIENTATIONS`, `DividerOrientation`) —
+  display, like the first group.
 - `paginationContract` (`PAGINATION_SIZES`, `PaginationSize`),
   `refresherContract` (`refreshScheduleSchema`, `RefreshSchedule`,
   `REFRESH_INTERVAL`, `REFRESH_TRIGGERS`, `RefreshTrigger`) — the page's

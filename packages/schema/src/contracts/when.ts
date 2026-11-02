@@ -55,6 +55,16 @@ export const whenSchema = z.array(z.union([whenTestSchema, whenAnySchema, whenEx
 export type When = z.infer<typeof whenSchema>;
 
 /**
+ * How a widget APPEARS when its condition turns true (the `appear` section,
+ * beside `when`): one of a closed list of animations an adapter draws —
+ * never a duration or a curve in configuration. Without it a widget simply
+ * shows.
+ */
+export const APPEARANCES = ["fade", "slide-up", "slide-down", "zoom", "flip"] as const;
+export const appearSchema = z.enum(APPEARANCES);
+export type Appearance = z.infer<typeof appearSchema>;
+
+/**
  * One named check a condition may use. PURE and synchronous: a function of
  * the value and the literal — no store, no bus, no clock, no throw. Anything
  * that needs more is an action that writes a value the condition then reads.

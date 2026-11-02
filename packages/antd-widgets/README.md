@@ -14,10 +14,12 @@ import "@wirework/antd-widgets/styles.css";
   `createAntdWidgets({ tableCells })` (`AntdWidgetsOptions`) to add your own
   table cell renderers by name.
 - One export per widget: `antdLabel`, `antdTag`, `antdAlert`,
-  `antdProgress`, `antdButton`, `antdCheckbox`, `antdInput`, `antdSelect`,
-  `antdMultiSelect`, `antdPagination`, `antdRefresher`, `antdTable`,
-  `antdInfiniteTable`, `antdFilterBar`, plus `antdCounter` and `antdEcho`
-  (this package's own kinds); `createAntdTable({ cells })` and
+  `antdProgress`, `antdStatistic`, `antdDivider`, `antdButton`,
+  `antdCheckbox`, `antdSwitch`, `antdInput`, `antdSelect`,
+  `antdMultiSelect`, `antdRadioGroup`, `antdSlider`, `antdRate`,
+  `antdPagination`, `antdRefresher`, `antdTable`, `antdInfiniteTable`,
+  `antdFilterBar`, plus `antdCounter` and `antdEcho` (this package's own
+  kinds); `createAntdTable({ cells })` and
   `createAntdInfiniteTable({ cells })` (`AntdTableOptions`) are the two
   tables with your renderers (`TableCellProps`, `TableCellRenderer`,
   `TableCellRenderers`). Both tables offer each column's filter in its

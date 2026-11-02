@@ -45,10 +45,14 @@ Feature: Conditions — a widget shown when a predicate holds
     And I set the condition to "demo.count" "is greater than" "10"
     Then the condition reads "when demo.count is greater than 10"
     And the add widget button is enabled
-    When I add the widget
+    # A conditional widget may APPEAR with an animation from the list; it simply shows otherwise.
+    When I set the appearance to "slide up"
+    And I add the widget
     Then the page has 1 cell
     And the cell "custom-1" is hidden
+    And the cell "custom-1" appears with "slide-up"
     And the state JSON contains '"is": "greater"'
+    And the state JSON contains '"appear": "slide-up"'
     When the store holds at "demo.count":
       """
       11

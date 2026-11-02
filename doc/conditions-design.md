@@ -213,6 +213,20 @@ problem, and are not saved over. The headless state is `GroupDraft` /
 part's place ("", "1", "1.0") and `TreeEdit` the step (`set`, `group`,
 `add`, `"remove"`), and `editTree` the pure function behind it.
 
+### Appearance
+
+A widget with a condition may say how it APPEARS when the condition turns
+true: `appear`, the fourth reserved key beside `inputs`, `on` and `when`,
+one of a closed list (`APPEARANCES`: `fade`, `slide-up`, `slide-down`,
+`zoom`, `flip`) — never a duration or a curve in configuration. The adapter
+draws it: the element around the widget mounts with the condition, so a
+mount animation IS the appearance (`.ww-appear-<name>` in the adapter's
+stylesheet, 320 ms, eased, none under `prefers-reduced-motion`); the cell
+carries `data-appear`. The builder offers it under the conditions, as
+"appears with", only while there is a condition; `collect()` saves it only
+with one, because an appearance means nothing without a condition to
+appear on. Without it a widget simply shows.
+
 ## The predicates
 
 ```ts
@@ -495,6 +509,35 @@ Open to the product owner: whether a hidden widget should also be
 hideable by the USER (the overlay question above). The demo's run page
 keeps its "…" placeholders while the run loads (decided for the fixture;
 a page builder hides them with one `when` per cell).
+
+## Reviewed 2026-11-02 (the constructor as an editor, the appearance, the six widgets)
+
+- **Morgan:** the constructor is now something a page builder COMPOSES —
+  the condition reads left to right as it will run, every element in its
+  own colour. The "and …" button says what adding does. Ship.
+- **Dmitri:** the saved form is still the words, and the tree is only the
+  form's; nothing new in the engine. `Appearing` renders no element when
+  there is nothing to appear with: an extra `div` around every widget on
+  every page would have been the kind of cost nobody notices until a
+  stylesheet does.
+- **Alexei:** `appear` is a binding like `when`, derived into the schema,
+  refused as a setting, kept out of the overlay — the same seam, no new
+  one. The six kinds follow the contract pattern to the letter: a contract,
+  an implementation with its hook, a conformance set another
+  implementation runs.
+- **Sasha:** the e2e helper that picks from an antd Select now goes by the
+  keyboard (Down until the highlighted option is the one wanted, Enter):
+  the mouse path lost a race with antd's popup alignment on long forms,
+  three times, with the trace to prove it. The new widgets are driven by
+  role (`switch`, `radiogroup`, `radio`, `slider`, `separator`), never by
+  antd's DOM; the slider's story presses the key as antd reads it (the key
+  code), the suite presses the real key in Edge.
+- **Ren:** two cautions, no objection. A mount animation is the appearance,
+  so a widget that flips often animates often — the page builder's choice,
+  and `prefers-reduced-motion` turns it off. The `( … )` button nests
+  without limit; a page builder who nests five deep gets what they asked
+  for, and the words still read.
+- **Vlad:** `Appearing` is one ternary; `templateOf` grew one spread.
 
 ## Built and tested
 

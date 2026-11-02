@@ -497,6 +497,15 @@ Then("the condition problem is {string}", async ({ page }, problem: string) => {
   await expect(page.getByTestId(conditionFieldId("problem"))).toHaveText(problem);
 });
 
+/** How a conditional widget appears when its condition turns true — one of the animations on offer. */
+When("I set the appearance to {string}", async ({ page }, appearance: string) => {
+  await chooseOption(page, conditionFieldId("appear"), appearance);
+});
+
+Then("the cell {string} appears with {string}", async ({ page }, id: string, appearance: string) => {
+  await expect(cell(page, id)).toHaveAttribute("data-appear", appearance);
+});
+
 /** A cell whose template carries no condition: nothing says when, it simply shows. */
 Then("the cell {string} always shows", async ({ page }, id: string) => {
   await expect(cell(page, id)).toBeVisible();

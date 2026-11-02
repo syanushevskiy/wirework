@@ -28,6 +28,81 @@
   color: var(--ww-color-note, var(--ant-color-warning, #b45309));
 }
 
+/*
+ * How a widget APPEARS when its condition turns true (`appear`, one of
+ * APPEARANCES in @wirework/schema): the element around the widget mounts
+ * with the condition, so a mount animation is the appearance. Short and
+ * eased; none at all for people who asked their system for less motion.
+ */
+.ww-appear {
+  --ww-appear-time: 320ms;
+  --ww-appear-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-duration: var(--ww-appear-time);
+  animation-timing-function: var(--ww-appear-ease);
+  animation-fill-mode: both;
+}
+
+.ww-appear-fade {
+  animation-name: ww-fade;
+}
+
+.ww-appear-slide-up {
+  animation-name: ww-slide-up;
+}
+
+.ww-appear-slide-down {
+  animation-name: ww-slide-down;
+}
+
+.ww-appear-zoom {
+  animation-name: ww-zoom;
+}
+
+.ww-appear-flip {
+  animation-name: ww-flip;
+  transform-origin: top center;
+}
+
+@keyframes ww-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ww-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+@keyframes ww-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+}
+
+@keyframes ww-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@keyframes ww-flip {
+  from {
+    opacity: 0;
+    transform: perspective(40rem) rotateX(-20deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ww-appear {
+    animation: none;
+  }
+}
+
 /* ---- edit-mode chrome (placed by each engine) ---- */
 
 .ww-cell-actions {

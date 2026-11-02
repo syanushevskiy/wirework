@@ -88,6 +88,60 @@ Then("the status badge reads {string}", async ({ page }, text: string) => {
   await expect(live(page).getByTestId("status-badge")).toHaveText(text);
 });
 
+/* ----------------------- more widgets (WW-26) ----------------------- */
+
+When("I flip the switch", async ({ page }) => {
+  await live(page).getByRole("switch").click();
+});
+
+Then("the switch is {word}", async ({ page }, word: string) => {
+  await expect(live(page).getByTestId("antd-switch")).toHaveAttribute("data-checked", String(onOff(word)));
+});
+
+When("I pick {string} in the radio group", async ({ page }, label: string) => {
+  await live(page).getByRole("radiogroup").getByRole("radio", { name: label }).check();
+});
+
+Then("the radio group holds {string}", async ({ page }, value: string) => {
+  await expect(live(page).getByTestId("antd-radio-group")).toHaveAttribute("data-value", value);
+});
+
+/** The rating's stars are radios in a group; the n-th star is the score n. */
+When("I rate {int} star(s)", async ({ page }, stars: number) => {
+  await live(page)
+    .getByTestId("antd-rate")
+    .getByRole("radio")
+    .nth(stars - 1)
+    .click();
+});
+
+Then("the rating is {int}", async ({ page }, stars: number) => {
+  await expect(live(page).getByTestId("antd-rate")).toHaveAttribute("data-value", String(stars));
+});
+
+/** The slider moves by its step on the arrow keys. */
+When("I nudge the slider up {int} time(s)", async ({ page }, times: number) => {
+  const handle = live(page).getByRole("slider");
+  await handle.focus();
+  for (let i = 0; i < times; i += 1) {
+    await handle.press("ArrowRight");
+  }
+});
+
+Then("the slider holds {int}", async ({ page }, value: number) => {
+  await expect(live(page).getByTestId("antd-slider")).toHaveAttribute("data-value", String(value));
+});
+
+Then("the statistic reads {string} and {string}", async ({ page }, title: string, value: string) => {
+  const statistic = live(page).getByTestId("antd-statistic");
+  await expect(statistic).toContainText(title);
+  await expect(statistic).toContainText(value);
+});
+
+Then("the divider reads {string}", async ({ page }, text: string) => {
+  await expect(live(page).getByRole("separator")).toHaveText(text);
+});
+
 /* ------------------------------- input ------------------------------- */
 
 When("I type {string} into the input", async ({ page }, text: string) => {

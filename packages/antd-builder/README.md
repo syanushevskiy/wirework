@@ -57,6 +57,7 @@ field `port-input-<port>`, `setting-<name>`, `reaction-<event>-<part>`,
 the form cannot read; inside a constructor `condition-part-<at>-<part>`
 for a test at its place — `0`, `1.0` — and `condition-group-<at>-<part>`
 for a group — `root` for the first — with `join`, `not`, `add-test`,
-`add-group`, `remove`; `condition-add` for the section) — built by the helpers of `@wirework/antd-builder/ids`, which a
+`add-group`, `remove`; `condition-add` for the section and
+`condition-appear` for how a conditional widget appears) — built by the helpers of `@wirework/antd-builder/ids`, which a
 suite imports without the components. Renaming any of them is a breaking
 change.

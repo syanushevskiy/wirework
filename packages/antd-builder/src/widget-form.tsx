@@ -523,6 +523,9 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
     settings,
     events,
     conditions,
+    appear,
+    appearChoices,
+    setAppear,
     setPortPath,
     setSetting,
     chooseSetting,
@@ -739,6 +742,22 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
             + condition
           </Button>
         </div>
+        {/* How the widget appears when its condition turns true: one of the adapter's animations, or none. */}
+        {conditions.length === 0 ? null : (
+          <Form.Item htmlFor={conditionFieldId("appear")} label="appears with">
+            <Select
+              id={conditionFieldId("appear")}
+              data-testid={conditionFieldId("appear")}
+              className="ww-builder-field-narrow"
+              placeholder="no animation"
+              allowClear
+              disabled={bindingsLocked}
+              {...(appear === "" ? {} : { value: appear })}
+              onChange={(choice: string | undefined) => setAppear(choice ?? "")}
+              options={appearChoices}
+            />
+          </Form.Item>
+        )}
       </Flex>
     </ConfigProvider>
   );

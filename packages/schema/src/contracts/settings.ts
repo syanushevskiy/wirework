@@ -15,8 +15,8 @@
 import { z } from "zod";
 import type { Validator } from "./widget";
 
-/** View-model keys that are bindings, never settings: the ports, the reactions, the condition. */
-export const RESERVED_VIEW_MODEL_KEYS = new Set(["inputs", "on", "when"]);
+/** View-model keys that are bindings, never settings: the ports, the reactions, the condition and how the widget appears. */
+export const RESERVED_VIEW_MODEL_KEYS = new Set(["inputs", "on", "when", "appear"]);
 
 /** "json": anything that is not a primitive (an object, a list) — only on request, see `settingFields`. */
 export type SettingKind = "text" | "number" | "boolean" | "select" | "json";

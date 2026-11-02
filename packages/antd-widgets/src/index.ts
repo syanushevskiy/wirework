@@ -9,8 +9,9 @@
  * contract has leaked. No widget writes the store — every state change is
  * an emitted event plus a reaction. Label, button, input, pagination,
  * refresher, select, multi-select, filter-bar, tag, checkbox, progress,
- * alert, table and infinite-table IMPLEMENT the standard contracts; counter,
- * echo and crash are demo/test widgets.
+ * alert, table, infinite-table, switch, slider, radio-group, rate,
+ * statistic and divider IMPLEMENT the standard contracts; counter, echo and
+ * crash are demo/test widgets.
  */
 import { z } from "zod";
 import type { AnyWidgetDefinition } from "@wirework/schema";
@@ -19,6 +20,7 @@ import { antdButton } from "./widgets/antd-button";
 import { antdCheckbox } from "./widgets/antd-checkbox";
 import { antdCounter } from "./widgets/antd-counter";
 import { antdCrash } from "./widgets/antd-crash";
+import { antdDivider } from "./widgets/antd-divider";
 import { antdEcho } from "./widgets/antd-echo";
 import { antdFilterBar } from "./widgets/antd-filter-bar";
 import { antdInfiniteTable, createAntdInfiniteTable } from "./widgets/antd-infinite-table";
@@ -27,8 +29,13 @@ import { antdLabel } from "./widgets/antd-label";
 import { antdMultiSelect } from "./widgets/antd-multi-select";
 import { antdPagination } from "./widgets/antd-pagination";
 import { antdProgress } from "./widgets/antd-progress";
+import { antdRadioGroup } from "./widgets/antd-radio-group";
+import { antdRate } from "./widgets/antd-rate";
 import { antdRefresher } from "./widgets/antd-refresher";
 import { antdSelect } from "./widgets/antd-select";
+import { antdSlider } from "./widgets/antd-slider";
+import { antdStatistic } from "./widgets/antd-statistic";
+import { antdSwitch } from "./widgets/antd-switch";
 import { antdTable, createAntdTable, type AntdTableOptions } from "./widgets/antd-table";
 import { antdTag } from "./widgets/antd-tag";
 
@@ -38,6 +45,7 @@ export {
   antdCheckbox,
   antdCounter,
   antdCrash,
+  antdDivider,
   antdEcho,
   antdFilterBar,
   antdInfiniteTable,
@@ -46,8 +54,13 @@ export {
   antdMultiSelect,
   antdPagination,
   antdProgress,
+  antdRadioGroup,
+  antdRate,
   antdRefresher,
   antdSelect,
+  antdSlider,
+  antdStatistic,
+  antdSwitch,
   antdTable,
   antdTag,
   createAntdInfiniteTable,
@@ -69,6 +82,10 @@ export type { SelectEvents } from "./widgets/antd-select";
 export type { CheckboxEvents } from "./widgets/antd-checkbox";
 export type { MultiSelectEvents } from "./widgets/antd-multi-select";
 export type { FilterBarEvents } from "./widgets/antd-filter-bar";
+export type { SwitchEvents } from "./widgets/antd-switch";
+export type { SliderEvents } from "./widgets/antd-slider";
+export type { RadioGroupEvents } from "./widgets/antd-radio-group";
+export type { RateEvents } from "./widgets/antd-rate";
 
 export interface AntdWidgetsOptions {
   /** Cell renderers the host's tables offer by name (see createAntdTable). */
@@ -94,6 +111,12 @@ export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyW
     antdProgress,
     antdAlert,
     antdMultiSelect,
+    antdSwitch,
+    antdSlider,
+    antdRadioGroup,
+    antdRate,
+    antdStatistic,
+    antdDivider,
   ];
 }
 

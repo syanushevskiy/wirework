@@ -113,7 +113,7 @@ describe("validateViewModels", () => {
     const report = check(page([cell()], templates), {
       pages: { demo: { cells: { c1: { settings: { default: { on: { changed: [{ call: "anything" }] } } } } } } },
     });
-    expect(messages(report, "error")[0]).toMatch(/may not contain inputs, on or when/);
+    expect(messages(report, "error")[0]).toMatch(/may not contain inputs, on, when, appear/);
   });
 
   it("regression: a reaction reading a payload field that does not exist is reported", () => {

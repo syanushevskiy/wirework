@@ -28,6 +28,8 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import {
+  APPEARANCES,
+  appearSchema,
   settingFields,
   type AnyWidgetDefinition,
   type EventBindings,
@@ -92,6 +94,9 @@ export interface WidgetFormInput {
 /** Accepts any value: a condition may read a path of any shape. */
 const ANY_VALUE = { parse: (value: unknown): unknown => value };
 
+/** The appearances on offer, by name. */
+const APPEAR_CHOICES: Choice[] = APPEARANCES.map((name) => ({ value: name, label: name.replace("-", " ") }));
+
 /** The event's rows with the one at `index` replaced — rows up to it created blank when it is past the end. */
 function withRow(
   rows: readonly ReactionDraft[],
@@ -115,6 +120,7 @@ export function useWidgetForm({
   const [reactions, setReactions] = useState(initial.reactions);
   const [conditionDrafts, setConditionDrafts] = useState(initial.conditions);
   const [settingValues, setSettingValues] = useState(initial.settings);
+  const [appear, setAppear] = useState(initial.appear);
   /** Generated paths the port fields started from (a builder's defaults): see `reset`. */
   const [suggested, setSuggested] = useState<Record<string, string>>({});
 
@@ -223,6 +229,7 @@ export function useWidgetForm({
     setSuggested(suggestedPaths);
     setReactions({});
     setConditionDrafts([]);
+    setAppear("");
     setSettingValues({});
   }, []);
 
@@ -387,8 +394,18 @@ export function useWidgetForm({
       }),
     );
     const when = whenOfConditions(conditions);
-    return { bindings: { inputs, on, ...(when === undefined ? {} : { when }) }, settings: collected };
-  }, [fields, events, reactions, settings, settingValues, conditions]);
+    // An appearance means nothing without a condition to appear on: it is saved with one only.
+    const shown = appearSchema.safeParse(appear);
+    return {
+      bindings: {
+        inputs,
+        on,
+        ...(when === undefined ? {} : { when }),
+        ...(when === undefined || !shown.success ? {} : { appear: shown.data }),
+      },
+      settings: collected,
+    };
+  }, [fields, events, reactions, settings, settingValues, conditions, appear]);
 
   return {
     definition,
@@ -398,6 +415,10 @@ export function useWidgetForm({
     conditions,
     predicateChoices: predicateOptions,
     testChoices,
+    /** How the widget appears when its condition turns true ("" = it simply shows), and the list to pick from. */
+    appear,
+    appearChoices: APPEAR_CHOICES,
+    setAppear,
     setPortPath,
     setSetting,
     chooseSetting,

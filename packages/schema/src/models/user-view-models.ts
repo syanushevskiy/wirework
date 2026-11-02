@@ -25,7 +25,7 @@ import { pageViewModelSchema } from "./view-models";
 const userSettingsSchema = z
   .record(z.string(), z.unknown())
   .refine((settings) => Object.keys(settings).every((key) => !RESERVED_VIEW_MODEL_KEYS.has(key)), {
-    message: "user settings may not contain inputs, on or when (bindings belong to the page)",
+    message: `user settings may not contain ${[...RESERVED_VIEW_MODEL_KEYS].join(", ")} (bindings belong to the page)`,
   });
 
 /**

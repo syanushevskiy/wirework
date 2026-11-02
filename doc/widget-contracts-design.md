@@ -146,6 +146,31 @@ The basics every UI library has:
   focused row would leave the DOM with the window. The `table` conformance
   set runs against them unchanged.
 
+More of what every UI library has (added 2026-11-02, each with a
+conformance set and an antd implementation):
+
+- `switch` — controlled like `checkbox`: `checked` port, `changed
+{ checked }` written back; `label`, `onText`, `offText`; role=switch
+  named by the label.
+- `slider` — controlled: `value` port (a finite number), `changed
+{ value }` written back; `label`, `min`, `max` (above `min`, a rule on
+  the settings), `step`, `showValue`; role=slider named by the label, the
+  range as `aria-valuemin` / `aria-valuemax` / `aria-valuenow`, arrow keys
+  move by `step`.
+- `radio-group` — controlled like `select`, for a few options side by side:
+  `value` port, optional `options` port falling back to the `options`
+  setting, `changed { value }` written back; `label`, `buttons` (a row of
+  buttons instead of radios); role=radiogroup named by the label, one radio
+  per option.
+- `rate` — controlled: `value` port (a score, 0 = none), `changed
+{ value }` written back; `label`, `count`, `allowHalf`, `allowClear`; a
+  group named by the label holding one radio per star.
+- `statistic` — display: `value` port (a number or text), `title`,
+  `prefix`, `suffix`, `precision`; implementations expose the value as
+  `data-value`.
+- `divider` — display, nothing bound: `text`, `orientation` (where the
+  title sits), `dashed`; role=separator.
+
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and
 checked by conformance stories.

@@ -1,9 +1,10 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-five stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
-on 24 October 2026 (WW-22, WW-23) and two on 1 November 2026 (WW-24, WW-25), six to do (WW-15 to WW-20). Written for
+One epic, twenty-six stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25) and one on 2 November 2026 (WW-26), six to
+do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-25) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-26) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -660,10 +661,14 @@ while I edit the page it stays visible, dimmed, with the reason it would be hidd
 - **Given** a check the application registered (a run that can be retried), **when** I pick it in the builder,
   **then** it is offered by its description under the application's name, and a widget using it shows and hides as the
   application's rule says.
-- **Given** a condition the rows cannot say, **when** I pick "constructor" and write it in words — "demo.count is
-  greater than 10 and (demo.error is empty or demo.force is true)" — **then** the form reads it back or says what it
-  could not read ("missing )"), Add waits until it reads, and the widget shows and hides as the words say; **when** I
-  edit the widget later, **then** the words come back as I wrote them.
+- **Given** a condition the rows cannot say, **when** I pick "constructor" and build it step by step — a condition,
+  "and", a group in parentheses with two conditions joined by "or" — **then** the form reads the result back as a
+  sentence ("when demo.count is greater than 10 and (demo.error is empty or demo.force is true)"), Add waits until
+  every condition is finished, and the widget shows and hides as the sentence says; **when** I edit the widget later,
+  **then** the same groups and conditions come back and can be built on. Parentheses, "and"/"or" and "not" each have
+  a colour of their own, so a built condition is read at a glance.
+- **Given** a widget with a condition, **when** I pick an appearance ("slide up") under it, **then** the widget slides
+  in each time its condition turns true; without one it simply shows.
 - **Given** my personal view of a page, **then** I cannot change the page's conditions (they are the page's wiring, like
   its data bindings), and the widgets hidden by the page stay hidden in my view.
 
@@ -672,3 +677,27 @@ the button is not even shown"), `overlay.feature` and `builder-overlay.feature` 
 read-only" now covers conditions), the `WidgetBuilder` `ShowsWhen` story, the React adapter's `PageView` ("a cell with
 a condition") and `useWhen` tests, the engine's `predicates.test.ts`, the schema's `when.test.ts`, the builder's
 `form-when.test.ts` and `use-widget-builder.test.tsx`.
+
+### WW-26 · Xsight Wirework - Six more ready-made widgets: switch, slider, radio group, rating, statistic and divider
+
+**Type:** User feature · **Status:** Done · **Delivered:** 2 Nov
+
+**Short description:** As a page builder, I have six more widgets from the company's standard look to assemble pages
+with — an on/off switch, a slider along a range, a radio group for a few options side by side, a star rating, a large
+statistic with its title, and a divider with a title on the line — each a specification any implementation must
+match, each storing what the user picks without wiring, each with a live preview in the builder.
+
+**Acceptance criteria:**
+
+- **Given** the builder, **when** I open the palette, **then** every new widget shows a live preview with sample data.
+- **Given** a switch, a radio group, a rating and a slider added in the builder and bound to paths, **when** I flip
+  the switch, pick an option, pick a star and nudge the slider with the keyboard, **then** each stores what I chose
+  at its path, with nothing wired by hand.
+- **Given** a statistic bound to a number and a divider with a title, **when** the page shows, **then** the statistic
+  shows the number with its digits grouped under its title, and the divider shows the title on its line.
+- **Given** another implementation of any of the six, **when** its conformance stories run, **then** they say whether
+  it behaves as the specification requires.
+
+**Verified by:** `more-widgets.feature`, the six widgets' conformance stories (`switchConformance`,
+`sliderConformance`, `radioGroupConformance`, `rateConformance`, `statisticConformance`, `dividerConformance`) and
+playgrounds, the engine's standard-contracts test.

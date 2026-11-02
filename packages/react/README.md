@@ -18,7 +18,10 @@ import "@wirework/react/styles.css";
   the page isolated; `predicates` is the registry a cell's `when` may name
   (doc/conditions-design.md). A cell whose condition does not hold keeps
   its place with `data-when="false"` and no widget inside; in edit mode
-  the widget stays, dimmed, with the reason (`cell-hidden-note`).
+  the widget stays, dimmed, with the reason (`cell-hidden-note`). A
+  template's `appear` (one of `APPEARANCES`) is the animation the widget
+  mounts with when its condition turns true, `data-appear` on the cell and
+  `.ww-appear-<name>` in this stylesheet.
 - `WidgetPreview` (`WidgetPreviewProps`) — a live, non-interactive render of
   a widget from its preview seed, for palettes and catalogs.
 - `CellChrome` (`CellChromeProps`) — the Edit / Remove actions an engine

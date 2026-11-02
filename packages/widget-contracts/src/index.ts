@@ -42,10 +42,19 @@ export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
 export { infiniteTableContract } from "./infinite-table";
+// More of what every UI library has.
+export { switchContract } from "./switch";
+export { sliderContract } from "./slider";
+export { radioGroupContract } from "./radio-group";
+export { rateContract } from "./rate";
+export { statisticContract } from "./statistic";
+export { dividerContract, DIVIDER_ORIENTATIONS } from "./divider";
+export type { DividerOrientation } from "./divider";
 
 import { alertContract } from "./alert";
 import { buttonContract } from "./button";
 import { checkboxContract } from "./checkbox";
+import { dividerContract } from "./divider";
 import { filterBarContract } from "./filter-bar";
 import { infiniteTableContract } from "./infinite-table";
 import { inputContract } from "./input";
@@ -53,8 +62,13 @@ import { labelContract } from "./label";
 import { multiSelectContract } from "./multi-select";
 import { paginationContract } from "./pagination";
 import { progressContract } from "./progress";
+import { radioGroupContract } from "./radio-group";
+import { rateContract } from "./rate";
 import { refresherContract } from "./refresher";
 import { selectContract } from "./select";
+import { sliderContract } from "./slider";
+import { statisticContract } from "./statistic";
+import { switchContract } from "./switch";
 import { tableContract } from "./table";
 import { tagContract } from "./tag";
 
@@ -74,4 +88,10 @@ export const standardContracts = [
   tableContract,
   filterBarContract,
   infiniteTableContract,
+  switchContract,
+  sliderContract,
+  radioGroupContract,
+  rateContract,
+  statisticContract,
+  dividerContract,
 ];

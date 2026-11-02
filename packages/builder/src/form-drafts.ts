@@ -7,6 +7,7 @@
  */
 import {
   settingFields,
+  type Appearance,
   type AnyWidgetDefinition,
   type EventBindings,
   type EventDefinition,
@@ -137,11 +138,12 @@ export interface SettingDraft extends SettingField {
 /** Widget settings collected by the form, already coerced to their kind. */
 export type WidgetSettings = Record<string, unknown>;
 
-/** A widget template as the form collected it: the ports, the reactions, the condition (each only when there is one), the settings. */
+/** A widget template as the form collected it: the ports, the reactions, the condition and the appearance (each only when there is one), the settings. */
 export const templateOf = (bindings: WidgetBindings, settings: WidgetSettings): Record<string, unknown> => ({
   inputs: bindings.inputs,
   ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
   ...(bindings.when === undefined ? {} : { when: bindings.when }),
+  ...(bindings.appear === undefined ? {} : { appear: bindings.appear }),
   ...settings,
 });
 
@@ -166,10 +168,12 @@ export interface WidgetFormValues {
   reactions: Record<string, ReactionDraft[]>;
   /** The condition's rows, in order (form-when.ts); empty: the widget always shows. */
   conditions: ConditionDraft[];
+  /** How the widget appears when its condition turns true ("" = it simply shows). */
+  appear: string;
   settings: Record<string, string | boolean>;
 }
 
-export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, conditions: [], settings: {} };
+export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, conditions: [], appear: "", settings: {} };
 
 export const isBlank = (value: string | boolean | undefined): boolean =>
   value === undefined || (typeof value === "string" && value.trim() === "");
@@ -292,8 +296,9 @@ export function valuesFromViewModel(
       return [[field.name, field.kind === "boolean" ? value === true : String(value)]];
     }),
   );
-  // The one cast: the widget's own schema parsed the view model, `when` included.
-  return { paths, reactions, conditions: draftsOfWhen(vm["when"] as When | undefined, predicates), settings };
+  // The one cast: the widget's own schema parsed the view model, `when` and `appear` included.
+  const { when, appear } = vm as { when?: When; appear?: Appearance };
+  return { paths, reactions, conditions: draftsOfWhen(when, predicates), appear: appear ?? "", settings };
 }
 
 /** The write-back an event does by default, with the port's path as the form holds it now. */

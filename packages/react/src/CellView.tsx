@@ -12,8 +12,8 @@
  * edited. A predicate that throws is a crash of this cell: the placeholder,
  * and a report to the host.
  */
-import { useMemo, type ComponentType, type ErrorInfo } from "react";
-import type { EventBus, Store, When, WidgetProps } from "@wirework/schema";
+import { useMemo, type ComponentType, type ErrorInfo, type ReactNode } from "react";
+import type { Appearance, EventBus, Store, When, WidgetProps } from "@wirework/schema";
 import {
   readableStore,
   type CellProblem,
@@ -70,8 +70,9 @@ function ProblemCell({ cell, problem }: CellViewProps & { problem: CellProblem }
   );
 }
 
-/** The condition of a resolved view model, if it declares one. The one cast: the widget's own schema parsed it. */
-const whenOf = (viewModel: unknown): When | undefined => (viewModel as { when?: When } | null)?.when;
+/** The condition and the appearance of a resolved view model, if it declares them. The one cast: the widget's own schema parsed it. */
+const showingOf = (viewModel: unknown): { when?: When; appear?: Appearance } =>
+  (viewModel as { when?: When; appear?: Appearance } | null) ?? {};
 
 function WidgetCell({
   cell,
@@ -84,7 +85,7 @@ function WidgetCell({
 }: CellViewProps & { cell: ResolvedCellOk }) {
   const emit = useCellEmitter(bus, cell.definition, page, cell.key);
   const readable = useMemo(() => readableStore(store), [store]);
-  const when = whenOf(cell.viewModel);
+  const { when, appear } = showingOf(cell.viewModel);
   // A throwing predicate is reported by the hook, like a crashing widget.
   const { shown, error, text } = useWhen(readable, when, { predicates, onError });
   // The registry stores framework-agnostic definitions; this adapter renders
@@ -100,11 +101,12 @@ function WidgetCell({
       data-kind={cell.definition.kind}
       data-fallback={cell.fallback?.used}
       {...(when === undefined ? {} : { "data-when": String(shown) })}
+      {...(appear === undefined ? {} : { "data-appear": appear })}
     >
       {error ? (
         <WidgetCrash widgetType={cell.widget} error={error} />
       ) : hiddenNow && !editable ? null : (
-        <>
+        <Appearing appear={appear}>
           {hiddenNow ? (
             <div className="ww-cell-note" data-testid="cell-hidden-note">
               hidden now — shows {text}
@@ -114,10 +116,19 @@ function WidgetCell({
           <WidgetErrorBoundary widgetType={cell.widget} resetKey={cell.viewModel} onError={onError}>
             <Widget viewModel={cell.viewModel} store={readable} emit={emit} />
           </WidgetErrorBoundary>
-        </>
+        </Appearing>
       )}
     </div>
   );
+}
+
+/**
+ * The element a widget APPEARS on: mounted when its condition turns true,
+ * so the declared appearance plays as a mount animation (styles.css). A
+ * widget without one gets no element at all.
+ */
+function Appearing({ appear, children }: { appear: Appearance | undefined; children: ReactNode }) {
+  return appear === undefined ? children : <div className={`ww-appear ww-appear-${appear}`}>{children}</div>;
 }
 
 export function CellView(props: CellViewProps) {

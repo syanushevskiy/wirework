@@ -148,7 +148,7 @@ describe("defineContract", () => {
   it("refuses a setting named like a binding — it would replace the wiring in the view model", () => {
     expect(() =>
       defineContract({ kind: "odd", io, events, settings: z.object({ inputs: z.string(), tone: z.string() }) }),
-    ).toThrow(/names a setting "inputs": inputs, on and when are the bindings/);
+    ).toThrow(/names a setting "inputs": inputs, on, when, appear are the bindings/);
     expect(() => defineContract({ kind: "odd", io, events, settings: z.object({ on: z.string() }) })).toThrow(/"on"/);
   });
 
@@ -169,7 +169,7 @@ describe("defineContract", () => {
     // An unknown key is still refused; the fields are still found through the rule.
     expect(contract.viewModel.safeParse({ ...bindings, mni: 1 }).success).toBe(false);
     expect(settingFields(contract.viewModel).map((field) => field.name)).toEqual(["min", "max"]);
-    expect(validatorKeys(contract.viewModel)).toEqual(["inputs", "on", "when", "min", "max"]);
+    expect(validatorKeys(contract.viewModel)).toEqual(["inputs", "on", "when", "appear", "min", "max"]);
   });
 });
 

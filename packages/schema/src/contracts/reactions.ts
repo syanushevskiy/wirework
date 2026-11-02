@@ -22,7 +22,7 @@ import { z } from "zod";
 import { ACTION_NAME } from "./names";
 import type { WidgetEvents } from "./events";
 import { ioBindingsSchema, storePathSchema, type IoBindings, type WidgetIO } from "./io";
-import { whenSchema, type When } from "./when";
+import { appearSchema, whenSchema, type Appearance, type When } from "./when";
 
 /**
  * strict: a misspelled key ("form" for "from") must fail, never be dropped —
@@ -92,12 +92,14 @@ export function eventBindingsSchema<E extends WidgetEvents>(events: E) {
 }
 
 /**
- * `inputs` + `on` + `when` in one go (the ports, the reactions, the
- * condition under which the widget shows — contracts/when.ts). Compose
- * widget settings on top with `.extend()`.
+ * `inputs` + `on` + `when` + `appear` in one go (the ports, the reactions,
+ * the condition under which the widget shows and how it appears when it
+ * does — contracts/when.ts). Compose widget settings on top with `.extend()`.
  */
 export function widgetBindingsSchema<IO extends WidgetIO, E extends WidgetEvents>(io: IO, events: E) {
-  return ioBindingsSchema(io).merge(eventBindingsSchema(events)).extend({ when: whenSchema.optional() });
+  return ioBindingsSchema(io)
+    .merge(eventBindingsSchema(events))
+    .extend({ when: whenSchema.optional(), appear: appearSchema.optional() });
 }
 
 /** Everything a builder collects for a new widget instance. */
@@ -105,4 +107,6 @@ export interface WidgetBindings extends IoBindings {
   on: EventBindings;
   /** The condition under which the widget shows; absent: always. */
   when?: When;
+  /** How it appears when the condition turns true; absent: it simply shows. */
+  appear?: Appearance;
 }
