@@ -22,6 +22,7 @@ import { z } from "zod";
 import { ACTION_NAME } from "./names";
 import type { WidgetEvents } from "./events";
 import { ioBindingsSchema, storePathSchema, type IoBindings, type WidgetIO } from "./io";
+import { whenSchema, type When } from "./when";
 
 /**
  * strict: a misspelled key ("form" for "from") must fail, never be dropped —
@@ -90,12 +91,18 @@ export function eventBindingsSchema<E extends WidgetEvents>(events: E) {
   return z.object({ on }).strict();
 }
 
-/** `inputs` + `on` in one go. Compose widget settings on top with `.extend()`. */
+/**
+ * `inputs` + `on` + `when` in one go (the ports, the reactions, the
+ * condition under which the widget shows — contracts/when.ts). Compose
+ * widget settings on top with `.extend()`.
+ */
 export function widgetBindingsSchema<IO extends WidgetIO, E extends WidgetEvents>(io: IO, events: E) {
-  return ioBindingsSchema(io).merge(eventBindingsSchema(events));
+  return ioBindingsSchema(io).merge(eventBindingsSchema(events)).extend({ when: whenSchema.optional() });
 }
 
 /** Everything a builder collects for a new widget instance. */
 export interface WidgetBindings extends IoBindings {
   on: EventBindings;
+  /** The condition under which the widget shows; absent: always. */
+  when?: When;
 }

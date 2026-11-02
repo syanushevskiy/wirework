@@ -12,9 +12,12 @@ import {
   type EventDefinition,
   type Reaction,
   type SettingField,
+  type When,
+  type WidgetBindings,
   type WidgetEvents,
 } from "@wirework/schema";
-import { defaultReaction, sameReaction } from "@wirework/engine";
+import { STANDARD_PREDICATES, defaultReaction, sameReaction, type PredicateRegistry } from "@wirework/engine";
+import { draftsOfWhen, type ConditionDraft } from "./form-when";
 
 /**
  * A dropdown option cannot carry "", so the two "nothing chosen" answers
@@ -134,6 +137,14 @@ export interface SettingDraft extends SettingField {
 /** Widget settings collected by the form, already coerced to their kind. */
 export type WidgetSettings = Record<string, unknown>;
 
+/** A widget template as the form collected it: the ports, the reactions, the condition (each only when there is one), the settings. */
+export const templateOf = (bindings: WidgetBindings, settings: WidgetSettings): Record<string, unknown> => ({
+  inputs: bindings.inputs,
+  ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
+  ...(bindings.when === undefined ? {} : { when: bindings.when }),
+  ...settings,
+});
+
 export interface ReactionDraft {
   kind: ReactionKind;
   set: string;
@@ -153,10 +164,12 @@ export interface WidgetFormValues {
   paths: Record<string, string>;
   /** The reaction drafts per event, in order — the CONFIGURED ones; a default write-back is never among them. */
   reactions: Record<string, ReactionDraft[]>;
+  /** The condition's rows, in order (form-when.ts); empty: the widget always shows. */
+  conditions: ConditionDraft[];
   settings: Record<string, string | boolean>;
 }
 
-export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, settings: {} };
+export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, conditions: [], settings: {} };
 
 export const isBlank = (value: string | boolean | undefined): boolean =>
   value === undefined || (typeof value === "string" && value.trim() === "");
@@ -251,7 +264,11 @@ export function draftOf(reaction: Reaction): ReactionDraft {
  * (`withDefaultReactions`); the form shows it as the default, not as a row,
  * so a leading one is left out of the drafts.
  */
-export function valuesFromViewModel(definition: AnyWidgetDefinition, viewModel: unknown): WidgetFormValues {
+export function valuesFromViewModel(
+  definition: AnyWidgetDefinition,
+  viewModel: unknown,
+  predicates: PredicateRegistry = STANDARD_PREDICATES,
+): WidgetFormValues {
   const vm = (viewModel ?? {}) as Record<string, unknown>;
   const inputs = (vm["inputs"] ?? {}) as Record<string, unknown>;
   const paths = Object.fromEntries(
@@ -275,7 +292,8 @@ export function valuesFromViewModel(definition: AnyWidgetDefinition, viewModel: 
       return [[field.name, field.kind === "boolean" ? value === true : String(value)]];
     }),
   );
-  return { paths, reactions, settings };
+  // The one cast: the widget's own schema parsed the view model, `when` included.
+  return { paths, reactions, conditions: draftsOfWhen(vm["when"] as When | undefined, predicates), settings };
 }
 
 /** The write-back an event does by default, with the port's path as the form holds it now. */

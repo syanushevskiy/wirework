@@ -1,9 +1,9 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-four stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
-on 24 October 2026 (WW-22, WW-23) and one on 1 November 2026 (WW-24), six to do (WW-15 to WW-20). Written for
+One epic, twenty-five stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+on 24 October 2026 (WW-22, WW-23) and two on 1 November 2026 (WW-24, WW-25), six to do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-24) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-25) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -629,3 +629,46 @@ be added until required ports and reactions are bound", "A controlled widget sto
 reactions follow in order"), `events.feature` ("The counter's own write is its default reaction, not widget code",
 "Editing the paginator on the shared page keeps its whole reaction chain"), the `WidgetBuilder` `WritesBackByDefault`
 and `WaitsForTheWiring` stories, the engine's "default write-back" and registry tests, the builder's form tests.
+
+### WW-25 · Xsight Wirework - Show a widget only when a condition holds: ready-made checks, and the application's own
+
+**Type:** User feature · **Status:** Done · **Delivered:** 1 Nov (designed with the tiger team the same day,
+doc/conditions-design.md)
+
+**Short description:** As a page builder, I say when a widget shows — "show the error line only when there is an
+error", "show Open run only while a run is selected", "show Retry only to admins, on a failed run" — from the builder's
+form, in words, without code. A condition reads one value from the page's data and applies a named check: empty, true,
+false, equals, one of, contains, greater than, less than; several conditions must all hold, and a line can say "one
+of these". The application's developers add checks of their own under a name (a run that can be retried), and the
+builder offers them next to the ready-made ones. A hidden widget keeps its place on the page and comes back as it was;
+while I edit the page it stays visible, dimmed, with the reason it would be hidden.
+
+**Acceptance criteria:**
+
+- **Given** the runs page, **when** it opens, **then** "Open run" is hidden; **when** I click a row, **then** it is
+  shown; **when** the selection is cleared, **then** it is hidden again.
+- **Given** the run page of a run that does not exist, **when** the server has answered, **then** the error line is
+  shown with the server's message; on an existing run it is hidden.
+- **Given** the builder, **when** I choose a label, give it a text and say "show when `demo.count` is greater than
+  10", **then** the form reads the condition back as a sentence and Add is enabled; **when** I add the widget, **then**
+  its cell is hidden until the page's data says 11 or more, and shown after.
+- **Given** a condition whose value the check refuses (a word where a number is needed), **when** I type it,
+  **then** Add is disabled and the row says why; **given** a page whose configuration names a check that does not
+  exist, **when** it renders, **then** that cell shows a problem naming the registered checks and the page stands.
+- **Given** the page in edit mode, **when** a widget's condition does not hold, **then** the widget is still shown,
+  dimmed, with "hidden now: …" and its Edit button works.
+- **Given** a check the application registered (a run that can be retried), **when** I pick it in the builder,
+  **then** it is offered by its description under the application's name, and a widget using it shows and hides as the
+  application's rule says.
+- **Given** a condition the rows cannot say, **when** I pick "constructor" and write it in words — "demo.count is
+  greater than 10 and (demo.error is empty or demo.force is true)" — **then** the form reads it back or says what it
+  could not read ("missing )"), Add waits until it reads, and the widget shows and hides as the words say; **when** I
+  edit the widget later, **then** the words come back as I wrote them.
+- **Given** my personal view of a page, **then** I cannot change the page's conditions (they are the page's wiring, like
+  its data bindings), and the widgets hidden by the page stay hidden in my view.
+
+**Verified by:** `conditions.feature` (all nine scenarios), `app.feature` ("Nothing opens while no run is selected —
+the button is not even shown"), `overlay.feature` and `builder-overlay.feature` ("keeps inputs and reactions
+read-only" now covers conditions), the `WidgetBuilder` `ShowsWhen` story, the React adapter's `PageView` ("a cell with
+a condition") and `useWhen` tests, the engine's `predicates.test.ts`, the schema's `when.test.ts`, the builder's
+`form-when.test.ts` and `use-widget-builder.test.tsx`.

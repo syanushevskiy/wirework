@@ -4,18 +4,36 @@
  * READ-ONLY view of the store (writes happen through reactions).
  * Placement is the engine renderer's job: it wraps what `renderCell`
  * returns in its own item (a grid item, a flex row slot, a tab).
+ *
+ * A cell with a CONDITION (`when`, doc/conditions-design.md) keeps its
+ * place whatever the answer: `data-when` says it, and while the condition
+ * does not hold the widget is unmounted — or, in edit mode, shown dimmed
+ * with a note saying why it would be hidden, so it can still be found and
+ * edited. A predicate that throws is a crash of this cell: the placeholder,
+ * and a report to the host.
  */
 import { useMemo, type ComponentType, type ErrorInfo } from "react";
-import type { EventBus, Store, WidgetProps } from "@wirework/schema";
-import { readableStore, type CellProblem, type ResolvedCell, type ResolvedCellOk } from "@wirework/engine";
+import type { EventBus, Store, When, WidgetProps } from "@wirework/schema";
+import {
+  readableStore,
+  type CellProblem,
+  type PredicateRegistry,
+  type ResolvedCell,
+  type ResolvedCellOk,
+} from "@wirework/engine";
 import { useCellEmitter } from "./useCellEmitter";
-import { WidgetErrorBoundary } from "./WidgetErrorBoundary";
+import { useWhen } from "./useWhen";
+import { WidgetCrash, WidgetErrorBoundary } from "./WidgetErrorBoundary";
 
 export interface CellViewProps {
   cell: ResolvedCell;
   page: string;
   store: Store;
   bus: EventBus;
+  /** The predicates a `when` may name; the standard ones alone when absent. */
+  predicates?: PredicateRegistry | undefined;
+  /** Edit mode: a cell whose condition does not hold stays visible, dimmed, with the reason. */
+  editable?: boolean | undefined;
   /** The widget crashed (its placeholder is shown): for the host to report. */
   onError?: ((error: Error, info: ErrorInfo) => void) | undefined;
 }
@@ -52,25 +70,52 @@ function ProblemCell({ cell, problem }: CellViewProps & { problem: CellProblem }
   );
 }
 
-function WidgetCell({ cell, page, store, bus, onError }: CellViewProps & { cell: ResolvedCellOk }) {
+/** The condition of a resolved view model, if it declares one. The one cast: the widget's own schema parsed it. */
+const whenOf = (viewModel: unknown): When | undefined => (viewModel as { when?: When } | null)?.when;
+
+function WidgetCell({
+  cell,
+  page,
+  store,
+  bus,
+  predicates,
+  editable = false,
+  onError,
+}: CellViewProps & { cell: ResolvedCellOk }) {
   const emit = useCellEmitter(bus, cell.definition, page, cell.key);
   const readable = useMemo(() => readableStore(store), [store]);
+  const when = whenOf(cell.viewModel);
+  // A throwing predicate is reported by the hook, like a crashing widget.
+  const { shown, error, text } = useWhen(readable, when, { predicates, onError });
   // The registry stores framework-agnostic definitions; this adapter renders
   // React components (see ReactWidgetDefinition).
   const Widget = cell.definition.component as ComponentType<WidgetProps>;
+  const hiddenNow = !shown && error === undefined;
   return (
     <div
-      className="ww-cell"
+      className={hiddenNow && editable ? "ww-cell ww-cell-hidden-now" : "ww-cell"}
       data-testid="cell"
       data-cell={cell.key}
       data-widget={cell.widget}
       data-kind={cell.definition.kind}
       data-fallback={cell.fallback?.used}
+      {...(when === undefined ? {} : { "data-when": String(shown) })}
     >
-      {/* resetKey: a re-resolved view model clears a previous crash state */}
-      <WidgetErrorBoundary widgetType={cell.widget} resetKey={cell.viewModel} onError={onError}>
-        <Widget viewModel={cell.viewModel} store={readable} emit={emit} />
-      </WidgetErrorBoundary>
+      {error ? (
+        <WidgetCrash widgetType={cell.widget} error={error} />
+      ) : hiddenNow && !editable ? null : (
+        <>
+          {hiddenNow ? (
+            <div className="ww-cell-note" data-testid="cell-hidden-note">
+              hidden now — shows {text}
+            </div>
+          ) : null}
+          {/* resetKey: a re-resolved view model clears a previous crash state */}
+          <WidgetErrorBoundary widgetType={cell.widget} resetKey={cell.viewModel} onError={onError}>
+            <Widget viewModel={cell.viewModel} store={readable} emit={emit} />
+          </WidgetErrorBoundary>
+        </>
+      )}
     </div>
   );
 }

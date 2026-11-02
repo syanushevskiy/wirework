@@ -173,7 +173,10 @@ function validateCells(
     // The templates this cell does not show today: a user may select any of them.
     for (const [name, template] of Object.entries(templateMap)) {
       if (name === resolved.template || template === undefined || template === null) continue;
-      const checked = checkTemplate(resolved.definition, template, userWidget?.settings?.[name], input.actions);
+      const checked = checkTemplate(resolved.definition, template, userWidget?.settings?.[name], {
+        actions: input.actions,
+        predicates: input.predicates,
+      });
       if (checked.problem) {
         error(`${cellLocation} template "${name}"`, cellProblemMessage(checked.problem, registry));
       }

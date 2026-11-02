@@ -121,6 +121,71 @@ describe("useWidgetBuilder", () => {
     expect(result.current.form.collect().bindings.on).toEqual({ turned: [{ set: "demo.log", from: "value" }] });
   });
 
+  it("saves a condition when every row holds, gates Add on a refused value, and never saves a blank row", () => {
+    const { result, onAdd } = setup(undefined, [dial]);
+    act(() => result.current.selectWidget("dial"));
+    expect(result.current.form.conditions).toEqual([]);
+    expect(result.current.form.predicateChoices.map((choice) => choice.label)).toContain("is greater than");
+
+    act(() => result.current.form.addCondition());
+    // A blank row is not a condition: Add stays offered.
+    expect(result.current.canAdd).toBe(true);
+    act(() => result.current.form.setCondition(0, "path", "demo.count"));
+    // A path without a check is unfinished.
+    expect(result.current.canAdd).toBe(false);
+    act(() => result.current.form.setCondition(0, "is", "greater"));
+    act(() => result.current.form.setCondition(0, "to", "ten"));
+    expect(result.current.form.conditions[0]?.toError).toBe("not a number");
+    expect(result.current.canAdd).toBe(false);
+    act(() => result.current.form.setCondition(0, "to", "10"));
+    expect(result.current.form.conditions[0]?.sentence).toBe("when demo.count is greater than 10");
+    expect(result.current.canAdd).toBe(true);
+
+    act(() => result.current.form.addCondition());
+    act(() => result.current.form.setCondition(1, "path", "demo.error"));
+    act(() => result.current.form.setCondition(1, "is", "empty"));
+    act(() => result.current.form.setCondition(1, "not", true));
+    act(() => result.current.form.addCondition());
+    expect(result.current.form.collect().bindings.when).toEqual([
+      { path: "demo.count", is: "greater", to: 10 },
+      { path: "demo.error", is: "empty", not: true },
+    ]);
+    act(() => result.current.form.removeCondition(0));
+    act(() => result.current.add());
+    expect(onAdd.mock.calls[0]?.[1]).toEqual({
+      inputs: { value: "builder.dial.value" },
+      on: {},
+      when: [{ path: "demo.error", is: "empty", not: true }],
+    });
+    // Without a condition nothing is saved: the widget always shows.
+    act(() => result.current.selectWidget("dial"));
+    expect(result.current.form.collect().bindings.when).toBeUndefined();
+  });
+
+  it("turns a row into a constructor built step by step and back, saving the words it prints to", () => {
+    const { result } = setup(undefined, [dial]);
+    act(() => result.current.selectWidget("dial"));
+    act(() => result.current.form.addCondition());
+    act(() => result.current.form.setCondition(0, "is", "constructor"));
+    // One group of one blank test; a test inside picks from the checks without the constructor.
+    expect(result.current.form.conditions[0]?.tree?.parts).toHaveLength(1);
+    expect(result.current.form.testChoices.some((choice) => choice.value === "constructor")).toBe(false);
+    expect(result.current.canAdd).toBe(false);
+    act(() => result.current.form.editConstructor(0, "0", { set: { path: "demo.a", is: "empty" } }));
+    act(() => result.current.form.editConstructor(0, "", { add: "group" }));
+    act(() => result.current.form.editConstructor(0, "1.0", { set: { path: "demo.b", is: "true" } }));
+    act(() => result.current.form.editConstructor(0, "1", { add: "test" }));
+    act(() => result.current.form.editConstructor(0, "1.1", { set: { path: "demo.c", is: "greater", to: "2" } }));
+    act(() => result.current.form.editConstructor(0, "1", { group: { join: "or" } }));
+    expect(result.current.canAdd).toBe(true);
+    expect(result.current.form.collect().bindings.when).toEqual([
+      { expression: "demo.a is empty and (demo.b is true or demo.c is greater than 2)" },
+    ]);
+    act(() => result.current.form.setCondition(0, "is", "empty"));
+    expect(result.current.form.conditions[0]).toMatchObject({ is: "empty", path: "" });
+    expect(result.current.form.conditions[0]?.tree).toBeUndefined();
+  });
+
   it("is locked by the host, not only its button — and reports the reason for the UI to say", () => {
     const { result, onAdd, rerender } = setup("editing");
     act(() => result.current.selectWidget("counter"));

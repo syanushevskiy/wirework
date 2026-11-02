@@ -7,9 +7,9 @@ import { useMemo } from "react";
 import { resolvePage, type ResolvedPage, type ResolveInput } from "@wirework/engine";
 
 export function usePagePlan(input: ResolveInput, provided?: ResolvedPage): ResolvedPage {
-  const { viewModels, userViewModels, page, registry, layoutEngines, actions } = input;
+  const { viewModels, userViewModels, page, registry, layoutEngines, actions, predicates } = input;
   return useMemo(
-    () => provided ?? resolvePage({ viewModels, userViewModels, page, registry, layoutEngines, actions }),
-    [provided, viewModels, userViewModels, page, registry, layoutEngines, actions],
+    () => provided ?? resolvePage({ viewModels, userViewModels, page, registry, layoutEngines, actions, predicates }),
+    [provided, viewModels, userViewModels, page, registry, layoutEngines, actions, predicates],
   );
 }

@@ -148,7 +148,7 @@ describe("defineContract", () => {
   it("refuses a setting named like a binding — it would replace the wiring in the view model", () => {
     expect(() =>
       defineContract({ kind: "odd", io, events, settings: z.object({ inputs: z.string(), tone: z.string() }) }),
-    ).toThrow(/names a setting "inputs": inputs and on are the bindings/);
+    ).toThrow(/names a setting "inputs": inputs, on and when are the bindings/);
     expect(() => defineContract({ kind: "odd", io, events, settings: z.object({ on: z.string() }) })).toThrow(/"on"/);
   });
 
@@ -169,7 +169,7 @@ describe("defineContract", () => {
     // An unknown key is still refused; the fields are still found through the rule.
     expect(contract.viewModel.safeParse({ ...bindings, mni: 1 }).success).toBe(false);
     expect(settingFields(contract.viewModel).map((field) => field.name)).toEqual(["min", "max"]);
-    expect(validatorKeys(contract.viewModel)).toEqual(["inputs", "on", "min", "max"]);
+    expect(validatorKeys(contract.viewModel)).toEqual(["inputs", "on", "when", "min", "max"]);
   });
 });
 
@@ -226,7 +226,13 @@ describe("settingFields per zod wrapper", () => {
   });
 
   it("leaves out what it cannot offer as a field, and reserved keys", () => {
-    const schema = z.object({ inputs: z.string(), on: z.string(), list: z.array(z.string()), when: z.date() });
+    const schema = z.object({
+      inputs: z.string(),
+      on: z.string(),
+      when: z.string(),
+      list: z.array(z.string()),
+      at: z.date(),
+    });
     expect(settingFields(schema)).toEqual([]);
     expect(settingFields(z.string())).toEqual([]);
   });

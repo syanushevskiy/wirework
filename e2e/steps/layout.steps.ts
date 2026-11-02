@@ -43,6 +43,27 @@ Then("the cell {string} reads {string}", async ({ page }, id: string, text: stri
   await expect(cell(page, id)).toHaveText(text);
 });
 
+/* ---- conditions (doc/conditions-design.md): a cell keeps its place; `data-when` says whether its widget shows ---- */
+
+Then("the cell {string} is hidden", async ({ page }, id: string) => {
+  await expect(cell(page, id)).toHaveAttribute("data-when", "false");
+  await expect(cell(page, id)).toBeEmpty();
+});
+
+Then("the cell {string} is shown", async ({ page }, id: string) => {
+  await expect(cell(page, id)).toHaveAttribute("data-when", "true");
+  await expect(cell(page, id)).not.toBeEmpty();
+});
+
+/** Edit mode: the widget stays visible, dimmed, with the condition it would be hidden by. */
+Then("the cell {string} says it is hidden now {string}", async ({ page }, id: string, condition: string) => {
+  await expect(cell(page, id)).toHaveAttribute("data-when", "false");
+  const note = cell(page, id).getByTestId("cell-hidden-note");
+  await expect(note).toHaveText(`hidden now — shows ${condition}`);
+  // The widget itself is still there, under the note.
+  await expect(note.locator("xpath=following-sibling::*").first()).toBeVisible();
+});
+
 Then("the cell {string} has kind {string}", async ({ page }, id: string, kind: string) => {
   await expect(page.locator(`[data-testid="cell"][data-cell="${id}"]`)).toHaveAttribute("data-kind", kind);
 });

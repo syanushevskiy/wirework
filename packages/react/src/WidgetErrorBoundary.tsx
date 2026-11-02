@@ -49,6 +49,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 }
 
+/** What a crashed widget's cell shows: the boundary's fallback, and what a cell shows when its condition's predicate threw. */
+export function WidgetCrash({ widgetType, error }: { widgetType: string; error: Error }) {
+  return (
+    <div role="alert" className="ww-widget-error" data-testid="widget-error" data-widget={widgetType}>
+      Widget &quot;{widgetType}&quot; crashed: {error.message}
+    </div>
+  );
+}
+
 export interface WidgetErrorBoundaryProps {
   widgetType: string;
   resetKey?: unknown;
@@ -61,11 +70,7 @@ export function WidgetErrorBoundary({ widgetType, resetKey, onError, children }:
     <ErrorBoundary
       resetKey={resetKey}
       onError={onError}
-      fallback={(error) => (
-        <div role="alert" className="ww-widget-error" data-testid="widget-error" data-widget={widgetType}>
-          Widget &quot;{widgetType}&quot; crashed: {error.message}
-        </div>
-      )}
+      fallback={(error) => <WidgetCrash widgetType={widgetType} error={error} />}
     >
       {children}
     </ErrorBoundary>

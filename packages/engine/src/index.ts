@@ -5,6 +5,19 @@ export { createContracts } from "./contracts";
 export type { ContractRegistry } from "./contracts";
 export { createActions } from "./actions";
 export type { ActionRegistry } from "./actions";
+export {
+  STANDARD_PREDICATES,
+  createPredicates,
+  holds,
+  literalText,
+  parsedExpression,
+  testText,
+  whenPaths,
+  whenProblems,
+  whenText,
+} from "./predicates";
+export type { PredicateRegistry } from "./predicates";
+export type { ConditionNode, ParsedExpression } from "./expressions";
 export { createLayoutEngines, resolveTemplate } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
 export { layoutEngineProblems } from "./layout-engine-checks";

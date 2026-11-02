@@ -54,7 +54,7 @@ export type { PageViewPanel, PageViewPanelKind, PageViewsInput, PageViewsState }
 
 export { useWidgetForm } from "./use-widget-form";
 export type { WidgetFormInput, WidgetFormState } from "./use-widget-form";
-export { EMPTY_FORM, valuesFromViewModel } from "./form-drafts";
+export { EMPTY_FORM, templateOf, valuesFromViewModel } from "./form-drafts";
 export type {
   Choice,
   EventField,
@@ -68,6 +68,18 @@ export type {
   WidgetSettings,
   WriteBack,
 } from "./form-drafts";
+export { CONSTRUCTOR, editTree, literalOf, predicateChoices, whenOfConditions } from "./form-when";
+export type {
+  ConditionDraft,
+  ConditionField,
+  GroupDraft,
+  GroupField,
+  LeafField,
+  NodeDraft,
+  TestDraft,
+  TestFacts,
+  TreeEdit,
+} from "./form-when";
 
 export { useWidgetBuilder } from "./use-widget-builder";
 export type { WidgetBuilderInput, WidgetGroup } from "./use-widget-builder";

@@ -28,14 +28,14 @@ store from them — nothing in this package restores anything.
 
 ## What a host provides
 
-| To                                                       | What                                                                                                                                                        |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useCommit`                                              | the store, `save`                                                                                                                                           |
-| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace`  |
-| `useBuilder`                                             | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded`                                                       |
-| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions (and, for the builder, `addLock`: why Add is not offered)                                                            |
-| `usePageToolbar`                                         | the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target  |
-| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, whether the overlay is on, the shown view (`plan.view`), `cancelEditing` |
+| To                                                       | What                                                                                                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useCommit`                                              | the store, `save`                                                                                                                                                         |
+| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace`                |
+| `useBuilder`                                             | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded`                                                                     |
+| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions, the predicates a condition may pick (the standard ones alone when absent) and, for the builder, `addLock`: why Add is not offered |
+| `usePageToolbar`                                         | the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target                |
+| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, whether the overlay is on, the shown view (`plan.view`), `cancelEditing`               |
 
 Every hook takes ONE input object. `canEdit` is required everywhere a hook
 can write: the builder never assumes this user may change pages, and it
@@ -79,8 +79,17 @@ layouts and your application decides where the files go.
   event its reactions: the write-back the event does by default (shown,
   following the port's path) and a list of rows, run in order, each `set` a
   path from a payload field or `call` an action with its declared
-  parameters (`addReaction`, `removeReaction`); `collect()` gives bindings
-  and settings, the default never among them.
+  parameters (`addReaction`, `removeReaction`); and the CONDITION under
+  which the widget shows (doc/conditions-design.md) as rows of a path, a
+  check picked from the predicate registry by its phrase — or the
+  `CONSTRUCTOR`, a tree of groups (and / or, negated, nested as
+  parentheses) and tests built step by step (`editConstructor`, `editTree`,
+  `TreeEdit`) and saved as the words the engine reads —, the value it
+  takes and when/unless (`conditions`, `predicateChoices`, `testChoices`,
+  `conditionPaths`, `addCondition`, `removeCondition`, `setCondition`),
+  every row gating submit until it holds together; `collect()` gives
+  bindings (`inputs`, `on`, `when`) and settings, the default never among
+  them, and `templateOf` writes them into a template.
 - `useWidgetBuilder` — a widget choice with generated input paths on top of
   the form; `add` hands the result to the host.
 - `useWidgetSearch`, `usePalettePress` — the palette's search and card presses.

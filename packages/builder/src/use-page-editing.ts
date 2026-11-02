@@ -24,6 +24,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import {
+  RESERVED_VIEW_MODEL_KEYS,
   deletePath,
   settingFields,
   type AnyLayoutEngine,
@@ -41,6 +42,7 @@ import {
   updateWidgetTemplate,
   type ActionRegistry,
   type LayoutEngineRegistry,
+  type PredicateRegistry,
   type ResolvedCell,
   type WidgetRegistry,
 } from "@wirework/engine";
@@ -48,7 +50,7 @@ import { usePagePlan } from "@wirework/react";
 import { freeTemplateName } from "./page-views";
 import type { Commit, EditableTrees } from "./use-commit";
 import type { EditableCell } from "./use-widget-editor";
-import type { WidgetSettings } from "./form-drafts";
+import { templateOf, type WidgetSettings } from "./form-drafts";
 
 export type EditTarget = "user" | "base";
 /** Name of the user's own copy of a prebuilt page template (the sketch's "my own" pill); numbered when taken. */
@@ -91,6 +93,8 @@ export interface PageEditingInput {
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry;
+  /** The predicates a cell's `when` may name; the standard ones alone when absent. */
+  predicates?: PredicateRegistry | undefined;
   page: string;
   target: EditTarget;
   withUserOverlay: boolean;
@@ -106,17 +110,11 @@ export interface PageEditingInput {
 
 /** Keys the form owns: dropped from a base template before the form's values are re-applied. */
 function withoutFormKeys(template: unknown, settingNames: string[]): Record<string, unknown> {
-  const owned = new Set(["inputs", "on", ...settingNames]);
+  const owned = new Set([...RESERVED_VIEW_MODEL_KEYS, ...settingNames]);
   return Object.fromEntries(
     Object.entries((template ?? {}) as Record<string, unknown>).filter(([key]) => !owned.has(key)),
   );
 }
-
-const overridesOf = (bindings: WidgetBindings, settings: WidgetSettings): Record<string, unknown> => ({
-  inputs: bindings.inputs,
-  ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
-  ...settings,
-});
 
 /** True when any template of the page (base or user) still has a cell using `model`. */
 function isModelReferenced(
@@ -137,6 +135,7 @@ export function usePageEditing({
   registry,
   layoutEngines,
   actions,
+  predicates,
   page,
   target,
   withUserOverlay,
@@ -157,6 +156,7 @@ export function usePageEditing({
     registry,
     layoutEngines,
     actions,
+    predicates,
   });
   const activeView = plan.problem === undefined ? plan.view : undefined;
   const engine = plan.problem === undefined ? plan.engine : undefined;
@@ -293,7 +293,7 @@ export function usePageEditing({
       const routing = target;
       // The user overlay carries SETTINGS only: a user's view never rewires
       // inputs or reactions (doc/layout-engines-design.md, "Where edits go").
-      const overrides = routing === "base" ? overridesOf(bindings, settings) : settings;
+      const overrides = routing === "base" ? templateOf(bindings, settings) : settings;
       const { model, template, key } = cell;
       const settingNames = settingFields(cell.definition.viewModel).map((field) => field.name);
       push((source) =>

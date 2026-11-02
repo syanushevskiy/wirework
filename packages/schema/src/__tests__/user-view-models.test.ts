@@ -35,7 +35,7 @@ describe("userViewModelsSchema", () => {
   it("refuses settings that carry inputs or reactions — a user's view never rewires a widget", () => {
     const overlay = { pages: { runs: { cells: { table: { settings: { compact: { inputs: { rows: "x" } } } } } } } };
     expect(issues(overlay)).toEqual([
-      "pages.runs.cells.table.settings.compact: user settings may not contain inputs or on (bindings belong to the page)",
+      "pages.runs.cells.table.settings.compact: user settings may not contain inputs, on or when (bindings belong to the page)",
     ]);
   });
 

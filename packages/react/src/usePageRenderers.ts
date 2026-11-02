@@ -5,7 +5,7 @@
  */
 import { createElement, useCallback, useMemo, type ErrorInfo, type ReactNode } from "react";
 import type { EventBus, Store } from "@wirework/schema";
-import type { ResolvedCell, ResolvedPage } from "@wirework/engine";
+import type { PredicateRegistry, ResolvedCell, ResolvedPage } from "@wirework/engine";
 import { CellChrome } from "./CellChrome";
 import { CellView } from "./CellView";
 import type { PageError } from "./PageView";
@@ -14,6 +14,7 @@ export interface PageRenderersInput {
   plan: ResolvedPage;
   store: Store;
   bus: EventBus;
+  predicates?: PredicateRegistry | undefined;
   editable: boolean;
   onEditCell?: ((cellId: string) => void) | undefined;
   onRemoveCell?: ((cellId: string) => void) | undefined;
@@ -24,6 +25,7 @@ export function usePageRenderers({
   plan,
   store,
   bus,
+  predicates,
   editable,
   onEditCell,
   onRemoveCell,
@@ -43,10 +45,12 @@ export function usePageRenderers({
         page,
         store,
         bus,
+        predicates,
+        editable,
         onError: (error: Error, info: ErrorInfo) =>
           onError?.({ in: "widget", cell: cell.key, widget: cell.widget, error, info }),
       }),
-    [page, store, bus, onError],
+    [page, store, bus, predicates, editable, onError],
   );
 
   const renderChrome = useMemo(

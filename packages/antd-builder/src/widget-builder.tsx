@@ -7,7 +7,7 @@
  */
 import { Button, Card, Flex, Form, Typography } from "antd";
 import type { Store, WidgetBindings } from "@wirework/schema";
-import type { ActionRegistry, ContractRegistry, WidgetRegistry } from "@wirework/engine";
+import type { ActionRegistry, ContractRegistry, PredicateRegistry, WidgetRegistry } from "@wirework/engine";
 import { useWidgetBuilder, type AddLock, type WidgetSettings } from "@wirework/builder";
 import { WidgetForm } from "./widget-form";
 import { WidgetPalette } from "./widget-palette";
@@ -23,6 +23,8 @@ export interface WidgetBuilderProps {
   contracts: ContractRegistry;
   store: Store;
   actions: ActionRegistry;
+  /** The checks a condition may pick (doc/conditions-design.md); the standard ones alone when absent. */
+  predicates?: PredicateRegistry | undefined;
   /** The page widgets are added to — where the input ports' suggested paths start. */
   page: string;
   /** Why Add is not offered right now (an open page edit, a user's own view); undefined when it is. */
@@ -37,6 +39,7 @@ export function WidgetBuilder({
   contracts,
   store,
   actions,
+  predicates,
   page,
   addLock,
   lockTexts,
@@ -47,6 +50,7 @@ export function WidgetBuilder({
     contracts,
     store,
     actions,
+    predicates,
     page,
     onAdd,
     addLock,

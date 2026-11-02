@@ -11,6 +11,7 @@ import {
   suggestedInputPaths,
   type ActionRegistry,
   type ContractRegistry,
+  type PredicateRegistry,
   type WidgetRegistry,
 } from "@wirework/engine";
 import type { AddLock } from "./locks";
@@ -30,6 +31,8 @@ export interface WidgetBuilderInput {
   contracts: ContractRegistry;
   store: Store;
   actions: ActionRegistry;
+  /** The checks a condition may pick; the standard ones alone when absent. */
+  predicates?: PredicateRegistry | undefined;
   /** The page widgets are added to: the first segment of every generated path. */
   page: string;
   onAdd: (widgetType: string, bindings: WidgetBindings, settings: WidgetSettings) => void;
@@ -37,7 +40,16 @@ export interface WidgetBuilderInput {
   addLock?: AddLock | undefined;
 }
 
-export function useWidgetBuilder({ registry, contracts, store, actions, page, onAdd, addLock }: WidgetBuilderInput) {
+export function useWidgetBuilder({
+  registry,
+  contracts,
+  store,
+  actions,
+  predicates,
+  page,
+  onAdd,
+  addLock,
+}: WidgetBuilderInput) {
   const [widgetType, setWidgetType] = useState<string>("");
   /** Registered widgets grouped by the contract kind they implement. */
   const widgetGroups = useMemo<WidgetGroup[]>(() => {
@@ -58,7 +70,7 @@ export function useWidgetBuilder({ registry, contracts, store, actions, page, on
     }));
   }, [registry, contracts]);
   const definition = widgetType ? registry.get(widgetType) : undefined;
-  const form = useWidgetForm({ definition, store, actions });
+  const form = useWidgetForm({ definition, store, actions, predicates });
   // The stable functions of the form and the search, so the callbacks below
   // depend on what they use — not on objects rebuilt every render.
   const { reset: resetForm, collect, valid } = form;

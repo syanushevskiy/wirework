@@ -40,8 +40,9 @@ export interface WidgetContractInput<IO extends WidgetIO, E extends WidgetEvents
  * A contract: the input plus the DERIVED view-model schema
  * (inputs + on + settings), so contract and schema can never drift.
  *
- * A setting may not be named `inputs` or `on`: those are the bindings, and
- * a setting of that name would silently replace them in the view model. A
+ * A setting may not be named `inputs`, `on` or `when`: those are the
+ * bindings, and a setting of that name would silently replace them in the
+ * view model. A
  * rule the settings object carries (`.refine()`) still holds: the view model
  * runs it on its settings part.
  */
@@ -52,7 +53,7 @@ export function defineContract<IO extends WidgetIO, E extends WidgetEvents, S ex
   const reserved = Object.keys(settings.shape).filter((key) => RESERVED_VIEW_MODEL_KEYS.has(key));
   if (reserved.length > 0) {
     throw new Error(
-      `Contract "${input.kind}" names a setting ${reserved.map((key) => `"${key}"`).join(", ")}: inputs and on are the bindings, never settings`,
+      `Contract "${input.kind}" names a setting ${reserved.map((key) => `"${key}"`).join(", ")}: inputs, on and when are the bindings, never settings`,
     );
   }
   // `.extend()` on a strict object stays strict: an unknown setting key is

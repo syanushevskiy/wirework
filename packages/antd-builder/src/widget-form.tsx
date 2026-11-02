@@ -3,17 +3,338 @@
  * by the builder ("Add widget") and the editor ("Edit widget"): input
  * ports, primitive settings and per event its reactions — the write-back
  * it does by default, then the rows configured, added and removed here
- * (required for events that carry state and have no default). With
- * `bindingsLocked` (a user's own view), ports and reactions are shown
- * read-only: they belong to the shared page.
+ * (required for events that carry state and have no default), and the
+ * CONDITION under which the widget shows — rows of path, check and value
+ * that must all hold. With `bindingsLocked` (a user's own view), ports,
+ * reactions and conditions are shown read-only: they belong to the shared
+ * page.
  */
-import { Alert, Button, Checkbox, Flex, Form, Input, Select, Typography } from "antd";
-import type { EventField, ReactionField, ReactionKind, WidgetFormState } from "@wirework/builder";
-import { paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "./ids";
+import { Fragment } from "react";
+import { Alert, Button, Checkbox, ConfigProvider, Flex, Form, Input, Select, Typography } from "antd";
+import type {
+  Choice,
+  ConditionField,
+  EventField,
+  GroupField,
+  ReactionField,
+  ReactionKind,
+  TestDraft,
+  TestFacts,
+  TreeEdit,
+  WidgetFormState,
+} from "@wirework/builder";
+import { conditionFieldId, paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "./ids";
 import { PathCombobox } from "./path-combobox";
 
 // The field ids are the form's promise to whoever automates it (ids.ts).
-export { paramFieldId, portFieldId, reactionFieldId, settingFieldId };
+export { conditionFieldId, paramFieldId, portFieldId, reactionFieldId, settingFieldId };
+
+/** A negated condition reads "unless"; the dropdown says so. */
+const NOT_CHOICES = [
+  { value: "when", label: "when" },
+  { value: "unless", label: "unless" },
+];
+const YES_NO = [
+  { value: "true", label: "true" },
+  { value: "false", label: "false" },
+];
+
+/**
+ * The form's dropdowns open BESIDE their field, not on the document body:
+ * a long form (a constructor with groups) scrolls, and a popup aligned
+ * against the viewport flips and re-aligns under a scroll — a field near
+ * the end of the page could not be picked from. Beside its field, a popup
+ * scrolls with the form and extends it when there is no room below.
+ */
+const popupBeside = (trigger?: HTMLElement): HTMLElement => trigger?.parentElement ?? document.body;
+
+/** The value field's placeholder, by the kind of value the check takes. */
+const VALUE_HINT: Record<string, string> = { list: "a, b, c", json: "JSON", number: "a number" };
+
+interface TestFieldsProps {
+  /** The field ids of this test: the row's, or the constructor part's. */
+  id: (part: string) => string;
+  test: TestDraft & TestFacts;
+  /** The checks on offer: with the constructor for a row, without it inside one. */
+  checks: Choice[];
+  paths: () => string[];
+  locked: boolean;
+  onChange: <K extends keyof TestDraft>(field: K, value: TestDraft[K]) => void;
+}
+
+/**
+ * The fields of ONE test: when/unless, the path read, the check by its
+ * phrase, the value it takes (a field of the kind the check declares).
+ * Shared by a condition row and by every test inside a constructor.
+ */
+function TestFields({ id, test, checks, paths, locked, onChange }: TestFieldsProps) {
+  return (
+    <>
+      <Select
+        id={id("not")}
+        data-testid={id("not")}
+        className="ww-builder-field-narrow"
+        disabled={locked}
+        value={test.not ? "unless" : "when"}
+        onChange={(choice: string) => onChange("not", choice === "unless")}
+        options={NOT_CHOICES}
+      />
+      <PathCombobox
+        id={id("path")}
+        testId={id("path")}
+        placeholder="store.path"
+        disabled={locked}
+        value={test.path}
+        suggestions={paths}
+        onSelect={(path) => onChange("path", path)}
+      />
+      <Select
+        id={id("is")}
+        data-testid={id("is")}
+        className="ww-builder-field"
+        placeholder="choose a check…"
+        disabled={locked}
+        {...(test.is === "" ? {} : { value: test.is })}
+        onChange={(choice: string) => onChange("is", choice)}
+        options={checks}
+      />
+      {test.toKind === "none" ? null : test.toKind === "select" || test.toKind === "boolean" ? (
+        <Select
+          id={id("to")}
+          data-testid={id("to")}
+          className="ww-builder-field-narrow"
+          placeholder="choose…"
+          disabled={locked}
+          {...(test.to === "" ? {} : { value: test.to })}
+          onChange={(choice: string) => onChange("to", choice)}
+          options={test.toKind === "boolean" ? YES_NO : (test.toChoices ?? [])}
+        />
+      ) : (
+        /* Text even for a number: the form reads it and says "not a number" —
+           a number input would swallow the letters and say nothing. */
+        <Input
+          id={id("to")}
+          data-testid={id("to")}
+          className="ww-builder-field-narrow"
+          placeholder={VALUE_HINT[test.toKind] ?? "value"}
+          disabled={locked}
+          value={test.to}
+          onChange={(change) => onChange("to", change.target.value)}
+        />
+      )}
+    </>
+  );
+}
+
+interface ConstructorGroupProps {
+  form: WidgetFormState;
+  index: number;
+  group: GroupField;
+  locked: boolean;
+}
+
+/**
+ * One group of the constructor, read left to right as the condition it
+ * builds — `not ( a and b ) or ( c and d )`: a "not" button before it,
+ * its parts in a row with the joiner between them (a button: press it and
+ * the group's "and" becomes "or"), a nested group between "(" and ")", and
+ * after the last part the joiner once more, which adds one more test, and
+ * "( )", which adds a group inside. Every kind of element has its own
+ * colour (styles.css): parentheses purple, joiners teal, "not" volcano,
+ * a test on a white card. The root group has no parentheses and no Remove:
+ * the row's × removes the whole constructor.
+ */
+function ConstructorGroup({ form, index, group, locked }: ConstructorGroupProps) {
+  const { editConstructor, testChoices, conditionPaths } = form;
+  const { at } = group;
+  const nested = at !== "";
+  const groupId = (part: string) => conditionFieldId(`group-${nested ? at : "root"}-${part}`, index);
+  const edit = (step: TreeEdit) => editConstructor(index, at, step);
+  return (
+    <span
+      className={nested ? "ww-builder-group ww-builder-group-nested" : "ww-builder-group"}
+      data-testid="constructor-group"
+      data-at={at}
+    >
+      <Button
+        className="ww-builder-not"
+        data-testid={groupId("not")}
+        aria-pressed={group.not}
+        title="the opposite of what follows"
+        disabled={locked}
+        onClick={() => edit({ group: { not: !group.not } })}
+      >
+        not
+      </Button>
+      {nested ? <span className="ww-builder-paren">(</span> : null}
+      {group.parts.map((part, position) => (
+        <Fragment key={part.at}>
+          {position === 0 ? null : (
+            <Button
+              className="ww-builder-op"
+              data-testid={groupId(position === 1 ? "join" : `join-${position}`)}
+              title="press to switch between and / or"
+              disabled={locked}
+              onClick={() => edit({ group: { join: group.join === "and" ? "or" : "and" } })}
+            >
+              {group.join}
+            </Button>
+          )}
+          {"parts" in part ? (
+            <ConstructorGroup form={form} index={index} group={part} locked={locked} />
+          ) : (
+            <span className="ww-builder-reaction ww-builder-test" data-testid="constructor-test" data-at={part.at}>
+              <TestFields
+                id={(field) => conditionFieldId(`part-${part.at}-${field}`, index)}
+                test={part}
+                checks={testChoices}
+                paths={conditionPaths}
+                locked={locked}
+                onChange={(field, value) => editConstructor(index, part.at, { set: { [field]: value } })}
+              />
+              <Button
+                size="small"
+                type="text"
+                data-testid={conditionFieldId(`part-${part.at}-remove`, index)}
+                aria-label={`Remove condition ${part.at}`}
+                disabled={locked}
+                onClick={() => editConstructor(index, part.at, "remove")}
+              >
+                ×
+              </Button>
+            </span>
+          )}
+        </Fragment>
+      ))}
+      <Button
+        className="ww-builder-op ww-builder-op-add"
+        data-testid={groupId("add-test")}
+        aria-label={`Add a condition to group ${at || "root"}, joined by ${group.join}`}
+        title={`one more condition, joined by ${group.join}`}
+        disabled={locked}
+        onClick={() => edit({ add: "test" })}
+      >
+        {group.join} …
+      </Button>
+      <Button
+        className="ww-builder-paren-add"
+        data-testid={groupId("add-group")}
+        aria-label={`Add a group to group ${at || "root"}`}
+        title="a group in parentheses"
+        disabled={locked}
+        onClick={() => edit({ add: "group" })}
+      >
+        ( … )
+      </Button>
+      {nested ? (
+        <>
+          <span className="ww-builder-paren">)</span>
+          <Button
+            size="small"
+            type="text"
+            data-testid={groupId("remove")}
+            aria-label={`Remove group ${at}`}
+            disabled={locked}
+            onClick={() => edit("remove")}
+          >
+            ×
+          </Button>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+interface ConditionRowProps {
+  form: WidgetFormState;
+  condition: ConditionField;
+  bindingsLocked: boolean;
+}
+
+/**
+ * One condition: a test's fields, or the constructor's tree, and Remove —
+ * under it the row as a sentence, or why it does not hold together yet. A
+ * member the form does not edit (an `any` written in the inspector, words
+ * it cannot read) shows as it is.
+ */
+function ConditionRow({ form, condition, bindingsLocked }: ConditionRowProps) {
+  const { setCondition, removeCondition, predicateChoices, conditionPaths } = form;
+  const { index } = condition;
+  const id = (part: string) => conditionFieldId(part, index);
+  const remove = (
+    <Button
+      size="small"
+      type="text"
+      data-testid={id("remove")}
+      aria-label={`Remove condition ${index + 1}`}
+      disabled={bindingsLocked}
+      onClick={() => removeCondition(index)}
+    >
+      ×
+    </Button>
+  );
+  const feedback = condition.toError ? (
+    <Typography.Text type="danger" data-testid={id("problem")}>
+      {condition.toError}
+    </Typography.Text>
+  ) : condition.sentence ? (
+    <Typography.Text type="secondary" data-testid={id("sentence")}>
+      {condition.sentence}
+    </Typography.Text>
+  ) : null;
+  if (condition.fixed || condition.expression !== undefined) {
+    return (
+      <Flex vertical gap="small" component="li" data-testid="widget-condition" data-index={index}>
+        <div className="ww-builder-reaction">
+          <Typography.Text data-testid={id("expression")} className="ww-builder-mono">
+            {condition.fixed ? condition.sentence : condition.expression}
+          </Typography.Text>
+          <Typography.Text type="secondary">
+            {condition.fixed ? "(one of — written in the inspector)" : "(words the form cannot edit)"}
+          </Typography.Text>
+          {remove}
+        </div>
+        {condition.fixed ? null : feedback}
+      </Flex>
+    );
+  }
+  if (condition.tree) {
+    return (
+      <Flex vertical gap="small" component="li" data-testid="widget-condition" data-index={index}>
+        <div className="ww-builder-reaction">
+          <Select
+            id={id("is")}
+            data-testid={id("is")}
+            className="ww-builder-field"
+            disabled={bindingsLocked}
+            value={condition.is}
+            onChange={(choice: string) => setCondition(index, "is", choice)}
+            options={predicateChoices}
+          />
+          {remove}
+        </div>
+        <ConstructorGroup form={form} index={index} group={condition.tree} locked={bindingsLocked} />
+        {feedback}
+      </Flex>
+    );
+  }
+  return (
+    <Flex vertical gap="small" component="li" data-testid="widget-condition" data-index={index}>
+      <div className="ww-builder-reaction">
+        <TestFields
+          id={id}
+          test={condition}
+          checks={predicateChoices}
+          paths={conditionPaths}
+          locked={bindingsLocked}
+          onChange={(field, value) => setCondition(index, field, value)}
+        />
+        {remove}
+      </div>
+      {feedback}
+    </Flex>
+  );
+}
 
 export interface WidgetFormProps {
   form: WidgetFormState;
@@ -196,18 +517,29 @@ function ReactionRow({ form, event, reaction, bindingsLocked }: ReactionRowProps
 }
 
 export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
-  const { definition, fields, settings, events, setPortPath, setSetting, chooseSetting, addReaction, suggestionsFor } =
-    form;
+  const {
+    definition,
+    fields,
+    settings,
+    events,
+    conditions,
+    setPortPath,
+    setSetting,
+    chooseSetting,
+    addReaction,
+    addCondition,
+    suggestionsFor,
+  } = form;
   if (!definition) return null;
 
   return (
-    <>
+    <ConfigProvider getPopupContainer={popupBeside}>
       {bindingsLocked ? (
         <Alert
           type="info"
           showIcon
           data-testid="bindings-locked"
-          title="Your view changes settings only. Inputs and reactions belong to the shared page — turn the user overlay off to change them."
+          title="Your view changes settings only. Inputs, reactions and conditions belong to the shared page — turn the user overlay off to change them."
         />
       ) : null}
       {fields.map((field) => {
@@ -385,6 +717,29 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
           </Flex>
         )}
       </Flex>
-    </>
+
+      {/* The CONDITION (doc/conditions-design.md): rows that must all hold
+          for the widget to show, saved as the template's `when`. Wiring,
+          like ports and reactions: read-only in a user's own view. */}
+      <Flex vertical gap="small" data-testid="widget-conditions">
+        <Typography.Text strong>Show when</Typography.Text>
+        {conditions.length === 0 ? (
+          <Typography.Text type="secondary" data-testid="widget-conditions-always">
+            Always. Add a condition to show this widget only while the page&apos;s data says so.
+          </Typography.Text>
+        ) : (
+          <Flex vertical gap="small" component="ul" className="ww-builder-reactions">
+            {conditions.map((condition) => (
+              <ConditionRow key={condition.index} form={form} condition={condition} bindingsLocked={bindingsLocked} />
+            ))}
+          </Flex>
+        )}
+        <div>
+          <Button size="small" data-testid={conditionFieldId("add")} disabled={bindingsLocked} onClick={addCondition}>
+            + condition
+          </Button>
+        </div>
+      </Flex>
+    </ConfigProvider>
   );
 }

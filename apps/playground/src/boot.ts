@@ -31,10 +31,12 @@ import {
   createActions,
   createContracts,
   createLayoutEngines,
+  createPredicates,
   createRegistry,
   type ActionRegistry,
   type ContractRegistry,
   type LayoutEngineRegistry,
+  type PredicateRegistry,
   type WidgetRegistry,
 } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
@@ -48,12 +50,14 @@ import { createPlaygroundStore } from "./devtools";
 /** The roots of the demo application's store that outlive a page visit. */
 export const APP_ROOTS = ["app", "viewModels", "userViewModels"] as const;
 
-/** The four extension points an application registers into. */
+/** The five extension points an application registers into. */
 export interface Registries {
   contracts: ContractRegistry;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry;
+  /** The checks a widget's `when` may name: the standard ones, plus this application's (doc/conditions-design.md). */
+  predicates: PredicateRegistry;
 }
 
 /** What the router matched: put at `route` in a demo page's store, so widgets can bind to it. */
@@ -106,6 +110,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
     registry: createRegistry({ contracts }),
     layoutEngines: createLayoutEngines(),
     actions: createActions(),
+    predicates: createPredicates(),
   };
   const demo = installDemo(registries, navigator);
   // Boot is over: the registries are what the pages render against, and a

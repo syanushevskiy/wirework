@@ -15,6 +15,13 @@ export const KEBAB_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 export const ACTION_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*)?$/;
 
 /**
+ * Predicate names (doc/conditions-design.md): the action grammar — the
+ * standard checks are plain ("equal", "one-of"), a host's own carry its
+ * namespace ("runs/retryable").
+ */
+export const PREDICATE_NAME = ACTION_NAME;
+
+/**
  * One segment of a dotted store path: anything but a dot, whitespace or
  * nothing. The ONE grammar — the schema (`storePathSchema`), the store's
  * write check (`checkedSegments`), path enumeration and the generated-path

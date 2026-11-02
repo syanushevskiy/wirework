@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { useWidgetForm } from "@wirework/builder";
 import { createStore } from "@wirework/store";
 import type { AnyWidgetDefinition } from "@wirework/schema";
-import { WidgetForm, portFieldId, reactionFieldId, settingFieldId } from "../widget-form";
+import { WidgetForm, conditionFieldId, portFieldId, reactionFieldId, settingFieldId } from "../widget-form";
 import { actions, counter, dial } from "./fixtures";
 
 function Harness({
@@ -84,6 +84,25 @@ describe("WidgetForm", () => {
     expect(fallback.getAttribute("data-path")).toBe("demo.level");
     expect(fallback.textContent).toContain("demo.level");
     expect(screen.getByTestId("valid").textContent).toBe("true");
+  });
+
+  it("offers the condition rows under their ids: a check by its phrase, a value field of its kind, the sentence, the problem", () => {
+    render(<Harness definition={dial} />);
+    expect(screen.getByTestId("widget-conditions-always")).toBeTruthy();
+    fireEvent.click(screen.getByTestId(conditionFieldId("add")));
+    expect(screen.getByTestId("widget-condition").getAttribute("data-index")).toBe("0");
+    expect(screen.getByTestId(conditionFieldId("path"))).toBeTruthy();
+    expect(screen.getByTestId(conditionFieldId("is"))).toBeTruthy();
+    // No check chosen yet: no value field, no sentence.
+    expect(screen.queryByTestId(conditionFieldId("to"))).toBeNull();
+    expect(screen.queryByTestId(conditionFieldId("sentence"))).toBeNull();
+    fireEvent.click(screen.getByTestId(conditionFieldId("remove")));
+    expect(screen.queryByTestId("widget-condition")).toBeNull();
+  });
+
+  it("locks the conditions with the other bindings", () => {
+    render(<Harness bindingsLocked />);
+    expect(screen.getByTestId<HTMLButtonElement>(conditionFieldId("add")).disabled).toBe(true);
   });
 
   it("adds rows under an event, each under its own ids, and removes the one asked", () => {

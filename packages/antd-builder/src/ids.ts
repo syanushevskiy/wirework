@@ -17,3 +17,10 @@ export const reactionFieldId = (event: string, part: string, index = 0): string 
   index === 0 ? `reaction-${event}-${part}` : `reaction-${event}-${index + 1}-${part}`;
 export const paramFieldId = (event: string, param: string, index = 0): string =>
   reactionFieldId(event, `param-${param}`, index);
+/**
+ * The CONDITION rows ("Show when", doc/conditions-design.md), numbered like
+ * the reactions: `condition-path`, `condition-2-path`, … (`index` from 0);
+ * the section's own control is `condition-add`.
+ */
+export const conditionFieldId = (part: string, index = 0): string =>
+  index === 0 ? `condition-${part}` : `condition-${index + 1}-${part}`;

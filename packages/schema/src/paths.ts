@@ -25,6 +25,17 @@ const INDEX = /^(0|[1-9]\d*)$/;
 /** A canonical array index: "0", "12" — not "01", "-1" or "length". */
 export const isIndexSegment = (segment: string): boolean => INDEX.test(segment);
 
+/**
+ * A value as TEXT, the one rule everywhere a value is shown or matched as
+ * text: nothing for null and undefined, JSON for an object or a list, the
+ * value itself otherwise (a table cell's text, a tag's tone match, the
+ * `equal` predicate).
+ */
+export function valueText(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
 /** An object literal (or JSON) value — not an array, class instance or null. */
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;

@@ -81,16 +81,21 @@ export function WidgetPalette({ search, selected, onSelect, action }: WidgetPale
               {...press(type)}
             >
               <Flex vertical gap={4} align="start">
-                {/* Half the default frame (and half the scale, so the
-                    same content still fits): the palette stays compact. */}
-                <WidgetPreview definition={definition} width={120} height={55} scale={0.35} />
+                {/* Half the default frame, drawn close to life size: a
+                    small widget fills it instead of sitting in a corner,
+                    and a big one shows its top-left part. */}
+                <WidgetPreview definition={definition} width={120} height={55} scale={0.6} />
                 <Flex gap={4} wrap align="center">
                   <Typography.Text code>{type}</Typography.Text>
                   {/* The contract this widget implements — unless the
                       widget's own name already says it. */}
                   {kindTag ? <Tag>{kindTag}</Tag> : null}
                 </Flex>
-                {description ? <Typography.Text type="secondary">{description}</Typography.Text> : null}
+                {description ? (
+                  <Typography.Text type="secondary" className="ww-builder-palette-description">
+                    {description}
+                  </Typography.Text>
+                ) : null}
               </Flex>
             </Card>
           ))}

@@ -15,8 +15,8 @@
 import { z } from "zod";
 import type { Validator } from "./widget";
 
-/** View-model keys that are bindings, never settings. */
-export const RESERVED_VIEW_MODEL_KEYS = new Set(["inputs", "on"]);
+/** View-model keys that are bindings, never settings: the ports, the reactions, the condition. */
+export const RESERVED_VIEW_MODEL_KEYS = new Set(["inputs", "on", "when"]);
 
 /** "json": anything that is not a primitive (an object, a list) — only on request, see `settingFields`. */
 export type SettingKind = "text" | "number" | "boolean" | "select" | "json";
@@ -123,6 +123,25 @@ function objectShape(validator: Validator<unknown>): Record<string, unknown> | u
 export function validatorKeys(validator: Validator<unknown>): string[] | undefined {
   const shape = objectShape(validator);
   return shape === undefined ? undefined : Object.keys(shape);
+}
+
+/**
+ * What a builder shows for ONE value a validator describes — a predicate's
+ * `to` (doc/conditions-design.md): nothing for no validator, a number, a
+ * list (an array), a yes/no, a choice (an enum), JSON for an object, text
+ * for everything else.
+ */
+export type ArgumentKind = "none" | "text" | "number" | "boolean" | "select" | "list" | "json";
+
+export function argumentKind(validator: Validator<unknown> | undefined): { kind: ArgumentKind; options?: string[] } {
+  if (validator === undefined) return { kind: "none" };
+  if (!(validator instanceof z.ZodType)) return { kind: "text" };
+  const { inner } = unwrap(validator);
+  if (inner instanceof z.ZodArray) return { kind: "list" };
+  if (inner instanceof z.ZodObject || inner instanceof z.ZodRecord) return { kind: "json" };
+  const kind = kindOf(inner);
+  const choices = optionsOf(inner);
+  return { kind: kind ?? "text", ...(choices === undefined ? {} : { options: choices }) };
 }
 
 /**

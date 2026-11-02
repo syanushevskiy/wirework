@@ -32,7 +32,14 @@ export type { PageViewsProps, PageViewTexts } from "./page-views";
 export { WidgetPalette } from "./widget-palette";
 export type { WidgetPaletteProps } from "./widget-palette";
 
-export { WidgetForm, paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "./widget-form";
+export {
+  WidgetForm,
+  conditionFieldId,
+  paramFieldId,
+  portFieldId,
+  reactionFieldId,
+  settingFieldId,
+} from "./widget-form";
 export type { WidgetFormProps } from "./widget-form";
 
 export { WidgetEditor } from "./widget-editor";

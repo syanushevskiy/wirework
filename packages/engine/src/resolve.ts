@@ -27,6 +27,7 @@ import {
   type PageViewModel,
   type UserViewModels,
   type ViewModels,
+  type When,
   type WidgetEvents,
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
@@ -34,6 +35,7 @@ import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { errorText, issuesText, problemText } from "./messages";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
+import { whenProblems, type PredicateRegistry } from "./predicates";
 import { actionArguments, withDefaultReactions } from "./reactions";
 import type { WidgetRegistry } from "./registry";
 import { pageTemplates } from "./trees";
@@ -131,6 +133,14 @@ export interface ResolveInput {
   layoutEngines: LayoutEngineRegistry;
   /** When given, reactions calling an unregistered action are a cell problem. */
   actions?: ActionRegistry | undefined;
+  /** The predicates a `when` may name; the standard ones alone when absent (doc/conditions-design.md). */
+  predicates?: PredicateRegistry | undefined;
+}
+
+/** The registries a template is checked against. */
+export interface CheckRegistries {
+  actions?: ActionRegistry | undefined;
+  predicates?: PredicateRegistry | undefined;
 }
 
 /**
@@ -183,17 +193,18 @@ export function pickTemplate(
  * least one reaction under `on` (that is how widget state reaches the
  * store), every `call` must name a registered action, and every `from`
  * must start at a field the event's payload has — a typo there would write
- * `undefined` on every emit. Returns a message describing what is wrong, or
- * undefined.
+ * `undefined` on every emit; and a `when` must name registered predicates
+ * and give each the literal it takes. Returns a message describing what is
+ * wrong, or undefined.
  */
 export function contractProblems(
   definition: AnyWidgetDefinition,
   viewModel: unknown,
-  actions?: ActionRegistry,
+  { actions, predicates }: CheckRegistries = {},
 ): string | undefined {
   // The one cast: the widget's own schema parsed `viewModel` a moment ago. `Partial`,
   // because zod keeps a reaction list left explicitly `undefined` under its key.
-  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Partial<EventBindings> } | null;
+  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Partial<EventBindings>; when?: When } | null;
   const events = definition.events as WidgetEvents;
   const unknownActions: string[] = [];
   const invalidArguments: string[] = [];
@@ -241,6 +252,8 @@ export function contractProblems(
   if (invalidArguments.length > 0) parts.push(`reactions call actions wrongly: ${invalidArguments.join("; ")}`);
   if (unknownFields.length > 0)
     parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
+  const condition = whenProblems(vm?.when, predicates);
+  if (condition !== undefined) parts.push(`the condition is wrong: ${condition}`);
   return parts.length > 0 ? parts.join("; ") : undefined;
 }
 
@@ -254,7 +267,7 @@ export function checkTemplate(
   definition: AnyWidgetDefinition,
   template: unknown,
   userSettings: unknown,
-  actions?: ActionRegistry,
+  registries: CheckRegistries = {},
 ): { viewModel: unknown; problem?: undefined } | { viewModel?: undefined; problem: CellProblem } {
   let viewModel: unknown;
   try {
@@ -262,7 +275,7 @@ export function checkTemplate(
   } catch (error) {
     return { problem: { kind: "invalid-view-model", message: problemText(error) } };
   }
-  const unmet = contractProblems(definition, viewModel, actions);
+  const unmet = contractProblems(definition, viewModel, registries);
   return unmet ? { problem: { kind: "unmet-contract", message: unmet } } : { viewModel };
 }
 
@@ -271,7 +284,7 @@ export function checkTemplate(
  * overlay), validation by the widget's own schema and the contract check.
  */
 function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): ResolvedCell {
-  const { viewModels, userViewModels, page, registry, actions } = input;
+  const { viewModels, userViewModels, page, registry, actions, predicates } = input;
   const base = { key: cell.id, widget: cell.widget, model: cell.model } as const;
 
   const definition = registry.get(cell.widget);
@@ -303,7 +316,10 @@ function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): R
     };
   }
 
-  const checked = checkTemplate(definition, templateMap[picked.name], userWidget?.settings?.[picked.name], actions);
+  const checked = checkTemplate(definition, templateMap[picked.name], userWidget?.settings?.[picked.name], {
+    actions,
+    predicates,
+  });
   const chosen = { template: picked.name, ...(picked.fallback === undefined ? {} : { fallback: picked.fallback }) };
   if (checked.problem) {
     return { ...base, definition, ...chosen, problem: checked.problem };

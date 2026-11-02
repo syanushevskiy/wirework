@@ -276,7 +276,8 @@ export const demoViewModels: ViewModels = {
             h: 2,
           },
           // Opens the selected run's page: the action reads runs.selected
-          // and asks the host's router for /demo/runs/<id>.
+          // and asks the host's router for /demo/runs/<id>. Its template
+          // SHOWS it only while a run is selected (`when`).
           {
             id: "button-open-run",
             widget: "antd-button",
@@ -386,7 +387,7 @@ export const demoViewModels: ViewModels = {
             w: 3,
             h: 1,
           },
-          // Empty until the server says there is no such run.
+          // Hidden until the server says there is no such run (`when`).
           {
             id: "label-run-error",
             widget: "antd-label",
@@ -395,6 +396,18 @@ export const demoViewModels: ViewModels = {
             x: 0,
             y: 2,
             w: 9,
+            h: 1,
+          },
+          // Shown by a predicate of the APPLICATION's own (`runs/retryable`,
+          // doc/conditions-design.md): a failed run with an even id.
+          {
+            id: "tag-run-retry",
+            widget: "antd-tag",
+            model: "widgets.run.retry",
+            template: "default",
+            x: 9,
+            y: 2,
+            w: 3,
             h: 1,
           },
           {
@@ -678,7 +691,12 @@ export const demoViewModels: ViewModels = {
         default: { inputs: { value: "runs.selected" }, label: "Selected run" },
       },
       openRun: {
-        default: { label: "Open run", on: { clicked: [{ call: "runs/open-selected" }] } },
+        default: {
+          label: "Open run",
+          on: { clicked: [{ call: "runs/open-selected" }] },
+          // Shown only while a run is selected (doc/conditions-design.md).
+          when: [{ path: "runs.selected", is: "empty", not: true }],
+        },
       },
     },
     history: {
@@ -764,7 +782,17 @@ export const demoViewModels: ViewModels = {
         default: { inputs: { text: "run.data.status.message" }, text: "…", tone: "muted" },
       },
       error: {
-        default: { inputs: { text: "run.error" }, text: "", tone: "danger" },
+        // A CONDITION (doc/conditions-design.md): the line shows only once there is an error.
+        default: {
+          inputs: { text: "run.error" },
+          text: "",
+          tone: "danger",
+          when: [{ path: "run.error", is: "empty", not: true }],
+        },
+      },
+      retry: {
+        // A check the application registered: two properties and a rule, picked by name like a standard one.
+        default: { text: "Retry possible", tone: "warning", when: [{ path: "run.data", is: "runs/retryable" }] },
       },
       route: {
         default: { inputs: { value: "route" }, label: "Route (from the URL)" },

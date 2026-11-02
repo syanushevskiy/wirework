@@ -1,7 +1,13 @@
 /** The widget builder and editor: the palette, the form (ports, settings, reactions, action parameters), Add, the edit target and its locks. */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "@wirework/antd-builder/ids";
+import {
+  conditionFieldId,
+  paramFieldId,
+  portFieldId,
+  reactionFieldId,
+  settingFieldId,
+} from "@wirework/antd-builder/ids";
 import { chooseOption, dropdown, isSelect, option } from "../support/antd";
 import { cell, live } from "../support/page";
 
@@ -350,6 +356,157 @@ Then(
   },
 );
 
+/* ----------------------------- conditions ----------------------------- */
+
+/**
+ * The "Show when" rows (doc/conditions-design.md): "the condition" is the
+ * first row, "condition 2" the next (`conditionFieldId` counts from 0). A
+ * check is picked by its PHRASE ("is greater than", "can be retried"), the
+ * value typed as text — nothing for a check that takes none.
+ */
+/** Type a store path into a condition's combobox and leave it — its suggestions closed, so the next dropdown is the only one open. */
+async function typePath(page: Page, testId: string, path: string) {
+  const pathBox = page.getByTestId(testId).getByRole("combobox");
+  await pathBox.click();
+  await pathBox.fill(path);
+  await pathBox.blur();
+  await expect(dropdown(page)).toHaveCount(0);
+}
+
+async function setCondition(page: Page, index: number, path: string, phrase: string, value?: string) {
+  await typePath(page, conditionFieldId("path", index), path);
+  await chooseOption(page, conditionFieldId("is", index), phrase, "prefix");
+  if (value === undefined) return;
+  const control = page.getByTestId(conditionFieldId("to", index));
+  if (await isSelect(control)) {
+    await chooseOption(page, conditionFieldId("to", index), value);
+  } else {
+    await control.fill(value);
+  }
+}
+
+When("I add a condition", async ({ page }) => {
+  await page.getByTestId(conditionFieldId("add")).click();
+});
+
+When(
+  "I set the condition to {string} {string} {string}",
+  async ({ page }, path: string, phrase: string, value: string) => {
+    await setCondition(page, 0, path, phrase, value);
+  },
+);
+
+When("I set the condition to {string} {string}", async ({ page }, path: string, phrase: string) => {
+  await setCondition(page, 0, path, phrase);
+});
+
+When(
+  "I set condition {int} to {string} {string} {string}",
+  async ({ page }, ordinal: number, path: string, phrase: string, value: string) => {
+    await setCondition(page, ordinal - 1, path, phrase, value);
+  },
+);
+
+When("I set condition {int} to {string} {string}", async ({ page }, ordinal: number, path: string, phrase: string) => {
+  await setCondition(page, ordinal - 1, path, phrase);
+});
+
+/*
+ * The CONSTRUCTOR (first row): a tree built step by step. A part is named
+ * by its place — "0" the first test, "1" the second part, "1.0" the first
+ * test inside the group at "1"; the root group is "the constructor".
+ */
+const groupAt = (at: string): string => `group-${at === "" || at === "the constructor" ? "root" : at}`;
+
+When("I switch the condition to the constructor", async ({ page }) => {
+  await chooseOption(page, conditionFieldId("is"), "constructor", "prefix");
+});
+
+/** A test of the constructor: its path, its check by phrase and its value (none for a check that takes none). */
+async function setConstructorTest(page: Page, at: string, path: string, phrase: string, value?: string) {
+  await typePath(page, conditionFieldId(`part-${at}-path`), path);
+  await chooseOption(page, conditionFieldId(`part-${at}-is`), phrase, "prefix");
+  if (value !== undefined) await page.getByTestId(conditionFieldId(`part-${at}-to`)).fill(value);
+}
+
+When(
+  "I set constructor condition {string} to {string} {string} {string}",
+  async ({ page }, at: string, path: string, phrase: string, value: string) => {
+    await setConstructorTest(page, at, path, phrase, value);
+  },
+);
+
+When(
+  "I set constructor condition {string} to {string} {string}",
+  async ({ page }, at: string, path: string, phrase: string) => {
+    await setConstructorTest(page, at, path, phrase);
+  },
+);
+
+/** "I add a condition to the constructor" or "… to constructor group "1"". */
+When("I add a condition to {string}", async ({ page }, group: string) => {
+  await page.getByTestId(conditionFieldId(`${groupAt(group.replace(/^constructor group /, ""))}-add-test`)).click();
+});
+
+When("I add a group to {string}", async ({ page }, group: string) => {
+  await page.getByTestId(conditionFieldId(`${groupAt(group.replace(/^constructor group /, ""))}-add-group`)).click();
+});
+
+/** "and" / "or": how a group's parts join — the word between them is a button that switches it. */
+When("I join {string} with {string}", async ({ page }, group: string, join: string) => {
+  const joiner = page.getByTestId(conditionFieldId(`${groupAt(group.replace(/^constructor group /, ""))}-join`));
+  if ((await joiner.innerText()).trim() !== join) await joiner.click();
+  await expect(joiner).toHaveText(join);
+});
+
+When("I negate constructor condition {string}", async ({ page }, at: string) => {
+  await chooseOption(page, conditionFieldId(`part-${at}-not`), "unless");
+});
+
+/** The "not" button before a group. */
+When("I negate {string}", async ({ page }, group: string) => {
+  const not = page.getByTestId(conditionFieldId(`${groupAt(group.replace(/^constructor group /, ""))}-not`));
+  await not.click();
+  await expect(not).toHaveAttribute("aria-pressed", "true");
+});
+
+When("I remove constructor condition {string}", async ({ page }, at: string) => {
+  await page.getByTestId(conditionFieldId(`part-${at}-remove`)).click();
+});
+
+/** "unless": the widget shows while the check does NOT hold. */
+When("I negate condition {int}", async ({ page }, ordinal: number) => {
+  await chooseOption(page, conditionFieldId("not", ordinal - 1), "unless");
+});
+
+When("I remove condition {int}", async ({ page }, ordinal: number) => {
+  await page.getByTestId(conditionFieldId("remove", ordinal - 1)).click();
+});
+
+/** The row read back as a sentence — what the form will save. */
+Then("the condition reads {string}", async ({ page }, sentence: string) => {
+  await expect(page.getByTestId(conditionFieldId("sentence"))).toHaveText(sentence);
+});
+
+Then("condition {int} reads {string}", async ({ page }, ordinal: number, sentence: string) => {
+  await expect(page.getByTestId(conditionFieldId("sentence", ordinal - 1))).toHaveText(sentence);
+});
+
+/** Why the first row's value cannot be used. */
+Then("the condition problem is {string}", async ({ page }, problem: string) => {
+  await expect(page.getByTestId(conditionFieldId("problem"))).toHaveText(problem);
+});
+
+/** A cell whose template carries no condition: nothing says when, it simply shows. */
+Then("the cell {string} always shows", async ({ page }, id: string) => {
+  await expect(cell(page, id)).toBeVisible();
+  await expect(cell(page, id)).not.toHaveAttribute("data-when", /.*/);
+});
+
+Then("the cell {string} shows the problem {string}", async ({ page }, id: string, text: string) => {
+  await expect(live(page).locator(`[data-testid="cell-problem"][data-cell="${id}"]`)).toContainText(text);
+});
+
 /* --------------------------- editing / target --------------------------- */
 
 Then("the edit target is {string}", async ({ page }, target: string) => {
@@ -370,10 +527,11 @@ Then("the cell {string} has no edit chrome", async ({ page }, id: string) => {
 
 Then("the widget editor keeps inputs and reactions read-only", async ({ page }) => {
   await expect(page.getByTestId("bindings-locked")).toBeVisible();
-  // No reaction can be added — the one control every event has, rows or not.
+  // No reaction can be added — the one control every event has, rows or not — and no condition either.
   await expect(page.locator('[data-testid^="reaction-"][data-testid$="-add"]').first()).toBeDisabled();
   const kinds = page.locator('[data-testid^="reaction-"][data-testid$="-kind"]');
   if ((await kinds.count()) > 0) await expect(kinds.first().getByRole("combobox")).toBeDisabled();
+  await expect(page.getByTestId(conditionFieldId("add"))).toBeDisabled();
 });
 
 When("I save the widget", async ({ page }) => {

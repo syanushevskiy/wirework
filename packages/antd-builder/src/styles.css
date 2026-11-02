@@ -32,6 +32,94 @@
   width: 10rem;
 }
 
+/*
+ * ---- the constructor: a condition read left to right ----
+ *
+ * Every kind of element has a colour of its own, so a built condition is
+ * read at a glance: parentheses and the group they hold are PURPLE, the
+ * joiners ("and" / "or") TEAL, "not" VOLCANO when pressed, and each test
+ * sits on a white card. Larger than the rest of the form on purpose: this
+ * is the part a page builder composes, not a field they fill. Colours are
+ * antd's palette tokens with a fixed fallback (guidelines: no hardcoded
+ * colours in markup; the stylesheet names the roles).
+ */
+
+.ww-builder-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+/* A nested group: its parentheses' colour as a faint band, so its extent is seen at a glance. */
+.ww-builder-group-nested {
+  padding: 0.5rem 0.625rem;
+  border: 1px dashed var(--ant-purple-3, #d3adf7);
+  border-radius: 0.75rem;
+  background: var(--ant-purple-1, #f9f0ff);
+}
+
+.ww-builder-paren {
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ant-purple-6, #722ed1);
+}
+
+/* Doubled classes: antd's own button colours are single-class rules. */
+.ww-builder-op.ww-builder-op,
+.ww-builder-paren-add.ww-builder-paren-add,
+.ww-builder-not.ww-builder-not {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border-radius: 1.125rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* "and" / "or" between two parts, and once more after the last one to add a part. */
+.ww-builder-op.ww-builder-op {
+  color: var(--ant-cyan-8, #006d75);
+  background: var(--ant-cyan-1, #e6fffb);
+  border-color: var(--ant-cyan-4, #5cdbd3);
+}
+
+.ww-builder-op-add.ww-builder-op-add {
+  background: transparent;
+  border-style: dashed;
+}
+
+/* "( … )": adds a group, in the parentheses' colour. */
+.ww-builder-paren-add.ww-builder-paren-add {
+  color: var(--ant-purple-7, #531dab);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--ant-purple-4, #b37feb);
+}
+
+/* "not": quiet until pressed, then volcano — the one element that inverts what follows. */
+.ww-builder-not.ww-builder-not {
+  color: var(--ant-color-text-tertiary, #8c8c8c);
+  border-color: var(--ant-color-border, #d9d9d9);
+}
+
+.ww-builder-not.ww-builder-not[aria-pressed="true"] {
+  color: var(--ant-color-white, #ffffff);
+  background: var(--ant-volcano-6, #fa541c);
+  border-color: var(--ant-volcano-6, #fa541c);
+}
+
+/* One test of the constructor: its fields on a card, so where one test ends and the next begins is plain. */
+.ww-builder-test {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  border-radius: 0.625rem;
+  background: var(--ant-color-bg-container, #ffffff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
 .ww-builder-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -96,6 +184,12 @@
 .ww-builder-palette-card[aria-pressed="true"] {
   border-color: var(--ant-color-primary, #1677ff);
   box-shadow: 0 0 0 2px var(--ant-color-primary-border, #91caff);
+}
+
+/* The one line under a card's name: 10px at the browser's 16px default, scaling with it. */
+.ww-builder-palette-description.ww-builder-palette-description {
+  font-size: 0.625rem;
+  line-height: 1.4;
 }
 
 /* ---- widget form ---- */

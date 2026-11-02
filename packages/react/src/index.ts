@@ -24,5 +24,7 @@ export { useReactions } from "./useReactions";
 export { useStorePath } from "./useStorePath";
 export { useStoreSnapshot } from "./useStoreSnapshot";
 export { useWidgetEvent } from "./useWidgetEvent";
-export { ErrorBoundary, LayoutErrorBoundary, WidgetErrorBoundary } from "./WidgetErrorBoundary";
+export { useWhen } from "./useWhen";
+export type { WhenOptions, WhenState } from "./useWhen";
+export { ErrorBoundary, LayoutErrorBoundary, WidgetCrash, WidgetErrorBoundary } from "./WidgetErrorBoundary";
 export type { LayoutErrorBoundaryProps, OnError, WidgetErrorBoundaryProps } from "./WidgetErrorBoundary";

@@ -23,7 +23,13 @@
  */
 import type { ComponentType, ErrorInfo } from "react";
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
-import type { ActionRegistry, LayoutEngineRegistry, ResolvedPage, WidgetRegistry } from "@wirework/engine";
+import type {
+  ActionRegistry,
+  LayoutEngineRegistry,
+  PredicateRegistry,
+  ResolvedPage,
+  WidgetRegistry,
+} from "@wirework/engine";
 import type { LayoutRendererProps } from "./layout";
 import { PageReloadContext } from "./useAnnounce";
 import { usePageLoad } from "./usePageLoad";
@@ -45,6 +51,8 @@ export interface PageViewProps {
   layoutEngines: LayoutEngineRegistry;
   /** Host actions that `call` reactions may invoke. */
   actions?: ActionRegistry | undefined;
+  /** The predicates a cell's `when` may name (doc/conditions-design.md); the standard ones alone when absent. */
+  predicates?: PredicateRegistry | undefined;
   /**
    * An already-resolved plan (from `usePagePlan`) for these same inputs.
    * When given, PageView renders it and resolves nothing itself.
@@ -78,6 +86,7 @@ export function PageView({
   registry,
   layoutEngines,
   actions,
+  predicates,
   plan: providedPlan,
   store,
   bus,
@@ -89,7 +98,10 @@ export function PageView({
   onError,
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
-  const plan = usePagePlan({ viewModels, userViewModels, page, registry, layoutEngines, actions }, providedPlan);
+  const plan = usePagePlan(
+    { viewModels, userViewModels, page, registry, layoutEngines, actions, predicates },
+    providedPlan,
+  );
   useReactions(bus, store, plan, actions);
   // The page's own `load` event: what `viewModels.on.<page>.load` declares runs once per opening.
   usePageLoad(bus, store, page, reloadKey);
@@ -97,6 +109,7 @@ export function PageView({
     plan,
     store,
     bus,
+    predicates,
     editable,
     onEditCell,
     onRemoveCell,

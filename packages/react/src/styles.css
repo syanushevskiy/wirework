@@ -16,6 +16,18 @@
   min-width: 0;
 }
 
+/* ---- conditions (doc/conditions-design.md) ---- */
+
+/* In edit mode a cell whose condition does not hold stays visible, dimmed, with the reason above it. */
+.ww-cell-hidden-now {
+  opacity: 0.55;
+}
+
+.ww-cell-note {
+  font-size: 0.75rem;
+  color: var(--ww-color-note, var(--ant-color-warning, #b45309));
+}
+
 /* ---- edit-mode chrome (placed by each engine) ---- */
 
 .ww-cell-actions {

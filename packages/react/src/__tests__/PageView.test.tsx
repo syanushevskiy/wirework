@@ -7,6 +7,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserViewModels } from "@wirework/schema";
+import { createPredicates } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
 import { createStore } from "@wirework/store";
 import { PageView, type PageViewProps } from "../PageView";
@@ -104,6 +105,66 @@ describe("PageView", () => {
       in: "layout",
       engine: "list",
       error: expect.objectContaining({ message: "the list is broken" }),
+    });
+  });
+
+  describe("a cell with a condition", () => {
+    const conditional = (when: unknown) =>
+      viewModels([cell()], { echo: { default: { inputs: { value: "demo.text" }, when } } });
+    const notEmpty = [{ path: "demo.text", is: "empty", not: true }];
+
+    it("keeps its place and shows its widget only while the condition holds", () => {
+      const { store } = renderPage({ viewModels: conditional(notEmpty) });
+      expect(screen.getByTestId("cell").getAttribute("data-when")).toBe("true");
+      expect(screen.getByTestId("echo").textContent).toBe("hello");
+
+      act(() => store.set("demo.text", ""));
+      expect(screen.getByTestId("cell").getAttribute("data-when")).toBe("false");
+      expect(screen.queryByTestId("echo")).toBeNull();
+
+      act(() => store.set("demo.text", "back"));
+      expect(screen.getByTestId("echo").textContent).toBe("back");
+    });
+
+    it("in edit mode stays visible, dimmed, with the reason it would be hidden", () => {
+      const { store } = renderPage({ viewModels: conditional(notEmpty), editable: true, onEditCell: vi.fn() });
+      act(() => store.set("demo.text", ""));
+      const hidden = screen.getByTestId("cell");
+      expect(hidden.getAttribute("data-when")).toBe("false");
+      expect(hidden.className).toContain("ww-cell-hidden-now");
+      expect(screen.getByTestId("cell-hidden-note").textContent).toBe("hidden now — shows unless demo.text is empty");
+      expect(screen.getByTestId("echo")).toBeTruthy();
+      expect(screen.getByTestId("cell-edit")).toBeTruthy();
+    });
+
+    it("carries no data-when without a condition", () => {
+      renderPage();
+      expect(screen.getByTestId("cell").hasAttribute("data-when")).toBe(false);
+    });
+
+    it("shows a condition that names an unknown predicate as a cell problem", () => {
+      renderPage({ viewModels: conditional([{ path: "demo.text", is: "demo/nope" }]) });
+      const problem = screen.getByTestId("cell-problem");
+      expect(problem.getAttribute("data-problem")).toBe("unmet-contract");
+      expect(problem.textContent).toContain('unknown predicate "demo/nope"');
+    });
+
+    it("isolates a predicate that throws to its cell, and reports it", () => {
+      const predicates = createPredicates();
+      predicates.register({
+        name: "demo/picky",
+        description: "throws",
+        phrase: "is fine",
+        test: () => {
+          throw new Error("the predicate is broken");
+        },
+      });
+      const onError = vi.fn();
+      renderPage({ viewModels: conditional([{ path: "demo.text", is: "demo/picky" }]), predicates, onError });
+      expect(screen.getByTestId("widget-error").textContent).toContain("the predicate is broken");
+      expect(screen.getByTestId("cell").getAttribute("data-when")).toBe("false");
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError.mock.calls[0]?.[0]).toMatchObject({ in: "widget", cell: "c1", widget: "echo" });
     });
   });
 

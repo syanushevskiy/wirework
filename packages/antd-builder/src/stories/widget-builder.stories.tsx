@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn } from "storybook/test";
+import { expect, fn, screen, within } from "storybook/test";
 import type { AddLock } from "@wirework/builder";
 import { WidgetBuilder } from "../widget-builder";
 import { actions, contracts, registry, store } from "./fixtures";
@@ -86,6 +86,44 @@ export const WaitsForTheWiring: Story = {
     await expect(add).toBeDisabled();
     await userEvent.type(canvas.getByTestId("reaction-refresh-set"), "demo.refreshed");
     await expect(add).toBeEnabled();
+  },
+};
+
+/**
+ * A CONDITION typed in words (doc/conditions-design.md): a path, a check by
+ * its phrase, the value it takes; the row reads itself back as a sentence,
+ * a value the check refuses holds Add back, and what Add hands over carries
+ * the condition as the template's `when`.
+ */
+export const ShowsWhen: Story = {
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Show widgets" }));
+    await userEvent.click(canvas.getByRole("button", { name: /antd-label/ }));
+    // A label needs its text; the condition is what this story is about.
+    await userEvent.type(canvas.getByTestId("setting-text"), "Plenty");
+    await expect(canvas.getByTestId("widget-conditions-always")).toBeVisible();
+    await userEvent.click(canvas.getByTestId("condition-add"));
+    const path = within(canvas.getByTestId("condition-path")).getByRole("combobox");
+    await userEvent.type(path, "demo.count");
+    // The path's suggestions open under the field: close them before anything below is clicked.
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(within(canvas.getByTestId("condition-is")).getByRole("combobox"));
+    await userEvent.click(await screen.findByTitle("is greater than"));
+    await userEvent.type(canvas.getByTestId("condition-to"), "ten");
+    await expect(canvas.getByTestId("condition-problem")).toHaveTextContent("not a number");
+    await expect(canvas.getByRole("button", { name: "Add widget" })).toBeDisabled();
+    await userEvent.clear(canvas.getByTestId("condition-to"));
+    await userEvent.type(canvas.getByTestId("condition-to"), "10");
+    await expect(canvas.getByTestId("condition-sentence")).toHaveTextContent("when demo.count is greater than 10");
+    const add = canvas.getByRole("button", { name: "Add widget" });
+    await expect(add).toBeEnabled();
+    await userEvent.click(add);
+    await expect(args.onAdd).toHaveBeenCalledTimes(1);
+    await expect(args.onAdd).toHaveBeenCalledWith(
+      "antd-label",
+      expect.objectContaining({ when: [{ path: "demo.count", is: "greater", to: 10 }] }),
+      expect.anything(),
+    );
   },
 };
 

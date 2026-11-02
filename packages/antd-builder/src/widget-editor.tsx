@@ -8,7 +8,7 @@
  */
 import { Button, Card, Flex, Form, Typography } from "antd";
 import type { Store, WidgetBindings } from "@wirework/schema";
-import type { ActionRegistry } from "@wirework/engine";
+import type { ActionRegistry, PredicateRegistry } from "@wirework/engine";
 import { useWidgetEditor, type EditableCell, type WidgetSettings } from "@wirework/builder";
 import { WidgetForm } from "./widget-form";
 
@@ -16,14 +16,24 @@ export interface WidgetEditorProps {
   cell: EditableCell;
   store: Store;
   actions: ActionRegistry;
-  /** Editing a user's own view: settings only, inputs and reactions read-only. */
+  /** The checks a condition may pick; the standard ones alone when absent. */
+  predicates?: PredicateRegistry | undefined;
+  /** Editing a user's own view: settings only, inputs, reactions and conditions read-only. */
   bindingsLocked: boolean;
   onSave: (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => void;
   onCancel: () => void;
 }
 
-export function WidgetEditor({ cell, store, actions, bindingsLocked, onSave, onCancel }: WidgetEditorProps) {
-  const { form, canSave, save } = useWidgetEditor({ cell, store, actions, onSave });
+export function WidgetEditor({
+  cell,
+  store,
+  actions,
+  predicates,
+  bindingsLocked,
+  onSave,
+  onCancel,
+}: WidgetEditorProps) {
+  const { form, canSave, save } = useWidgetEditor({ cell, store, actions, predicates, onSave });
 
   return (
     <Card

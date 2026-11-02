@@ -44,12 +44,14 @@ type cast, a view without `set` — so a widget cannot write even by accident.
 ## Binding convention
 
 The view model binds port names to store paths under the reserved `inputs`
-key, and event names to reactions under the reserved `on` key:
+key, event names to reactions under the reserved `on` key, and says when
+the widget shows under the reserved `when` key (doc/conditions-design.md):
 
 ```ts
 {
   inputs: { <portName>: "<store path>" },        // e.g. { value: "demo.counter" }
   on:     { <event>: [{ set: "<store path>", from?: "<payload field>" }] },
+  when?:  [{ path: "<store path>", is: "<predicate>", to?: <literal>, not?: true }],
   ...widgetSpecificSettings
 }
 ```

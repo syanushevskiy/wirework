@@ -26,9 +26,17 @@ export const option = (page: Page, label: string, match: "exact" | "prefix" = "e
     match === "exact" ? `.ant-select-item-option[title="${label}"]` : `.ant-select-item-option[title^="${label}"]`,
   );
 
-/** Open an antd Select by its test id and pick one option. */
+/**
+ * Open an antd Select by its test id and pick one option. The control is
+ * brought to the MIDDLE of the viewport first: a Select at the bottom edge
+ * opens its popup upwards and partly outside the viewport, Playwright then
+ * scrolls the page to reach the option, antd re-aligns the popup on the
+ * scroll, and the two chase each other until the click times out.
+ */
 export async function chooseOption(page: Page, testId: string, label: string, match: "exact" | "prefix" = "exact") {
-  await page.getByTestId(testId).click();
+  const control = page.getByTestId(testId);
+  await control.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  await control.click();
   await option(page, label, match).click();
 }
 

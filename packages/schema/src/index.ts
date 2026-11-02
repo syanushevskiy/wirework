@@ -9,6 +9,7 @@ export * from "./contracts/widget";
 export * from "./contracts/io";
 export * from "./contracts/events";
 export * from "./contracts/reactions";
+export * from "./contracts/when";
 export * from "./contracts/page-events";
 export * from "./contracts/actions";
 export * from "./contracts/widget-contract";

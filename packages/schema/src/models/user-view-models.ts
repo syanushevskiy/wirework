@@ -17,14 +17,15 @@ import { RESERVED_VIEW_MODEL_KEYS } from "../contracts/settings";
 import { pageViewModelSchema } from "./view-models";
 
 /**
- * One template's settings overrides. SETTINGS only: `inputs` and `on` are
- * the page's wiring, and a user's view must not be able to rebind a widget,
- * call an action or write a data path the page never declared.
+ * One template's settings overrides. SETTINGS only: `inputs`, `on` and
+ * `when` are the page's wiring, and a user's view must not be able to
+ * rebind a widget, call an action, write a data path the page never
+ * declared, or show what the page hides.
  */
 const userSettingsSchema = z
   .record(z.string(), z.unknown())
   .refine((settings) => Object.keys(settings).every((key) => !RESERVED_VIEW_MODEL_KEYS.has(key)), {
-    message: "user settings may not contain inputs or on (bindings belong to the page)",
+    message: "user settings may not contain inputs, on or when (bindings belong to the page)",
   });
 
 /**

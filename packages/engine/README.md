@@ -7,9 +7,9 @@ validation, reactions, tree editing. Depends on `@wirework/schema` (and
 ## Registries
 
 `createRegistry({ contracts? })` (widgets), `createContracts()`,
-`createActions()`, `createLayoutEngines()` — each with `register`, `get`,
-`keys`, `list`, and `seal()` once boot is over (a later registration
-throws). A definition that breaks the registry's invariants throws a
+`createActions()`, `createLayoutEngines()`, `createPredicates()` — each
+with `register`, `get`, `keys`, `list`, and `seal()` once boot is over (a
+later registration throws). A definition that breaks the registry's invariants throws a
 `RegistrationError` whose message names the registry and the key; a widget claiming a
 contract `kind` is checked against that contract, and the message names
 the departing port or event. `layoutEngineProblems` is the conformance
@@ -40,6 +40,25 @@ one cell's declared reactions on the bus), `withDefaultReactions` /
 default, in place first under its event — what `checkTemplate` applies to
 every resolved view model), `emitPageLoad` (the page has opened),
 `readableStore` (the read side a widget receives).
+
+## Conditions
+
+A widget's `when` (doc/conditions-design.md) names predicates from the
+fifth registry: `createPredicates()` starts with the standard eight and
+takes the host's own (`runs/retryable`), checked like every registration
+(a name in the action grammar, a `test`, a `phrase`, a `description`, an
+`argument` that validates); `STANDARD_PREDICATES` is the standard set
+alone, sealed, what every function here uses when no registry is given.
+`holds(when, read, predicates?)` evaluates a condition against whatever
+`read` gives at a path, `whenPaths` lists what it reads, `testText` /
+`whenText` are its one wording ("unless run.error is empty"), and
+`whenProblems` what resolve and boot validation report (an unknown
+predicate, a literal it refuses, takes none of or lacks) — part of
+`contractProblems`, given `ResolveInput.predicates`. A member written in
+words (`{ expression }`, the constructor: `and`, `or`, `not`, parentheses
+over `path phrase value` leaves) is parsed once per registry and text
+(`parsedExpression`, `ConditionNode`, `ParsedExpression`); one that cannot
+be read is a problem with the reason, and never holds.
 
 ## Trees and paths
 

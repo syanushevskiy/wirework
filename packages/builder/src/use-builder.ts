@@ -26,7 +26,7 @@ import {
 import { useStorePath } from "@wirework/react";
 import type { EngineLock } from "./locks";
 import type { Commit } from "./use-commit";
-import type { WidgetSettings } from "./form-drafts";
+import { templateOf, type WidgetSettings } from "./form-drafts";
 
 /** What a builder calls the things it creates. A host may name them differently. */
 export interface BuilderNaming {
@@ -150,11 +150,7 @@ export function useBuilder({
       if (target.problem !== undefined) return;
       const group = (prev.widgets[naming.modelGroup] as Record<string, unknown> | undefined) ?? {};
       const id = naming.cellId([...Object.keys(group), ...target.cells.map((cell) => cell.id)]);
-      const template = {
-        inputs: bindings.inputs,
-        ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
-        ...settings,
-      };
+      const template = templateOf(bindings, settings);
       const withCell = updatePageTemplate(prev, page, naming.pageView, () =>
         target.engine.appendCell(target.template, {
           id,

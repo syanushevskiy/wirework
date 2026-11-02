@@ -13,7 +13,7 @@ import { gridstackEngine } from "@wirework/engine-gridstack";
 import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
 import type { Store } from "@wirework/schema";
 import { createTableViewActions } from "@wirework/table-view";
-import { sampleRuns, type DemoPage } from "@wirework/view-data-models-examples";
+import { sampleRuns, type DemoPage, type Run } from "@wirework/view-data-models-examples";
 import { standardContracts } from "@wirework/widget-contracts";
 import { antdTestWidgets, brokenWidgets, createAntdWidgets } from "@wirework/antd-widgets";
 import { createFilterActions } from "../actions/filter-actions";
@@ -31,6 +31,13 @@ import { RunStatusCell } from "../widgets/run-status-cell";
 import { statusBadge } from "../widgets/status-badge";
 import { builderPage, demoPages, demoSessionState } from "./pages";
 
+/** A run record (whatever a page's `when` reads: live data) that failed and has an even id. */
+function isRetryable(run: unknown): boolean {
+  // The one cast: live data of any shape, every field read is checked before it is trusted.
+  const record = run as Partial<Run> | null;
+  return record?.status?.state === "Failed" && typeof record.id === "string" && Number(record.id) % 2 === 0;
+}
+
 /** What the host needs from the demo once everything is registered. */
 export interface Demo {
   /** Every broken definition and how the registry answered — the proof the playground shows. */
@@ -43,7 +50,10 @@ export interface Demo {
   builderPage: PlaygroundPage;
 }
 
-export function installDemo({ contracts, registry, layoutEngines, actions }: Registries, navigator: Navigator): Demo {
+export function installDemo(
+  { contracts, registry, layoutEngines, actions, predicates }: Registries,
+  navigator: Navigator,
+): Demo {
   // Contracts: the standard kinds plus this app's own; widgets implement them.
   for (const contract of standardContracts) contracts.register(contract);
   contracts.register(statusBadgeContract);
@@ -101,6 +111,17 @@ export function installDemo({ contracts, registry, layoutEngines, actions }: Reg
   for (const action of createFilterActions(suiteOptionsFor)) actions.register(action);
   // Navigation: the host owns the router, pages only name where to go.
   for (const action of createNavActions(navigator)) actions.register(action);
+
+  // A PREDICATE of this application's own (doc/conditions-design.md): what
+  // no standard check can say — two properties and a rule — as code with a
+  // name, which a page's `when` picks like a standard one. The rule is the
+  // fake server's: a failed run with an even id would run again.
+  predicates.register({
+    name: "runs/retryable",
+    description: "A failed run the server would accept again (its id is even)",
+    phrase: "can be retried",
+    test: (run) => isRetryable(run),
+  });
 
   // Negative proof: every broken definition must be rejected loudly.
   const rejections = Object.entries(brokenWidgets).map(([name, definition]) => {

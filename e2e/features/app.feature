@@ -64,10 +64,10 @@ Feature: Demo application — routes and global state
     Then the address is "/demo/runs"
     And the state JSON does not contain '"runId"'
 
-  Scenario: Nothing opens while no run is selected
+  Scenario: Nothing opens while no run is selected — the button is not even shown
     Given I open the "runs" page
-    When I click the button "Open run"
-    Then the address is "/demo/runs"
+    Then the cell "button-open-run" is hidden
+    And the address is "/demo/runs"
 
   Scenario: A run's address can be opened directly
     Given I open the address "/demo/runs/123459"

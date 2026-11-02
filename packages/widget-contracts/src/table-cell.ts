@@ -17,7 +17,7 @@
  * The helpers are pure and shared by every implementation.
  */
 import { z } from "zod";
-import { getPath, KEBAB_NAME } from "@wirework/schema";
+import { getPath, KEBAB_NAME, valueText } from "@wirework/schema";
 import { TAG_TONES, type TagTone } from "./tag";
 
 /** An address of the application: one leading "/", never "//" or "/\" (no other origin). */
@@ -51,11 +51,8 @@ export const tableCellSchema = z.discriminatedUnion("kind", [
 export type TableCell = z.infer<typeof tableCellSchema>;
 export type TableCellKind = TableCell["kind"];
 
-/** A cell value as text: nothing for null/undefined, JSON for objects, the value otherwise. */
-export function cellText(value: unknown): string {
-  if (value === undefined || value === null) return "";
-  return typeof value === "object" ? JSON.stringify(value) : String(value);
-}
+/** A cell value as text: nothing for null/undefined, JSON for objects, the value otherwise — the schema's one rule. */
+export const cellText = valueText;
 
 /** The tone a tag cell shows for a value: an exact match of its text, `default` otherwise. */
 export function cellTone(tones: Partial<Record<string, TagTone>>, value: unknown): TagTone {
