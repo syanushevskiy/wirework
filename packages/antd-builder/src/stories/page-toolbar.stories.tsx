@@ -27,7 +27,11 @@ type Args = {
 
 /** The toolbar as the hook decides it: the args are the facts a host composes from its session and builder. */
 function Toolbar(args: Args) {
-  const input: PageToolbarInput = { engines: ["react-grid-layout", "gridstack", "flex-rows"], ...args };
+  const input: PageToolbarInput = {
+    page: "builder",
+    engines: ["react-grid-layout", "gridstack", "flex-rows"],
+    ...args,
+  };
   return <PageToolbar toolbar={usePageToolbar(input)} />;
 }
 

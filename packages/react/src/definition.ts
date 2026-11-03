@@ -57,6 +57,7 @@ export function implementContract<C extends AnyWidgetContract>(
     ...(description === undefined ? {} : { description }),
     kind: contract.kind,
     ...(preview === undefined ? {} : { preview }),
+    ...(contract.contains === undefined ? {} : { contains: contract.contains }),
     io: contract.io,
     events: contract.events,
     viewModel: contract.viewModel,

@@ -29,9 +29,14 @@ Then("row {int} has {int} cells", async ({ page }, row: number, count: number) =
 Then("the page has {int} cell(s)", async ({ page }, count: number) => {
   // The page must exist: a count of 0 must never pass because nothing rendered.
   await expect(page.getByTestId("page")).toBeVisible();
-  await expect(page.getByTestId("page").locator('[data-testid="cell"], [data-testid="cell-problem"]')).toHaveCount(
-    count,
-  );
+  // The page's OWN cells: the ones inside a container's layout are the container's (doc/containers-design.md).
+  await expect(
+    page
+      .getByTestId("page")
+      .locator(
+        'xpath=.//*[(@data-testid="cell" or @data-testid="cell-problem") and not(ancestor::*[@data-testid="layout"])]',
+      ),
+  ).toHaveCount(count);
 });
 
 Then("I see a widget {string}", async ({ page }, widget: string) => {
@@ -62,6 +67,56 @@ Then("the cell {string} says it is hidden now {string}", async ({ page }, id: st
   await expect(note).toHaveText(`hidden now — shows ${condition}`);
   // The widget itself is still there, under the note.
   await expect(note.locator("xpath=following-sibling::*").first()).toBeVisible();
+});
+
+/* ---- containers (doc/containers-design.md): a layout inside a widget's cell ---- */
+
+/** The cells of the layout inside a container, in order: "input-name, select-page-size". */
+Then("the container {string} holds the cells {string}", async ({ page }, id: string, ids: string) => {
+  const inner = cell(page, id).locator('[data-testid="layout"]').first().locator('[data-testid="cell"]');
+  await expect(inner).toHaveCount(ids.split(", ").length);
+  for (const [index, innerId] of ids.split(", ").entries()) {
+    await expect(inner.nth(index)).toHaveAttribute("data-cell", innerId);
+  }
+});
+
+Then("the container {string} is empty", async ({ page }, id: string) => {
+  const layout = cell(page, id).locator('[data-testid="layout"]').first();
+  await expect(layout).toBeVisible();
+  await expect(layout.locator('[data-testid="cell"]')).toHaveCount(0);
+});
+
+/** Edit mode: a container's "Edit content" shows the layout inside it as the page, with a breadcrumb back. (The chrome sits in the engine's handle bar, beside the cell.) */
+When("I edit the content of the cell {string}", async ({ page }, id: string) => {
+  await page.locator(`[data-testid="cell-edit-layout"][data-cell="${id}"]`).click();
+});
+
+/** A container with several layouts (tabs, panels) has one "Edit …" per layout, named by its path: "tabs.1.content". */
+When("I edit the layout {string} of the cell {string}", async ({ page }, path: string, id: string) => {
+  await page.locator(`[data-testid="cell-edit-layout"][data-cell="${id}"][data-layout="${path}"]`).click();
+});
+
+/** The tabs of a tabs widget, in order: "Runs, History". */
+Then("the cell {string} has the tabs {string}", async ({ page }, id: string, labels: string) => {
+  await expect(cell(page, id).getByRole("tab")).toHaveText(labels.split(", "));
+});
+
+Then("the breadcrumb reads {string}", async ({ page }, text: string) => {
+  const crumbs = page.getByTestId("layout-crumbs").getByTestId("layout-crumb");
+  await expect(crumbs).toHaveText(text.split(" › "));
+});
+
+Then("there is no breadcrumb", async ({ page }) => {
+  await expect(page.getByTestId("layout-crumbs")).toHaveCount(0);
+});
+
+When("I follow the breadcrumb {string}", async ({ page }, label: string) => {
+  await page.getByTestId("layout-crumbs").getByTestId("layout-crumb").filter({ hasText: label }).click();
+});
+
+/** Edit mode: "Wrap in a card" — a new card cell holding the cell. */
+When("I wrap the cell {string} in a card", async ({ page }, id: string) => {
+  await page.locator(`[data-testid="cell-wrap"][data-cell="${id}"]`).click();
 });
 
 Then("the cell {string} has kind {string}", async ({ page }, id: string, kind: string) => {

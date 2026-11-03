@@ -32,12 +32,14 @@ import type {
   WidgetRegistry,
 } from "@wirework/engine";
 import type { LayoutRendererProps } from "./layout";
+import { PageContext } from "./PageContext";
 import { PageReloadContext } from "./useAnnounce";
 import { usePageLoad } from "./usePageLoad";
 import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
 import { useReactions } from "./useReactions";
 import { LayoutErrorBoundary } from "./WidgetErrorBoundary";
+import type { WrapCell } from "./CellChrome";
 
 /** A crash PageView isolated — in one widget's cell, or in the layout renderer — for the host to report. */
 export type PageError = { error: Error; info: ErrorInfo } & (
@@ -70,6 +72,10 @@ export interface PageViewProps {
   /** Edit-mode chrome actions; a button renders only when its callback is given. */
   onEditCell?: ((cellId: string) => void) | undefined;
   onRemoveCell?: ((cellId: string) => void) | undefined;
+  /** A container's "Edit content": open the layout it holds at `layoutPath` (doc/containers-design.md). */
+  onEditLayout?: ((cellId: string, layoutPath: string) => void) | undefined;
+  /** "Wrap in a card": put the cell into a new container — the host names the button and does the wrapping. */
+  wrapCell?: WrapCell | undefined;
   /**
    * Change it to LOAD THE PAGE AGAIN — for a host that changed the page
    * while it is open (an editor after Add or Save): every widget that asks
@@ -98,6 +104,8 @@ export function PageView({
   onLayoutChange,
   onEditCell,
   onRemoveCell,
+  onEditLayout,
+  wrapCell,
   reloadKey,
   onError,
 }: PageViewProps) {
@@ -109,14 +117,22 @@ export function PageView({
   useReactions(bus, store, plan, actions);
   // The page's own `load` event: what `viewModels.on.<page>.load` declares runs once per opening.
   usePageLoad(bus, store, page, reloadKey);
-  const { cells, cellById, renderCell, renderChrome } = usePageRenderers({
+  const { cells, cellById, renderCell, renderChrome, scope } = usePageRenderers({
     plan,
+    viewModels,
+    userViewModels,
+    registry,
+    layoutEngines,
+    actions,
     store,
     bus,
     predicates,
+    appearances,
     editable,
     onEditCell,
     onRemoveCell,
+    onEditLayout,
+    wrapCell,
     onError,
   });
 
@@ -173,15 +189,18 @@ export function PageView({
       >
         {/* The reload signal: every widget under the page announces itself again when it changes (useAfterMount). */}
         <PageReloadContext value={reloadKey}>
-          <Renderer
-            template={plan.template}
-            cells={cells}
-            cellById={cellById}
-            editable={editable}
-            onChange={onLayoutChange}
-            renderCell={renderCell}
-            renderChrome={renderChrome}
-          />
+          {/* What the layouts inside this page's containers render with (NestedLayout). */}
+          <PageContext value={scope}>
+            <Renderer
+              template={plan.template}
+              cells={cells}
+              cellById={cellById}
+              editable={editable}
+              onChange={onLayoutChange}
+              renderCell={renderCell}
+              renderChrome={renderChrome}
+            />
+          </PageContext>
         </PageReloadContext>
       </LayoutErrorBoundary>
     </div>

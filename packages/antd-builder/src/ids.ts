@@ -13,6 +13,15 @@
  */
 export const portFieldId = (port: string): string => `port-input-${port}`;
 export const settingFieldId = (setting: string): string => `setting-${setting}`;
+/**
+ * The entries of a NAMED-LIST setting (a tabs widget's `tabs`, a collapse's
+ * `panels`), numbered like the reactions: `setting-tabs-label`,
+ * `setting-tabs-2-label`, … (`index` from 0); an entry's other fields by
+ * their name (`setting-panels-open`) and its `remove`; the list's own
+ * control is `setting-tabs-add`.
+ */
+export const itemFieldId = (setting: string, part: string, index = 0): string =>
+  settingFieldId(index === 0 ? `${setting}-${part}` : `${setting}-${index + 1}-${part}`);
 export const reactionFieldId = (event: string, part: string, index = 0): string =>
   index === 0 ? `reaction-${event}-${part}` : `reaction-${event}-${index + 1}-${part}`;
 export const paramFieldId = (event: string, param: string, index = 0): string =>

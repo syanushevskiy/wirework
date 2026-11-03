@@ -30,7 +30,18 @@ ww-<name>` in the host's stylesheet.
 - `WidgetPreview` (`WidgetPreviewProps`) — a live, non-interactive render of
   a widget from its preview seed, for palettes and catalogs.
 - `CellChrome` (`CellChromeProps`) — the Edit / Remove actions an engine
-  places per cell in edit mode.
+  places per cell in edit mode; for a container, "Edit content" per layout
+  it holds (`onEditLayout(cellId, layoutPath)`), and a host's wrap action
+  (`WrapCell`: `{ label, onWrap }`, `PageView.wrapCell`).
+- `NestedLayout` (`NestedLayoutProps`: `template`, `path`) — a layout INSIDE
+  a widget (doc/containers-design.md): a container renders the page
+  template its own view model holds with the page's registries, store and
+  bus from `PageContext` (`PageScope`, provided by `PageView`; the cell's
+  id from `CellKeyContext`), its cells reacting under the nested page name
+  (`overview/card-1`) and their overlay entries under the chain key
+  (`card-1/button`), never editable in place; four deep at most, a
+  problem placeholder beyond; outside a page only how many widgets it
+  holds. Its element is `data-testid="layout"`.
 - `ErrorBoundary`, `WidgetErrorBoundary`, `LayoutErrorBoundary` (`OnError`,
   `WidgetErrorBoundaryProps`, `LayoutErrorBoundaryProps`) — a crash shown
   as a placeholder (`WidgetCrash`), cleared by a changed `resetKey`,

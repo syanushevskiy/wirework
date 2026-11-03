@@ -23,12 +23,11 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UserViewModels, ViewModels } from "@wirework/schema";
-import { validateViewModels } from "@wirework/engine";
+import { layoutChain, validateViewModels } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import {
   DEFAULT_BUILDER_NAMING,
   builderPage,
-  modelNamespaceOf,
   useBuilder,
   useCommit,
   usePageEditing,
@@ -38,6 +37,7 @@ import {
   type EditLock,
   type EditTarget,
   type OverlayLock,
+  type PlacedWidget,
   type SaveTrees,
 } from "@wirework/builder";
 import type { PageVisit, Playground } from "../boot";
@@ -45,6 +45,8 @@ import { useDemoBridge } from "./use-demo-bridge";
 
 /** The page the widget builder adds to. */
 export const BUILDER_PAGE = "builder";
+/** The container "Wrap in a card" wraps a cell in. */
+const CARD_WIDGET = "antd-card";
 
 /** What a store without the trees means (the inspector can remove them): no pages, loudly. */
 const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
@@ -80,6 +82,17 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   // widget — which would lock Add right after the first one.
   if (overlayWanted && overlayLock !== undefined) setOverlayWanted(false);
   const withUserOverlay = overlayWanted && overlayLock === undefined;
+
+  /**
+   * The layout shown and edited (doc/containers-design.md): the page, or —
+   * after "Edit content" on a container — the layout inside it, `at` the
+   * chain of containers down to it. Visit state, not an address: a new
+   * address would open a new visit, and the builder's starts from nothing.
+   * A layout inside a container belongs to the shared page, so the overlay
+   * on means the page itself.
+   */
+  const [atWanted, setAt] = useState<string | undefined>(undefined);
+  const at = withUserOverlay ? undefined : atWanted;
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
@@ -130,15 +143,18 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     predicates,
     appearances,
     page,
+    at,
     target,
     withUserOverlay,
     trees,
-    modelNamespace: modelNamespaceOf(DEFAULT_BUILDER_NAMING),
+    naming: DEFAULT_BUILDER_NAMING,
   });
 
   // The session's stable functions: the callbacks below depend on what they
   // use, not on the session object rebuilt every render.
-  const { cancel: cancelEditing, save: saveSession, startEditing } = editing;
+  const { cancel: cancelEditing, save: saveSession, startEditing, wrapCell } = editing;
+
+  const wrapInCard = useCallback((cellId: string) => wrapCell(cellId, CARD_WIDGET), [wrapCell]);
 
   /** Toggling the overlay changes the edit target — an open session ends. */
   const toggleUserOverlay = useCallback(
@@ -173,27 +189,83 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   const [reloadKey, setReloadKey] = useState(0);
   const loadAgain = useCallback(() => setReloadKey((loads) => loads + 1), []);
 
-  const { engineLock, setEngine, addWidget } = useBuilder({
-    store,
-    commit,
-    canEdit: canEditPages,
-    layoutEngines,
-    page: BUILDER_PAGE,
-    naming: DEFAULT_BUILDER_NAMING,
-    cancelEditing,
-    onAdded: loadAgain,
-  });
-
   /** Save page: commit the session; if something was committed, the page loads again — by what was just saved. */
   const savePage = useCallback(() => {
     if (saveSession() === "committed") loadAgain();
   }, [saveSession, loadAgain]);
 
+  /**
+   * Changing the layout shown — a breadcrumb, "Edit content" on a container,
+   * a container just placed — SAVES the page first, as Save page does: a
+   * session is one layout's. (Left open, the session would have locked Add
+   * on every layout until someone found Save or Cancel.)
+   */
+  const goTo = useCallback(
+    (next: string | undefined) => {
+      savePage();
+      setAt(next);
+    },
+    [savePage],
+  );
+  /** The chain to the layout inside a container shown now: one level further down. */
+  const layoutIn = useCallback(
+    (cellId: string, layoutPath: string) => [at, layoutChain(cellId, layoutPath)].filter(Boolean).join("/"),
+    [at],
+  );
+  /**
+   * "Edit content" on a container — pressed in edit mode, to edit: the layout
+   * inside opens with a session of its own, its cells with their handles at
+   * once; Add waits for Save page there as on any page being edited.
+   */
+  const editLayout = useCallback(
+    (cellId: string, layoutPath: string) => {
+      goTo(layoutIn(cellId, layoutPath));
+      startEditing();
+    },
+    [goTo, layoutIn, startEditing],
+  );
+
+  /**
+   * A widget was ADDED: the page loads again by the new configuration — and
+   * a CONTAINER opens at once, its first layout shown as the page in view
+   * mode, so the widgets meant for inside it are added next, with no trip
+   * through Edit page and "Edit content"; the breadcrumb leads back.
+   */
+  const onAdded = useCallback(
+    (placed: PlacedWidget) => {
+      loadAgain();
+      const inside = placed.layouts[0];
+      if (inside !== undefined) goTo(layoutIn(placed.id, inside));
+    },
+    [loadAgain, goTo, layoutIn],
+  );
+
+  /**
+   * Where widgets are ADDED: the builder page — or, inside a container, the
+   * layout shown, on whichever page (the palette appears with it).
+   */
+  const adding = page === BUILDER_PAGE || at !== undefined;
+  const { engineLock, setEngine, addWidget } = useBuilder({
+    store,
+    commit,
+    canEdit: canEditPages,
+    registry,
+    layoutEngines,
+    page,
+    at,
+    naming: DEFAULT_BUILDER_NAMING,
+    cancelEditing,
+    onAdded,
+  });
+
   const toolbar = usePageToolbar({
+    page,
+    at,
+    onGoTo: goTo,
     engines: layoutEngines.keys(),
     engine: editing.engine,
-    // A demo page's engine is its configuration; only the builder's is a choice, while it is empty.
-    engineLock: page === BUILDER_PAGE ? engineLock : "configured",
+    // A demo page's engine is its configuration; the builder's — and an empty layout inside a container — is a choice.
+    engineLock: adding ? engineLock : "configured",
     onSelectEngine: setEngine,
     editing: editing.editing,
     pendingChanges: editing.pendingChanges,
@@ -237,8 +309,11 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     rejections,
     page,
     target,
+    adding,
     addLock,
     addWidget,
+    editLayout,
+    wrapInCard,
     toolbar,
     views,
     ...editing,

@@ -34,6 +34,8 @@ export interface WidgetContractInput<IO extends WidgetIO, E extends WidgetEvents
   settings: SettingsSchema<S>;
   /** Default palette preview for every implementation of this kind. */
   preview?: WidgetPreviewSpec;
+  /** The settings that hold a layout shown inside the widget (`WidgetDefinition.contains`). */
+  contains?: readonly string[];
 }
 
 /**

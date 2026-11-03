@@ -8,15 +8,27 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_BUILDER_NAMING } from "../use-builder";
 import type { Commit, EditableTrees } from "../use-commit";
 import { usePageEditing, type EditTarget } from "../use-page-editing";
-import { actions, cell, counter, enginesWith, listEngine, registryWith, treesWithCounter } from "./fixtures";
+import {
+  actions,
+  box,
+  cell,
+  counter,
+  enginesWith,
+  listEngine,
+  registryWith,
+  treesWithBoxedCounter,
+  treesWithCounter,
+} from "./fixtures";
 
 interface Props {
   canEdit: boolean;
   target: EditTarget;
   withUserOverlay: boolean;
   trees: EditableTrees;
+  at?: string | undefined;
 }
 
 function setup(overrides: Partial<Props> = {}) {
@@ -32,11 +44,11 @@ function setup(overrides: Partial<Props> = {}) {
     (props: Props) =>
       usePageEditing({
         commit,
-        registry: registryWith(counter),
+        registry: registryWith(counter, box),
         layoutEngines: enginesWith(listEngine),
         actions: actions(),
         page: "demo",
-        modelNamespace: "widgets.custom",
+        naming: DEFAULT_BUILDER_NAMING,
         ...props,
       }),
     { initialProps },
@@ -242,5 +254,77 @@ describe("usePageEditing — the ops", () => {
 
     rerender({ ...initialProps, target: "user", withUserOverlay: true });
     expect(result.current.editingCell).toBeUndefined();
+  });
+});
+
+describe("usePageEditing — layouts inside containers (doc/containers-design.md)", () => {
+  it("shows the layout at a chain as the page, under its nested name, and edits it in place", () => {
+    const { result, commit } = setup({ trees: treesWithBoxedCounter(), at: "custom-2" });
+    expect(result.current.layoutPage).toBe("demo/custom-2");
+    expect(result.current.cells.map((cell) => cell.key)).toEqual(["custom-1"]);
+    act(() => result.current.startEditing());
+    act(() => result.current.changeLayout(emptyList));
+    expect(result.current.cells).toEqual([]);
+    // The page's own layout is untouched: the op went into the box's template.
+    expect(result.current.shownViewModels.pages?.["demo"]).toEqual(treesWithBoxedCounter().viewModels.pages["demo"]);
+    expect(result.current.shownViewModels.widgets["custom"]).toMatchObject({
+      "custom-2": { default: { title: "Boxed", content: emptyList } },
+    });
+    act(() => result.current.save());
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a page without a template when the chain leads nowhere", () => {
+    const { result } = setup({ trees: treesWithBoxedCounter(), at: "nobody" });
+    expect(result.current.plan.problem).toMatch(/no template/);
+    expect(result.current.engine).toBeUndefined();
+  });
+
+  it("removes a container with the templates of the cells inside it that nothing references any more", () => {
+    const { result } = setup({ trees: treesWithBoxedCounter() });
+    act(() => result.current.startEditing());
+    act(() => result.current.removeCellById("custom-2"));
+    expect(result.current.cells).toEqual([]);
+    expect(result.current.shownViewModels.widgets["custom"]).toEqual({});
+  });
+
+  it("keeps an inner cell's template while a layout still references it", () => {
+    const trees = treesWithBoxedCounter();
+    // The counter sits in the box AND on the page.
+    trees.viewModels.pages = {
+      demo: {
+        default: {
+          engine: "list",
+          cells: [cell({ id: "custom-2", widget: "box", model: "widgets.custom.custom-2" }), cell()],
+        },
+      },
+    };
+    const { result } = setup({ trees });
+    act(() => result.current.startEditing());
+    act(() => result.current.removeCellById("custom-2"));
+    expect(Object.keys(result.current.shownViewModels.widgets["custom"] as object)).toEqual(["custom-1"]);
+  });
+
+  it("wraps a cell in a container: a new container cell holding the cell on an empty layout of the same engine", () => {
+    const { result } = setup();
+    act(() => result.current.startEditing());
+    act(() => result.current.wrapCell("custom-1", "box"));
+    expect(result.current.pendingChanges).toBe(1);
+    expect(result.current.cells.map((cell) => [cell.key, cell.widget])).toEqual([["custom-2", "box"]]);
+    expect(result.current.shownViewModels.widgets["custom"]).toEqual({
+      ...(treesWithCounter().viewModels.widgets["custom"] as Record<string, unknown>),
+      "custom-2": { default: { content: { engine: "list", cells: [cell()] } } },
+    });
+  });
+
+  it("wraps nothing in a widget that contains no layout, nor in a user's view", () => {
+    const { result } = setup();
+    act(() => result.current.startEditing());
+    act(() => result.current.wrapCell("custom-1", "counter"));
+    expect(result.current.pendingChanges).toBe(0);
+    const user = setup({ target: "user", withUserOverlay: true });
+    act(() => user.result.current.startEditing());
+    act(() => user.result.current.wrapCell("custom-1", "box"));
+    expect(user.result.current.pendingChanges).toBe(0);
   });
 });

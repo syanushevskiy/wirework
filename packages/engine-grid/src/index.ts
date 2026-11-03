@@ -7,7 +7,7 @@
  * height, a margin) and the renderer.
  */
 import { z } from "zod";
-import { cellBaseSchema, type CellBase, type PageViewModel } from "@wirework/schema";
+import { cellBaseSchema, type CellBase, type CellSize, type PageViewModel } from "@wirework/schema";
 
 /** Column count when the template names none. */
 export const DEFAULT_GRID_COLS = 12;
@@ -50,9 +50,10 @@ export interface GridOperationsOptions<T extends GridTemplate> {
 
 /**
  * The layout operations of a grid template, pure and library-free: an
- * appended cell is a full-width band below the lowest one, a change moves
- * the cells it names (unknown ids are ignored), and a cell wider than the
- * grid is a problem the renderer would otherwise clamp silently.
+ * appended cell is a full-width band below the lowest one (a "tall" one
+ * twice as high — room for a layout inside), a change moves the cells it
+ * names (unknown ids are ignored), and a cell wider than the grid is a
+ * problem the renderer would otherwise clamp silently.
  */
 export function gridOperations<T extends GridTemplate>({
   empty,
@@ -61,9 +62,10 @@ export function gridOperations<T extends GridTemplate>({
   return {
     empty,
     cells: (template: T): CellBase[] => template.cells,
-    appendCell: (template: T, cell: CellBase): T => {
+    appendCell: (template: T, cell: CellBase, size: CellSize = "default"): T => {
       const y = template.cells.reduce((bottom, placed) => Math.max(bottom, placed.y + placed.h), 0);
-      return { ...template, cells: [...template.cells, { ...cell, x: 0, y, w: gridCols(template), h: cellRows }] };
+      const h = size === "tall" ? cellRows * 2 : cellRows;
+      return { ...template, cells: [...template.cells, { ...cell, x: 0, y, w: gridCols(template), h }] };
     },
     removeCell: (template: T, cellId: string): T => ({
       ...template,

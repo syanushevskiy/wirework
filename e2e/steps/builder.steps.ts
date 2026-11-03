@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import {
   conditionFieldId,
+  itemFieldId,
   paramFieldId,
   portFieldId,
   reactionFieldId,
@@ -218,6 +219,27 @@ When("I set the setting {string} to {string}", async ({ page }, name: string, va
 
 Then("the builder shows a setting {string}", async ({ page }, name: string) => {
   await expect(page.getByTestId(settingFieldId(name))).toBeVisible();
+});
+
+/* A NAMED LIST (a tabs widget's tabs, a collapse's panels): entries added, named, removed; ordinals from 1. */
+
+When("I add an entry to the setting {string}", async ({ page }, name: string) => {
+  await page.getByTestId(itemFieldId(name, "add")).click();
+});
+
+When(
+  "I name entry {int} of the setting {string} {string}",
+  async ({ page }, ordinal: number, name: string, label: string) => {
+    await page.getByTestId(itemFieldId(name, "label", ordinal - 1)).fill(label);
+  },
+);
+
+When("I remove entry {int} of the setting {string}", async ({ page }, ordinal: number, name: string) => {
+  await page.getByTestId(itemFieldId(name, "remove", ordinal - 1)).click();
+});
+
+Then("the setting {string} has {int} entr(y)(ies)", async ({ page }, name: string, count: number) => {
+  await expect(page.locator(`[data-testid="setting-item"][data-setting="${name}"]`)).toHaveCount(count);
 });
 
 /* ----------------------------- reactions ----------------------------- */

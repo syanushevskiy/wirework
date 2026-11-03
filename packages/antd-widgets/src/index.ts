@@ -10,14 +10,16 @@
  * an emitted event plus a reaction. Label, button, input, pagination,
  * refresher, select, multi-select, filter-bar, tag, checkbox, progress,
  * alert, table, infinite-table, switch, slider, radio-group, rate,
- * statistic and divider IMPLEMENT the standard contracts; counter, echo and
- * crash are demo/test widgets.
+ * statistic, divider and the containers card, tabs and collapse IMPLEMENT
+ * the standard contracts; counter, echo and crash are demo/test widgets.
  */
 import { z } from "zod";
 import type { AnyWidgetDefinition } from "@wirework/schema";
 import { antdAlert } from "./widgets/antd-alert";
 import { antdButton } from "./widgets/antd-button";
+import { antdCard } from "./widgets/antd-card";
 import { antdCheckbox } from "./widgets/antd-checkbox";
+import { antdCollapse } from "./widgets/antd-collapse";
 import { antdCounter } from "./widgets/antd-counter";
 import { antdCrash } from "./widgets/antd-crash";
 import { antdDivider } from "./widgets/antd-divider";
@@ -37,12 +39,15 @@ import { antdSlider } from "./widgets/antd-slider";
 import { antdStatistic } from "./widgets/antd-statistic";
 import { antdSwitch } from "./widgets/antd-switch";
 import { antdTable, createAntdTable, type AntdTableOptions } from "./widgets/antd-table";
+import { antdTabs } from "./widgets/antd-tabs";
 import { antdTag } from "./widgets/antd-tag";
 
 export {
   antdAlert,
   antdButton,
+  antdCard,
   antdCheckbox,
+  antdCollapse,
   antdCounter,
   antdCrash,
   antdDivider,
@@ -62,6 +67,7 @@ export {
   antdStatistic,
   antdSwitch,
   antdTable,
+  antdTabs,
   antdTag,
   createAntdInfiniteTable,
   createAntdTable,
@@ -117,6 +123,9 @@ export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyW
     antdRate,
     antdStatistic,
     antdDivider,
+    antdCard,
+    antdTabs,
+    antdCollapse,
   ];
 }
 

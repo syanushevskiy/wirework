@@ -7,10 +7,23 @@
  * host's composition of `useBuilder` and `usePageEditing`; this hook only
  * decides what the toolbar shows.
  */
+import { chainSteps } from "@wirework/engine";
 import type { EditLock, EngineLock, OverlayLock } from "./locks";
 import type { EditTarget } from "./use-page-editing";
 
+/** One step of the breadcrumb from the page down to the layout shown: the page, then a container per step. */
+export interface LayoutCrumb {
+  label: string;
+  /** What to show when it is followed: the page itself (undefined) or the chain down to this step. */
+  at: string | undefined;
+}
+
 export interface PageToolbarInput {
+  /** The page shown, and — when the layout shown sits inside its containers (doc/containers-design.md) — the chain to it. */
+  page: string;
+  at?: string | undefined;
+  /** Show the page itself (undefined) or the layout at a chain: following a breadcrumb. */
+  onGoTo?: ((at: string | undefined) => void) | undefined;
   /** The layout engines a builder may choose from while the page is empty. */
   engines: readonly string[];
   /** The engine of the shown template — undefined while the page does not resolve. */
@@ -31,6 +44,9 @@ export interface PageToolbarInput {
 }
 
 export function usePageToolbar({
+  page,
+  at,
+  onGoTo,
   engines,
   engine,
   engineLock,
@@ -46,7 +62,19 @@ export function usePageToolbar({
   onToggleOverlay,
   target,
 }: PageToolbarInput) {
+  /** The page, then one crumb per container down to the layout shown: `builder › card-1`. */
+  const crumbs: LayoutCrumb[] = [
+    { label: page, at: undefined },
+    ...(at === undefined
+      ? []
+      : chainSteps(at).map((step) => ({
+          label: step.layoutPath === "content" ? step.cell : `${step.cell} · ${step.layoutPath}`,
+          at: step.at,
+        }))),
+  ];
   return {
+    crumbs,
+    goTo: onGoTo,
     /** The engine is still a free choice: the names to offer and the one chosen so far. Absent once locked. */
     engineChoice: engineLock === undefined ? { engines, chosen: engine } : undefined,
     engine,

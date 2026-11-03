@@ -8,9 +8,11 @@
 import {
   isPlainObject,
   KEBAB_NAME,
+  validatorKeys,
   type AnyWidgetContract,
   type EventDefinition,
   type PortDefinition,
+  type Validator,
   PATH_SEGMENT,
 } from "@wirework/schema";
 import { problemText } from "./messages";
@@ -23,6 +25,18 @@ interface Declaration {
   viewModel?: { parse?: unknown } | null;
   io?: { inputs?: unknown } | null;
   events?: unknown;
+  contains?: unknown;
+}
+
+/** A layout a widget says it contains must be one of its settings, or the adapter would look for nothing. */
+function containsProblem(contains: unknown, viewModel: unknown): string | undefined {
+  if (contains === undefined) return undefined;
+  if (!Array.isArray(contains) || contains.some((name) => typeof name !== "string")) {
+    return "has a `contains` that is not a list of setting names";
+  }
+  const keys = validatorKeys(viewModel as Validator<unknown>);
+  const missing = keys === undefined ? undefined : contains.find((name: string) => !keys.includes(name));
+  return missing === undefined ? undefined : `contains a layout at "${missing}", which is not one of its settings`;
 }
 
 function portsProblem(inputs: Record<string, unknown>): string | undefined {
@@ -74,6 +88,7 @@ export const declarationInvariants: readonly Invariant<Declaration>[] = [
     !isPlainObject(events)
       ? "has no events declaration (use NO_EVENTS for none)"
       : eventsProblem(events, (io as { inputs: Record<string, unknown> }).inputs),
+  ({ contains, viewModel }) => containsProblem(contains, viewModel),
 ];
 
 export function createContracts(): ContractRegistry {

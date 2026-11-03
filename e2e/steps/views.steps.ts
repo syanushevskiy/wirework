@@ -72,8 +72,15 @@ When("I share the view", async ({ page }) => {
   await expect(page.getByTestId("page-view-panel")).toHaveAttribute("data-panel", "share");
 });
 
+const literally = (fragment: string) => new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
 Then("the shared view JSON contains {string}", async ({ page }, fragment: string) => {
-  await expect(page.getByTestId("view-json")).toHaveValue(new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  await expect(page.getByTestId("view-json")).toHaveValue(literally(fragment));
+});
+
+/** A view is the page's layout alone: what a container holds is the page's configuration, not the view's. */
+Then("the shared view JSON does not contain {string}", async ({ page }, fragment: string) => {
+  await expect(page.getByTestId("view-json")).not.toHaveValue(literally(fragment));
 });
 
 /** Paste a view file (the step's doc string) and import it under the file's own name. */

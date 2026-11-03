@@ -6,8 +6,9 @@
  * aria-invalid, alert), never implementation test ids.
  */
 import type { StoryObj } from "@storybook/react-vite";
-import { expect, fireEvent, within } from "storybook/test";
+import { expect, fireEvent, waitFor, within } from "storybook/test";
 import type { AnyWidgetDefinition } from "@wirework/schema";
+import type { LayoutEngineRegistry, WidgetRegistry } from "@wirework/engine";
 import { WidgetStory } from "./harness";
 
 /** A dropdown's options open in a portal outside the story's canvas. */
@@ -833,6 +834,121 @@ export function statisticConformance(definition: AnyWidgetDefinition): Record<"N
       play: async ({ canvas }) => {
         await expect(canvas.getByText("Healthy")).toBeVisible();
         await expect(canvas.getByText("●")).toBeVisible();
+      },
+    },
+  };
+}
+
+/**
+ * What a container's conformance set needs beside the definition: the
+ * widgets its content may hold and the engine that lays them out (a story's
+ * list engine), and the page's view models the inner cells' templates come
+ * from. `labelInside` names a label widget to put inside.
+ */
+export interface ContainerInside {
+  registry: WidgetRegistry;
+  layoutEngines: LayoutEngineRegistry;
+  /** A label widget type registered in `registry`, for the content. */
+  label: string;
+}
+
+const labelCell = (id: string, label: string) => ({ id, widget: label, model: `widgets.${id}`, template: "default" });
+/** The inner cells' templates: a label showing its own id's text. */
+const labelTemplates = (...ids: string[]) => ({
+  pages: {},
+  widgets: Object.fromEntries(ids.map((id) => [id, { default: { text: `Inside: ${id}` } }])),
+});
+
+/** `card` contract: the title, and the layout in its template rendered inside — its widgets resolved from the page. */
+export function cardConformance(
+  definition: AnyWidgetDefinition,
+  { registry, layoutEngines, label }: ContainerInside,
+): Record<"Content" | "Empty", Story> {
+  return {
+    Content: {
+      render: () => (
+        <WidgetStory
+          key="content"
+          definition={definition}
+          inside={{ registry, layoutEngines, viewModels: labelTemplates("inner") }}
+          viewModel={{ title: "Details", content: { engine: "list", cells: [labelCell("inner", label)] } }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Details")).toBeVisible();
+        await expect(canvas.getByTestId("layout")).toBeVisible();
+        await expect(canvas.getByText("Inside: inner")).toBeVisible();
+      },
+    },
+    Empty: {
+      render: () => <WidgetStory key="empty" definition={definition} viewModel={{ title: "Empty card" }} />,
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Empty card")).toBeVisible();
+        await expect(canvas.queryByTestId("layout")).toBeNull();
+      },
+    },
+  };
+}
+
+/** `tabs` contract: one tab per item, its layout rendered when shown. */
+export function tabsConformance(
+  definition: AnyWidgetDefinition,
+  { registry, layoutEngines, label }: ContainerInside,
+): Record<"Switches", Story> {
+  return {
+    Switches: {
+      render: () => (
+        <WidgetStory
+          key="switches"
+          definition={definition}
+          inside={{ registry, layoutEngines, viewModels: labelTemplates("a-1", "b-1") }}
+          viewModel={{
+            tabs: [
+              { key: "a", label: "First", content: { engine: "list", cells: [labelCell("a-1", label)] } },
+              { key: "b", label: "Second", content: { engine: "list", cells: [labelCell("b-1", label)] } },
+            ],
+          }}
+        />
+      ),
+      play: async ({ canvas, userEvent }) => {
+        await expect(canvas.getByText("Inside: a-1")).toBeVisible();
+        await expect(canvas.getAllByTestId("layout")).toHaveLength(1);
+        await userEvent.click(canvas.getByRole("tab", { name: "Second" }));
+        await expect(canvas.getByRole("tab", { name: "Second" })).toHaveAttribute("aria-selected", "true");
+        await expect(canvas.getByText("Inside: b-1")).toBeVisible();
+        await expect(canvas.getAllByTestId("layout")).toHaveLength(2);
+      },
+    },
+  };
+}
+
+/** `collapse` contract: one panel per item, open ones unfolded with their layout, the others folded until opened. */
+export function collapseConformance(
+  definition: AnyWidgetDefinition,
+  { registry, layoutEngines, label }: ContainerInside,
+): Record<"Panels", Story> {
+  return {
+    Panels: {
+      render: () => (
+        <WidgetStory
+          key="panels"
+          definition={definition}
+          inside={{ registry, layoutEngines, viewModels: labelTemplates("a-1", "b-1") }}
+          viewModel={{
+            panels: [
+              { key: "a", label: "Open", open: true, content: { engine: "list", cells: [labelCell("a-1", label)] } },
+              { key: "b", label: "Folded", content: { engine: "list", cells: [labelCell("b-1", label)] } },
+            ],
+          }}
+        />
+      ),
+      play: async ({ canvas, userEvent }) => {
+        await expect(canvas.getByText("Inside: a-1")).toBeVisible();
+        await expect(canvas.getAllByTestId("layout")).toHaveLength(1);
+        await userEvent.click(canvas.getByRole("button", { name: /Folded/ }));
+        // antd unfolds a panel with a height animation: the label is in the DOM at once, visible when it ends.
+        await waitFor(() => expect(canvas.getByText("Inside: b-1")).toBeVisible());
+        await expect(canvas.getAllByTestId("layout")).toHaveLength(2);
       },
     },
   };

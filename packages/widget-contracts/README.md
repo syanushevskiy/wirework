@@ -26,6 +26,13 @@ declares:
 - `statisticContract` (one number, large, with its title) and
   `dividerContract` (`DIVIDER_ORIENTATIONS`, `DividerOrientation`) —
   display, like the first group.
+- `cardContract` (`CARD_SIZES`, `CardSize`), `tabsContract`
+  (`layoutItemSchema`, `LayoutItem`) and `collapseContract` — CONTAINERS
+  (doc/containers-design.md): a layout of other widgets inside, held in
+  the widget's own template (a card's `content`; a `content` per tab or
+  panel) and declared with `contains`, so the adapter renders it, boot
+  validation walks into it and a builder edits it where it edits a page.
+  Nothing bound, nothing emitted: the widgets inside do that.
 - `paginationContract` (`PAGINATION_SIZES`, `PaginationSize`),
   `refresherContract` (`refreshScheduleSchema`, `RefreshSchedule`,
   `REFRESH_INTERVAL`, `REFRESH_TRIGGERS`, `RefreshTrigger`) — the page's

@@ -28,14 +28,14 @@ store from them — nothing in this package restores anything.
 
 ## What a host provides
 
-| To                                                       | What                                                                                                                                                                      |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useCommit`                                              | the store, `save`                                                                                                                                                         |
-| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name, the edit target (`"base"` or `"user"`), the trees, `modelNamespace`                |
-| `useBuilder`                                             | `commit`, `canEdit`, the layout engines, the page name, a `BuilderNaming`, `cancelEditing`, `onAdded`                                                                     |
-| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions, the predicates a condition may pick (the standard ones alone when absent) and, for the builder, `addLock`: why Add is not offered |
-| `usePageToolbar`                                         | the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target                |
-| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, whether the overlay is on, the shown view (`plan.view`), `cancelEditing`               |
+| To                                                       | What                                                                                                                                                                                                                            |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useCommit`                                              | the store, `save`                                                                                                                                                                                                               |
+| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name and `at` (the layout inside a chain of containers, else the page), the edit target (`"base"` or `"user"`), the trees, the `BuilderNaming` |
+| `useBuilder`                                             | `commit`, `canEdit`, the widget and layout-engine registries, the page name and `at`, a `BuilderNaming`, `cancelEditing`, `onAdded` (told what was placed: a `PlacedWidget` — id, widget, the paths of the layouts it holds)    |
+| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions, the predicates a condition may pick (the standard ones alone when absent) and, for the builder, `addLock`: why Add is not offered                                                       |
+| `usePageToolbar`                                         | the page and `at` with `onGoTo` (the breadcrumb), the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target                    |
+| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, whether the overlay is on, the shown view (`plan.view`), `cancelEditing`                                                                     |
 
 Every hook takes ONE input object. `canEdit` is required everywhere a hook
 can write: the builder never assumes this user may change pages, and it
@@ -75,8 +75,12 @@ layouts and your application decides where the files go.
 
 ## Hooks
 
-- `useWidgetForm` — one field per input port, per primitive setting, and per
-  event its reactions: the write-back the event does by default (shown,
+- `useWidgetForm` — one field per input port, per primitive setting — and
+  for a NAMED LIST (a tabs widget's tabs, a collapse's panels: entries with
+  a key and a label, kind `items`) a row per entry, added, named and
+  removed (`addItem`, `removeItem`, `setItemLabel`, `setItemValue`), the
+  key made from the label and the entry's layout kept behind the row —,
+  and per event its reactions: the write-back the event does by default (shown,
   following the port's path) and a list of rows, run in order, each `set` a
   path from a payload field or `call` an action with its declared
   parameters (`addReaction`, `removeReaction`); and the CONDITION under
@@ -99,10 +103,20 @@ layouts and your application decides where the files go.
 - `useWidgetSearch`, `usePalettePress` — the palette's search and card presses.
 - `useWidgetEditor` — the form prefilled from a placed widget.
 - `usePageEditing` — the edit session: layout changes, widget edits and
-  removals as pure ops replayed over the live trees, committed on Save.
-- `useBuilder` — the page being built, its engine choice while it is empty,
-  and placing a widget.
-- `usePageToolbar` — what the toolbar above a page offers: the engine
+  removals as pure ops replayed over the live trees, committed on Save;
+  `wrapCell(cellId, widget)` puts a cell into a new container. With `at`
+  (doc/containers-design.md — a chain of containers, `card-1`,
+  `tabs-1/tabs.0.content`) the session edits the layout INSIDE a container's
+  template, shown as the page under its nested name (`layoutPage`); every
+  op remembers where it was made, and a host saves or cancels the session
+  before it changes `at` (a session is one layout's); a location inside a
+  container is the shared page's (keep `at` clear while the overlay is on).
+- `useBuilder` — the layout being built (the page, or the one `at` a chain),
+  its engine choice while it is empty, and placing a widget — a container's
+  layouts started empty on the same engine, its cell appended tall, and
+  `onAdded` told the id and those layouts so a host can open it at once.
+- `usePageToolbar` — what the toolbar above a page offers: the breadcrumb
+  from the page down to the layout shown (`crumbs`, `goTo`), the engine
   choice, Edit / Save / Cancel with the pending count, the overlay switch and
   where edits go, each lock as a reason.
 - `usePageViews` — the page's views: the list with each one's kind, the

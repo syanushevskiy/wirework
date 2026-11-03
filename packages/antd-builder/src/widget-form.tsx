@@ -18,16 +18,17 @@ import type {
   GroupField,
   ReactionField,
   ReactionKind,
+  SettingDraft,
   TestDraft,
   TestFacts,
   TreeEdit,
   WidgetFormState,
 } from "@wirework/builder";
-import { conditionFieldId, paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "./ids";
+import { conditionFieldId, itemFieldId, paramFieldId, portFieldId, reactionFieldId, settingFieldId } from "./ids";
 import { PathCombobox } from "./path-combobox";
 
 // The field ids are the form's promise to whoever automates it (ids.ts).
-export { conditionFieldId, paramFieldId, portFieldId, reactionFieldId, settingFieldId };
+export { conditionFieldId, itemFieldId, paramFieldId, portFieldId, reactionFieldId, settingFieldId };
 
 /** A negated condition reads "unless"; the dropdown says so. */
 const NOT_CHOICES = [
@@ -516,6 +517,116 @@ function ReactionRow({ form, event, reaction, bindingsLocked }: ReactionRowProps
   );
 }
 
+interface SettingControlProps {
+  id: string;
+  setting: SettingDraft;
+  onChange: (value: string | boolean) => void;
+  /** What a select answered (the form maps "use the default" back to nothing chosen). */
+  onChoose: (choice: string) => void;
+}
+
+/** The control of one primitive setting: a checkbox, a select, or a text / number input — a widget's own or an entry's. */
+function SettingControl({ id, setting, onChange, onChoose }: SettingControlProps) {
+  if (setting.kind === "boolean") {
+    return (
+      <Checkbox
+        id={id}
+        data-testid={id}
+        checked={setting.value === true}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    );
+  }
+  if (setting.kind === "select") {
+    return (
+      <Select
+        id={id}
+        data-testid={id}
+        className="ww-builder-field"
+        placeholder="choose…"
+        {...(setting.choice === undefined ? {} : { value: setting.choice })}
+        onChange={onChoose}
+        options={setting.choices ?? []}
+      />
+    );
+  }
+  return (
+    <Input
+      id={id}
+      data-testid={id}
+      type={setting.kind === "number" ? "number" : "text"}
+      className="ww-builder-field"
+      placeholder={setting.defaultValue === undefined ? undefined : `default: ${String(setting.defaultValue)}`}
+      value={typeof setting.value === "string" ? setting.value : ""}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
+
+interface ItemsEditorProps {
+  form: WidgetFormState;
+  setting: SettingDraft;
+}
+
+/**
+ * The entries of a NAMED LIST (a tabs widget's tabs, a collapse's panels —
+ * doc/containers-design.md): one row per entry with the label the user
+ * gives it, its other fields and Remove, and "+ one more" under them. The
+ * layout an entry holds stays behind its row; a new entry gets an empty one
+ * when the widget is added or saved.
+ */
+function ItemsEditor({ form, setting }: ItemsEditorProps) {
+  const { addItem, removeItem, setItemLabel, setItemValue, chooseItemValue } = form;
+  const { name } = setting;
+  return (
+    <Flex vertical gap="small" data-testid={settingFieldId(name)} data-count={setting.items?.length ?? 0}>
+      {(setting.items ?? []).map((item) => (
+        <div
+          key={item.index}
+          className="ww-builder-reaction"
+          data-testid="setting-item"
+          data-setting={name}
+          data-index={item.index}
+        >
+          <Input
+            id={itemFieldId(name, "label", item.index)}
+            data-testid={itemFieldId(name, "label", item.index)}
+            className="ww-builder-field"
+            placeholder="label *"
+            value={item.label}
+            onChange={(event) => setItemLabel(name, item.index, event.target.value)}
+          />
+          {item.fields.map((field) => (
+            <Fragment key={field.name}>
+              <label htmlFor={itemFieldId(name, field.name, item.index)}>{field.name}</label>
+              <SettingControl
+                id={itemFieldId(name, field.name, item.index)}
+                setting={field}
+                onChange={(value) => setItemValue(name, item.index, field.name, value)}
+                onChoose={(choice) => chooseItemValue(name, item.index, field.name, choice)}
+              />
+            </Fragment>
+          ))}
+          <Button
+            size="small"
+            type="text"
+            data-testid={itemFieldId(name, "remove", item.index)}
+            aria-label={`Remove ${name} ${item.index + 1}`}
+            onClick={() => removeItem(name, item.index)}
+          >
+            ×
+          </Button>
+        </div>
+      ))}
+      <div>
+        <Button size="small" data-testid={itemFieldId(name, "add")} onClick={() => addItem(name)}>
+          + one more
+        </Button>
+      </div>
+    </Flex>
+  );
+}
+
 export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
   const {
     definition,
@@ -610,34 +721,14 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
                   </>
                 }
               >
-                {setting.kind === "boolean" ? (
-                  <Checkbox
-                    id={fieldId}
-                    data-testid={fieldId}
-                    checked={setting.value === true}
-                    onChange={(event) => setSetting(setting.name, event.target.checked)}
-                  />
-                ) : setting.kind === "select" ? (
-                  <Select
-                    id={fieldId}
-                    data-testid={fieldId}
-                    className="ww-builder-field"
-                    placeholder="choose…"
-                    {...(setting.choice === undefined ? {} : { value: setting.choice })}
-                    onChange={(value: string) => chooseSetting(setting.name, value)}
-                    options={setting.choices ?? []}
-                  />
+                {setting.kind === "items" ? (
+                  <ItemsEditor form={form} setting={setting} />
                 ) : (
-                  <Input
+                  <SettingControl
                     id={fieldId}
-                    data-testid={fieldId}
-                    type={setting.kind === "number" ? "number" : "text"}
-                    className="ww-builder-field"
-                    placeholder={
-                      setting.defaultValue === undefined ? undefined : `default: ${String(setting.defaultValue)}`
-                    }
-                    value={typeof setting.value === "string" ? setting.value : ""}
-                    onChange={(event) => setSetting(setting.name, event.target.value)}
+                    setting={setting}
+                    onChange={(value) => setSetting(setting.name, value)}
+                    onChoose={(choice) => chooseSetting(setting.name, choice)}
                   />
                 )}
               </Form.Item>

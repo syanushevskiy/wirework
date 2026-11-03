@@ -15,6 +15,13 @@
 import type { CellBase, PageViewModel } from "../models/view-models";
 import type { Validator } from "./widget";
 
+/**
+ * How much room an appended cell gets: the engine's usual, or "tall" —
+ * twice that — for a cell that holds a layout of its own (a card). A hint:
+ * an engine whose cells size to their content may ignore it.
+ */
+export type CellSize = "default" | "tall";
+
 export interface LayoutEngine<T extends PageViewModel = PageViewModel, C = unknown, TRenderer = unknown> {
   /** Kebab-case name referenced by page templates as `engine`. */
   name: string;
@@ -24,8 +31,8 @@ export interface LayoutEngine<T extends PageViewModel = PageViewModel, C = unkno
   empty(): T;
   /** Every cell of the template, in a stable order. */
   cells(template: T): CellBase[];
-  /** A new cell placed somewhere sensible (builders append). */
-  appendCell(template: T, cell: CellBase): T;
+  /** A new cell placed somewhere sensible (builders append), with the room `size` asks for. */
+  appendCell(template: T, cell: CellBase, size?: CellSize): T;
   removeCell(template: T, cellId: string): T;
   /**
    * Validator for the CHANGE payload. The core parses every reported change

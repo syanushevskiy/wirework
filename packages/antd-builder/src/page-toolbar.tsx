@@ -5,7 +5,7 @@
  * user-overlay switch and where edits go. Every lock the hook reports as a
  * code is said here in words — the defaults below, or the host's own.
  */
-import { Button, Checkbox, Flex, Select, Space, Tag, Typography } from "antd";
+import { Breadcrumb, Button, Checkbox, Flex, Select, Space, Tag, Typography } from "antd";
 import type { EditLock, EditTarget, OverlayLock, PageToolbarState } from "@wirework/builder";
 
 export interface PageToolbarTexts {
@@ -34,11 +34,46 @@ export interface PageToolbarProps {
 
 export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
   const words = { ...DEFAULT_PAGE_TOOLBAR_TEXTS, ...texts };
-  const { engineChoice, engine, hasPage, mode, editing, pendingChanges, editLock, overlay, overlayLock, target } =
-    toolbar;
+  const {
+    crumbs,
+    engineChoice,
+    engine,
+    hasPage,
+    mode,
+    editing,
+    pendingChanges,
+    editLock,
+    overlay,
+    overlayLock,
+    target,
+  } = toolbar;
+  const last = crumbs.length - 1;
 
   return (
     <Flex wrap gap="small" align="center" data-testid="layout-toolbar" className="ww-builder-toolbar">
+      {/* Inside a container (doc/containers-design.md): the way back up, a crumb per layout. */}
+      {crumbs.length > 1 ? (
+        <Breadcrumb
+          data-testid="layout-crumbs"
+          className="ww-builder-crumbs"
+          items={crumbs.map((crumb, index) => ({
+            title:
+              index === last ? (
+                <span data-testid="layout-crumb">{crumb.label}</span>
+              ) : (
+                <Button
+                  type="link"
+                  size="small"
+                  data-testid="layout-crumb"
+                  className="ww-builder-crumb"
+                  onClick={() => toolbar.goTo?.(crumb.at)}
+                >
+                  {crumb.label}
+                </Button>
+              ),
+          }))}
+        />
+      ) : null}
       <label htmlFor="engine-select">engine</label>
       {engineChoice ? (
         /* Free choice until the first widget is placed; then locked. */

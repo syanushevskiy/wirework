@@ -11,11 +11,11 @@ import type { ViewModels } from "@wirework/schema";
 import { createStore } from "@wirework/store";
 import { DEFAULT_BUILDER_NAMING, useBuilder } from "../use-builder";
 import { commitTrees, type Commit, type EditableTrees } from "../use-commit";
-import { enginesWith, gridEngine, listEngine } from "./fixtures";
+import { box, counter, enginesWith, gridEngine, listEngine, registryWith } from "./fixtures";
 
 const emptyPage = (): ViewModels => ({ pages: { builder: { default: { engine: "list", cells: [] } } }, widgets: {} });
 
-function setup(viewModels: ViewModels, canEdit = true) {
+function setup(viewModels: ViewModels, canEdit = true, at?: string) {
   const store = createStore({ viewModels });
   const saved: EditableTrees[] = [];
   const commit: Commit = (next) => commitTrees(store, (trees) => void saved.push(trees), next);
@@ -27,8 +27,10 @@ function setup(viewModels: ViewModels, canEdit = true) {
         store,
         commit,
         canEdit,
+        registry: registryWith(counter, box),
         layoutEngines: enginesWith(listEngine, gridEngine),
         page: "builder",
+        at,
         naming: DEFAULT_BUILDER_NAMING,
         cancelEditing,
         onAdded,
@@ -58,6 +60,7 @@ describe("useBuilder", () => {
     });
     expect(store.get("viewModels.widgets.custom.custom-1")).toEqual({ default: { ...bindings, label: "Hits" } });
     expect(onAdded).toHaveBeenCalledTimes(1);
+    expect(onAdded).toHaveBeenCalledWith({ id: "custom-1", widget: "counter", layouts: [] });
     expect(result.current.hasCells).toBe(true);
     expect(result.current.engineLock).toBe("widgets-placed");
 
@@ -91,5 +94,51 @@ describe("useBuilder", () => {
     act(() => result.current.addWidget("counter", bindings, {}));
     expect(store.get("viewModels")).toEqual({ pages: {}, widgets: {} });
     expect(onAdded).not.toHaveBeenCalled();
+  });
+});
+
+describe("useBuilder — containers (doc/containers-design.md)", () => {
+  it("starts a placed container's layout empty, on the engine of the layout it is placed in, and names it to the host", () => {
+    const { result, store, onAdded } = setup(emptyPage());
+    act(() => result.current.setEngine("grid"));
+    act(() => result.current.addWidget("box", { inputs: {}, on: {} }, { title: "Controls" }));
+    expect(store.get("viewModels.widgets.custom.custom-1.default")).toEqual({
+      inputs: {},
+      title: "Controls",
+      content: { engine: "grid", cells: [] },
+    });
+    expect(onAdded).toHaveBeenCalledWith({ id: "custom-1", widget: "box", layouts: ["content"] });
+  });
+
+  it("adds INTO the layout at a chain of containers, numbering from every placed widget", () => {
+    const viewModels: ViewModels = {
+      pages: {
+        builder: {
+          default: {
+            engine: "list",
+            cells: [{ id: "custom-1", widget: "box", model: "widgets.custom.custom-1", template: "default" }],
+          },
+        },
+      },
+      widgets: { custom: { "custom-1": { default: { content: { engine: "list", cells: [] } } } } },
+    };
+    const { result, store, page } = setup(viewModels, true, "custom-1");
+    expect(result.current.hasCells).toBe(false);
+    expect(result.current.engineLock).toBeUndefined();
+    act(() => result.current.addWidget("counter", bindings, {}));
+    expect(page()?.["cells"]).toHaveLength(1);
+    expect(store.get("viewModels.widgets.custom.custom-1.default.content")).toEqual({
+      engine: "list",
+      cells: [{ id: "custom-2", widget: "counter", model: "widgets.custom.custom-2", template: "default" }],
+    });
+    expect(result.current.hasCells).toBe(true);
+    expect(result.current.engineLock).toBe("widgets-placed");
+  });
+
+  it("has no template when the chain leads nowhere", () => {
+    const { result, store } = setup(emptyPage(), true, "nobody");
+    expect(result.current.engineLock).toBe("no-template");
+    act(() => result.current.addWidget("counter", bindings, {}));
+    expect(store.get("viewModels")).toEqual(emptyPage());
   });
 });

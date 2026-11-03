@@ -1,10 +1,10 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-six stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
-on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25) and one on 2 November 2026 (WW-26), six to
-do (WW-15 to WW-20). Written for
+One epic, twenty-seven stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25) and two on 2 November 2026 (WW-26, WW-27),
+six to do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-26) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-27) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -703,3 +703,49 @@ match, each storing what the user picks without wiring, each with a live preview
 **Verified by:** `more-widgets.feature`, the six widgets' conformance stories (`switchConformance`,
 `sliderConformance`, `radioGroupConformance`, `rateConformance`, `statisticConformance`, `dividerConformance`) and
 playgrounds, the engine's standard-contracts test.
+
+### WW-27 · Xsight Wirework - Containers: a card, tabs and panels that hold other widgets, added in the builder
+
+**Type:** User feature · **Status:** Done (designed and built 2 Nov, doc/containers-design.md)
+
+**Short description:** As a page builder, I add a card with a title to a page and put widgets inside it — a table and
+its filter, a counter and what shows it — and tabs with a layout per tab and panels that fold, so that a page has
+structure without a developer. A container holds a small layout of its own, kept inside the container's own
+configuration — a card with two buttons and an input holds those three widgets on its own little grid, three cards on
+one screen are three such layouts, and the screen is still one page that is shared as one — which I edit the way I
+edit a page, with the same palette and the same form, and come back by a breadcrumb. "Wrap in a card" puts a title
+around a widget already placed.
+
+**Acceptance criteria:**
+
+- **Given** the settings page, **when** it opens, **then** the name input, the page-size select and the auto-refresh
+  checkbox sit inside a card titled "Preferences", and typing a name or ticking the box changes the settings as before.
+- **Given** the builder, **when** I add a card, **then** it takes a cell twice the usual height and OPENS at once: the
+  breadcrumb reads "builder › custom-1" and its empty layout is the page; **when** I add a label there and follow the
+  breadcrumb back, **then** the label shows inside the card; **when** I edit the page and follow "Edit content",
+  **then** the card's layout is the page again, in edit mode, its widgets ready to move and resize; after Save page,
+  ready for another widget.
+- **Given** a card just added, **when** I pick another layout engine before placing anything inside, **then** the
+  card's content runs on that engine while the page keeps its own; once a widget is inside, the choice is locked.
+- **Given** a placed counter in edit mode, **when** I choose "Wrap in a card" and save the page, **then** the counter
+  sits inside a new card, wired as before.
+- **Given** a page with a card, **when** I share its view, **then** the view names the card and nothing inside it: the
+  card's content is the page's configuration, which every user has.
+- **Given** a card nested five deep, **when** the page renders, **then** that card shows the problem and the rest of
+  the page stands; the application's start-up check reports it too.
+- **Given** tabs with a layout per tab, **when** I switch tabs, **then** each tab's widgets appear when first shown
+  and keep what they had after; panels that fold do the same when unfolded.
+- **Given** the builder, **when** I choose tabs, **then** the form shows one tab to name; **when** I name it "Runs",
+  add one more named "History" and add the widget, **then** the tabs read Runs and History and the widget opens on
+  the first tab's layout; **when** I edit the widget, add a tab "More", remove "Runs" and save, **then** the tabs read
+  History and More, and the new tab has an empty layout of its own to fill.
+
+**Delivered:** 2 November 2026.
+
+**Verified by:** `containers.feature` (the settings card and its controls, the shared view, the palette previews, the
+builder's card opened on Add and filled, then reopened through "Edit content", tabs named and added in the form, "Wrap in
+a card"); the `antd-card`, `antd-tabs` and `antd-collapse`
+stories with their conformance sets; the adapter's `NestedLayout` tests (the live store inside, the preview outside,
+the depth limit); the engine's `nesting` tests (the layouts a view model holds, the overlay chain key, the registry's
+check of `contains`, boot validation into layouts and the depth refusal); the builder's `use-page-editing` and
+`use-builder` tests (the location, wrap, removal walking inside a container).

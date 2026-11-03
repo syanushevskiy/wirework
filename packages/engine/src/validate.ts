@@ -15,6 +15,7 @@
 import { viewModelsSchema, type CellBase } from "@wirework/schema";
 import { resolveTemplate } from "./layout-engines";
 import { issuesText } from "./messages";
+import { MAX_LAYOUT_DEPTH, innerOverlay, layoutsOf } from "./nesting";
 import { checkPageReactions } from "./page-events";
 import type { WidgetRegistry } from "./registry";
 import {
@@ -143,13 +144,14 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
   return report(problems);
 }
 
-/** Every cell of one template, through the SAME pipeline the renderer uses. */
+/** Every cell of one template, through the SAME pipeline the renderer uses — and into the layouts a container holds. */
 function validateCells(
   cells: readonly CellBase[],
   location: string,
   input: ResolveInput,
   error: Report,
   warn: Report,
+  depth = 0,
 ): void {
   const { page, registry, userViewModels: overlay } = input;
 
@@ -157,6 +159,25 @@ function validateCells(
     const cellLocation = `${location} cell[${index}] (#${resolved.key})`;
     if (resolved.problem) {
       error(cellLocation, cellProblemMessage(resolved.problem, registry));
+    }
+
+    // A container's layouts are pages inside the page: the same checks, one level down.
+    if (resolved.definition && resolved.viewModel !== undefined) {
+      for (const { path, template } of layoutsOf(resolved.definition, resolved.viewModel)) {
+        const innerLocation = `${cellLocation} ${path}`;
+        if (depth + 1 >= MAX_LAYOUT_DEPTH) {
+          error(innerLocation, `layouts nested too deep (at most ${MAX_LAYOUT_DEPTH})`);
+          continue;
+        }
+        const inner = resolveTemplate(input.layoutEngines, template);
+        if (inner.problem !== undefined) {
+          error(innerLocation, inner.problem);
+          continue;
+        }
+        for (const message of inner.warnings) error(innerLocation, message);
+        const innerInput = { ...input, userViewModels: innerOverlay(overlay, page, resolved.key, path) };
+        validateCells(inner.cells, innerLocation, innerInput, error, warn, depth + 1);
+      }
     }
     if (resolved.fallback) {
       warn(

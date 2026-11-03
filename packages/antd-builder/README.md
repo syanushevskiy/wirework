@@ -51,7 +51,10 @@ through: `layout-toolbar`, `engine-select`, `engine`, `page-edit`,
 `widget-browse`, `widget-card`, `widget-editor`, `widget-save`,
 `widget-cancel`, `bindings-locked`, `widget-conditions`,
 `widget-conditions-always`, `widget-condition` (with `data-index`), and per
-field `port-input-<port>`, `setting-<name>`, `reaction-<event>-<part>`,
+field `port-input-<port>`, `setting-<name>` (a named list's entries under
+it: `setting-<name>-label`, `setting-<name>-2-label`, an entry's other
+fields by name, `setting-<name>-remove`, and `setting-<name>-add`;
+`setting-item` with `data-setting` and `data-index` per row), `reaction-<event>-<part>`,
 `condition-<part>` (`condition-2-<part>` for the second row: `path`, `is`,
 `to`, `not`, `sentence`, `problem`, `remove`, `expression` for saved words
 the form cannot read; inside a constructor `condition-part-<at>-<part>`

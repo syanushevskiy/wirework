@@ -33,9 +33,13 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     report,
     rejections,
     page,
+    layoutPage,
     target,
+    adding,
     addLock,
     addWidget,
+    editLayout,
+    wrapInCard,
     toolbar,
     views,
     shownViewModels,
@@ -109,7 +113,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
             : "Opening a page starts its own data over. The demo app's global state (app, view models, your overlay) stays until you open the builder or reload."}
         </Typography.Paragraph>
 
-        {page === BUILDER_PAGE ? (
+        {adding ? (
           <WidgetBuilder
             registry={registry}
             contracts={contracts}
@@ -138,7 +142,8 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
         ) : null}
 
         <PageView
-          page={page}
+          /* The page — or, inside a container, the layout shown under its nested name (doc/containers-design.md). */
+          page={layoutPage}
           viewModels={shownViewModels}
           userViewModels={shownUserViewModels}
           registry={registry}
@@ -155,6 +160,9 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
           onLayoutChange={changeLayout}
           onEditCell={selectCell}
           onRemoveCell={removeCellById}
+          /* A container's content is edited as a layout, and a cell wrapped in a card — on the shared page only. */
+          onEditLayout={target === "base" ? editLayout : undefined}
+          wrapCell={target === "base" ? { label: "Wrap in a card", onWrap: wrapInCard } : undefined}
           /* After Add and after Save page the page loads again: its `load`
              event and its widgets' run by the new configuration. */
           reloadKey={reloadKey}

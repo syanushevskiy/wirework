@@ -16,7 +16,7 @@ interface LayoutEngine<T extends PageViewModel, C, TRenderer> {
   name: string; // page templates: { engine: "<name>", ... }
   template: Validator<T>; // the engine OWNS the template shape
   cells(template: T): CellBase[]; // identity + widget binding, stable order
-  appendCell(template: T, cell: CellBase): T;
+  appendCell(template: T, cell: CellBase, size?: CellSize): T; // "tall": twice the room, for a container
   removeCell(template: T, cellId: string): T;
   applyChange(template: T, change: C): T; // renderer-reported change, PURE
   empty(): T; // what a builder starts from
@@ -28,7 +28,10 @@ interface LayoutEngine<T extends PageViewModel, C, TRenderer> {
 `C` is the engine's own change payload: placements by id for a grid, a
 whole model document for a docking layout. The core never looks inside a
 template. `PageViewModel` in the core is only `{ engine: string }` plus
-whatever the engine validates.
+whatever the engine validates. `appendCell`'s `size` is a HINT: the
+builder asks for a `"tall"` cell when the widget holds a layout of its own
+(doc/containers-design.md); the grid engines give it twice their rows, an
+engine whose cells size to content ignores it.
 
 The React adapter narrows the renderer slot (`ReactLayoutEngine`,
 `defineLayoutEngine`) to a component receiving `LayoutRendererProps`:

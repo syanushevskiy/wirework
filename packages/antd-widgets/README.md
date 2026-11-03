@@ -18,7 +18,11 @@ import "@wirework/antd-widgets/styles.css";
   `antdCheckbox`, `antdSwitch`, `antdInput`, `antdSelect`,
   `antdMultiSelect`, `antdRadioGroup`, `antdSlider`, `antdRate`,
   `antdPagination`, `antdRefresher`, `antdTable`, `antdInfiniteTable`,
-  `antdFilterBar`, plus `antdCounter` and `antdEcho` (this package's own
+  `antdFilterBar`, the containers `antdCard`, `antdTabs` and
+  `antdCollapse` (a layout of other widgets inside, rendered by the
+  adapter's `NestedLayout`; in a story, `inside(...widgets)` from
+  `./stories` lends them a list engine and the widgets they may hold),
+  plus `antdCounter` and `antdEcho` (this package's own
   kinds); `createAntdTable({ cells })` and
   `createAntdInfiniteTable({ cells })` (`AntdTableOptions`) are the two
   tables with your renderers (`TableCellProps`, `TableCellRenderer`,

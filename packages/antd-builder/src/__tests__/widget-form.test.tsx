@@ -9,8 +9,15 @@ import { describe, expect, it } from "vitest";
 import { useWidgetForm } from "@wirework/builder";
 import { createStore } from "@wirework/store";
 import type { AnyWidgetDefinition } from "@wirework/schema";
-import { WidgetForm, conditionFieldId, portFieldId, reactionFieldId, settingFieldId } from "../widget-form";
-import { actions, counter, dial } from "./fixtures";
+import {
+  WidgetForm,
+  conditionFieldId,
+  itemFieldId,
+  portFieldId,
+  reactionFieldId,
+  settingFieldId,
+} from "../widget-form";
+import { actions, counter, dial, panels } from "./fixtures";
 
 function Harness({
   bindingsLocked = false,
@@ -119,5 +126,25 @@ describe("WidgetForm", () => {
     fireEvent.click(screen.getByTestId(reactionFieldId("turned", "remove")));
     expect(screen.getAllByTestId("widget-reaction")).toHaveLength(1);
     expect(screen.getByTestId<HTMLInputElement>(reactionFieldId("turned", "set")).value).toBe("demo.log");
+  });
+
+  it("edits a named list's entries under their ids: the default's row to name, one more added, one removed, each entry's own fields", () => {
+    render(<Harness definition={panels} />);
+    // The contract's default entry, labelled, so the form is complete at once.
+    expect(screen.getAllByTestId("setting-item")).toHaveLength(1);
+    expect(screen.getByTestId<HTMLInputElement>(itemFieldId("panels", "label")).value).toBe("First");
+    expect(screen.getByTestId<HTMLInputElement>(itemFieldId("panels", "open")).checked).toBe(true);
+    expect(screen.getByTestId("valid").textContent).toBe("true");
+
+    fireEvent.click(screen.getByTestId(itemFieldId("panels", "add")));
+    expect(screen.getByTestId(itemFieldId("panels", "label", 1)).getAttribute("id")).toBe("setting-panels-2-label");
+    // A blank label holds the form.
+    expect(screen.getByTestId("valid").textContent).toBe("false");
+    fireEvent.change(screen.getByTestId(itemFieldId("panels", "label", 1)), { target: { value: "More" } });
+    expect(screen.getByTestId("valid").textContent).toBe("true");
+
+    fireEvent.click(screen.getByTestId(itemFieldId("panels", "remove")));
+    expect(screen.getAllByTestId("setting-item")).toHaveLength(1);
+    expect(screen.getByTestId<HTMLInputElement>(itemFieldId("panels", "label")).value).toBe("More");
   });
 });

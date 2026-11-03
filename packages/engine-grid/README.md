@@ -26,5 +26,7 @@ Exports: `gridPlacementSchema` / `GridPlacement`, `gridPlacementsSchema` /
 `GridPlacements`, `gridCellSchema` / `GridCell`, `GridTemplate`, `gridCols`,
 `gridOperations` (`GridOperationsOptions`), `DEFAULT_GRID_COLS`,
 `DEFAULT_GRID_CELL_ROWS`. An appended cell is a full-width band below the
-lowest one; `applyChange` moves the cells a change names and ignores
-unknown ids; `validate` names a cell wider than the grid.
+lowest one, `cellRows` high — twice that when appended `"tall"` (a
+`CellSize`: a builder asks it for a container, whose layout needs room);
+`applyChange` moves the cells a change names and ignores unknown ids;
+`validate` names a cell wider than the grid.

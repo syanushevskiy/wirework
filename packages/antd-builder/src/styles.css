@@ -134,6 +134,16 @@
   margin-left: auto;
 }
 
+/* The way back up from a layout inside a container: the page, then a crumb per container (doc/containers-design.md). */
+.ww-builder-crumbs {
+  flex: 1 0 100%;
+}
+
+.ww-builder-crumb.ant-btn {
+  padding: 0;
+  height: auto;
+}
+
 /* ---- page views ---- */
 
 .ww-builder-views {

@@ -19,6 +19,14 @@ describe("gridOperations", () => {
     expect(grid.cells(two).map((placed) => placed.id)).toEqual(["a", "b"]);
   });
 
+  it("gives a tall cell twice the rows, below the lowest one", () => {
+    const two = grid.appendCell(grid.appendCell(grid.empty(), cell("a"), "tall"), cell("b"));
+    expect(two.cells.map(({ id, y, h }) => ({ id, y, h }))).toEqual([
+      { id: "a", y: 0, h: 4 },
+      { id: "b", y: 4, h: 2 },
+    ]);
+  });
+
   it("respects the template's own column count and the engine's cell height", () => {
     const narrow = gridOperations<Template>({
       empty: () => ({ engine: "test-grid", cols: 6, cells: [] }),

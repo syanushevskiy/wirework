@@ -17,11 +17,19 @@
  */
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { action } from "storybook/actions";
-import type { AnyWidgetDefinition, WidgetProps } from "@wirework/schema";
+import type { AnyWidgetDefinition, ViewModels, WidgetProps } from "@wirework/schema";
 import { settingFields } from "@wirework/schema";
-import { bindCellReactions, createEmitter, errorText, readableStore, withDefaultReactions } from "@wirework/engine";
+import {
+  bindCellReactions,
+  createEmitter,
+  errorText,
+  readableStore,
+  withDefaultReactions,
+  type LayoutEngineRegistry,
+  type WidgetRegistry,
+} from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
-import { useStoreSnapshot, WidgetErrorBoundary } from "@wirework/react";
+import { CellKeyContext, PageContext, useStoreSnapshot, WidgetErrorBoundary, type PageScope } from "@wirework/react";
 import { createStore } from "@wirework/store";
 
 export interface WidgetStoryProps {
@@ -45,6 +53,13 @@ export interface WidgetStoryProps {
   cellWidth?: number | undefined;
   /** Show the live store readout underneath. Default true. */
   showStore?: boolean | undefined;
+  /**
+   * For a CONTAINER (a card, tabs): the widgets its layouts may hold and
+   * the engines that lay them out — what a page would give it. Without it a
+   * container shows only that it holds a layout.
+   */
+  inside?:
+    { registry: WidgetRegistry; layoutEngines: LayoutEngineRegistry; viewModels?: ViewModels | undefined } | undefined;
 }
 
 /** Same data, whatever the object identity: controls hand over fresh objects on every change. */
@@ -71,6 +86,7 @@ export function WidgetStory({
   onData,
   cellWidth,
   showStore = true,
+  inside,
 }: WidgetStoryProps) {
   // One store + bus per mounted story (re-mount with `key` to re-seed).
   const [{ store, bus }] = useState(() => ({ store: createStore(seed), bus: createEventBus() }));
@@ -129,6 +145,28 @@ export function WidgetStory({
   const readable = useMemo(() => readableStore(store), [store]);
   const Widget = definition.component as ComponentType<WidgetProps>;
 
+  // A page around the story, for a container's layouts: the widgets inside resolve against `inside`.
+  const scope = useMemo<PageScope | undefined>(
+    () =>
+      inside === undefined
+        ? undefined
+        : {
+            page: "storybook",
+            viewModels: inside.viewModels ?? { pages: {}, widgets: {} },
+            userViewModels: undefined,
+            registry: inside.registry,
+            layoutEngines: inside.layoutEngines,
+            actions: undefined,
+            predicates: undefined,
+            appearances: undefined,
+            store,
+            bus,
+            onError: undefined,
+            depth: 0,
+          },
+    [inside, store, bus],
+  );
+
   return (
     <div data-testid="story">
       {"problem" in parsed ? (
@@ -139,7 +177,11 @@ export function WidgetStory({
         // A widget lives in a CELL of some width: narrow it to see how it copes.
         <div className="ww-cell" style={cellWidth === undefined ? undefined : { width: cellWidth, maxWidth: "100%" }}>
           <WidgetErrorBoundary widgetType={definition.type}>
-            <Widget viewModel={parsed.viewModel} store={readable} emit={emit} />
+            <PageContext value={scope}>
+              <CellKeyContext value="story">
+                <Widget viewModel={parsed.viewModel} store={readable} emit={emit} />
+              </CellKeyContext>
+            </PageContext>
           </WidgetErrorBoundary>
         </div>
       )}
@@ -160,8 +202,8 @@ export function storyArgTypes(definition: AnyWidgetDefinition): Record<string, A
     settingFields(definition.viewModel).map((field) => [
       field.name,
       {
-        // "json" only comes on request (action parameters); Storybook edits it as an object.
-        control: field.kind === "json" ? "object" : field.kind,
+        // A list — "json" (on request, action parameters) or the named items of tabs and panels — Storybook edits as an object.
+        control: field.kind === "json" || field.kind === "items" ? "object" : field.kind,
         ...(field.options ? { options: field.options } : {}),
         ...(field.description ? { description: field.description } : {}),
       },

@@ -248,6 +248,38 @@ describe("settingFields per zod wrapper", () => {
   });
 });
 
+describe("settingFields with a named list (items)", () => {
+  const panels = z.object({
+    panels: z
+      .array(
+        z.object({
+          key: z.string(),
+          label: z.string().min(1),
+          open: z.boolean().optional(),
+          content: z.object({ engine: z.string() }).optional(),
+        }),
+      )
+      .default([{ key: "first", label: "First" }])
+      .describe("The panels"),
+    rows: z.array(z.string()).optional(),
+  });
+
+  it("offers an array of entries with a key and a label as items, with each entry's other primitive fields", () => {
+    const [field, ...rest] = settingFields(panels);
+    expect(rest).toEqual([]);
+    expect(field).toMatchObject({ name: "panels", kind: "items", required: false, description: "The panels" });
+    expect(field?.defaultValue).toEqual([{ key: "first", label: "First" }]);
+    expect(field?.itemFields).toEqual([{ name: "open", kind: "boolean", required: false }]);
+  });
+
+  it("leaves a list of anything else to json on request", () => {
+    expect(settingFields(panels, { json: true }).map((field) => [field.name, field.kind])).toEqual([
+      ["panels", "items"],
+      ["rows", "json"],
+    ]);
+  });
+});
+
 describe("settingFields with json", () => {
   const params = z.object({
     url: z.string().optional().describe("Where the API lives"),

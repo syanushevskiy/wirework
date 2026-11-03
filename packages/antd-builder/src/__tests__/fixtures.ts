@@ -52,6 +52,28 @@ export const dial: AnyWidgetDefinition = {
   component: () => null,
 };
 
+/** A CONTAINER with a NAMED LIST: panels with a key, a label, an `open` flag and a layout each (doc/containers-design.md). */
+export const panels: AnyWidgetDefinition = {
+  type: "panels",
+  io: { inputs: {} },
+  events: {},
+  contains: ["panels"],
+  viewModel: z.object({
+    inputs: z.object({}).default({}),
+    panels: z
+      .array(
+        z.object({
+          key: z.string(),
+          label: z.string().min(1),
+          open: z.boolean().optional(),
+          content: z.object({ engine: z.string(), cells: z.array(z.unknown()) }).optional(),
+        }),
+      )
+      .default([{ key: "first", label: "First", open: true }]),
+  }),
+  component: () => null,
+};
+
 export const registryWith = (...widgets: AnyWidgetDefinition[]) => {
   const registry = createRegistry();
   for (const widget of widgets) registry.register(widget);

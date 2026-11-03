@@ -23,8 +23,19 @@ export type { ConditionNode, ParsedExpression } from "./expressions";
 export { createLayoutEngines, resolveTemplate } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
 export { layoutEngineProblems } from "./layout-engine-checks";
-export { resolvePage } from "./resolve";
+export { resolveCells, resolvePage } from "./resolve";
 export type { CellProblem, ResolvedCell, ResolvedCellOk, ResolvedPage, ResolveInput } from "./resolve";
+export {
+  MAX_LAYOUT_DEPTH,
+  cellsWithin,
+  chainSteps,
+  innerCellKey,
+  innerOverlay,
+  layoutChain,
+  layoutPathAt,
+  layoutsOf,
+} from "./nesting";
+export type { ChainStep, HeldLayout } from "./nesting";
 export { validateViewModels } from "./validate";
 export { createEmitter } from "./emitter";
 export { readableStore } from "./readable";

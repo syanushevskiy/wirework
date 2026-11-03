@@ -438,36 +438,19 @@ export const demoViewModels: ViewModels = {
             w: 12,
             h: 1,
           },
-          // A controlled input: the text lives at app.settings.displayName, written back by its default reaction.
+          // A CONTAINER (doc/containers-design.md): the three controls sit in
+          // a card, on a layout of the card's own (widgets.settings.preferences,
+          // `content`). They are controlled widgets written back by their
+          // default reactions — inside a card exactly as on the page.
           {
-            id: "input-name",
-            widget: "antd-input",
-            model: "widgets.settings.nameInput",
+            id: "card-preferences",
+            widget: "antd-card",
+            model: "widgets.settings.preferences",
             template: "default",
             x: 0,
             y: 1,
-            w: 6,
-            h: 2,
-          },
-          {
-            id: "select-page-size",
-            widget: "antd-select",
-            model: "widgets.settings.pageSize",
-            template: "default",
-            x: 6,
-            y: 1,
-            w: 3,
-            h: 2,
-          },
-          {
-            id: "checkbox-auto-refresh",
-            widget: "antd-checkbox",
-            model: "widgets.settings.autoRefresh",
-            template: "default",
-            x: 9,
-            y: 1,
-            w: 3,
-            h: 2,
+            w: 12,
+            h: 3,
           },
           {
             id: "echo-settings",
@@ -816,6 +799,48 @@ export const demoViewModels: ViewModels = {
     settings: {
       title: {
         default: { text: "Your settings — global state: every page sees them", tone: "accent" },
+      },
+      // The card's layout lives in the card's template: three cells on a grid of its own.
+      preferences: {
+        default: {
+          title: "Preferences",
+          content: {
+            engine: "react-grid-layout",
+            cells: [
+              // A controlled input: the text lives at app.settings.displayName, written back by its default reaction.
+              {
+                id: "input-name",
+                widget: "antd-input",
+                model: "widgets.settings.nameInput",
+                template: "default",
+                x: 0,
+                y: 0,
+                w: 6,
+                h: 2,
+              },
+              {
+                id: "select-page-size",
+                widget: "antd-select",
+                model: "widgets.settings.pageSize",
+                template: "default",
+                x: 6,
+                y: 0,
+                w: 3,
+                h: 2,
+              },
+              {
+                id: "checkbox-auto-refresh",
+                widget: "antd-checkbox",
+                model: "widgets.settings.autoRefresh",
+                template: "default",
+                x: 9,
+                y: 0,
+                w: 3,
+                h: 2,
+              },
+            ],
+          },
+        },
       },
       nameInput: {
         default: {

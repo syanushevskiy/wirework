@@ -1,7 +1,10 @@
 /**
  * The widget form — shared by "Add widget" (builder) and "Edit widget"
  * (editor). Generic over a definition: one path field per input port, one
- * field per primitive setting, and per event its REACTIONS — a list, in
+ * field per primitive setting — and for a NAMED LIST (a tabs widget's tabs,
+ * a collapse's panels: entries with a key and a label) rows added, named
+ * and removed, each entry's saved layout kept behind its row —, and per
+ * event its REACTIONS — a list, in
  * the order they run, each either "set a store path from a payload field"
  * or "call a host action" (picked from the action registry), rows added
  * and removed at will. An event that writes back by default (a controlled
@@ -47,14 +50,19 @@ import {
 } from "@wirework/engine";
 import {
   EMPTY_FORM,
+  EMPTY_ITEM,
   EMPTY_REACTION,
   editedReaction,
   isBlank,
+  itemDraftsOf,
+  itemFieldsOf,
+  itemsOf,
   nextParamValue,
-  optionChoices,
+  settingDraftOf,
   USE_DEFAULT,
   WHOLE_PAYLOAD,
   type Choice,
+  type ItemDraft,
   type ParamDraft,
   type PortField,
   type ReactionDraft,
@@ -124,6 +132,7 @@ export function useWidgetForm({
   const [reactions, setReactions] = useState(initial.reactions);
   const [conditionDrafts, setConditionDrafts] = useState(initial.conditions);
   const [settingValues, setSettingValues] = useState(initial.settings);
+  const [itemValues, setItemValues] = useState(initial.items);
   const [appear, setAppear] = useState(initial.appear);
   const [disappear, setDisappear] = useState(initial.disappear);
   const appearChoices = useMemo(() => appearChoicesOf(appearances), [appearances]);
@@ -148,30 +157,17 @@ export function useWidgetForm({
     [definition, paths, suggested],
   );
 
-  /** Primitive settings of the widget, with the user's drafts. */
+  /** The settings the form asks for: the primitive ones and the named lists (doc/containers-design.md). */
+  const settingList = useMemo(() => (definition ? settingFields(definition.viewModel) : []), [definition]);
+  /** The settings with the user's drafts — a named list's entries from the setting's default until the user touches them. */
   const settings = useMemo<SettingDraft[]>(
     () =>
-      (definition ? settingFields(definition.viewModel) : []).map((field) => {
-        const value = settingValues[field.name] ?? (field.kind === "boolean" ? false : "");
-        if (field.kind !== "select") return { ...field, value };
-        // A setting the widget defaults: offer that default as an option of
-        // its own, so "nothing chosen" is something the user can pick back.
-        const fallback =
-          field.defaultValue === undefined
-            ? []
-            : [{ value: USE_DEFAULT, label: `default: ${String(field.defaultValue)}` }];
-        return {
-          ...field,
-          value,
-          ...(typeof value === "string" && value !== ""
-            ? { choice: value }
-            : field.defaultValue === undefined
-              ? {}
-              : { choice: USE_DEFAULT }),
-          choices: [...fallback, ...optionChoices(field.options)],
-        };
-      }),
-    [definition, settingValues],
+      settingList.map((field) =>
+        field.kind === "items"
+          ? { ...field, value: "", items: itemFieldsOf(field, itemDraftsOf(field, itemValues[field.name])) }
+          : settingDraftOf(field, settingValues),
+      ),
+    [settingList, settingValues, itemValues],
   );
 
   /** The host's actions, as the reactions offer them. */
@@ -238,6 +234,7 @@ export function useWidgetForm({
     setAppear("");
     setDisappear("");
     setSettingValues({});
+    setItemValues({});
   }, []);
 
   /** Another condition row, blank, after the ones there: every row must hold. */
@@ -288,6 +285,42 @@ export function useWidgetForm({
   const chooseSetting = useCallback(
     (name: string, choice: string) => setSetting(name, choice === USE_DEFAULT ? "" : choice),
     [setSetting],
+  );
+
+  /** One change to a named list's entries — starting, the first time, from what the form shows: the setting's default. */
+  const editItems = useCallback(
+    (name: string, change: (items: readonly ItemDraft[]) => ItemDraft[]) => {
+      const field = settingList.find((candidate) => candidate.name === name);
+      if (!field) return;
+      setItemValues((prev) => ({ ...prev, [name]: change(itemDraftsOf(field, prev[name])) }));
+    },
+    [settingList],
+  );
+  /** Another entry, blank, after the ones there. */
+  const addItem = useCallback((name: string) => editItems(name, (items) => [...items, EMPTY_ITEM]), [editItems]);
+  /** The entry at `index` goes — with the layout it held; the ones after it move up. */
+  const removeItem = useCallback(
+    (name: string, index: number) => editItems(name, (items) => items.filter((_item, at) => at !== index)),
+    [editItems],
+  );
+  const setItemLabel = useCallback(
+    (name: string, index: number, label: string) =>
+      editItems(name, (items) => items.map((item, at) => (at === index ? { ...item, label } : item))),
+    [editItems],
+  );
+  /** One of an entry's other fields (a panel's `open`). */
+  const setItemValue = useCallback(
+    (name: string, index: number, field: string, value: string | boolean) =>
+      editItems(name, (items) =>
+        items.map((item, at) => (at === index ? { ...item, values: { ...item.values, [field]: value } } : item)),
+      ),
+    [editItems],
+  );
+  /** What an entry's select answered — "use the default" means nothing chosen. */
+  const chooseItemValue = useCallback(
+    (name: string, index: number, field: string, choice: string) =>
+      setItemValue(name, index, field, choice === USE_DEFAULT ? "" : choice),
+    [setItemValue],
   );
 
   /** One field of one row; the row (and blank ones before it) is created on first touch. */
@@ -368,6 +401,12 @@ export function useWidgetForm({
       ),
     ) &&
     settings.every((setting) => !setting.required || !isBlank(settingValues[setting.name])) &&
+    // A named list keeps at least one entry, each with a label: the widget's schema asks for both.
+    settings.every(
+      (setting) =>
+        setting.items === undefined ||
+        (setting.items.length > 0 && setting.items.every((item) => item.label.trim() !== "")),
+    ) &&
     // A condition row either saves something or is blank; one with only a path, only a check, a refused value or unreadable words is unfinished.
     conditions.every(
       (condition) => condition.saves !== undefined || (condition.path.trim() === "" && condition.is === ""),
@@ -394,10 +433,13 @@ export function useWidgetForm({
       }),
     );
     const collected: WidgetSettings = Object.fromEntries(
-      settings.flatMap((setting) => {
+      settings.flatMap((setting): [string, unknown][] => {
+        if (setting.kind === "items") {
+          return [[setting.name, itemsOf(setting, itemDraftsOf(setting, itemValues[setting.name]))]];
+        }
         const raw = settingValues[setting.name];
         if (isBlank(raw)) return [];
-        return [[setting.name, setting.kind === "number" ? Number(raw) : raw] as const];
+        return [[setting.name, setting.kind === "number" ? Number(raw) : raw]];
       }),
     );
     const when = whenOfConditions(conditions);
@@ -415,7 +457,7 @@ export function useWidgetForm({
       },
       settings: collected,
     };
-  }, [fields, events, reactions, settings, settingValues, conditions, appear, disappear, appearances]);
+  }, [fields, events, reactions, settings, settingValues, itemValues, conditions, appear, disappear, appearances]);
 
   return {
     definition,
@@ -434,6 +476,11 @@ export function useWidgetForm({
     setPortPath,
     setSetting,
     chooseSetting,
+    addItem,
+    removeItem,
+    setItemLabel,
+    setItemValue,
+    chooseItemValue,
     setReaction,
     addReaction,
     removeReaction,

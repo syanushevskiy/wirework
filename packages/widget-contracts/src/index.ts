@@ -51,10 +51,18 @@ export { rateContract } from "./rate";
 export { statisticContract } from "./statistic";
 export { dividerContract, DIVIDER_ORIENTATIONS } from "./divider";
 export type { DividerOrientation } from "./divider";
+// Containers: a layout of other widgets inside (doc/containers-design.md).
+export { cardContract, CARD_SIZES } from "./card";
+export type { CardSize } from "./card";
+export { tabsContract, layoutItemSchema } from "./tabs";
+export type { LayoutItem } from "./tabs";
+export { collapseContract } from "./collapse";
 
 import { alertContract } from "./alert";
 import { buttonContract } from "./button";
+import { cardContract } from "./card";
 import { checkboxContract } from "./checkbox";
+import { collapseContract } from "./collapse";
 import { dividerContract } from "./divider";
 import { filterBarContract } from "./filter-bar";
 import { infiniteTableContract } from "./infinite-table";
@@ -71,6 +79,7 @@ import { sliderContract } from "./slider";
 import { statisticContract } from "./statistic";
 import { switchContract } from "./switch";
 import { tableContract } from "./table";
+import { tabsContract } from "./tabs";
 import { tagContract } from "./tag";
 
 /** Everything a host registers at once. */
@@ -95,4 +104,7 @@ export const standardContracts = [
   rateContract,
   statisticContract,
   dividerContract,
+  cardContract,
+  tabsContract,
+  collapseContract,
 ];

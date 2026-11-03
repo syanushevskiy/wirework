@@ -50,7 +50,9 @@ const SHOW_STORE = "storyShowStore";
 const inputArg = (port: string): string => `input_${port}`;
 
 type Control = "text" | "number" | "boolean" | "select" | "object";
-const controlOf = (field: SettingField): Control => (field.kind === "json" ? "object" : field.kind);
+/** A list (json, or the named items of tabs and panels) is edited as an object in Storybook. */
+const controlOf = (field: SettingField): Control =>
+  field.kind === "json" || field.kind === "items" ? "object" : field.kind;
 
 /** What a port holds, as a control kind: read off its validator like a setting's. */
 function portFields(definition: AnyWidgetDefinition): Map<string, SettingField> {

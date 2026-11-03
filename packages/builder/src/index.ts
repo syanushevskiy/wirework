@@ -30,13 +30,13 @@ export { commitTrees, useCommit } from "./use-commit";
 export type { Commit, CommitInput, EditableTrees, SaveError, SaveTrees, TreesChange } from "./use-commit";
 
 export { DEFAULT_BUILDER_NAMING, builderPage, modelNamespaceOf, numberedIds, useBuilder } from "./use-builder";
-export type { BuilderInput, BuilderNaming } from "./use-builder";
+export type { BuilderInput, BuilderNaming, PlacedWidget } from "./use-builder";
 
 export { USER_PAGE_TEMPLATE, usePageEditing } from "./use-page-editing";
 export type { EditTarget, PageEditingInput, SaveOutcome } from "./use-page-editing";
 
 export { usePageToolbar } from "./use-page-toolbar";
-export type { PageToolbarInput, PageToolbarState } from "./use-page-toolbar";
+export type { LayoutCrumb, PageToolbarInput, PageToolbarState } from "./use-page-toolbar";
 
 export {
   PAGE_VIEW_FILE_KIND,
@@ -58,6 +58,8 @@ export { EMPTY_FORM, templateOf, valuesFromViewModel } from "./form-drafts";
 export type {
   Choice,
   EventField,
+  ItemDraft,
+  ItemField,
   ParamDraft,
   PortField,
   ReactionDraft,

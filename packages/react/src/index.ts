@@ -10,7 +10,11 @@ export type { ContractImplementation, ReactWidgetDefinition } from "./definition
 export { defineLayoutEngine } from "./layout";
 export type { LayoutRendererProps, ReactLayoutEngine } from "./layout";
 export { CellChrome } from "./CellChrome";
-export type { CellChromeProps } from "./CellChrome";
+export type { CellChromeProps, WrapCell } from "./CellChrome";
+export { NestedLayout } from "./NestedLayout";
+export type { NestedLayoutProps } from "./NestedLayout";
+export { CellKeyContext, PageContext } from "./PageContext";
+export type { PageScope } from "./PageContext";
 export { PageView } from "./PageView";
 export type { PageError, PageViewProps } from "./PageView";
 export { WidgetPreview } from "./WidgetPreview";

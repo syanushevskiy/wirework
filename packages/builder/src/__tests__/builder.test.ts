@@ -13,7 +13,9 @@ import { commitTrees } from "../use-commit";
 import { DEFAULT_BUILDER_NAMING, modelNamespaceOf, numberedIds } from "../use-builder";
 import {
   argumentsOf,
+  draftsOfItems,
   editedReaction,
+  itemsOf,
   nextParamValue,
   valuesFromViewModel,
   writeBackOf,
@@ -21,6 +23,45 @@ import {
   type ReactionField,
 } from "../form-drafts";
 import { counter, dial } from "./fixtures";
+
+describe("a named-list setting's entries (tabs, panels — doc/containers-design.md)", () => {
+  const panels: SettingField = {
+    name: "panels",
+    kind: "items",
+    required: false,
+    defaultValue: [{ key: "first", label: "First", open: true }],
+    itemFields: [{ name: "open", kind: "boolean", required: false }],
+  };
+  const layout = { engine: "list", cells: [] };
+
+  it("drafts saved entries with their other fields, keeping each entry whole behind its row", () => {
+    const drafts = draftsOfItems(panels, [
+      { key: "a", label: "A", open: true, content: layout },
+      { key: "b", label: "B" },
+    ]);
+    expect(drafts).toEqual([
+      { label: "A", values: { open: true }, original: { key: "a", label: "A", open: true, content: layout } },
+      { label: "B", values: {}, original: { key: "b", label: "B" } },
+    ]);
+    expect(draftsOfItems(panels, undefined)).toEqual([]);
+  });
+
+  it("saves the label as typed, the saved key and layout, and a key made from the label for a new entry — unique in the list", () => {
+    const [kept, renamed, fresh, twin, unnamed] = itemsOf(panels, [
+      { label: "A", values: { open: false }, original: { key: "a", label: "A", open: true, content: layout } },
+      { label: "Run history", values: {}, original: { key: "b", label: "B", open: true } },
+      { label: " Run history ", values: { open: true } },
+      { label: "Run History!", values: {} },
+      { label: "", values: {} },
+    ]);
+    // The form shows `open`: what it holds is what is saved — the cleared one is gone, the layout stays.
+    expect(kept).toEqual({ key: "a", label: "A", open: false, content: layout });
+    expect(renamed).toEqual({ key: "b", label: "Run history" });
+    expect(fresh).toEqual({ key: "run-history", label: "Run history", open: true });
+    expect(twin).toEqual({ key: "run-history-2", label: "Run History!" });
+    expect(unnamed).toEqual({ key: "item", label: "" });
+  });
+});
 
 describe("numberedIds", () => {
   const next = numberedIds("custom");

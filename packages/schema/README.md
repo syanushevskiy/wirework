@@ -39,7 +39,8 @@ against, plus the shared path rules. Depends on zod only.
 - **Layout engines**: `LayoutEngine` / `AnyLayoutEngine`.
 - **Stores**: `Store`, `ReadableStore`, `Unsubscribe`.
 - **Settings introspection**: `settingFields` (`SettingField`,
-  `SettingKind`), `argumentKind` (`ArgumentKind`: what a builder shows for
+  `SettingKind` — the primitives, `items` for a named list of entries with
+  a `key` and a `label` such as tabs, `json` on request), `argumentKind` (`ArgumentKind`: what a builder shows for
   one value a validator describes), `validatorKeys`,
   `RESERVED_VIEW_MODEL_KEYS` (`inputs`, `on`, `when`).
 

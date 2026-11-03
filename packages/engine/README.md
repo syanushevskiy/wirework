@@ -27,9 +27,10 @@ template with its engine.
 ## Validation
 
 `validateViewModels(input)` walks every template of both trees at boot and
-reports each problem with its location and severity. `problemText`,
-`errorText` and `issuesText` turn thrown values and validator issues into
-sentences.
+reports each problem with its location and severity — and into every layout
+a container holds (`… (#card-1) content cell[0] (#inner)`), refusing one
+nested deeper than `MAX_LAYOUT_DEPTH`. `problemText`, `errorText` and
+`issuesText` turn thrown values and validator issues into sentences.
 
 ## Appearances
 
@@ -41,6 +42,19 @@ animation itself `@keyframes ww-<name>` in the host's stylesheet);
 `STANDARD_APPEARANCES` is the standard set alone, sealed.
 `appearanceProblems(viewModel, appearances?)` reports a name nobody
 registered — part of `contractProblems`, given `ResolveInput.appearances`.
+
+## Layouts inside widgets
+
+doc/containers-design.md: a container's template holds a page template in
+a setting its definition names in `contains`. `layoutsOf(definition,
+viewModel)` lists the layouts held (`{ path, template }` — `content`, or
+`tabs.0.content` for an item of a list); `innerCellKey` and `innerOverlay`
+give the overlay as the cells inside see it (`card-1/button`);
+`chainSteps(at)` reads a chain of containers; `layoutPathAt(layoutEngines,
+viewModels, page, at)` finds where such a layout lives in the view models;
+`cellsWithin(registry, layoutEngines, viewModels, template)` lists a
+layout's cells, the ones inside its containers included. The registry
+refuses a `contains` naming a setting the widget does not have.
 
 ## Events and reactions
 

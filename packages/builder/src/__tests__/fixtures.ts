@@ -5,6 +5,8 @@
  */
 import { z } from "zod";
 import {
+  NO_EVENTS,
+  pageViewModelSchema,
   widgetBindingsSchema,
   type AnyLayoutEngine,
   type AnyWidgetDefinition,
@@ -44,6 +46,19 @@ export const dial: AnyWidgetDefinition = {
   io: counterIo,
   events: dialEvents,
   viewModel: widgetBindingsSchema(counterIo, dialEvents).extend({ label: z.string().default("Level") }),
+  component: () => null,
+};
+
+/** A CONTAINER: its `content` holds a layout (doc/containers-design.md). */
+export const box: AnyWidgetDefinition = {
+  type: "box",
+  io: { inputs: {} },
+  events: NO_EVENTS,
+  viewModel: widgetBindingsSchema({ inputs: {} }, NO_EVENTS).extend({
+    title: z.string().optional(),
+    content: pageViewModelSchema.optional(),
+  }),
+  contains: ["content"],
   component: () => null,
 };
 
@@ -106,6 +121,30 @@ export const cell = (overrides: Partial<CellBase> = {}): CellBase => ({
   template: "default",
   ...overrides,
 });
+
+/** The page "demo" with a placed box holding the placed counter of `treesWithCounter`, as a builder would have left it. */
+export const treesWithBoxedCounter = (): EditableTrees => {
+  const trees = treesWithCounter();
+  return {
+    viewModels: {
+      pages: {
+        demo: {
+          default: {
+            engine: "list",
+            cells: [cell({ id: "custom-2", widget: "box", model: "widgets.custom.custom-2" })],
+          },
+        },
+      },
+      widgets: {
+        custom: {
+          ...(trees.viewModels.widgets["custom"] as Record<string, unknown>),
+          "custom-2": { default: { title: "Boxed", content: { engine: "list", cells: [cell()] } } },
+        },
+      },
+    },
+    userViewModels: {},
+  };
+};
 
 /** The page "demo" with one placed counter, wired to `demo.count`, as a builder would have left it. */
 export const treesWithCounter = (): EditableTrees => ({

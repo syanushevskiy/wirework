@@ -21,6 +21,7 @@ import {
   type ResolvedCell,
   type ResolvedCellOk,
 } from "@wirework/engine";
+import { CellKeyContext } from "./PageContext";
 import { useCellEmitter } from "./useCellEmitter";
 import { useShowing, type Showing } from "./useShowing";
 import { useWhen } from "./useWhen";
@@ -117,7 +118,10 @@ function WidgetCell({
           ) : null}
           {/* resetKey: a re-resolved view model clears a previous crash state */}
           <WidgetErrorBoundary widgetType={cell.widget} resetKey={cell.viewModel} onError={onError}>
-            <Widget viewModel={cell.viewModel} store={readable} emit={emit} />
+            {/* The cell's id, for a container to name the layouts it holds (NestedLayout). */}
+            <CellKeyContext value={cell.key}>
+              <Widget viewModel={cell.viewModel} store={readable} emit={emit} />
+            </CellKeyContext>
           </WidgetErrorBoundary>
         </Appearing>
       )}

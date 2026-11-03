@@ -133,6 +133,119 @@ export interface SettingDraft extends SettingField {
   /** A select setting's value — its own, or "use the widget's default" — and what it offers. */
   choice?: string;
   choices?: Choice[];
+  /** An `items` setting's entries as the form shows them (a tabs widget's tabs). */
+  items?: ItemField[];
+}
+
+/**
+ * One entry of a NAMED-LIST setting (a tab, a panel — doc/containers-design.md)
+ * as the form edits it: the label the user types, its other fields' drafts,
+ * and the saved entry behind it, kept whole for what the form does not show
+ * (its key, the layout it holds). A new entry has no original.
+ */
+export interface ItemDraft {
+  label: string;
+  values: Record<string, string | boolean>;
+  original?: Record<string, unknown>;
+}
+
+/** One entry as the form shows it: its place, its label, its other fields each a draft of its own. */
+export interface ItemField {
+  index: number;
+  label: string;
+  fields: SettingDraft[];
+}
+
+/** An entry to fill: no label yet. */
+export const EMPTY_ITEM: ItemDraft = { label: "", values: {} };
+
+/**
+ * A setting as the form shows it: its draft, and for a select the default as
+ * an option of its own, so "nothing chosen" is something the user can pick back.
+ */
+export function settingDraftOf(field: SettingField, values: Record<string, string | boolean>): SettingDraft {
+  const value = values[field.name] ?? (field.kind === "boolean" ? false : "");
+  if (field.kind !== "select") return { ...field, value };
+  const fallback =
+    field.defaultValue === undefined ? [] : [{ value: USE_DEFAULT, label: `default: ${String(field.defaultValue)}` }];
+  return {
+    ...field,
+    value,
+    ...(typeof value === "string" && value !== ""
+      ? { choice: value }
+      : field.defaultValue === undefined
+        ? {}
+        : { choice: USE_DEFAULT }),
+    choices: [...fallback, ...optionChoices(field.options)],
+  };
+}
+
+/** Saved entries (a template's, or the setting's default) as drafts; nothing when the value is not a list. */
+export function draftsOfItems(field: SettingField, saved: unknown): ItemDraft[] {
+  if (!Array.isArray(saved)) return [];
+  return saved.flatMap((entry: unknown) => {
+    if (entry === null || typeof entry !== "object") return [];
+    const original = entry as Record<string, unknown>;
+    const values = Object.fromEntries(
+      (field.itemFields ?? []).flatMap((itemField) => {
+        const value = original[itemField.name];
+        if (value === undefined || value === null) return [];
+        return [[itemField.name, itemField.kind === "boolean" ? value === true : String(value)]];
+      }),
+    );
+    return [{ label: String(original["label"] ?? ""), values, original }];
+  });
+}
+
+/** The entries the form holds for a setting: the user's drafts, else the setting's default. */
+export const itemDraftsOf = (field: SettingField, drafts: readonly ItemDraft[] | undefined): readonly ItemDraft[] =>
+  drafts ?? draftsOfItems(field, field.defaultValue);
+
+/** The entries as the form shows them. */
+export const itemFieldsOf = (field: SettingField, drafts: readonly ItemDraft[]): ItemField[] =>
+  drafts.map((draft, index) => ({
+    index,
+    label: draft.label,
+    fields: (field.itemFields ?? []).map((itemField) => settingDraftOf(itemField, draft.values)),
+  }));
+
+/**
+ * An entry's key — one path segment, unique in the list: the saved one, else
+ * made from the label (`Run history` → `run-history`), numbered when taken.
+ */
+function keyFor(saved: unknown, label: string, taken: Set<string>): string {
+  const base =
+    typeof saved === "string" && saved !== ""
+      ? saved
+      : label
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "item";
+  let key = base;
+  for (let n = 2; taken.has(key); n += 1) key = `${base}-${n}`;
+  taken.add(key);
+  return key;
+}
+
+/**
+ * The drafts as the setting's saved list: each entry its key, its label, its
+ * other fields as typed (blank ones left out) and whatever the saved entry
+ * held that the form does not show — its layout.
+ */
+export function itemsOf(field: SettingField, drafts: readonly ItemDraft[]): Record<string, unknown>[] {
+  const shown = new Set(["key", "label", ...(field.itemFields ?? []).map((itemField) => itemField.name)]);
+  const taken = new Set<string>();
+  return drafts.map((draft) => {
+    const kept = Object.fromEntries(Object.entries(draft.original ?? {}).filter(([name]) => !shown.has(name)));
+    const values = Object.fromEntries(
+      (field.itemFields ?? []).flatMap((itemField) => {
+        const raw = draft.values[itemField.name];
+        return isBlank(raw) ? [] : [[itemField.name, itemField.kind === "number" ? Number(raw) : raw]];
+      }),
+    );
+    const label = draft.label.trim();
+    return { ...kept, key: keyFor(draft.original?.["key"], label, taken), label, ...values };
+  });
 }
 
 /** Widget settings collected by the form, already coerced to their kind. */
@@ -173,6 +286,8 @@ export interface WidgetFormValues {
   appear: string;
   disappear: string;
   settings: Record<string, string | boolean>;
+  /** The entries of every `items` setting, in order (a tabs widget's tabs); a setting absent here shows its default. */
+  items: Record<string, ItemDraft[]>;
 }
 
 export const EMPTY_FORM: WidgetFormValues = {
@@ -182,6 +297,7 @@ export const EMPTY_FORM: WidgetFormValues = {
   appear: "",
   disappear: "",
   settings: {},
+  items: {},
 };
 
 export const isBlank = (value: string | boolean | undefined): boolean =>
@@ -298,12 +414,20 @@ export function valuesFromViewModel(
       return configured.length > 0 ? [[event, configured.map(draftOf)]] : [];
     }),
   );
+  const fields = settingFields(definition.viewModel);
   const settings = Object.fromEntries(
-    settingFields(definition.viewModel).flatMap((field) => {
+    fields.flatMap((field) => {
       const value = vm[field.name];
-      if (value === undefined || value === null) return [];
+      if (field.kind === "items" || value === undefined || value === null) return [];
       return [[field.name, field.kind === "boolean" ? value === true : String(value)]];
     }),
+  );
+  const items = Object.fromEntries(
+    fields.flatMap((field) =>
+      field.kind === "items" && Array.isArray(vm[field.name])
+        ? [[field.name, draftsOfItems(field, vm[field.name])]]
+        : [],
+    ),
   );
   // The one cast: the widget's own schema parsed the view model, `when`, `appear` and `disappear` included.
   const { when, appear, disappear } = vm as { when?: When; appear?: Appearance; disappear?: Appearance };
@@ -314,6 +438,7 @@ export function valuesFromViewModel(
     appear: appear ?? "",
     disappear: disappear ?? "",
     settings,
+    items,
   };
 }
 
