@@ -144,6 +144,7 @@ export const templateOf = (bindings: WidgetBindings, settings: WidgetSettings): 
   ...(Object.keys(bindings.on).length > 0 ? { on: bindings.on } : {}),
   ...(bindings.when === undefined ? {} : { when: bindings.when }),
   ...(bindings.appear === undefined ? {} : { appear: bindings.appear }),
+  ...(bindings.disappear === undefined ? {} : { disappear: bindings.disappear }),
   ...settings,
 });
 
@@ -168,12 +169,20 @@ export interface WidgetFormValues {
   reactions: Record<string, ReactionDraft[]>;
   /** The condition's rows, in order (form-when.ts); empty: the widget always shows. */
   conditions: ConditionDraft[];
-  /** How the widget appears when its condition turns true ("" = it simply shows). */
+  /** How the widget appears when its condition turns true, and disappears when it turns false ("" = it simply shows / goes). */
   appear: string;
+  disappear: string;
   settings: Record<string, string | boolean>;
 }
 
-export const EMPTY_FORM: WidgetFormValues = { paths: {}, reactions: {}, conditions: [], appear: "", settings: {} };
+export const EMPTY_FORM: WidgetFormValues = {
+  paths: {},
+  reactions: {},
+  conditions: [],
+  appear: "",
+  disappear: "",
+  settings: {},
+};
 
 export const isBlank = (value: string | boolean | undefined): boolean =>
   value === undefined || (typeof value === "string" && value.trim() === "");
@@ -296,9 +305,16 @@ export function valuesFromViewModel(
       return [[field.name, field.kind === "boolean" ? value === true : String(value)]];
     }),
   );
-  // The one cast: the widget's own schema parsed the view model, `when` and `appear` included.
-  const { when, appear } = vm as { when?: When; appear?: Appearance };
-  return { paths, reactions, conditions: draftsOfWhen(when, predicates), appear: appear ?? "", settings };
+  // The one cast: the widget's own schema parsed the view model, `when`, `appear` and `disappear` included.
+  const { when, appear, disappear } = vm as { when?: When; appear?: Appearance; disappear?: Appearance };
+  return {
+    paths,
+    reactions,
+    conditions: draftsOfWhen(when, predicates),
+    appear: appear ?? "",
+    disappear: disappear ?? "",
+    settings,
+  };
 }
 
 /** The write-back an event does by default, with the port's path as the form holds it now. */

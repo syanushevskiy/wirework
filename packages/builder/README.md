@@ -88,9 +88,11 @@ layouts and your application decides where the files go.
   takes and when/unless (`conditions`, `predicateChoices`, `testChoices`,
   `conditionPaths`, `addCondition`, `removeCondition`, `setCondition`),
   every row gating submit until it holds together, and how the widget
-  appears when the condition turns true (`appear`, `appearChoices`,
-  `setAppear` — saved only with a condition); `collect()` gives bindings
-  (`inputs`, `on`, `when`, `appear`) and settings, the default never among
+  appears and disappears as the condition changes (`appear`, `disappear`,
+  `appearChoices` — the names of the `appearances` registry given, the
+  standard ones alone otherwise —, `setAppear`, `setDisappear` — saved
+  only with a condition); `collect()` gives bindings (`inputs`, `on`,
+  `when`, `appear`, `disappear`) and settings, the default never among
   them, and `templateOf` writes them into a template.
 - `useWidgetBuilder` — a widget choice with generated input paths on top of
   the form; `add` hands the result to the host.

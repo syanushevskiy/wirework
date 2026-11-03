@@ -10,6 +10,8 @@ import {
   standardPredicates,
   whenSchema,
   widgetBindingsSchema,
+  APPEARANCES,
+  standardAppearances,
   type AnyPredicateDefinition,
 } from "../index";
 
@@ -56,13 +58,15 @@ describe("whenSchema", () => {
     expect(issues([{ any: [] }]).length).toBeGreaterThan(0);
   });
 
-  it("is the third reserved section of every widget's view model, optional, with `appear` the fourth", () => {
+  it("is the third reserved section of every widget's view model, optional, with `appear` and `disappear` after it", () => {
     const schema = widgetBindingsSchema({ inputs: {} }, NO_EVENTS);
     expect(schema.parse({})).toEqual({ inputs: {}, on: {} });
     expect(schema.parse({ when: [{ path: "a", is: "empty" }] }).when).toEqual([{ path: "a", is: "empty" }]);
     expect(schema.safeParse({ when: [] }).success).toBe(false);
-    expect(schema.parse({ appear: "fade" }).appear).toBe("fade");
-    expect(schema.safeParse({ appear: "bounce" }).success).toBe(false);
+    // An appearance is a NAME (the registry says which exist): any kebab-case one parses, a malformed one does not.
+    expect(schema.parse({ appear: "fade", disappear: "drop" })).toMatchObject({ appear: "fade", disappear: "drop" });
+    expect(schema.safeParse({ appear: "Fade In" }).success).toBe(false);
+    expect(APPEARANCES).toEqual(standardAppearances.map((appearance) => appearance.name));
   });
 });
 

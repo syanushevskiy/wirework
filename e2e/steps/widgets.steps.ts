@@ -31,6 +31,11 @@ Then("the counter shows {string}", async ({ page }, text: string) => {
   await expect(live(page).getByTestId("antd-counter")).toContainText(text);
 });
 
+/** The button's variant (primary, secondary, dashed, danger): how much it stands out. */
+Then("the button {string} has the variant {string}", async ({ page }, label: string, variant: string) => {
+  await expect(live(page).getByRole("button", { name: label, exact: true })).toHaveAttribute("data-variant", variant);
+});
+
 When("I click the button {string}", async ({ page }, label: string) => {
   await live(page).getByRole("button", { name: label, exact: true }).click();
 });

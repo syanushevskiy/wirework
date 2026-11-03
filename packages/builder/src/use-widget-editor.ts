@@ -5,7 +5,7 @@
  */
 import { useCallback, useMemo } from "react";
 import type { Store, WidgetBindings } from "@wirework/schema";
-import type { ActionRegistry, PredicateRegistry, ResolvedCell } from "@wirework/engine";
+import type { ActionRegistry, AppearanceRegistry, PredicateRegistry, ResolvedCell } from "@wirework/engine";
 import { valuesFromViewModel, type WidgetSettings } from "./form-drafts";
 import { useWidgetForm } from "./use-widget-form";
 
@@ -17,12 +17,14 @@ export interface WidgetEditorInput {
   actions: ActionRegistry;
   /** The checks a condition may pick; the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
+  /** The animations a conditional widget may pick; the standard ones alone when absent. */
+  appearances?: AppearanceRegistry | undefined;
   onSave: (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => void;
 }
 
-export function useWidgetEditor({ cell, store, actions, predicates, onSave }: WidgetEditorInput) {
+export function useWidgetEditor({ cell, store, actions, predicates, appearances, onSave }: WidgetEditorInput) {
   const initial = useMemo(() => valuesFromViewModel(cell.definition, cell.viewModel, predicates), [cell, predicates]);
-  const form = useWidgetForm({ definition: cell.definition, store, actions, predicates, initial });
+  const form = useWidgetForm({ definition: cell.definition, store, actions, predicates, appearances, initial });
   const { collect, valid } = form;
 
   const save = useCallback(() => {

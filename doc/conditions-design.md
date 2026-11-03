@@ -216,16 +216,41 @@ part's place ("", "1", "1.0") and `TreeEdit` the step (`set`, `group`,
 ### Appearance
 
 A widget with a condition may say how it APPEARS when the condition turns
-true: `appear`, the fourth reserved key beside `inputs`, `on` and `when`,
-one of a closed list (`APPEARANCES`: `fade`, `slide-up`, `slide-down`,
-`zoom`, `flip`) — never a duration or a curve in configuration. The adapter
-draws it: the element around the widget mounts with the condition, so a
-mount animation IS the appearance (`.ww-appear-<name>` in the adapter's
-stylesheet, 320 ms, eased, none under `prefers-reduced-motion`); the cell
-carries `data-appear`. The builder offers it under the conditions, as
-"appears with", only while there is a condition; `collect()` saves it only
-with one, because an appearance means nothing without a condition to
-appear on. Without it a widget simply shows.
+true and how it DISAPPEARS when it turns false: `appear` and `disappear`,
+the fourth and fifth reserved keys beside `inputs`, `on` and `when`, each
+the NAME of an animation — never a duration or a curve in configuration.
+
+The names are a registry, the sixth extension point, built like the
+predicates': `createAppearances()` in the engine starts with the standard
+five (`standardAppearances` in the schema: `fade`, `slide-up`,
+`slide-down`, `zoom`, `flip`, each with a description for the builder's
+list) and takes the host's own — a kebab-case name and a description —
+until it is sealed; `STANDARD_APPEARANCES` is the standard set alone, what
+every function uses when no registry is given. A name nobody registered
+is a contract problem (`appearanceProblems`, part of `contractProblems`
+given `ResolveInput.appearances`), reported by resolve and boot validation
+like an unknown predicate.
+
+The adapter draws a name as the CSS keyframes `ww-<name>`: the element
+around the widget (`.ww-appear`, 320 ms, eased) plays them FORWARD when it
+mounts with the condition and in REVERSE (`.ww-disappear`,
+`animation-direction: reverse`) on its way out — one set of keyframes
+serves both directions, and a host registers an appearance of its own by
+naming it and writing `@keyframes ww-<name>` in a stylesheet of its own
+(the playground's `drop`: `appearances.register({ name: "drop",
+description })` in `demo/install.ts`, `ww-drop` in `index.css`). On the
+way out the widget stays MOUNTED until `animationend`, then leaves
+(`useShowing`); shown again before that,
+it stays and plays its appearance. Under `prefers-reduced-motion` the
+stylesheet plays nothing, so the hook unmounts at once rather than wait
+for an end that would never come. The cell carries `data-appear` and
+`data-disappear`.
+
+The builder offers both under the conditions, as "appears with" and
+"disappears with", from the registry's names, only while there is a
+condition; `collect()` saves them only with one and only when the
+registry knows the name, because an animation means nothing without a
+condition to play on. Without them a widget simply shows and goes.
 
 ## The predicates
 
@@ -538,6 +563,40 @@ a page builder hides them with one `when` per cell).
   without limit; a page builder who nests five deep gets what they asked
   for, and the words still read.
 - **Vlad:** `Appearing` is one ternary; `templateOf` grew one spread.
+
+## Reviewed 2026-11-02, later (the disappearance, the appearance registry)
+
+- **Morgan:** a widget that fades out instead of blinking away, and the
+  application's own animation in the list beside the standard ones — what
+  a page builder expects from "appearance". The button variants
+  (primary, secondary, dashed, danger) are the other half of looking
+  finished.
+- **Alexei:** the registry is the predicates' pattern to the letter —
+  schema definitions, engine registry with invariants, `STANDARD_*` sealed
+  default, a `*Problems` function folded into `contractProblems`, one
+  optional registry on `ResolveInput`. One concern raised and answered: the
+  name grammar is in the schema (`APPEARANCE_NAME`) so the schema can parse
+  a template without the registry, and the registry says which names exist.
+- **Dmitri:** `useShowing` is two effects and a boolean, and its header
+  says why reduced motion unmounts at once. The inline `animationName` is
+  the one place the guidelines allow a style: the value comes from the
+  view model, and it replaced five classes that said the same thing.
+- **Ren:** reverse playback is the cheap and honest choice — one set of
+  keyframes, no second stylesheet to keep in step — but a host that wants
+  a different way out than in must register two names (`drop` in,
+  `fade` out), which the two keys allow. The other caution: a leaving
+  widget keeps reading the store for 320 ms; a `load` fired in that window
+  would be a bug, and nothing fires on unmount, so it is not one.
+- **Sasha:** the suite asserts `data-disappear`, the state JSON and — the
+  real proof — that a hidden cell is EMPTY once the animation has ended
+  (Playwright retries the assertion through the 320 ms). The application's
+  `drop` is asserted on the run page, so a renamed registration breaks a
+  scenario. The adapter's test fires `animationend` itself.
+- **Vlad:** `appearChoicesOf` is one map; the two selects are one map over
+  a tuple.
+- **External reviewer:** less than before in the stylesheet (five classes
+  gone), one hook added, one registry added by the pattern that already
+  existed. `Appearing` still renders no element without an animation.
 
 ## Built and tested
 

@@ -15,6 +15,17 @@ Feature: More widgets
     And the preview of "antd-statistic" reads "Active runs"
     And the preview of "antd-divider" reads "Section"
 
+  Scenario: A button has a variant: primary by default, or secondary, dashed, danger
+    Given I open the "overview" page
+    Then the button "Reset counter" has the variant "danger"
+    Given I open the "builder" page
+    When I choose the "antd-button" widget
+    And I set the setting "label" to "Clear"
+    And I set the setting "variant" to "dashed"
+    And I set the reaction for "clicked" to call "log-event"
+    And I add the widget
+    Then the button "Clear" has the variant "dashed"
+
   Scenario: A switch stores on or off
     Given I open the "builder" page
     When I choose the "antd-switch" widget

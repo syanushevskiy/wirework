@@ -27,6 +27,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     layoutEngines,
     actions,
     predicates,
+    appearances,
     store,
     bus,
     report,
@@ -115,6 +116,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
             store={store}
             actions={actions}
             predicates={predicates}
+            appearances={appearances}
             page={page}
             addLock={addLock}
             onAdd={addWidget}
@@ -128,6 +130,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
             store={store}
             actions={actions}
             predicates={predicates}
+            appearances={appearances}
             bindingsLocked={target === "user"}
             onSave={saveWidget}
             onCancel={clearCell}
@@ -142,6 +145,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
           layoutEngines={layoutEngines}
           actions={actions}
           predicates={predicates}
+          appearances={appearances}
           /* The host already resolved this page (use-page-editing); reuse
              that plan instead of resolving the same inputs again. */
           plan={plan}

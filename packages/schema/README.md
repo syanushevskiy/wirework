@@ -25,7 +25,10 @@ against, plus the shared path rules. Depends on zod only.
   `AnyPredicateDefinition` (a named, pure check with its `phrase`,
   `description` and `argument`); `standardPredicates` — the eight every
   registry starts with (`empty`, `true`, `false`, `equal`, `one-of`,
-  `contains`, `greater`, `less`).
+  `contains`, `greater`, `less`); `appearSchema` / `Appearance` (a
+  kebab-case name, `APPEARANCE_NAME`) for the `appear` and `disappear`
+  sections, `AppearanceDefinition` and `standardAppearances` — the five
+  every appearance registry starts with (`APPEARANCES` their names).
 - **Page events**: `pageEvents`, `PageEventName`, `pageBindingsSchema` /
   `PageBindings` (derived from the declaration), `PAGE_EVENT_WIDGET`,
   `pageEventSource`.

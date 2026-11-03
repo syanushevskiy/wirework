@@ -14,9 +14,9 @@ import { useButton } from "../hooks/use-button";
 export type ButtonEvents = (typeof buttonContract)["events"];
 
 function AntdButton({ viewModel, emit }: ContractProps<typeof buttonContract>) {
-  const { click } = useButton(emit, viewModel.label);
+  const { click, type, danger } = useButton(emit, viewModel.label, viewModel.variant);
   return (
-    <Button type="primary" data-testid="antd-button" onClick={click}>
+    <Button type={type} danger={danger} data-testid="antd-button" data-variant={viewModel.variant} onClick={click}>
       {viewModel.label}
     </Button>
   );

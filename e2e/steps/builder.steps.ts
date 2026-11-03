@@ -506,6 +506,15 @@ Then("the cell {string} appears with {string}", async ({ page }, id: string, app
   await expect(cell(page, id)).toHaveAttribute("data-appear", appearance);
 });
 
+/** How it disappears when the condition turns false — the same list, played in reverse. */
+When("I set the disappearance to {string}", async ({ page }, appearance: string) => {
+  await chooseOption(page, conditionFieldId("disappear"), appearance);
+});
+
+Then("the cell {string} disappears with {string}", async ({ page }, id: string, appearance: string) => {
+  await expect(cell(page, id)).toHaveAttribute("data-disappear", appearance);
+});
+
 /** A cell whose template carries no condition: nothing says when, it simply shows. */
 Then("the cell {string} always shows", async ({ page }, id: string) => {
   await expect(cell(page, id)).toBeVisible();

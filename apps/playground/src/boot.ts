@@ -29,11 +29,13 @@
  */
 import {
   createActions,
+  createAppearances,
   createContracts,
   createLayoutEngines,
   createPredicates,
   createRegistry,
   type ActionRegistry,
+  type AppearanceRegistry,
   type ContractRegistry,
   type LayoutEngineRegistry,
   type PredicateRegistry,
@@ -58,6 +60,8 @@ export interface Registries {
   actions: ActionRegistry;
   /** The checks a widget's `when` may name: the standard ones, plus this application's (doc/conditions-design.md). */
   predicates: PredicateRegistry;
+  /** The animations a conditional widget may appear and disappear with: the standard ones, plus this application's. */
+  appearances: AppearanceRegistry;
 }
 
 /** What the router matched: put at `route` in a demo page's store, so widgets can bind to it. */
@@ -111,6 +115,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
     layoutEngines: createLayoutEngines(),
     actions: createActions(),
     predicates: createPredicates(),
+    appearances: createAppearances(),
   };
   const demo = installDemo(registries, navigator);
   // Boot is over: the registries are what the pages render against, and a

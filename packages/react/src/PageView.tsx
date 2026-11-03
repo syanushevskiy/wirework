@@ -25,6 +25,7 @@ import type { ComponentType, ErrorInfo } from "react";
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
 import type {
   ActionRegistry,
+  AppearanceRegistry,
   LayoutEngineRegistry,
   PredicateRegistry,
   ResolvedPage,
@@ -53,6 +54,8 @@ export interface PageViewProps {
   actions?: ActionRegistry | undefined;
   /** The predicates a cell's `when` may name (doc/conditions-design.md); the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
+  /** The appearances a cell's `appear` and `disappear` may name; the standard ones alone when absent. */
+  appearances?: AppearanceRegistry | undefined;
   /**
    * An already-resolved plan (from `usePagePlan`) for these same inputs.
    * When given, PageView renders it and resolves nothing itself.
@@ -87,6 +90,7 @@ export function PageView({
   layoutEngines,
   actions,
   predicates,
+  appearances,
   plan: providedPlan,
   store,
   bus,
@@ -99,7 +103,7 @@ export function PageView({
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
   const plan = usePagePlan(
-    { viewModels, userViewModels, page, registry, layoutEngines, actions, predicates },
+    { viewModels, userViewModels, page, registry, layoutEngines, actions, predicates, appearances },
     providedPlan,
   );
   useReactions(bus, store, plan, actions);

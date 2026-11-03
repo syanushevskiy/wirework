@@ -28,6 +28,20 @@
   align-content: start;
 }
 
+/*
+ * This application's own appearance, registered as "drop" in demo/install.ts:
+ * the adapter plays `ww-<name>` forward to appear and in reverse to disappear.
+ */
+@keyframes ww-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-1.5rem) scale(0.96);
+  }
+  60% {
+    transform: translateY(0.2rem);
+  }
+}
+
 /* Shell: the title and the menu stay while the router swaps the page. */
 .pg-header {
   display: flex;

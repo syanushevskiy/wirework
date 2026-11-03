@@ -524,8 +524,10 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
     events,
     conditions,
     appear,
+    disappear,
     appearChoices,
     setAppear,
+    setDisappear,
     setPortPath,
     setSetting,
     chooseSetting,
@@ -742,22 +744,29 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
             + condition
           </Button>
         </div>
-        {/* How the widget appears when its condition turns true: one of the adapter's animations, or none. */}
-        {conditions.length === 0 ? null : (
-          <Form.Item htmlFor={conditionFieldId("appear")} label="appears with">
-            <Select
-              id={conditionFieldId("appear")}
-              data-testid={conditionFieldId("appear")}
-              className="ww-builder-field-narrow"
-              placeholder="no animation"
-              allowClear
-              disabled={bindingsLocked}
-              {...(appear === "" ? {} : { value: appear })}
-              onChange={(choice: string | undefined) => setAppear(choice ?? "")}
-              options={appearChoices}
-            />
-          </Form.Item>
-        )}
+        {/* How the widget appears when its condition turns true and disappears when it turns false: an animation the registry knows, or none. */}
+        {conditions.length === 0
+          ? null
+          : (
+              [
+                ["appear", "appears with", appear, setAppear],
+                ["disappear", "disappears with", disappear, setDisappear],
+              ] as const
+            ).map(([part, label, value, set]) => (
+              <Form.Item key={part} htmlFor={conditionFieldId(part)} label={label}>
+                <Select
+                  id={conditionFieldId(part)}
+                  data-testid={conditionFieldId(part)}
+                  className="ww-builder-field-narrow"
+                  placeholder="no animation"
+                  allowClear
+                  disabled={bindingsLocked}
+                  {...(value === "" ? {} : { value })}
+                  onChange={(choice: string | undefined) => set(choice ?? "")}
+                  options={appearChoices}
+                />
+              </Form.Item>
+            ))}
       </Flex>
     </ConfigProvider>
   );

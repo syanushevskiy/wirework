@@ -15,7 +15,7 @@
  */
 import { z } from "zod";
 import { isPlainObject, valueText } from "../paths";
-import { PREDICATE_NAME } from "./names";
+import { APPEARANCE_NAME, PREDICATE_NAME } from "./names";
 import { storePathSchema } from "./io";
 import type { Validator } from "./widget";
 
@@ -55,14 +55,34 @@ export const whenSchema = z.array(z.union([whenTestSchema, whenAnySchema, whenEx
 export type When = z.infer<typeof whenSchema>;
 
 /**
- * How a widget APPEARS when its condition turns true (the `appear` section,
- * beside `when`): one of a closed list of animations an adapter draws —
- * never a duration or a curve in configuration. Without it a widget simply
- * shows.
+ * How a widget APPEARS when its condition turns true (`appear`) and
+ * DISAPPEARS when it turns false (`disappear`): the NAME of an animation —
+ * never a duration or a curve in configuration. An adapter draws the name
+ * as a CSS animation (`@keyframes ww-<name>`, played forward to appear and
+ * in reverse to disappear); the engine's appearance registry says which
+ * names exist — the standard five below and whatever the host registers
+ * with a stylesheet of its own. Without them a widget simply shows and
+ * goes.
  */
-export const APPEARANCES = ["fade", "slide-up", "slide-down", "zoom", "flip"] as const;
-export const appearSchema = z.enum(APPEARANCES);
+export const appearSchema = z.string().regex(APPEARANCE_NAME, "An appearance is a kebab-case name");
 export type Appearance = z.infer<typeof appearSchema>;
+
+/** One named appearance: what the builder lists; the animation itself is the adapter's stylesheet. */
+export interface AppearanceDefinition {
+  name: Appearance;
+  description: string;
+}
+
+export const standardAppearances: readonly AppearanceDefinition[] = [
+  { name: "fade", description: "Fades in" },
+  { name: "slide-up", description: "Slides up into place" },
+  { name: "slide-down", description: "Slides down into place" },
+  { name: "zoom", description: "Grows into place" },
+  { name: "flip", description: "Flips open from the top" },
+];
+
+/** The standard appearances' names, for a schema or a list that needs them alone. */
+export const APPEARANCES: readonly Appearance[] = standardAppearances.map((appearance) => appearance.name);
 
 /**
  * One named check a condition may use. PURE and synchronous: a function of

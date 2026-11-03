@@ -176,6 +176,7 @@ function validateCells(
       const checked = checkTemplate(resolved.definition, template, userWidget?.settings?.[name], {
         actions: input.actions,
         predicates: input.predicates,
+        appearances: input.appearances,
       });
       if (checked.problem) {
         error(`${cellLocation} template "${name}"`, cellProblemMessage(checked.problem, registry));

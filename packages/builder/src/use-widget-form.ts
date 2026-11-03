@@ -28,8 +28,6 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import {
-  APPEARANCES,
-  appearSchema,
   settingFields,
   type AnyWidgetDefinition,
   type EventBindings,
@@ -39,10 +37,12 @@ import {
   type WidgetBindings,
 } from "@wirework/schema";
 import {
+  STANDARD_APPEARANCES,
   STANDARD_PREDICATES,
   compatibleStorePaths,
   sameReaction,
   type ActionRegistry,
+  type AppearanceRegistry,
   type PredicateRegistry,
 } from "@wirework/engine";
 import {
@@ -87,6 +87,8 @@ export interface WidgetFormInput {
   actions: ActionRegistry;
   /** The checks a condition may pick (doc/conditions-design.md); the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
+  /** The animations a conditional widget may pick; the standard ones alone when absent. */
+  appearances?: AppearanceRegistry | undefined;
   /** What the form starts from (an editor: the placed widget's values); empty when absent. */
   initial?: WidgetFormValues | undefined;
 }
@@ -94,8 +96,9 @@ export interface WidgetFormInput {
 /** Accepts any value: a condition may read a path of any shape. */
 const ANY_VALUE = { parse: (value: unknown): unknown => value };
 
-/** The appearances on offer, by name. */
-const APPEAR_CHOICES: Choice[] = APPEARANCES.map((name) => ({ value: name, label: name.replace("-", " ") }));
+/** The appearances on offer: the registry's names, said in words. */
+const appearChoicesOf = (appearances: AppearanceRegistry): Choice[] =>
+  appearances.keys().map((name) => ({ value: name, label: name.replaceAll("-", " ") }));
 
 /** The event's rows with the one at `index` replaced — rows up to it created blank when it is past the end. */
 function withRow(
@@ -114,6 +117,7 @@ export function useWidgetForm({
   store,
   actions,
   predicates = STANDARD_PREDICATES,
+  appearances = STANDARD_APPEARANCES,
   initial = EMPTY_FORM,
 }: WidgetFormInput) {
   const [paths, setPaths] = useState(initial.paths);
@@ -121,6 +125,8 @@ export function useWidgetForm({
   const [conditionDrafts, setConditionDrafts] = useState(initial.conditions);
   const [settingValues, setSettingValues] = useState(initial.settings);
   const [appear, setAppear] = useState(initial.appear);
+  const [disappear, setDisappear] = useState(initial.disappear);
+  const appearChoices = useMemo(() => appearChoicesOf(appearances), [appearances]);
   /** Generated paths the port fields started from (a builder's defaults): see `reset`. */
   const [suggested, setSuggested] = useState<Record<string, string>>({});
 
@@ -230,6 +236,7 @@ export function useWidgetForm({
     setReactions({});
     setConditionDrafts([]);
     setAppear("");
+    setDisappear("");
     setSettingValues({});
   }, []);
 
@@ -394,18 +401,21 @@ export function useWidgetForm({
       }),
     );
     const when = whenOfConditions(conditions);
-    // An appearance means nothing without a condition to appear on: it is saved with one only.
-    const shown = appearSchema.safeParse(appear);
+    // An animation means nothing without a condition to play on: both are saved with one only, and only names the registry knows.
+    const known = (name: string) => (when !== undefined && appearances.get(name) !== undefined ? name : undefined);
+    const shown = known(appear);
+    const gone = known(disappear);
     return {
       bindings: {
         inputs,
         on,
         ...(when === undefined ? {} : { when }),
-        ...(when === undefined || !shown.success ? {} : { appear: shown.data }),
+        ...(shown === undefined ? {} : { appear: shown }),
+        ...(gone === undefined ? {} : { disappear: gone }),
       },
       settings: collected,
     };
-  }, [fields, events, reactions, settings, settingValues, conditions, appear]);
+  }, [fields, events, reactions, settings, settingValues, conditions, appear, disappear, appearances]);
 
   return {
     definition,
@@ -415,10 +425,12 @@ export function useWidgetForm({
     conditions,
     predicateChoices: predicateOptions,
     testChoices,
-    /** How the widget appears when its condition turns true ("" = it simply shows), and the list to pick from. */
+    /** How the widget appears when its condition turns true and disappears when it turns false ("" = it simply shows / goes), and the list to pick from. */
     appear,
-    appearChoices: APPEAR_CHOICES,
+    disappear,
+    appearChoices,
     setAppear,
+    setDisappear,
     setPortPath,
     setSetting,
     chooseSetting,

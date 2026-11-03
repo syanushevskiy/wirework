@@ -31,6 +31,17 @@ reports each problem with its location and severity. `problemText`,
 `errorText` and `issuesText` turn thrown values and validator issues into
 sentences.
 
+## Appearances
+
+How a conditional widget appears and disappears (`appear` / `disappear`,
+doc/conditions-design.md "Appearance") is a NAME from the sixth registry:
+`createAppearances()` starts with the standard five (`standardAppearances`)
+and takes the host's own (`{ name, description }`, the name kebab-case, the
+animation itself `@keyframes ww-<name>` in the host's stylesheet);
+`STANDARD_APPEARANCES` is the standard set alone, sealed.
+`appearanceProblems(viewModel, appearances?)` reports a name nobody
+registered — part of `contractProblems`, given `ResolveInput.appearances`.
+
 ## Events and reactions
 
 `createEmitter` (a cell-scoped, validating `emit`: an undeclared name or a

@@ -66,3 +66,8 @@ When the user asks for the "tiger team" opinion, respond as all personas below, 
 - **Role:** Manual QA testers with no programming language knowledge.
 - **Perspective:** They write test scenarios in plain language (Given/When/Then), execute manual test plans, file detailed bug reports, and validate acceptance criteria. They need tools with visual interfaces, readable reports, and the ability to contribute test cases without touching code.
 - **They do NOT speak individually** — Sasha represents their needs when the tiger team is consulted. Their existence is a constraint that shapes tooling and process decisions.
+
+### 9. External expert reviewer
+
+- **Role:** Expert reviewer that reviews code after other team made conclusion.
+- **Perspective:** Checks code follows doc/guidelines.md and insured that code done is minimum. Less code, less bug, easier to read, cleaner the solution

@@ -92,14 +92,15 @@ export function eventBindingsSchema<E extends WidgetEvents>(events: E) {
 }
 
 /**
- * `inputs` + `on` + `when` + `appear` in one go (the ports, the reactions,
- * the condition under which the widget shows and how it appears when it
- * does — contracts/when.ts). Compose widget settings on top with `.extend()`.
+ * `inputs` + `on` + `when` + `appear` + `disappear` in one go (the ports,
+ * the reactions, the condition under which the widget shows and how it
+ * appears and disappears as it changes — contracts/when.ts). Compose widget
+ * settings on top with `.extend()`.
  */
 export function widgetBindingsSchema<IO extends WidgetIO, E extends WidgetEvents>(io: IO, events: E) {
   return ioBindingsSchema(io)
     .merge(eventBindingsSchema(events))
-    .extend({ when: whenSchema.optional(), appear: appearSchema.optional() });
+    .extend({ when: whenSchema.optional(), appear: appearSchema.optional(), disappear: appearSchema.optional() });
 }
 
 /** Everything a builder collects for a new widget instance. */
@@ -109,4 +110,6 @@ export interface WidgetBindings extends IoBindings {
   when?: When;
   /** How it appears when the condition turns true; absent: it simply shows. */
   appear?: Appearance;
+  /** How it disappears when the condition turns false; absent: it simply goes. */
+  disappear?: Appearance;
 }

@@ -17,6 +17,8 @@ export {
   whenText,
 } from "./predicates";
 export type { PredicateRegistry } from "./predicates";
+export { STANDARD_APPEARANCES, appearanceProblems, createAppearances } from "./appearances";
+export type { AppearanceRegistry } from "./appearances";
 export type { ConditionNode, ParsedExpression } from "./expressions";
 export { createLayoutEngines, resolveTemplate } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";

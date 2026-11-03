@@ -13,7 +13,9 @@ declares:
 - `labelContract` (`LABEL_TONES`, `LabelTone`), `tagContract` (`TAG_TONES`,
   `TagTone`), `alertContract` (`ALERT_TONES`, `AlertTone`),
   `progressContract` (`PROGRESS_TONES`, `ProgressTone`) — display.
-- `buttonContract`, `checkboxContract`, `switchContract`, `inputContract`
+- `buttonContract` (`BUTTON_VARIANTS`, `ButtonVariant`: `primary`,
+  `secondary`, `dashed`, `danger` — how much it stands out),
+  `checkboxContract`, `switchContract`, `inputContract`
   (`INPUT_TYPES`, `VALIDATION_RULES`, `ValidationRule`), `selectContract`,
   `multiSelectContract` and `radioGroupContract` (`choiceOptionSchema`,
   `choiceOptionsSchema`, `ChoiceOption`), `sliderContract`, `rateContract`

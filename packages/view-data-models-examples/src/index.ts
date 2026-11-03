@@ -528,6 +528,8 @@ export const demoViewModels: ViewModels = {
       resetButton: {
         default: {
           label: "Reset counter",
+          // A destructive action looks like one: the `danger` variant.
+          variant: "danger",
           // `call`: anything beyond a store write is host code, picked by name.
           on: { clicked: [{ call: "reset-counter" }] },
         },
@@ -694,8 +696,10 @@ export const demoViewModels: ViewModels = {
         default: {
           label: "Open run",
           on: { clicked: [{ call: "runs/open-selected" }] },
-          // Shown only while a run is selected (doc/conditions-design.md).
+          // Shown only while a run is selected (doc/conditions-design.md), fading in and out.
           when: [{ path: "runs.selected", is: "empty", not: true }],
+          appear: "fade",
+          disappear: "fade",
         },
       },
     },
@@ -770,7 +774,12 @@ export const demoViewModels: ViewModels = {
         default: { inputs: { text: "run.data.name" }, text: "Loading the run…", tone: "accent" },
       },
       back: {
-        default: { label: "Back to runs", on: { clicked: [{ call: "nav/go", with: { to: "/demo/runs" } }] } },
+        default: {
+          label: "Back to runs",
+          // A way back, not the page's main action: the `secondary` variant.
+          variant: "secondary",
+          on: { clicked: [{ call: "nav/go", with: { to: "/demo/runs" } }] },
+        },
       },
       status: {
         default: { inputs: { state: "run.data.status.state" }, prefix: "Status: " },
@@ -791,8 +800,14 @@ export const demoViewModels: ViewModels = {
         },
       },
       retry: {
-        // A check the application registered: two properties and a rule, picked by name like a standard one.
-        default: { text: "Retry possible", tone: "warning", when: [{ path: "run.data", is: "runs/retryable" }] },
+        // A check the application registered: two properties and a rule, picked by name like a standard one —
+        // and an appearance the application registered ("drop", apps/playground/src/demo/install.ts).
+        default: {
+          text: "Retry possible",
+          tone: "warning",
+          when: [{ path: "run.data", is: "runs/retryable" }],
+          appear: "drop",
+        },
       },
       route: {
         default: { inputs: { value: "route" }, label: "Route (from the URL)" },

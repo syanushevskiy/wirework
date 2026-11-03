@@ -20,6 +20,8 @@ export const ACTION_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z][a-z0-9]*(?:
  * namespace ("runs/retryable").
  */
 export const PREDICATE_NAME = ACTION_NAME;
+/** An appearance's name (`fade`, `slide-up`, a host's `drop`): kebab-case, the suffix of its `@keyframes ww-<name>`. */
+export const APPEARANCE_NAME = KEBAB_NAME;
 
 /**
  * One segment of a dotted store path: anything but a dot, whitespace or

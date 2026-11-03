@@ -668,7 +668,9 @@ while I edit the page it stays visible, dimmed, with the reason it would be hidd
   **then** the same groups and conditions come back and can be built on. Parentheses, "and"/"or" and "not" each have
   a colour of their own, so a built condition is read at a glance.
 - **Given** a widget with a condition, **when** I pick an appearance ("slide up") under it, **then** the widget slides
-  in each time its condition turns true; without one it simply shows.
+  in each time its condition turns true; without one it simply shows. **When** I pick a disappearance too, **then**
+  the widget plays it on its way out and is gone when it ends; the list holds the five standard animations and the
+  ones the application registered under names of its own (the demo's "drop", on the run page's retry tag).
 - **Given** my personal view of a page, **then** I cannot change the page's conditions (they are the page's wiring, like
   its data bindings), and the widgets hidden by the page stay hidden in my view.
 

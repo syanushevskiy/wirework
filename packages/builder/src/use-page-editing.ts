@@ -41,6 +41,7 @@ import {
   updateUserPageTemplate,
   updateWidgetTemplate,
   type ActionRegistry,
+  type AppearanceRegistry,
   type LayoutEngineRegistry,
   type PredicateRegistry,
   type ResolvedCell,
@@ -95,6 +96,8 @@ export interface PageEditingInput {
   actions: ActionRegistry;
   /** The predicates a cell's `when` may name; the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
+  /** The appearances a cell's `appear` and `disappear` may name; the standard ones alone when absent. */
+  appearances?: AppearanceRegistry | undefined;
   page: string;
   target: EditTarget;
   withUserOverlay: boolean;
@@ -136,6 +139,7 @@ export function usePageEditing({
   layoutEngines,
   actions,
   predicates,
+  appearances,
   page,
   target,
   withUserOverlay,
@@ -157,6 +161,7 @@ export function usePageEditing({
     layoutEngines,
     actions,
     predicates,
+    appearances,
   });
   const activeView = plan.problem === undefined ? plan.view : undefined;
   const engine = plan.problem === undefined ? plan.engine : undefined;

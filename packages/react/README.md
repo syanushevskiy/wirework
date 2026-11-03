@@ -19,9 +19,14 @@ import "@wirework/react/styles.css";
   (doc/conditions-design.md). A cell whose condition does not hold keeps
   its place with `data-when="false"` and no widget inside; in edit mode
   the widget stays, dimmed, with the reason (`cell-hidden-note`). A
-  template's `appear` (one of `APPEARANCES`) is the animation the widget
-  mounts with when its condition turns true, `data-appear` on the cell and
-  `.ww-appear-<name>` in this stylesheet.
+  template's `appear` and `disappear` name the animations the widget
+  plays when its condition turns true and false (`data-appear` /
+  `data-disappear` on the cell): the keyframes `ww-<name>` of this
+  stylesheet, forward on the way in and in reverse on the way out — the
+  widget stays mounted until the animation ends (`useShowing`). A host's
+  own appearance is a name in the engine's registry (`appearances`, the
+  registry a cell's names are checked against) plus its `@keyframes
+ww-<name>` in the host's stylesheet.
 - `WidgetPreview` (`WidgetPreviewProps`) — a live, non-interactive render of
   a widget from its preview seed, for palettes and catalogs.
 - `CellChrome` (`CellChromeProps`) — the Edit / Remove actions an engine

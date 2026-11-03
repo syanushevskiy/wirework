@@ -35,6 +35,7 @@ import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { errorText, issuesText, problemText } from "./messages";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
+import { appearanceProblems, type AppearanceRegistry } from "./appearances";
 import { whenProblems, type PredicateRegistry } from "./predicates";
 import { actionArguments, withDefaultReactions } from "./reactions";
 import type { WidgetRegistry } from "./registry";
@@ -135,12 +136,15 @@ export interface ResolveInput {
   actions?: ActionRegistry | undefined;
   /** The predicates a `when` may name; the standard ones alone when absent (doc/conditions-design.md). */
   predicates?: PredicateRegistry | undefined;
+  /** The appearances `appear` and `disappear` may name; the standard ones alone when absent. */
+  appearances?: AppearanceRegistry | undefined;
 }
 
 /** The registries a template is checked against. */
 export interface CheckRegistries {
   actions?: ActionRegistry | undefined;
   predicates?: PredicateRegistry | undefined;
+  appearances?: AppearanceRegistry | undefined;
 }
 
 /**
@@ -200,11 +204,17 @@ export function pickTemplate(
 export function contractProblems(
   definition: AnyWidgetDefinition,
   viewModel: unknown,
-  { actions, predicates }: CheckRegistries = {},
+  { actions, predicates, appearances }: CheckRegistries = {},
 ): string | undefined {
   // The one cast: the widget's own schema parsed `viewModel` a moment ago. `Partial`,
   // because zod keeps a reaction list left explicitly `undefined` under its key.
-  const vm = viewModel as { inputs?: Record<string, unknown>; on?: Partial<EventBindings>; when?: When } | null;
+  const vm = viewModel as {
+    inputs?: Record<string, unknown>;
+    on?: Partial<EventBindings>;
+    when?: When;
+    appear?: string;
+    disappear?: string;
+  } | null;
   const events = definition.events as WidgetEvents;
   const unknownActions: string[] = [];
   const invalidArguments: string[] = [];
@@ -254,6 +264,7 @@ export function contractProblems(
     parts.push(`reactions read payload fields that do not exist: ${unknownFields.join("; ")}`);
   const condition = whenProblems(vm?.when, predicates);
   if (condition !== undefined) parts.push(`the condition is wrong: ${condition}`);
+  parts.push(...appearanceProblems(vm ?? undefined, appearances));
   return parts.length > 0 ? parts.join("; ") : undefined;
 }
 
@@ -284,7 +295,7 @@ export function checkTemplate(
  * overlay), validation by the widget's own schema and the contract check.
  */
 function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): ResolvedCell {
-  const { viewModels, userViewModels, page, registry, actions, predicates } = input;
+  const { viewModels, userViewModels, page, registry, actions, predicates, appearances } = input;
   const base = { key: cell.id, widget: cell.widget, model: cell.model } as const;
 
   const definition = registry.get(cell.widget);
@@ -319,6 +330,7 @@ function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): R
   const checked = checkTemplate(definition, templateMap[picked.name], userWidget?.settings?.[picked.name], {
     actions,
     predicates,
+    appearances,
   });
   const chosen = { template: picked.name, ...(picked.fallback === undefined ? {} : { fallback: picked.fallback }) };
   if (checked.problem) {

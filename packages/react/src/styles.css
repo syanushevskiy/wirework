@@ -29,10 +29,14 @@
 }
 
 /*
- * How a widget APPEARS when its condition turns true (`appear`, one of
- * APPEARANCES in @wirework/schema): the element around the widget mounts
- * with the condition, so a mount animation is the appearance. Short and
- * eased; none at all for people who asked their system for less motion.
+ * How a widget APPEARS when its condition turns true and DISAPPEARS when it
+ * turns false (`appear` / `disappear`, names from the engine's appearance
+ * registry): the element around the widget plays the keyframes named
+ * `ww-<name>` — forward on the way in, in REVERSE on the way out, so one
+ * set of keyframes serves both. A host registers an appearance of its own
+ * by name and writes its `@keyframes ww-<name>` in a stylesheet of its own
+ * (the playground's `ww-drop`). Short and eased; none at all for people who
+ * asked their system for less motion.
  */
 .ww-appear {
   --ww-appear-time: 320ms;
@@ -42,25 +46,8 @@
   animation-fill-mode: both;
 }
 
-.ww-appear-fade {
-  animation-name: ww-fade;
-}
-
-.ww-appear-slide-up {
-  animation-name: ww-slide-up;
-}
-
-.ww-appear-slide-down {
-  animation-name: ww-slide-down;
-}
-
-.ww-appear-zoom {
-  animation-name: ww-zoom;
-}
-
-.ww-appear-flip {
-  animation-name: ww-flip;
-  transform-origin: top center;
+.ww-disappear {
+  animation-direction: reverse;
 }
 
 @keyframes ww-fade {
@@ -94,6 +81,10 @@
   from {
     opacity: 0;
     transform: perspective(40rem) rotateX(-20deg);
+    transform-origin: top center;
+  }
+  to {
+    transform-origin: top center;
   }
 }
 

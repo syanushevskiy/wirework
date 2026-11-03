@@ -13,6 +13,9 @@ Feature: Conditions — a widget shown when a predicate holds
     Then the cell "button-open-run" is hidden
     When I click the table row "123456"
     Then the cell "button-open-run" is shown
+    # It fades in, and fades out on its way: the cell is empty once the animation has ended.
+    And the cell "button-open-run" appears with "fade"
+    And the cell "button-open-run" disappears with "fade"
     When the store holds at "runs.selected":
       """
       ""
@@ -33,6 +36,8 @@ Feature: Conditions — a widget shown when a predicate holds
     Then the status badge reads "Status: Failed"
     And the cell "tag-run-retry" is shown
     And the cell "tag-run-retry" reads "Retry possible"
+    # An appearance the application registered ("drop"), picked by name like a standard one.
+    And the cell "tag-run-retry" appears with "drop"
     When I open the address "/demo/runs/123457"
     Then the status badge reads "Status: Success"
     And the cell "tag-run-retry" is hidden
@@ -45,20 +50,25 @@ Feature: Conditions — a widget shown when a predicate holds
     And I set the condition to "demo.count" "is greater than" "10"
     Then the condition reads "when demo.count is greater than 10"
     And the add widget button is enabled
-    # A conditional widget may APPEAR with an animation from the list; it simply shows otherwise.
+    # A conditional widget may APPEAR and DISAPPEAR with an animation from the list — the standard ones and the
+    # application's own "drop"; it simply shows and goes otherwise.
     When I set the appearance to "slide up"
+    And I set the disappearance to "drop"
     And I add the widget
     Then the page has 1 cell
     And the cell "custom-1" is hidden
     And the cell "custom-1" appears with "slide-up"
+    And the cell "custom-1" disappears with "drop"
     And the state JSON contains '"is": "greater"'
     And the state JSON contains '"appear": "slide-up"'
+    And the state JSON contains '"disappear": "drop"'
     When the store holds at "demo.count":
       """
       11
       """
     Then the cell "custom-1" is shown
     And the label reads "Plenty"
+    # Hidden again, it drops out: the cell is empty once the animation has ended.
     When the store holds at "demo.count":
       """
       5

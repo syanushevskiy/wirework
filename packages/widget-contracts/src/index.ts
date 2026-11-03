@@ -7,7 +7,8 @@
  */
 export { labelContract, LABEL_TONES } from "./label";
 export type { LabelTone } from "./label";
-export { buttonContract } from "./button";
+export { buttonContract, BUTTON_VARIANTS } from "./button";
+export type { ButtonVariant } from "./button";
 export { inputContract, INPUT_TYPES, VALIDATION_RULES } from "./input";
 export type { ValidationRule } from "./input";
 export { paginationContract, PAGINATION_SIZES } from "./pagination";

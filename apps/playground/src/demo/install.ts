@@ -51,7 +51,7 @@ export interface Demo {
 }
 
 export function installDemo(
-  { contracts, registry, layoutEngines, actions, predicates }: Registries,
+  { contracts, registry, layoutEngines, actions, predicates, appearances }: Registries,
   navigator: Navigator,
 ): Demo {
   // Contracts: the standard kinds plus this app's own; widgets implement them.
@@ -122,6 +122,10 @@ export function installDemo(
     phrase: "can be retried",
     test: (run) => isRetryable(run),
   });
+
+  // An appearance of this application's own: the name here, the keyframes
+  // `ww-drop` in index.css (doc/conditions-design.md, "Appearance").
+  appearances.register({ name: "drop", description: "Drops in from above" });
 
   // Negative proof: every broken definition must be rejected loudly.
   const rejections = Object.entries(brokenWidgets).map(([name, definition]) => {

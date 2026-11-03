@@ -142,6 +142,51 @@ describe("PageView", () => {
       expect(screen.getByTestId("cell").hasAttribute("data-when")).toBe(false);
     });
 
+    it("plays its disappearance on the way out, in reverse, and leaves when it ends", () => {
+      const animated = viewModels([cell()], {
+        echo: { default: { inputs: { value: "demo.text" }, when: notEmpty, appear: "fade", disappear: "zoom" } },
+      });
+      const { store } = renderPage({ viewModels: animated });
+      const shown = screen.getByTestId("cell").querySelector<HTMLElement>(".ww-appear");
+      expect(shown?.style.animationName).toBe("ww-fade");
+      expect(shown?.classList.contains("ww-disappear")).toBe(false);
+
+      act(() => store.set("demo.text", ""));
+      const cellElement = screen.getByTestId("cell");
+      expect(cellElement.getAttribute("data-when")).toBe("false");
+      expect(cellElement.getAttribute("data-disappear")).toBe("zoom");
+      // Still mounted, on its way out: the disappearance plays in reverse.
+      const leaving = cellElement.querySelector<HTMLElement>(".ww-disappear");
+      if (!leaving) throw new Error("nothing is leaving");
+      expect(leaving.style.animationName).toBe("ww-zoom");
+      expect(screen.getByTestId("echo")).toBeTruthy();
+
+      fireEvent.animationEnd(leaving);
+      expect(screen.queryByTestId("echo")).toBeNull();
+      expect(cellElement.querySelector(".ww-appear")).toBeNull();
+    });
+
+    it("stays when its condition turns true again before the way out ended", () => {
+      const animated = viewModels([cell()], {
+        echo: { default: { inputs: { value: "demo.text" }, when: notEmpty, disappear: "zoom" } },
+      });
+      const { store } = renderPage({ viewModels: animated });
+      act(() => store.set("demo.text", ""));
+      expect(screen.getByTestId("cell").querySelector(".ww-disappear")).not.toBeNull();
+      act(() => store.set("demo.text", "back"));
+      expect(screen.getByTestId("cell").querySelector(".ww-disappear")).toBeNull();
+      expect(screen.getByTestId("echo").textContent).toBe("back");
+    });
+
+    it("shows an appearance nobody registered as a cell problem", () => {
+      renderPage({
+        viewModels: viewModels([cell()], {
+          echo: { default: { inputs: { value: "demo.text" }, when: notEmpty, appear: "drop" } },
+        }),
+      });
+      expect(screen.getByTestId("cell-problem").textContent).toContain('unknown appearance "drop"');
+    });
+
     it("shows a condition that names an unknown predicate as a cell problem", () => {
       renderPage({ viewModels: conditional([{ path: "demo.text", is: "demo/nope" }]) });
       const problem = screen.getByTestId("cell-problem");

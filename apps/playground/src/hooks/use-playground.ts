@@ -51,7 +51,7 @@ const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
 const NO_USER_VIEW_MODELS: UserViewModels = {};
 
 export function usePlayground(playground: Playground, visit: PageVisit) {
-  const { registry, contracts, layoutEngines, actions, predicates, rejections } = playground;
+  const { registry, contracts, layoutEngines, actions, predicates, appearances, rejections } = playground;
   const { page, store, bus } = visit;
   // The page's opening (the first server request, the application's session
   // request) is a side effect: it belongs here, not in the router's loader
@@ -83,8 +83,8 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
-    () => validateViewModels({ registry, layoutEngines, viewModels, userViewModels, actions, predicates }),
-    [registry, layoutEngines, viewModels, userViewModels, actions, predicates],
+    () => validateViewModels({ registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances }),
+    [registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances],
   );
 
   /** This demo's own host-side wiring — not the builder's and not the engine's. */
@@ -128,6 +128,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     layoutEngines,
     actions,
     predicates,
+    appearances,
     page,
     target,
     withUserOverlay,
@@ -229,6 +230,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     layoutEngines,
     actions,
     predicates,
+    appearances,
     store,
     bus,
     report,

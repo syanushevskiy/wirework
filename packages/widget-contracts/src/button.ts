@@ -6,6 +6,10 @@
 import { z } from "zod";
 import { defineContract } from "@wirework/schema";
 
+/** How much a button stands out: the page's main action, a secondary one, an outlined one, a destructive one. */
+export const BUTTON_VARIANTS = ["primary", "secondary", "dashed", "danger"] as const;
+export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
+
 export const buttonContract = defineContract({
   kind: "button",
   description: "A button that emits `clicked` — wire the click to a reaction or an action",
@@ -18,6 +22,7 @@ export const buttonContract = defineContract({
   },
   settings: z.object({
     label: z.string().default("Click me").describe("Button caption"),
+    variant: z.enum(BUTTON_VARIANTS).default("primary").describe("How much the button stands out"),
   }),
   preview: { viewModel: { label: "Click me" } },
 });
