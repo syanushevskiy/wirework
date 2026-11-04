@@ -57,6 +57,15 @@ describe("the layout vocabulary", () => {
     expect(LAYOUT_CLASSES).not.toHaveProperty("-m-auto");
   });
 
+  it("has no name Tailwind 4 lacks — checked against Tailwind 4.3.4 on 3 November 2026", () => {
+    expect(LAYOUT_CLASSES).not.toHaveProperty("-order-last");
+    expect(LAYOUT_CLASSES).not.toHaveProperty("max-w-auto");
+    expect(LAYOUT_CLASSES).not.toHaveProperty("max-h-auto");
+    expect(LAYOUT_CLASSES["min-w-auto"]).toEqual({ minWidth: "auto" });
+    expect(LAYOUT_CLASSES["max-w-none"]).toEqual({ maxWidth: "none" });
+    expect(LAYOUT_CLASSES["order-last"]).toEqual({ order: "9999" });
+  });
+
   it("takes an arbitrary value in brackets where Tailwind does, underscores as spaces, negated by a leading minus", () => {
     expect(styleOf("w-[320px]")).toEqual({ width: "320px" });
     expect(styleOf("grid-cols-[200px_1fr]")).toEqual({ gridTemplateColumns: "200px 1fr" });

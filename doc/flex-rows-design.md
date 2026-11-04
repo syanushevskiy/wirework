@@ -130,8 +130,20 @@ works wherever Tailwind takes one (`w-[32rem]`, `grid-cols-[200px_1fr]`,
 `items-*`, `overflow-*`) takes none. Nothing outside layout — no colours,
 no typography, no borders — and nothing inline style cannot say: no
 responsive or state variants (`md:`, `hover:`), no `space-x-*` /
-`divide-*` (child selectors; use `gap-*`). About 2 900 names; the
-`<datalist>` holds them all.
+`divide-*` (child selectors; use `gap-*`). 3 226 names; the `<datalist>`
+holds them all. Every name was checked against Tailwind 4.3.4's own
+compiler on 3 November 2026 (see "Tailwind itself, weighed again"): three
+the table had, Tailwind lacks — `-order-last`, `max-w-auto`, `max-h-auto`
+— and they are gone, pinned by a test.
+
+Two things a Tailwind user should know, because the names are Tailwind's
+but the mechanism is inline style. The ORDER of two names that set the
+same property: here the later one in the field wins (`px-2 p-4` pads all
+four sides 1rem), where Tailwind's stylesheet order would let `px-2` win
+either way — write the general name first and the specific one after it
+and both agree (`p-4 px-2`, `flex-none basis-24`). And PRECEDENCE: inline
+style beats every class rule, a host's included, where a Tailwind class
+is an ordinary rule.
 
 ### The change payload and the operations (`operations.ts`)
 
@@ -195,15 +207,24 @@ grid-cols-3` to make the row a grid. Press Enter; the page shows it at
 ### The demo: the cards page (`/demo/cards`)
 
 The page runs on FLEXLAYOUT: a root row of two tabsets side by side
-(weights 60 and 40), each the one tab of a card, which the user may drag
-and resize as the docking engine allows. The card **Counter on a grid**
-holds a react-grid-layout with a statistic of `demo.counter`, the counter
-that moves it and a secondary button that calls `reset-counter`; the card
-**Profile in flex rows** holds flex rows — a row `items-end gap-2` with
-the name input (`flex-1`) and the auto-refresh switch (`shrink-0`), both
-writing the GLOBAL settings every page reads, and a row with the greeting
-label (`w-full`) that echoes the name. Three widgets in each, every one
-live; three layout engines on one page.
+(weights 40 and 60 — the playground's page is 728px wide at most, and the
+profile card needs the room), each the one tab of a card, which the user
+may drag and resize as the docking engine allows. The card **Counter on a
+grid** holds a react-grid-layout with a statistic of `demo.counter`, the
+counter that moves it and a secondary button that calls `reset-counter`;
+the card **Profile in flex rows** holds three flex rows: a row `gap-2` of
+three buttons of DIFFERENT sizes — Alice `basis-32 grow` (8rem, and it
+grows into the room left), Bob `flex-none basis-24` (6rem, fixed), Clear
+`flex-none basis-20` (5rem, fixed) — each a `set` of
+`app.settings.displayName` with a literal value; a row `items-end gap-2`
+with the name input (`flex-1`) and the auto-refresh switch (`shrink-0`),
+both writing the GLOBAL settings every page reads; and a row with the
+greeting label (`w-full`) that echoes the name. A row WRAPS by default,
+so when the card gets narrow — the window resized, or the splitter
+dragged — the button that no longer fits goes to the next line of its row
+and comes back with the room: at the e2e's 1280px the three stand side by
+side, at 600px Clear drops under Alice, at 520px Bob does too. Three
+layout engines on one page, every widget live.
 
 ## Tested
 
@@ -215,21 +236,83 @@ live; three layout engines on one page.
   once, `flexStyle` merging in order with strangers ignored.
 - E2E (`flex-rows.feature`): the cards page — FlexLayout at the root,
   the cards side by side (bounding boxes), each card's engine and cells,
-  the profile row's classes at work (the field and the switch side by
+  the profile rows' classes at work (the field and the switch side by
   side, the greeting below), the counter moving the statistic, reset, the
-  name typed and greeted, the switch writing the global setting; classes
+  name typed and greeted, the switch writing the global setting; the
+  profile card's row of buttons — three sizes measured (Alice wider than
+  Bob, Bob wider than Clear), the buttons setting the name the field and
+  the greeting follow, the row wrapping as the window narrows to 600px
+  and 520px and unwrapping at 1280px; classes
   changed with the overlay on and saved into `my-own`, the shared page
   untouched; the builder — two cells lifted into one row,
   reordered, row and cell classed, saved, chrome gone; an unknown class
   flagged in the field and warned above the page, gone when corrected; a
   card's flex content edited as the page through "Edit content".
 
+## Tailwind itself, weighed again (3 November 2026)
+
+After the build the question came back: why not install Tailwind, its
+general-purpose classes only? Investigated with Tailwind 4.3.4 installed
+in the engine package for an afternoon and its compiler asked for the
+stylesheet of the table's names (`@tailwindcss/node`'s `compile`, the
+names as the candidates). What was learnt, kept here because the question
+will come back:
+
+- **Tailwind is a compiler.** It emits CSS for the class names it SEES in
+  source files. Page templates live in a store, the builder and a server,
+  so the engine's names must be handed to it as a safelist — which is the
+  table we have. Validation still needs the table: Tailwind has no list
+  of valid names to ask at runtime.
+- **A prefix is a must in both kinds of host.** In a host without
+  Tailwind an unprefixed engine stylesheet defines `.hidden`, `.block`,
+  `.flex`, `.grid`, `.collapse` globally — a hazard for any host CSS or
+  third-party widget using one of those words. In a host WITH Tailwind
+  the two stylesheets would define the same class names and both write
+  `--spacing`; whichever loads later wins, and a host's customised scale
+  leaks into the engine or the other way round. With `prefix(ww)` the
+  rules are `.ww\:w-4` and the variable `--ww-spacing`; nothing can meet
+  them by accident, and the host's own prefix is unrelated. Template data
+  would keep `w-2/3`; the renderer would write `ww:w-2/3`.
+- **Cascade layers.** Tailwind puts its utilities in `@layer utilities`,
+  and unlayered CSS beats any layered rule whatever its specificity. The
+  engine would import the utilities UNLAYERED and lower its own defaults
+  to `:where()` (zero specificity), or `flex-none` would lose to the
+  default `flex: 1 1 0%`.
+- **Arbitrary values** (`w-[320px]`) cannot be in a prebuilt stylesheet;
+  they would stay inline style. `md:w-[320px]` is impossible without a
+  runtime compiler.
+- **Three names** the table had, Tailwind 4.3.4 rejects: `-order-last`,
+  `max-w-auto`, `max-h-auto`. Fixed in the table either way.
+- **Size**, measured, minified then gzipped:
+
+  | Stylesheet                                             | Minified | Gzipped |
+  | ------------------------------------------------------ | -------- | ------- |
+  | The table as it is (`classes.ts` built; no stylesheet) | 14.5 KB  | 4.3 KB  |
+  | Tailwind, the 3 229 names, no breakpoints              | 149 KB   | 19 KB   |
+  | Tailwind, the names × `sm md lg xl 2xl`                | 957 KB   | 115 KB  |
+
+  The table is small because it ships a recipe — forty utility
+  definitions and a few value lists multiplied on load (about 650 KB of
+  heap, 7ms) — where a stylesheet must spell every rule out.
+
+**Decided: without Tailwind.** The prefix would have solved coexistence
+either way; what Tailwind buys is `md:` variants at 115 KB, or nothing
+new at 19 KB, against 4.3 KB today — and the guidelines' rule against
+utility-class frameworks stands. The dependency was taken out again the
+same day; the lockfile is as it was. Should responsive variants become a
+requirement, the route is known: Tailwind as a dev dependency of the
+engine package only, the table as the safelist, the prefix `ww`, the
+utilities unlayered, breakpoints for the Flexbox and Sizing sections only
+(near 40 KB), the generated stylesheet committed and checked by a test —
+about a day's work.
+
 ## Later
 
 - **Responsive variants** (`md:flex-row`, `lg:basis-1/2`): inline style
-  cannot; the day they are wanted, the table grows a stylesheet
-  generated from it (option B on top of C) and the field accepts the
-  prefixes.
+  cannot; the day they are wanted, the way is described above ("Tailwind
+  itself, weighed again") — or the table grows its own generated
+  stylesheet (option B on top of C), which the same recipe would keep
+  small for a few breakpoints.
 - **Child selectors** (`space-x-*`, `divide-*`): inline style cannot
   reach the children; a stylesheet could, the day a row's `gap-*` is not
   enough.

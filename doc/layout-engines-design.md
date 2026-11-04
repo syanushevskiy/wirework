@@ -196,6 +196,7 @@ when the overlay is off, cancel dropping everything, the overlay toggle
 ending a session; on the builder page: modify, remove and layout save
 written to the base view models. Flex rows: the demo's cards page (a
 FlexLayout of two cards side by side, a grid in one and flex rows in the
-other), classes saved into the user's own view with the overlay on, cells
+other — a row of three buttons of different sizes that wraps as the
+window narrows), classes saved into the user's own view with the overlay on, cells
 moved between rows and classed in the builder, an unknown class flagged
 and reported, a card's flex content edited as the page.

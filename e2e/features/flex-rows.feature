@@ -16,11 +16,12 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     And the container "card-counter" runs on the "react-grid-layout" engine
     And the container "card-profile" runs on the "flex-rows" engine
     And the container "card-counter" holds the cells "statistic-clicks, counter-clicks, button-reset-clicks"
-    And the container "card-profile" holds the cells "input-profile-name, switch-profile-refresh, label-greeting"
-    # Inside the profile card the flex classes do their work: the name field takes the row, the switch keeps its size.
+    And the container "card-profile" holds the cells "button-name-alice, button-name-bob, button-name-clear, input-profile-name, switch-profile-refresh, label-greeting"
+    # Inside the profile card the flex classes do their work: the name field takes its row, the switch keeps its size.
     And the cells "input-profile-name, switch-profile-refresh" sit side by side
     And the cell "input-profile-name" has the flex classes "flex-1"
     And the cell "switch-profile-refresh" has the flex classes "shrink-0"
+    And the cell "input-profile-name" sits below the cell "button-name-alice"
     And the cell "label-greeting" sits below the cell "input-profile-name"
     # The widgets inside work as on any page: the counter moves the statistic, the controls write the global settings.
     When I click the counter 2 times
@@ -31,6 +32,36 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     Then the cell "label-greeting" reads "Sergey"
     When I flip the switch
     Then the state JSON contains '"autoRefresh": true'
+
+  Scenario: In the profile card a row of buttons of different sizes wraps when the card gets narrow, and the buttons write the name the field edits
+    Given I open the "cards" page
+    And the server has had time to answer
+    # Three buttons in one row: the first grows into the room left, the other two keep the width their basis says.
+    Then the cell "button-name-alice" has the flex classes "basis-32 grow"
+    And the cell "button-name-bob" has the flex classes "flex-none basis-24"
+    And the cell "button-name-clear" has the flex classes "flex-none basis-20"
+    And the cells "button-name-alice, button-name-bob, button-name-clear" sit side by side
+    And the cell "button-name-alice" is wider than the cell "button-name-bob"
+    And the cell "button-name-bob" is wider than the cell "button-name-clear"
+    # The buttons set the name; the field and the greeting follow, as they do a typed name.
+    When I click the button "Alice"
+    Then the cell "label-greeting" reads "Alice"
+    When I type "Sergey" into the input
+    Then the cell "label-greeting" reads "Sergey"
+    When I click the button "Bob"
+    Then the cell "label-greeting" reads "Bob"
+    When I click the button "Clear"
+    Then the cell "label-greeting" reads ""
+    # Narrow the window and the card with it: the button that no longer fits goes to the next line of its row, and comes back with the room.
+    When the browser window is 600 pixels wide
+    Then the cells "button-name-alice, button-name-bob" sit side by side
+    And the cell "button-name-clear" sits below the cell "button-name-alice"
+    And the cell "input-profile-name" sits below the cell "button-name-clear"
+    When the browser window is 520 pixels wide
+    Then the cell "button-name-bob" sits below the cell "button-name-alice"
+    And the cells "button-name-bob, button-name-clear" sit side by side
+    When the browser window is 1280 pixels wide
+    Then the cells "button-name-alice, button-name-bob, button-name-clear" sit side by side
 
   Scenario: With the user overlay on, a cell's flex classes go into the user's own view, as a drag on a grid does
     Given I open the "builder" page
@@ -101,7 +132,7 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     And I edit the content of the cell "card-profile"
     Then the breadcrumb reads "cards › card-profile"
     And the page layout uses the "flex-rows" engine
-    And the page has 2 rows
+    And the page has 3 rows
     When I set the flex classes of the cell "switch-profile-refresh" to "shrink-0 self-start"
     And I save the page
     Then the cell "switch-profile-refresh" has the flex classes "shrink-0 self-start"

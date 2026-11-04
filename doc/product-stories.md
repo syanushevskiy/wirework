@@ -769,6 +769,11 @@ not know is flagged and does nothing. A demo page shows two cards side by side a
   the counter card on a grid inside and the profile card on flex rows inside, where the name field takes its row and
   the switch keeps its size; clicking the counter moves the statistic, Reset puts it back, the name typed in the
   profile card is greeted below and the switch writes the global setting.
+- **Given** the profile card's row of three buttons of different sizes ("basis-32 grow", "flex-none basis-24",
+  "flex-none basis-20"), **then** they stand side by side, each narrower than the one before; **when** I click Alice,
+  Bob or Clear, **then** the field and the greeting show that name; **when** the window narrows so the card has no
+  room for them all, **then** the buttons that no longer fit go to the next line of their row, and come back when the
+  room does.
 - **Given** a page on flex rows with my overlay on, **when** I change a cell's classes to "basis-1/2 self-end" and
   save, **then** the change is in my own view and survives the save, and with the overlay off the shared page shows
   the cell without them.
@@ -783,7 +788,8 @@ not know is flagged and does nothing. A demo page shows two cards side by side a
 
 **Delivered:** 3 November 2026.
 
-**Verified by:** `flex-rows.feature` (the cards page, its three engines and its widgets, classes saved into the user's own view, cells
-moved and classed in the builder, the unknown class, a card's flex content edited as the page); the engine's unit tests
-(`engine.test.ts`: the promises, rows appended and dropped, classes set and cleared, every move, `validate`;
-`classes.test.ts`: Tailwind's names and values, the merge, the strangers).
+**Verified by:** `flex-rows.feature` (the cards page, its three engines and its widgets, the profile card's row of
+buttons measured and wrapping as the window narrows, classes saved into the user's own view, cells moved and classed in
+the builder, the unknown class, a card's flex content edited as the page); the engine's unit tests (`engine.test.ts`:
+the promises, rows appended and dropped, classes set and cleared, every move, `validate`; `classes.test.ts`: Tailwind's
+names and values, the three names Tailwind 4.3.4 lacks kept out, the merge, the strangers).

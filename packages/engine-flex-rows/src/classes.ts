@@ -75,6 +75,8 @@ const pairs = (named: Record<string, string>): Values => Object.entries(named);
 const FLEX_START_END = pairs({ start: "flex-start", end: "flex-end", center: "center" });
 const DISTRIBUTE = pairs({ between: "space-between", around: "space-around", evenly: "space-evenly" });
 const SIZE_KEYWORDS = pairs({ auto: "auto", full: "100%", min: "min-content", max: "max-content", fit: "fit-content" });
+/** A limit has no `auto`: Tailwind has `w-auto` and `min-w-auto`, never `max-w-auto` or `max-h-auto`. */
+const LIMIT_KEYWORDS = SIZE_KEYWORDS.filter(([name]) => name !== "auto");
 const SCREENS = (unit: string): Values =>
   pairs({
     screen: `100${unit}`,
@@ -201,9 +203,13 @@ const UTILITIES: readonly Utility[] = [
   ]),
   utility("grow", prop("flexGrow"), count(12, 0)),
   utility("shrink", prop("flexShrink"), count(12, 0)),
-  utility("order", prop("order"), [...count(12), ["first", "-9999"], ["last", "9999"], ["none", "0"]], {
-    negative: true,
-  }),
+  // Only a NUMBERED order has a negative (`-order-1`); Tailwind has no `-order-last`.
+  utility("order", prop("order"), count(12), { negative: true }),
+  utility("order", prop("order"), [
+    ["first", "-9999"],
+    ["last", "9999"],
+    ["none", "0"],
+  ]),
   utility("grid-cols", prop("gridTemplateColumns"), [
     ...count(12).map(([n]) => [n, `repeat(${n}, minmax(0, 1fr))`] as const),
     ...keywords("none", "subgrid"),
@@ -282,7 +288,7 @@ const UTILITIES: readonly Utility[] = [
     ...SCALE,
     ...FRACTIONS,
     ...CONTAINERS,
-    ...SIZE_KEYWORDS,
+    ...LIMIT_KEYWORDS,
     ...SCREENS("vw"),
     ["none", "none"],
     ["prose", "65ch"],
@@ -292,7 +298,7 @@ const UTILITIES: readonly Utility[] = [
   utility("max-h", prop("maxHeight"), [
     ...SCALE,
     ...FRACTIONS,
-    ...SIZE_KEYWORDS,
+    ...LIMIT_KEYWORDS,
     ...SCREENS("vh"),
     ["lh", "1lh"],
     ["none", "none"],

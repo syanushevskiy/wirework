@@ -97,6 +97,17 @@ Then("the cell {string} sits below the cell {string}", async ({ page }, id: stri
   expect(lower.y).toBeGreaterThanOrEqual(upper.y + upper.height - 1);
 });
 
+Then("the cell {string} is wider than the cell {string}", async ({ page }, id: string, other: string) => {
+  const wide = await settledBox(cell(page, id));
+  const narrow = await settledBox(cell(page, other));
+  expect(wide.width).toBeGreaterThan(narrow.width);
+});
+
+/** The window's width, its height kept: the panes follow it, and a flex row wraps the cells that no longer fit. */
+When("the browser window is {int} pixels wide", async ({ page }, width: number) => {
+  await page.setViewportSize({ width, height: page.viewportSize()?.height ?? 720 });
+});
+
 /** The layout inside a container names its engine: a card may run another engine than its page. */
 Then("the container {string} runs on the {string} engine", async ({ page }, id: string, engine: string) => {
   await expect(cell(page, id).locator('[data-testid="layout"]').first()).toHaveAttribute("data-engine", engine);

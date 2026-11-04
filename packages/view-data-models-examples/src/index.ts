@@ -498,13 +498,13 @@ export const demoViewModels: ViewModels = {
               {
                 type: "tabset",
                 id: "counter",
-                weight: 60,
+                weight: 40,
                 children: [{ type: "tab", id: "card-counter", name: "Counter", component: "cell" }],
               },
               {
                 type: "tabset",
                 id: "profile",
-                weight: 40,
+                weight: 60,
                 children: [{ type: "tab", id: "card-profile", name: "Profile", component: "cell" }],
               },
             ],
@@ -959,13 +959,43 @@ export const demoViewModels: ViewModels = {
       reset: {
         default: { label: "Reset", variant: "secondary", on: { clicked: [{ call: "reset-counter" }] } },
       },
-      // A card on FLEX ROWS: the name field takes the row, the switch keeps its size beside it; the greeting below.
+      // A card on FLEX ROWS: a row of three buttons of different sizes that
+      // WRAPS when the card gets narrow (a row wraps by default; the first
+      // button grows, the other two keep their width), the name field taking
+      // the next row with the switch keeping its size beside it, the greeting
+      // below.
       profile: {
         default: {
           title: "Profile in flex rows",
           content: {
             engine: "flex-rows",
             rows: [
+              {
+                classes: "gap-2",
+                cells: [
+                  {
+                    id: "button-name-alice",
+                    widget: "antd-button",
+                    model: "widgets.cards.nameAlice",
+                    template: "default",
+                    classes: "basis-32 grow",
+                  },
+                  {
+                    id: "button-name-bob",
+                    widget: "antd-button",
+                    model: "widgets.cards.nameBob",
+                    template: "default",
+                    classes: "flex-none basis-24",
+                  },
+                  {
+                    id: "button-name-clear",
+                    widget: "antd-button",
+                    model: "widgets.cards.nameClear",
+                    template: "default",
+                    classes: "flex-none basis-20",
+                  },
+                ],
+              },
               {
                 classes: "items-end gap-2",
                 cells: [
@@ -998,6 +1028,24 @@ export const demoViewModels: ViewModels = {
               },
             ],
           },
+        },
+      },
+      // The buttons write the name the field edits: a `set` with a literal value.
+      nameAlice: {
+        default: { label: "Alice", on: { clicked: [{ set: "app.settings.displayName", value: "Alice" }] } },
+      },
+      nameBob: {
+        default: {
+          label: "Bob",
+          variant: "secondary",
+          on: { clicked: [{ set: "app.settings.displayName", value: "Bob" }] },
+        },
+      },
+      nameClear: {
+        default: {
+          label: "Clear",
+          variant: "dashed",
+          on: { clicked: [{ set: "app.settings.displayName", value: "" }] },
         },
       },
       name: {
