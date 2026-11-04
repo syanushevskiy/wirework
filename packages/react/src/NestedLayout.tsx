@@ -37,7 +37,13 @@ export function NestedLayout({ template, path = "content" }: NestedLayoutProps) 
   const { Renderer, scope } = layout;
   return (
     <PageContext value={scope}>
-      <div className="ww-layout" data-testid="layout" data-page={scope.page} data-nested={scope.depth}>
+      <div
+        className="ww-layout"
+        data-testid="layout"
+        data-page={scope.page}
+        data-engine={layout.template.engine}
+        data-nested={scope.depth}
+      >
         <Renderer
           template={layout.template}
           cells={layout.cells}

@@ -51,13 +51,13 @@ const crash: AnyWidgetDefinition = {
 };
 
 interface RowsTemplate extends PageViewModel {
-  rows: CellBase[][];
+  rows: { cells: CellBase[] }[];
 }
 const flexRows: AnyLayoutEngine = {
   name: "flex-rows",
   template: { parse: (raw: unknown) => raw as RowsTemplate },
   empty: () => ({ engine: "flex-rows", rows: [] }),
-  cells: (template: RowsTemplate) => template.rows.flat(),
+  cells: (template: RowsTemplate) => template.rows.flatMap((row) => row.cells),
   appendCell: (template: RowsTemplate) => template,
   removeCell: (template: RowsTemplate) => template,
   change: z.unknown(),

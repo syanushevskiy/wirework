@@ -1,37 +1,90 @@
-/** flex-rows engine styles — semantic classes only; themable via --ww-*. */
-.ww-row {
+/*
+ * flex-rows engine styles — semantic classes only; themable via --ww-*.
+ * Scoped under the renderer's root (engines share item class names). What
+ * a row's or a cell's `classes` say is inline style computed from the
+ * template (classes.ts) and wins over the defaults here: a row is a
+ * wrapping flexbox with a gap, a cell takes an equal share (`flex-1`).
+ */
+.ww-flex-rows {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--ww-gap, 0.5rem);
 }
 
-/*
- * A cell's width: the `m` fraction of its width spec is its basis (width.ts
- * puts the fractions on the item as --ww-basis-*); narrow screens take the
- * `s` fraction and wide ones the `l` fraction when the spec names them.
- * "full" and "auto" are inline `flex` values and win over these rules.
- */
-.ww-flex-item {
+.ww-flex-rows .ww-flex-rowset {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  flex: 1 1 var(--ww-basis-m, auto);
 }
 
-@media (max-width: 767px) {
-  .ww-flex-item {
-    flex-basis: var(--ww-basis-s, var(--ww-basis-m, auto));
-  }
+.ww-flex-rows .ww-flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-gap, 0.5rem);
+  min-width: 0;
 }
 
-@media (min-width: 1200px) {
-  .ww-flex-item {
-    flex-basis: var(--ww-basis-l, var(--ww-basis-m, auto));
-  }
+.ww-flex-rows .ww-flex-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 0%;
 }
 
-.ww-flex-item > .ww-cell,
-.ww-flex-item > .ww-cell-problem {
+.ww-flex-rows .ww-flex-item > .ww-cell,
+.ww-flex-rows .ww-flex-item > .ww-cell-problem {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* ---- edit mode: a bar per row, a handle per cell ---- */
+
+.ww-flex-rows .ww-flex-row-bar,
+.ww-flex-rows .ww-flex-handle {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ww-gap, 0.5rem);
+  padding: 0 var(--ww-gap, 0.5rem);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  color: var(--ww-color-handle-text, var(--ant-color-primary-text, #1e3a8a));
+  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.ww-flex-rows .ww-flex-row-bar {
+  color: var(--ww-color-muted, var(--ant-color-text-secondary, #6b7280));
+  background: var(--ww-color-row-bar, var(--ant-color-fill-quaternary, #f1f5f9));
+}
+
+.ww-flex-rows .ww-flex-handle-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ww-flex-rows .ww-flex-classes {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  padding: 0 0.25rem;
+  color: inherit;
+  background: var(--ww-color-field, var(--ant-color-bg-container, #fff));
+  border: 1px solid var(--ww-color-border, var(--ant-color-border, #d1d5db));
+  border-radius: 0.25rem;
+}
+
+.ww-flex-rows .ww-flex-classes[aria-invalid="true"] {
+  border-color: var(--ww-color-danger, var(--ant-color-error, #dc2626));
+}
+
+.ww-page[data-layout-mode="edit"] .ww-flex-rows .ww-flex-item {
+  outline: 1px dashed var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+  border-radius: 0.25rem;
 }

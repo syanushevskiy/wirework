@@ -61,6 +61,8 @@ export function demoPages(runsServer: RunsServer): Record<DemoPage, PlaygroundPa
     // which run: the router's parameter, at route.params.runId.
     run: demoPage("run"),
     settings: demoPage("settings"),
+    // Two cards as FlexLayout tabsets, a layout engine of its own inside each: a grid, flex rows (doc/flex-rows-design.md).
+    cards: demoPage("cards"),
   };
 }
 

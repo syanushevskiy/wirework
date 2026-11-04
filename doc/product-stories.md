@@ -1,10 +1,10 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-seven stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
-on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25) and two on 2 November 2026 (WW-26, WW-27),
-six to do (WW-15 to WW-20). Written for
+One epic, twenty-eight stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25), two on 2 November 2026 (WW-26, WW-27) and
+one on 3 November 2026 (WW-28), six to do (WW-15 to WW-20). Written for
 managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-27) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-28) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -18,7 +18,7 @@ Today every internal page (a list of test runs, a status overview, a settings sc
 Wirework lets a page be assembled from ready-made widgets — tables, filters, buttons, labels — wired to data and to each
 other without programming, in a visual builder, and lets every user tune a shared page for themselves. Three groups of
 users: page builders who do not code, the people who use the pages, and the teams that embed Wirework in their own
-application. A demo application with five pages shows it working end to end on simulated servers.
+application. A demo application with six pages shows it working end to end on simulated servers.
 
 ### WW-1 · Xsight Wirework - The visual page builder: searchable widget catalog, generated settings form, widget editing
 
@@ -749,3 +749,41 @@ stories with their conformance sets; the adapter's `NestedLayout` tests (the liv
 the depth limit); the engine's `nesting` tests (the layouts a view model holds, the overlay chain key, the registry's
 check of `contains`, boot validation into layouts and the depth refusal); the builder's `use-page-editing` and
 `use-builder` tests (the location, wrap, removal walking inside a container).
+
+### WW-28 · Xsight Wirework - Flex rows: lay widgets out with Tailwind's layout classes, and a page of two cards
+
+**Type:** User feature · **Status:** Done (designed and built 3 Nov, doc/flex-rows-design.md)
+
+**Short description:** As a page builder who knows Tailwind, I lay a page out in rows of a flexbox each and say in
+Tailwind's own words how a row distributes its widgets and how a widget grows, shrinks, sizes, aligns and spaces
+itself — `flex-1`, `basis-1/3 shrink-0`, `w-2/3`, `justify-between items-center gap-4`, `grid grid-cols-3`, `self-end`,
+`order-last`, `p-4`, `-mt-2`, `w-[320px]`: all of Tailwind's layout, flexbox and grid, spacing and sizing classes — so
+that I get the power of CSS layout without a developer and without learning a grammar of this product's own. I move a widget between rows with
+arrows, type its classes in a field that suggests the names, and see the page change at once; a name the product does
+not know is flagged and does nothing. A demo page shows two cards side by side as the panes of a docking layout
+(FlexLayout), one holding a grid inside, the other flex rows, both with live widgets: three layout engines on one page.
+
+**Acceptance criteria:**
+
+- **Given** the cards page, **when** it opens, **then** two cards stand side by side as the panes of a docking layout,
+  the counter card on a grid inside and the profile card on flex rows inside, where the name field takes its row and
+  the switch keeps its size; clicking the counter moves the statistic, Reset puts it back, the name typed in the
+  profile card is greeted below and the switch writes the global setting.
+- **Given** a page on flex rows with my overlay on, **when** I change a cell's classes to "basis-1/2 self-end" and
+  save, **then** the change is in my own view and survives the save, and with the overlay off the shared page shows
+  the cell without them.
+- **Given** the builder on flex rows with two widgets added, **then** each has a row of its own; **when** I press the
+  second one's ↑, **then** both share one row side by side; **when** I press its ←, **then** it comes first; **when** I
+  give the row "justify-between" and the first cell "flex-none self-center" and save, **then** the saved page holds
+  both and the cells show no edit chrome.
+- **Given** a cell whose classes name something the product does not know ("bg-red-500"), **then** the field is marked
+  invalid and the page warns which class, and the warning goes when the class is corrected.
+- **Given** a card on flex rows, **when** I open its content through "Edit content", **then** it is edited as the page
+  — rows, arrows and classes — and the breadcrumb leads back.
+
+**Delivered:** 3 November 2026.
+
+**Verified by:** `flex-rows.feature` (the cards page, its three engines and its widgets, classes saved into the user's own view, cells
+moved and classed in the builder, the unknown class, a card's flex content edited as the page); the engine's unit tests
+(`engine.test.ts`: the promises, rows appended and dropped, classes set and cleared, every move, `validate`;
+`classes.test.ts`: Tailwind's names and values, the merge, the strangers).

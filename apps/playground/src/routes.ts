@@ -23,5 +23,6 @@ export const PAGE_ROUTES: readonly PageRoute[] = [
   { page: "history", path: "/demo/history", title: "History", menu: true },
   { page: "run", path: "/demo/runs/:runId", title: "Run", menu: false },
   { page: "settings", path: "/demo/settings", title: "Settings", menu: true },
+  { page: "cards", path: "/demo/cards", title: "Cards", menu: true },
   { page: "builder", path: "/builder", title: "Builder", menu: true },
 ];

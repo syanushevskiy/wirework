@@ -1,8 +1,8 @@
 /** Page layout: the engine and view in use, cells and their placement, the edit session (drag, resize, save, cancel). */
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { dragBetween, gridItem, settledBox } from "../support/grid";
-import { cell } from "../support/page";
+import { cell, live } from "../support/page";
 
 const { When, Then } = createBdd();
 
@@ -14,16 +14,92 @@ Then("the page uses the {string} view", async ({ page }, view: string) => {
   await expect(page.getByTestId("page")).toHaveAttribute("data-view", view);
 });
 
-Then("the page has {int} rows", async ({ page }, count: number) => {
-  await expect(page.getByTestId("row")).toHaveCount(count);
+/* ---- flex rows (doc/flex-rows-design.md): rows of a flexbox each, Tailwind's flex class names on rows and cells ---- */
+
+/** Outside any layout a container holds: the page's OWN rows and items (a card on flex rows has rows of its own). */
+const OWN = 'and not(ancestor::*[@data-testid="layout"])';
+const ownRows = (page: Page) => live(page).locator(`xpath=.//*[@data-testid="row" ${OWN}]`);
+const ownItems = (page: Page, row: number) =>
+  ownRows(page)
+    .nth(row - 1)
+    .locator(`xpath=.//*[@data-testid="flex-item" ${OWN}]`);
+const flexItem = (page: Page, id: string) => live(page).locator(`[data-testid="flex-item"][data-cell="${id}"]`);
+
+Then("the page has {int} row(s)", async ({ page }, count: number) => {
+  await expect(page.getByTestId("page")).toBeVisible();
+  await expect(ownRows(page)).toHaveCount(count);
 });
 
 Then("row {int} has {int} cells", async ({ page }, row: number, count: number) => {
-  const cells = page
-    .getByTestId("row")
-    .nth(row - 1)
-    .locator('[data-testid="cell"], [data-testid="cell-problem"]');
-  await expect(cells).toHaveCount(count);
+  await expect(ownItems(page, row)).toHaveCount(count);
+});
+
+/** The cells of one of the page's rows, in order: "custom-2, custom-1". */
+Then("row {int} holds the cells {string}", async ({ page }, row: number, ids: string) => {
+  const items = ownItems(page, row);
+  await expect(items).toHaveCount(ids.split(", ").length);
+  for (const [index, id] of ids.split(", ").entries()) {
+    await expect(items.nth(index)).toHaveAttribute("data-cell", id);
+  }
+});
+
+Then("the cell {string} has the flex classes {string}", async ({ page }, id: string, classes: string) => {
+  await expect(flexItem(page, id)).toHaveAttribute("data-classes", classes);
+});
+
+Then("row {int} has the flex classes {string}", async ({ page }, row: number, classes: string) => {
+  await expect(ownRows(page).nth(row - 1)).toHaveAttribute("data-classes", classes);
+});
+
+/** Edit mode: the field in the cell's handle; Enter commits one change. */
+When("I set the flex classes of the cell {string} to {string}", async ({ page }, id: string, classes: string) => {
+  const field = flexItem(page, id).getByTestId("flex-cell-classes").first();
+  await field.fill(classes);
+  await field.press("Enter");
+});
+
+When("I set the flex classes of row {int} to {string}", async ({ page }, row: number, classes: string) => {
+  const field = page.locator(`[data-testid="flex-row-bar"][data-row="${row - 1}"]`).getByTestId("flex-row-classes");
+  await field.fill(classes);
+  await field.press("Enter");
+});
+
+Then("the flex classes field of the cell {string} is marked invalid", async ({ page }, id: string) => {
+  await expect(flexItem(page, id).getByTestId("flex-cell-classes").first()).toHaveAttribute("aria-invalid", "true");
+});
+
+/** Edit mode: the arrows in the cell's handle — left / right within its row, up / down into the row above / below. */
+When("I move the cell {string} {word}", async ({ page }, id: string, direction: string) => {
+  await page.locator(`[data-testid="flex-move"][data-cell="${id}"][data-direction="${direction}"]`).click();
+});
+
+/** The named cells share a band, whatever engine placed them and however they align in it: left to right in the order given. */
+Then("the cells {string} sit side by side", async ({ page }, ids: string) => {
+  const boxes = [];
+  for (const id of ids.split(", ")) boxes.push(await settledBox(cell(page, id)));
+  for (const [index, box] of boxes.entries()) {
+    const previous = boxes[index - 1];
+    if (!previous) continue;
+    expect(box.y).toBeLessThan(previous.y + previous.height);
+    expect(previous.y).toBeLessThan(box.y + box.height);
+    expect(box.x).toBeGreaterThanOrEqual(previous.x + previous.width - 1);
+  }
+});
+
+Then("the cell {string} has no flex classes", async ({ page }, id: string) => {
+  await expect(flexItem(page, id)).toBeVisible();
+  await expect(flexItem(page, id)).not.toHaveAttribute("data-classes");
+});
+
+Then("the cell {string} sits below the cell {string}", async ({ page }, id: string, above: string) => {
+  const upper = await settledBox(cell(page, above));
+  const lower = await settledBox(cell(page, id));
+  expect(lower.y).toBeGreaterThanOrEqual(upper.y + upper.height - 1);
+});
+
+/** The layout inside a container names its engine: a card may run another engine than its page. */
+Then("the container {string} runs on the {string} engine", async ({ page }, id: string, engine: string) => {
+  await expect(cell(page, id).locator('[data-testid="layout"]').first()).toHaveAttribute("data-engine", engine);
 });
 
 Then("the page has {int} cell(s)", async ({ page }, count: number) => {

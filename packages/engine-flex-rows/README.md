@@ -1,8 +1,9 @@
 # @wirework/engine-flex-rows
 
-The simplest Wirework layout engine: rows of cells with a width each, no
-drag or resize. A good first engine to read, and the one the engine's own
-tests use. Peer: `react`.
+Rows of cells, each row a CSS flexbox, laid out by Tailwind's LAYOUT CLASS
+NAMES (doc/flex-rows-design.md). A good first engine to read, and the one
+the engine's own tests use. Peer: `react`. No Tailwind: the names are
+borrowed because page builders know them; the CSS is the engine's own.
 
 ```ts
 import { flexRowsEngine } from "@wirework/engine-flex-rows";
@@ -10,8 +11,35 @@ import "@wirework/engine-flex-rows/styles.css";
 layoutEngines.register(flexRowsEngine); // page templates use engine: "flex-rows"
 ```
 
-A cell's width is `full`, `auto` or a spec per breakpoint (`m-8/12 s-1/2`,
-`l-1/3`): `m` is the basis, `s` applies on narrow screens and `l` on wide
-ones. Exports: `flexRowsEngine`, the template schema and its types, and
-`widthStyle` (the spec as the item's style — custom properties the
-stylesheet's media queries apply).
+A template is `{ engine: "flex-rows", rows: [{ classes?, cells: [{ id,
+widget, model, template, classes? }] }] }`. A row's `classes` say how it
+lays its cells out (`justify-between items-center gap-4 flex-nowrap`, or
+`grid grid-cols-3`), a cell's how it grows, shrinks, sizes, aligns, orders
+and spaces itself (`flex-1`, `basis-1/3 shrink-0`, `w-2/3`, `w-[320px]`,
+`self-end`, `order-last`, `ml-auto`, `p-4`, `-mt-2`). Without classes a
+row wraps with a gap and every cell takes an equal share (`flex-1`).
+
+The vocabulary is `LAYOUT_CLASSES` (name → CSS): Tailwind's Layout,
+Flexbox & Grid, Spacing and Sizing sections whole — display, position and
+inset, float, overflow, z-index, aspect and columns; flex, grow, shrink,
+basis, order, grid templates, spans, flow and auto tracks, gap, the
+justify / align / place families; padding and margins; width, height,
+their limits and `size-*` — with Tailwind's spacing scale, fractions and
+container scale, the negatives Tailwind has (`-m-4`, `-top-1/2`) and an
+arbitrary value in brackets wherever Tailwind takes one (`w-[32rem]`,
+`grid-cols-[200px_1fr]`). `LAYOUT_CLASS_NAMES` lists the names,
+`styleOf(name)` is one name's style (arbitrary values included),
+`layoutStyle(classes)` the style a value stands for, `unknownClasses`
+what the engine lacks — responsive and state variants and the child
+selectors of `space-*`, which inline style cannot say. A name nobody knows
+is reported by `validate` (a warning above the page, an error at boot)
+and does nothing.
+
+In edit mode every row has a bar with a field for its classes, and every
+cell a handle with its id, four arrows (left / right within the row, up /
+down into the row above or below — past the ends a new row) and a field
+for its own classes; Enter or leaving the field commits ONE change. The
+change payload (`FlexRowsChange`) is `{ kind: "cell", id, classes }`,
+`{ kind: "row", row, classes }` or `{ kind: "move", id, row, index }`;
+`applyFlexRowsChange`, `moveTarget` and `removeFlexCell` are the pure
+operations behind it.

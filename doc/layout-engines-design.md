@@ -66,8 +66,13 @@ cells: [{ id, widget, model, template, x, y, w, h }] }`; change payload =
   placements by id; validates that cells fit the column count. Edit-mode
   chrome sits in the drag-handle bar; the buttons are excluded from the
   drag via the library's `cancel` selector.
-- `@wirework/engine-flex-rows` — `{ engine, rows: [[{ ..., width?, height?
-}]] }`; no interactive change; chrome sits above each cell.
+- `@wirework/engine-flex-rows` — `{ engine, rows: [{ classes?, cells: [{
+..., classes? }] }] }`: each row a flexbox, a row's and a cell's `classes`
+  Tailwind's flex class names, turned into style by the engine's own
+  table (doc/flex-rows-design.md); change payload = a cell's or a row's
+  classes, or a cell moved to a row and index; `validate` names unknown
+  classes. Edit mode: a bar per row and a handle per cell with four arrows
+  and a field for the classes; chrome sits in the handle.
 - `@wirework/engine-gridstack` — `{ engine, cols?, cellHeight?, cells: [{
 ..., x, y, w, h }] }`; the library OWNS the item DOM, so each cell's
   content (chrome + widget) is portalled into the content element gridstack
@@ -179,13 +184,18 @@ independent.
 - On the user target settings are deep-merged, so a blanked setting cannot
   UNSET a base value.
 - "Add widget" is disabled while a page edit is open (Save or Cancel first).
-- flex-rows has no interactive editing and no e2e page in the playground.
+- flex-rows moves cells by arrows, not by drag, and knows no responsive
+  variants (`md:`) — doc/flex-rows-design.md, "Later".
 
-## Tested (e2e/features/layout.feature, overlay.feature, builder.feature)
+## Tested (e2e/features/layout.feature, overlay.feature, builder.feature, flex-rows.feature)
 
 Grid rendering with placements, no handles or chrome outside edit mode,
 drag + save, drag + cancel, resize + save; on a demo page: widget edit,
 removal and layout edit in one session saved in the user overlay and gone
 when the overlay is off, cancel dropping everything, the overlay toggle
 ending a session; on the builder page: modify, remove and layout save
-written to the base view models.
+written to the base view models. Flex rows: the demo's cards page (a
+FlexLayout of two cards side by side, a grid in one and flex rows in the
+other), classes saved into the user's own view with the overlay on, cells
+moved between rows and classed in the builder, an unknown class flagged
+and reported, a card's flex content edited as the page.

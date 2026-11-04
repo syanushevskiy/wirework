@@ -7,6 +7,7 @@ export const PAGE_PATHS: Record<string, string> = {
   runs: "/demo/runs",
   history: "/demo/history",
   settings: "/demo/settings",
+  cards: "/demo/cards",
   builder: "/builder",
 };
 

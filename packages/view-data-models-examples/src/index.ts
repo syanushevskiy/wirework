@@ -3,8 +3,8 @@
  * and data modelled on the Xsight sketch.
  *
  * The DEMO is a small multi-page application ("test runs"): an overview, the
- * runs list, the same runs as an infinite list (history), one run's details
- * and the user's settings. A host (the
+ * runs list, the same runs as an infinite list (history), one run's details,
+ * the user's settings and a page of two cards. A host (the
  * playground) keeps the application's configuration and its GLOBAL state
  * (`demoAppState`: who the user is, what they may do, their settings, lists
  * every page needs) for as long as the user stays in the application, and
@@ -19,8 +19,10 @@
  *
  * Contract proof: depends on @wirework/schema ONLY — a view/data model is
  * plain data. Every cell carries a stable `id` (identity is never
- * positional). The playground pages use the "react-grid-layout" engine;
- * the failure-path page uses "flex-rows".
+ * positional). The playground pages use the "react-grid-layout" engine —
+ * the cards page "flexlayout", with a grid and "flex-rows"
+ * (doc/flex-rows-design.md) inside its cards; the failure-path page uses
+ * "flex-rows".
  */
 import type { UserViewModels, ViewModels } from "@wirework/schema";
 
@@ -35,7 +37,7 @@ export const builderViewModels: ViewModels = {
 };
 
 /** The demo application's pages, in menu order. "run" is reached from the runs list, not the menu. */
-export const DEMO_PAGES = ["overview", "runs", "history", "run", "settings"] as const;
+export const DEMO_PAGES = ["overview", "runs", "history", "run", "settings", "cards"] as const;
 export type DemoPage = (typeof DEMO_PAGES)[number];
 
 /**
@@ -475,6 +477,41 @@ export const demoViewModels: ViewModels = {
         ],
       },
     },
+    /**
+     * Two cards side by side on FLEXLAYOUT — a docking layout, each card the
+     * one tab of a tabset the user may drag and resize — each card holding a
+     * layout on an engine of its own: a grid in one, FLEX ROWS in the other
+     * (doc/flex-rows-design.md). Three engines on one page.
+     */
+    cards: {
+      default: {
+        engine: "flexlayout",
+        cells: [
+          { id: "card-counter", widget: "antd-card", model: "widgets.cards.counter", template: "default" },
+          { id: "card-profile", widget: "antd-card", model: "widgets.cards.profile", template: "default" },
+        ],
+        model: {
+          global: {},
+          layout: {
+            type: "row",
+            children: [
+              {
+                type: "tabset",
+                id: "counter",
+                weight: 60,
+                children: [{ type: "tab", id: "card-counter", name: "Counter", component: "cell" }],
+              },
+              {
+                type: "tabset",
+                id: "profile",
+                weight: 40,
+                children: [{ type: "tab", id: "card-profile", name: "Profile", component: "cell" }],
+              },
+            ],
+          },
+        },
+      },
+    },
   },
   // The PAGES' own reactions: what a page does when it loads. Beside the
   // templates — they hold for every template of the page, and a user's own
@@ -871,6 +908,108 @@ export const demoViewModels: ViewModels = {
         default: { inputs: { value: "app.permissions" }, label: "app.permissions (global)" },
       },
     },
+    cards: {
+      // A card on the GRID: a statistic, the counter that moves it, a button that resets it.
+      counter: {
+        default: {
+          title: "Counter on a grid",
+          content: {
+            engine: "react-grid-layout",
+            cells: [
+              {
+                id: "statistic-clicks",
+                widget: "antd-statistic",
+                model: "widgets.cards.clicks",
+                template: "default",
+                x: 0,
+                y: 0,
+                w: 6,
+                h: 2,
+              },
+              {
+                id: "counter-clicks",
+                widget: "antd-counter",
+                model: "widgets.cards.clicker",
+                template: "default",
+                x: 6,
+                y: 0,
+                w: 6,
+                h: 2,
+              },
+              {
+                id: "button-reset-clicks",
+                widget: "antd-button",
+                model: "widgets.cards.reset",
+                template: "default",
+                x: 0,
+                y: 2,
+                w: 6,
+                h: 1,
+              },
+            ],
+          },
+        },
+      },
+      clicks: {
+        default: { inputs: { value: "demo.counter" }, title: "Clicks" },
+      },
+      clicker: {
+        default: { inputs: { value: "demo.counter" }, step: 1, label: "Click" },
+      },
+      reset: {
+        default: { label: "Reset", variant: "secondary", on: { clicked: [{ call: "reset-counter" }] } },
+      },
+      // A card on FLEX ROWS: the name field takes the row, the switch keeps its size beside it; the greeting below.
+      profile: {
+        default: {
+          title: "Profile in flex rows",
+          content: {
+            engine: "flex-rows",
+            rows: [
+              {
+                classes: "items-end gap-2",
+                cells: [
+                  {
+                    id: "input-profile-name",
+                    widget: "antd-input",
+                    model: "widgets.cards.name",
+                    template: "default",
+                    classes: "flex-1",
+                  },
+                  {
+                    id: "switch-profile-refresh",
+                    widget: "antd-switch",
+                    model: "widgets.cards.autoRefresh",
+                    template: "default",
+                    classes: "shrink-0",
+                  },
+                ],
+              },
+              {
+                cells: [
+                  {
+                    id: "label-greeting",
+                    widget: "antd-label",
+                    model: "widgets.cards.greeting",
+                    template: "default",
+                    classes: "w-full",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      name: {
+        default: { inputs: { value: "app.settings.displayName" }, label: "Your name", placeholder: "type a name" },
+      },
+      autoRefresh: {
+        default: { inputs: { checked: "app.settings.autoRefresh" }, label: "Auto-refresh" },
+      },
+      greeting: {
+        default: { inputs: { text: "app.settings.displayName" }, text: "Type a name to be greeted", tone: "muted" },
+      },
+    },
   },
 };
 
@@ -885,70 +1024,42 @@ export const failurePathViewModels: ViewModels = {
       default: {
         engine: "flex-rows",
         rows: [
-          [
-            // 1. widget type nobody registered
-            { id: "ghost", widget: "ghost-widget", model: "widgets.demo.label", template: "default", width: "m-4/12" },
-            // 2. model path pointing nowhere
-            {
-              id: "dangling",
-              widget: "antd-label",
-              model: "widgets.nowhere.label",
-              template: "default",
-              width: "m-4/12",
-            },
-            // 3. template that fails the widget's validator
-            {
-              id: "bad-template",
-              widget: "antd-label",
-              model: "widgets.demo.badLabel",
-              template: "default",
-              width: "m-4/12",
-            },
-          ],
-          [
-            // 4. widget that throws during render — isolated by the boundary
-            { id: "crash", widget: "antd-crash", model: "widgets.demo.crash", template: "default", width: "m-6/12" },
-            // 5. healthy neighbour proving isolation
-            { id: "healthy", widget: "antd-label", model: "widgets.demo.label", template: "default", width: "m-6/12" },
-          ],
-          [
-            // 6. requested template missing -> REPORTED fallback to "default"
-            {
-              id: "fallback-label",
-              widget: "antd-label",
-              model: "widgets.demo.label",
-              template: "nope",
-              width: "m-6/12",
-            },
-            // 7. requested template missing and NO "default" -> problem
-            { id: "orphan", widget: "antd-label", model: "widgets.demo.orphan", template: "nope", width: "m-6/12" },
-          ],
-          [
-            // 8. reaction to an event the widget never declares -> problem
-            {
-              id: "bad-reaction",
-              widget: "antd-counter",
-              model: "widgets.demo.badReaction",
-              template: "default",
-              width: "m-6/12",
-            },
-            // 9. required event with no reaction bound -> problem
-            {
-              id: "unreacted",
-              widget: "antd-refresher",
-              model: "widgets.demo.unreacted",
-              template: "default",
-              width: "m-6/12",
-            },
-            // 10. reaction calling an action nobody registered -> problem
-            {
-              id: "bad-action",
-              widget: "antd-button",
-              model: "widgets.demo.badAction",
-              template: "default",
-              width: "m-6/12",
-            },
-          ],
+          {
+            cells: [
+              // 1. widget type nobody registered
+              { id: "ghost", widget: "ghost-widget", model: "widgets.demo.label", template: "default" },
+              // 2. model path pointing nowhere
+              { id: "dangling", widget: "antd-label", model: "widgets.nowhere.label", template: "default" },
+              // 3. template that fails the widget's validator
+              { id: "bad-template", widget: "antd-label", model: "widgets.demo.badLabel", template: "default" },
+            ],
+          },
+          {
+            cells: [
+              // 4. widget that throws during render — isolated by the boundary
+              { id: "crash", widget: "antd-crash", model: "widgets.demo.crash", template: "default" },
+              // 5. healthy neighbour proving isolation
+              { id: "healthy", widget: "antd-label", model: "widgets.demo.label", template: "default" },
+            ],
+          },
+          {
+            cells: [
+              // 6. requested template missing -> REPORTED fallback to "default"
+              { id: "fallback-label", widget: "antd-label", model: "widgets.demo.label", template: "nope" },
+              // 7. requested template missing and NO "default" -> problem
+              { id: "orphan", widget: "antd-label", model: "widgets.demo.orphan", template: "nope" },
+            ],
+          },
+          {
+            cells: [
+              // 8. reaction to an event the widget never declares -> problem
+              { id: "bad-reaction", widget: "antd-counter", model: "widgets.demo.badReaction", template: "default" },
+              // 9. required event with no reaction bound -> problem
+              { id: "unreacted", widget: "antd-refresher", model: "widgets.demo.unreacted", template: "default" },
+              // 10. reaction calling an action nobody registered -> problem
+              { id: "bad-action", widget: "antd-button", model: "widgets.demo.badAction", template: "default" },
+            ],
+          },
         ],
       },
     },
@@ -1069,6 +1180,7 @@ export const demoPageData: Record<DemoPage, Record<string, unknown>> = {
   history: {},
   run: {},
   settings: {},
+  cards: { demo: { counter: 0 } },
 };
 
 /**
