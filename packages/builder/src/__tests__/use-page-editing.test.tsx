@@ -274,6 +274,70 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     expect(commit).toHaveBeenCalledTimes(1);
   });
 
+  it("with the overlay on, edits the layout inside a container as the USER's own copy — the container's setting in the overlay — and shows it", () => {
+    const { result, initialProps, commit } = setup({
+      trees: treesWithBoxedCounter(),
+      at: "custom-2",
+      target: "user",
+      withUserOverlay: true,
+    });
+    expect(result.current.cells.map((cell) => cell.key)).toEqual(["custom-1"]);
+    act(() => result.current.startEditing());
+    act(() => result.current.changeLayout(emptyList));
+    expect(result.current.cells).toEqual([]);
+    // The shared page is untouched: the op went into the user's settings for the box.
+    expect(result.current.shownViewModels).toBe(initialProps.trees.viewModels);
+    expect(result.current.shownUserViewModels).toEqual({
+      pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
+    });
+    act(() => result.current.save());
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("customises a widget inside a container under its chain key, and shows it so", () => {
+    const { result } = setup({ trees: treesWithBoxedCounter(), at: "custom-2", target: "user", withUserOverlay: true });
+    act(() => result.current.startEditing());
+    act(() => result.current.selectCell("custom-1"));
+    const editing = result.current.editingCell;
+    if (!editing) throw new Error("no cell selected");
+    act(() => result.current.saveWidget(editing, { inputs: {}, on: {} }, { label: "Mine" }));
+    expect(result.current.shownUserViewModels).toEqual({
+      pages: { demo: { cells: { "custom-2/custom-1": { settings: { default: { label: "Mine" } } } } } },
+    });
+    const shown = result.current.plan.problem === undefined ? result.current.plan.cells[0]?.viewModel : undefined;
+    expect(shown).toMatchObject({ label: "Mine" });
+  });
+
+  it("keeps the user's own layout inside a container when the container's own form is saved in their view", () => {
+    const trees = treesWithBoxedCounter();
+    trees.userViewModels = {
+      pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
+    };
+    const { result } = setup({ trees, target: "user", withUserOverlay: true });
+    act(() => result.current.startEditing());
+    act(() => result.current.selectCell("custom-2"));
+    const editing = result.current.editingCell;
+    if (!editing) throw new Error("no cell selected");
+    act(() => result.current.saveWidget(editing, { inputs: {}, on: {} }, { title: "Mine" }));
+    expect(result.current.shownUserViewModels?.pages?.["demo"]?.cells?.["custom-2"]).toEqual({
+      settings: { default: { content: emptyList, title: "Mine" } },
+    });
+  });
+
+  it("removes a cell from the user's own layout inside a container with its overlay entry under the chain key", () => {
+    const trees = treesWithBoxedCounter();
+    trees.userViewModels = {
+      pages: { demo: { cells: { "custom-2/custom-1": { settings: { default: { label: "Mine" } } } } } },
+    };
+    const { result } = setup({ trees, at: "custom-2", target: "user", withUserOverlay: true });
+    act(() => result.current.startEditing());
+    act(() => result.current.removeCellById("custom-1"));
+    expect(result.current.cells).toEqual([]);
+    expect(result.current.shownUserViewModels).toEqual({
+      pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
+    });
+  });
+
   it("is a page without a template when the chain leads nowhere", () => {
     const { result } = setup({ trees: treesWithBoxedCounter(), at: "nobody" });
     expect(result.current.plan.problem).toMatch(/no template/);

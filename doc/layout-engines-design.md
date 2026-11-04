@@ -150,7 +150,11 @@ The playground routes every op by an EDIT TARGET:
   template named "my-own" (the sketch's "my own" pill; "my-own-2", … when
   taken), selected as the view (doc/page-views-design.md: the views list,
   Save as, Rename, Delete, Share, Import). Widget edits become per-cell SETTINGS
-  overlays (`...cells[<cellId>].settings[<template>]`). The overlay never
+  overlays (`...cells[<cellId>].settings[<template>]`). A layout INSIDE a
+  container (doc/containers-design.md) is a setting of the container, so
+  "Edit content" with the overlay on writes the user's own copy of it
+  there (`cells["card-1"].settings.default.content`), and the widgets
+  inside are customised under their chain keys (`cells["card-1/button"]`). The overlay never
   carries `inputs` or `on` — the schema rejects them — so a user's view
   cannot rebind a widget, call an action or write a data path the page
   never declared; the editor shows ports and reactions read-only there.

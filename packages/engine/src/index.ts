@@ -31,11 +31,14 @@ export {
   chainSteps,
   innerCellKey,
   innerOverlay,
+  innerOverlayAt,
   layoutChain,
   layoutPathAt,
   layoutsOf,
+  locateLayoutAt,
+  updateUserLayoutAt,
 } from "./nesting";
-export type { ChainStep, HeldLayout } from "./nesting";
+export type { ChainStep, HeldLayout, LocatedLayout } from "./nesting";
 export { validateViewModels } from "./validate";
 export { createEmitter } from "./emitter";
 export { readableStore } from "./readable";

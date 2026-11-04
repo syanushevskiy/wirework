@@ -115,9 +115,13 @@ template, the content goes wherever the card's template goes.
   which every user of the application has. Share and Import need nothing
   new.
 - **A user's own view** copies the screen's layout: the user moves or
-  removes the card; the content stays the page's. Inside a card the user
-  overlay works per cell as it does today (settings only), with the inner
-  cell's key under the card's: `cells["card-1/button-start"]`.
+  removes the card. Inside a card the user overlay works per cell as it
+  does today (settings only), with the inner cell's key under the card's:
+  `cells["card-1/button-start"]`. The card's CONTENT is a setting of the
+  card, so a user's own layout inside it is that setting in their overlay
+  (`cells["card-1"].settings.default.content`, the whole `tabs` list for a
+  tab's) — built on 3 November 2026, when the product owner asked for it
+  (see "Built").
 - **A bundle** — a layout plus every widget template it references,
   recursively, for moving a page to another installation — is not built
   today for any page; when it is, a card's content travels because it is
@@ -341,9 +345,16 @@ What stands, where it differs from the design above, and why.
   container is chosen in the toolbar while the layout is empty, as a page's
   is (`useBuilder` with `at`; `withEmptyLayouts` only starts it on the
   parent's engine), and locked once a widget is placed: a card may hold a
-  gridstack grid on a react-grid-layout page. A
-  layout inside a container belongs to the shared page, so the host keeps
-  `at` clear while the overlay is on. It is visit STATE, not an address: in the playground a
+  gridstack grid on a react-grid-layout page. With the overlay ON the
+  layout shown `at` the chain is the one the USER sees — the base one under
+  their settings for the container (`locateLayoutAt`) — and every op
+  writes their own copy of it as the container's setting
+  (`updateUserLayoutAt`: `cells["card-1"].settings.default.content`, the
+  whole `tabs` list for a tab's content), the cells inside customised and
+  removed under their chain keys (`cells["card-1/button"]`), their overlay
+  entries shown through `innerOverlayAt`; the container's own form in the
+  user's view keeps that copy. Add stays the shared page's: a user's copy
+  takes no new widget. It is visit STATE, not an address: in the playground a
   new address opens a new visit, and the builder's starts from nothing —
   so "Edit content" would have lost the card it was pressed on. The
   toolbar shows the breadcrumb (`usePageToolbar` `crumbs`/`goTo`, antd
@@ -413,10 +424,12 @@ What stands, where it differs from the design above, and why.
   dashboards — a layout engine of its own, independent of D.
 - Whether a BUNDLE export (a layout with every template it references) is
   wanted now that cards make pages worth moving whole.
-- The user overlay REACHES the cells inside a container (their settings
-  under `cells["card-1/button"]` apply), but nothing lets a user edit them:
-  a nested layout is never editable in place, so the inner cells have no
-  chrome in a personal view. Whether that is wanted — "my own settings for
-  a widget in a card" — or a card is personalised as a whole.
+- ~~The user overlay REACHES the cells inside a container, but nothing lets
+  a user edit them.~~ Answered 3 November 2026: the product owner wants a
+  user to lay out the widgets inside a card in their own view. "Edit
+  content" works with the overlay on; the user's layout is the card's
+  `content` setting in their overlay, the widgets inside are customised
+  under their chain keys (`containers.feature`, "With the user overlay
+  on…").
 - Leaving a layout SAVES its session without asking ("Edit content", a
   breadcrumb). Whether the builder should ask first, or offer to discard.

@@ -739,12 +739,16 @@ around a widget already placed.
   add one more named "History" and add the widget, **then** the tabs read Runs and History and the widget opens on
   the first tab's layout; **when** I edit the widget, add a tab "More", remove "Runs" and save, **then** the tabs read
   History and More, and the new tab has an empty layout of its own to fill.
+- **Given** a demo page with my overlay on, **when** I edit the page and open a card's content, **then** I lay out the
+  widgets inside as I do a page — move them, give them classes, change their settings — and save; **then** the card
+  shows my layout and my settings while my overlay is on, and the shared page's own when it is off (added 3 November
+  2026 at the product owner's ask).
 
-**Delivered:** 2 November 2026.
+**Delivered:** 2 November 2026; the user's own layout inside a card 3 November 2026.
 
 **Verified by:** `containers.feature` (the settings card and its controls, the shared view, the palette previews, the
 builder's card opened on Add and filled, then reopened through "Edit content", tabs named and added in the form, "Wrap in
-a card"); the `antd-card`, `antd-tabs` and `antd-collapse`
+a card", a card's content edited into the user's own overlay with the shared page untouched); the `antd-card`, `antd-tabs` and `antd-collapse`
 stories with their conformance sets; the adapter's `NestedLayout` tests (the live store inside, the preview outside,
 the depth limit); the engine's `nesting` tests (the layouts a view model holds, the overlay chain key, the registry's
 check of `contains`, boot validation into layouts and the depth refusal); the builder's `use-page-editing` and

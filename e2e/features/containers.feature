@@ -86,6 +86,41 @@ Feature: Containers — a card that holds other widgets
     And the page mode is "view"
     And the page has 4 cells
 
+  Scenario: With the user overlay on, a card's content is edited into the user's own view — layout and widgets inside — and the shared page is untouched
+    Given I open the "cards" page
+    And the server has had time to answer
+    When I edit the page
+    And I edit the content of the cell "card-profile"
+    Then the breadcrumb reads "cards › card-profile"
+    And the page mode is "editing"
+    And the page has 3 rows
+    # The greeting joins the row of the name field; the user's copy of the card's layout holds it.
+    When I move the cell "label-greeting" up
+    Then the page has 2 rows
+    And row 2 holds the cells "input-profile-name, switch-profile-refresh, label-greeting"
+    When I set the flex classes of the cell "label-greeting" to "w-full order-first"
+    # A widget inside is customised under the card's key as well: its settings, never its wiring.
+    And I edit the cell "label-greeting"
+    And I set the setting "text" to "Nobody yet"
+    And I save the widget
+    And I save the page
+    Then the cell "label-greeting" has the flex classes "w-full order-first"
+    And the cell "label-greeting" reads "Nobody yet"
+    And the state JSON contains '"card-profile/label-greeting"'
+    When I follow the breadcrumb "cards"
+    Then the page layout uses the "flexlayout" engine
+    # The DOM order is the user's layout (the greeting in the second row); order-first only draws it first.
+    And the container "card-profile" holds the cells "button-name-alice, button-name-bob, button-name-clear, input-profile-name, switch-profile-refresh, label-greeting"
+    And the cell "label-greeting" has the flex classes "w-full order-first"
+    And the cell "label-greeting" reads "Nobody yet"
+    # The shared page is as it was: without the overlay the card shows its own layout and text.
+    When I disable the user overlay
+    Then the cell "label-greeting" has the flex classes "w-full"
+    And the cell "label-greeting" reads "Type a name to be greeted"
+    And the cell "label-greeting" sits below the cell "input-profile-name"
+    When I enable the user overlay
+    Then the cell "label-greeting" has the flex classes "w-full order-first"
+
   Scenario: A card's content may run on another layout engine, chosen while it is empty
     Given I open the "builder" page
     When I choose the "antd-card" widget

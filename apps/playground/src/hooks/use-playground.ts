@@ -88,11 +88,10 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * after "Edit content" on a container — the layout inside it, `at` the
    * chain of containers down to it. Visit state, not an address: a new
    * address would open a new visit, and the builder's starts from nothing.
-   * A layout inside a container belongs to the shared page, so the overlay
-   * on means the page itself.
+   * With the overlay on it is the layout the USER sees — their own copy,
+   * once they change it.
    */
-  const [atWanted, setAt] = useState<string | undefined>(undefined);
-  const at = withUserOverlay ? undefined : atWanted;
+  const [at, setAt] = useState<string | undefined>(undefined);
 
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
@@ -242,9 +241,10 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   /**
    * Where widgets are ADDED: the builder page — or, inside a container, the
-   * layout shown, on whichever page (the palette appears with it).
+   * layout shown, on whichever page (the palette appears with it) — on the
+   * SHARED page only: a user's own copy of a layout takes no new widget.
    */
-  const adding = page === BUILDER_PAGE || at !== undefined;
+  const adding = page === BUILDER_PAGE || (at !== undefined && target === "base");
   const { engineLock, setEngine, addWidget } = useBuilder({
     store,
     commit,
@@ -252,7 +252,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     registry,
     layoutEngines,
     page,
-    at,
+    at: target === "base" ? at : undefined,
     naming: DEFAULT_BUILDER_NAMING,
     cancelEditing,
     onAdded,

@@ -25,10 +25,13 @@
  * The LOCATION (doc/containers-design.md): a session edits the page's
  * layout — or, `at` a chain of containers (`card-1`, `tabs-1/tabs.0.content`),
  * the layout INSIDE a container's widget template, shown as the page and
- * edited by the same ops. Such a layout belongs to the shared page: the
- * host keeps `at` clear while the overlay is on. Every op remembers where
- * it was made, so a session survives a change of `at` — but a host ends it
- * first (save or cancel): a session left open locks Add on every layout.
+ * edited by the same ops. On the shared page the ops rewrite that template;
+ * in a user's view they write the user's OWN copy of the layout as the
+ * container's setting in the overlay (`cells["card-1"].settings.default.content`),
+ * and the cells inside are customised under their chain keys
+ * (`cells["card-1/button"]`). Every op remembers where it was made, so a
+ * session survives a change of `at` — but a host ends it first (save or
+ * cancel): a session left open locks Add on every layout.
  */
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -44,14 +47,17 @@ import {
 } from "@wirework/schema";
 import {
   cellsWithin,
+  innerOverlayAt,
   layoutPathAt,
   layoutsOf,
+  locateLayoutAt,
   pageTemplates,
   problemText,
   removeUserCell,
   resolveTemplate,
   updatePageTemplate,
   updateUserCellSettings,
+  updateUserLayoutAt,
   updateUserPageTemplate,
   updateWidgetTemplate,
   type ActionRegistry,
@@ -196,21 +202,23 @@ export function usePageEditing({
   const shownUserViewModels = withUserOverlay ? shown.userViewModels : undefined;
   /**
    * What the plan is made of: the page itself — or the layout `at` the
-   * chain, shown AS a page under its nested name (the overlay never reaches
-   * it: a layout inside a container is the shared page's). A chain that
-   * leads nowhere is a page without a template, and the plan says so.
+   * chain, shown AS a page under its nested name: the shared page's layout,
+   * or with the overlay on the one the user sees (their own copy, held as
+   * the container's setting), with the inner cells' overlay entries under
+   * their own ids. A chain that leads nowhere is a page without a template,
+   * and the plan says so.
    */
   const layoutPage = layoutPageName(page, at);
   const planned = useMemo(() => {
     if (at === undefined) return { viewModels: shown.viewModels, userViewModels: shownUserViewModels };
-    const path = layoutPathAt(layoutEngines, shown.viewModels, page, at);
+    const located = locateLayoutAt(layoutEngines, shown.viewModels, shownUserViewModels, page, at);
     // The boundary: a layout read out of a widget template is raw; the plan validates it as it does a page's.
-    const template = path === undefined ? undefined : (getPath(shown.viewModels, path) as PageViewModel | undefined);
+    const template = located?.template as PageViewModel | undefined;
     const viewModels: ViewModels = {
       ...shown.viewModels,
       pages: { [layoutPage]: template === undefined ? {} : { default: template } },
     };
-    return { viewModels, userViewModels: undefined };
+    return { viewModels, userViewModels: innerOverlayAt(shownUserViewModels, page, at, layoutPage) };
   }, [at, shown.viewModels, shownUserViewModels, layoutEngines, page, layoutPage]);
   const plan = usePagePlan({
     viewModels: planned.viewModels,
@@ -236,9 +244,10 @@ export function usePageEditing({
 
   /**
    * An op on the SHOWN layout, routed by location and target: the layout
-   * inside a container (base only), the page's base template, or the user's
-   * own view. The engine plugin of that template applies the edit to the
-   * VALIDATED template.
+   * inside a container (the shared template, or the user's own copy as the
+   * container's setting), the page's base template, or the user's own view.
+   * The engine plugin of that template applies the edit to the VALIDATED
+   * template.
    */
   const pageOp = useCallback(
     (edit: (engine: AnyLayoutEngine, template: PageViewModel) => PageViewModel): Op => {
@@ -251,13 +260,14 @@ export function usePageEditing({
       };
       return (source) => {
         if (chain !== undefined) {
-          const path = layoutPathAt(layoutEngines, source.viewModels, page, chain);
+          const overlay = routing === "user" ? source.userViewModels : undefined;
+          const located = locateLayoutAt(layoutEngines, source.viewModels, overlay, page, chain);
           // The same boundary as the plan's: the raw layout in the template, validated by `update`.
-          const current =
-            path === undefined ? undefined : (getPath(source.viewModels, path) as PageViewModel | undefined);
-          return path === undefined || current === undefined
-            ? source
-            : { ...source, viewModels: setPath(source.viewModels, path, update(current)) };
+          const current = located?.template as PageViewModel | undefined;
+          if (located === undefined || current === undefined) return source;
+          return routing === "user"
+            ? { ...source, userViewModels: updateUserLayoutAt(source.userViewModels, page, located, update(current)) }
+            : { ...source, viewModels: setPath(source.viewModels, located.path, update(current)) };
         }
         if (view === undefined) return source;
         if (routing === "base") {
@@ -300,6 +310,9 @@ export function usePageEditing({
     },
     [at, activeView, page, layoutEngines],
   );
+
+  /** A shown cell's key in the page's user overlay: its id — under the chain to its layout, inside a container. */
+  const userCellKey = useCallback((cellId: string): string => (at === undefined ? cellId : `${at}/${cellId}`), [at]);
 
   /**
    * Every edit is gated the same way, whatever control triggered it: there
@@ -388,16 +401,17 @@ export function usePageEditing({
       // The removed cell's model — and, for a container, the models of every cell inside it.
       const models = removed ? [removed.model, ...modelsInside(removed)] : [];
       const routing = target;
+      const userKey = userCellKey(cellId);
       const remove = pageOp((plugin, template) => plugin.removeCell(template, cellId));
       push((source) => {
         const next = remove(source);
         // In a user's view the cell's overlay entry would be dead config; on the shared page its templates would.
         return routing === "user"
-          ? { ...next, userViewModels: removeUserCell(next.userViewModels, page, cellId) }
+          ? { ...next, userViewModels: removeUserCell(next.userViewModels, page, userKey) }
           : withoutOrphans(next, models);
       });
     },
-    [mayEdit, cells, target, page, modelsInside, withoutOrphans, pageOp, push],
+    [mayEdit, cells, target, page, userCellKey, modelsInside, withoutOrphans, pageOp, push],
   );
 
   /**
@@ -446,13 +460,22 @@ export function usePageEditing({
       // inputs or reactions (doc/layout-engines-design.md, "Where edits go").
       const overrides = routing === "base" ? templateOf(bindings, settings) : settings;
       const { model, template, key, definition } = cell;
+      const userKey = userCellKey(key);
       const settingNames = settingFields(definition.viewModel).map((field) => field.name);
       const models = modelsInside(cell);
       push((source) => {
         if (routing !== "base") {
+          // The form never shows a layout a container holds; the user's own copy of one stays with their settings.
+          const kept = source.userViewModels.pages?.[page]?.cells?.[userKey]?.settings?.[template] ?? {};
+          const layouts = Object.fromEntries(
+            (definition.contains ?? []).flatMap((held) => (held in kept ? [[held, kept[held]] as const] : [])),
+          );
           return {
             ...source,
-            userViewModels: updateUserCellSettings(source.userViewModels, page, key, template, overrides),
+            userViewModels: updateUserCellSettings(source.userViewModels, page, userKey, template, {
+              ...layouts,
+              ...overrides,
+            }),
           };
         }
         const engine = locateShown(source)?.engine;
@@ -464,7 +487,7 @@ export function usePageEditing({
       });
       setSelected(null);
     },
-    [mayEdit, target, page, modelsInside, locateShown, withoutOrphans, push],
+    [mayEdit, target, page, userCellKey, modelsInside, locateShown, withoutOrphans, push],
   );
 
   const selectCell = useCallback(

@@ -8,14 +8,16 @@
 import {
   getPath,
   isPlainObject,
+  setPath,
   type AnyWidgetDefinition,
   type CellBase,
   type UserViewModels,
   type ViewModels,
 } from "@wirework/schema";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
+import { deepMerge } from "./paths";
 import type { WidgetRegistry } from "./registry";
-import { pageTemplates } from "./trees";
+import { pageTemplates, updateUserCellSettings } from "./trees";
 
 /** How deep layouts may nest: a card in a card in a card in a card, and no further. */
 export const MAX_LAYOUT_DEPTH = 4;
@@ -95,27 +97,107 @@ const cellsOf = (layoutEngines: LayoutEngineRegistry, templates: readonly unknow
   });
 
 /**
- * Where, in the view models, the layout `at` a chain of containers under a
- * page lives — the dot-path segments of `widgets.custom.card-1.default.content`
- * — or undefined when the chain leads nowhere. The chain's first cell is
- * looked for in every template of the page (a view is a layout of the same
- * cells); the layouts below are read from the widget templates.
+ * The layout `at` a chain of containers under a page, located: where its
+ * BASE lives in the view models, which container's setting holds it, and
+ * the layout as a user SEES it — the base one under the user's settings for
+ * that container, when a user overlay is given (a user's own layout inside
+ * a card is a setting of the card: `cells["card-1"].settings.default.content`).
  */
-export function layoutPathAt(
+export interface LocatedLayout {
+  /** The dot-path segments of the base layout: `widgets.custom.card-1.default.content`. */
+  path: string[];
+  /** The container that holds it, as the page's user overlay keys it (`card-1`, `card-1/card-2`), and its template. */
+  container: { key: string; template: string };
+  /** The container's setting that holds the layout (`content`, `tabs`), its value as the user sees it, and the path of the layout within it (`0.content`, or nothing). */
+  holder: { setting: string; value: unknown; within: string[] };
+  /** The layout as the user sees it. */
+  template: unknown;
+}
+
+/**
+ * Where the layout `at` a chain lives and what it is — or undefined when
+ * the chain leads nowhere. The chain's first cell is looked for in every
+ * template of the page (a view is a layout of the same cells); the layouts
+ * below are read from the widget templates, each under the user's settings
+ * for its container when `userViewModels` is given.
+ */
+export function locateLayoutAt(
+  layoutEngines: LayoutEngineRegistry,
+  viewModels: ViewModels,
+  userViewModels: UserViewModels | undefined,
+  page: string,
+  at: string,
+): LocatedLayout | undefined {
+  let templates: unknown[] = Object.values(pageTemplates(viewModels, undefined, page) ?? {});
+  let located: LocatedLayout | undefined;
+  const steps = chainSteps(at);
+  for (const [index, step] of steps.entries()) {
+    const cell = cellsOf(layoutEngines, templates).find((candidate) => candidate.id === step.cell);
+    if (!cell) return undefined;
+    // The container's overlay key: the chain above it, then its id (`innerCellKey` of the layout above).
+    const above = steps[index - 1];
+    const key = above === undefined ? step.cell : `${above.at}/${step.cell}`;
+    const base = getPath(viewModels, [...cell.model.split("."), cell.template]);
+    const seen = deepMerge(base, userViewModels?.pages?.[page]?.cells?.[key]?.settings?.[cell.template]);
+    const [setting = "", ...within] = step.layoutPath.split(".");
+    located = {
+      path: [...cell.model.split("."), cell.template, ...step.layoutPath.split(".")],
+      container: { key, template: cell.template },
+      holder: { setting, value: getPath(seen, setting), within },
+      template: getPath(seen, step.layoutPath),
+    };
+    templates = [located.template];
+  }
+  return located;
+}
+
+/**
+ * Where, in the view models, the BASE of the layout `at` a chain lives — the
+ * dot-path segments of `widgets.custom.card-1.default.content` — or
+ * undefined when the chain leads nowhere.
+ */
+export const layoutPathAt = (
   layoutEngines: LayoutEngineRegistry,
   viewModels: ViewModels,
   page: string,
   at: string,
-): string[] | undefined {
-  let templates: unknown[] = Object.values(pageTemplates(viewModels, undefined, page) ?? {});
-  let path: string[] | undefined;
-  for (const step of chainSteps(at)) {
-    const cell = cellsOf(layoutEngines, templates).find((candidate) => candidate.id === step.cell);
-    if (!cell) return undefined;
-    path = [...cell.model.split("."), cell.template, ...step.layoutPath.split(".")];
-    templates = [getPath(viewModels, path)];
-  }
-  return path;
+): string[] | undefined => locateLayoutAt(layoutEngines, viewModels, undefined, page, at)?.path;
+
+/**
+ * A user's OWN layout inside a container: written into the user overlay as
+ * the container's setting that holds it (the whole `tabs` list for a tab's
+ * content), the user's other settings for the container kept.
+ */
+export function updateUserLayoutAt(
+  userViewModels: UserViewModels,
+  page: string,
+  located: LocatedLayout,
+  template: unknown,
+): UserViewModels {
+  const { key, template: name } = located.container;
+  const { setting, value, within } = located.holder;
+  const held = within.length === 0 ? template : setPath(value, within, template);
+  const settings = userViewModels.pages?.[page]?.cells?.[key]?.settings?.[name] ?? {};
+  return updateUserCellSettings(userViewModels, page, key, name, { ...settings, [setting]: held });
+}
+
+/**
+ * The user overlay as the cells of the layout `at` a chain see it: narrowed
+ * step by step (`innerOverlay`), keyed under `name` — the nested page name
+ * a builder shows the layout as. Undefined when there is nothing for them.
+ */
+export function innerOverlayAt(
+  userViewModels: UserViewModels | undefined,
+  page: string,
+  at: string,
+  name: string,
+): UserViewModels | undefined {
+  const inner = chainSteps(at).reduce<UserViewModels | undefined>(
+    (overlay, step) => innerOverlay(overlay, page, step.cell, step.layoutPath),
+    userViewModels,
+  );
+  const cells = inner?.pages?.[page];
+  return cells === undefined ? undefined : { pages: { [name]: cells } };
 }
 
 /**
