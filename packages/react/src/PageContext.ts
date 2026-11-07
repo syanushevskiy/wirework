@@ -8,11 +8,12 @@
  * only that it holds a layout.
  */
 import { createContext, useContext } from "react";
-import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
+import type { EventBus, Store, ViewModels } from "@wirework/schema";
 import type {
   ActionRegistry,
   AppearanceRegistry,
   LayoutEngineRegistry,
+  Overlays,
   PredicateRegistry,
   WidgetRegistry,
 } from "@wirework/engine";
@@ -22,8 +23,8 @@ export interface PageScope {
   /** The page's name — with the containers' ids appended for the layouts inside (`overview/card-1`). */
   page: string;
   viewModels: ViewModels;
-  /** The overlay as the cells of THIS layout see it (narrowed for the ones inside a container). */
-  userViewModels: UserViewModels | undefined;
+  /** The overlay layers — the user's roles' entries, then the user's own — as the cells of THIS layout see them (narrowed for the ones inside a container). */
+  overlays: Overlays;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry | undefined;

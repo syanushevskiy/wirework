@@ -18,7 +18,7 @@ import type { PageViewModel } from "@wirework/schema";
 import {
   MAX_LAYOUT_DEPTH,
   bindCellReactions,
-  innerOverlay,
+  innerOverlays,
   layoutChain,
   resolveCells,
   resolveTemplate,
@@ -61,17 +61,17 @@ export function useNestedLayout(template: unknown, layoutPath: string): NestedLa
     const Renderer = resolved.engine.renderer as ComponentType<LayoutRendererProps> | undefined;
     if (!Renderer)
       return { kind: "problem" as const, message: `layout engine "${resolved.engine.name}" has no renderer` };
-    // The layout's own scope: the page's name with this container's id, the overlay narrowed to its cells.
+    // The layout's own scope: the page's name with this container's id, every overlay layer narrowed to its cells.
     const scope: PageScope = {
       ...outer,
       page: `${outer.page}/${layoutChain(container, layoutPath)}`,
-      userViewModels: innerOverlay(outer.userViewModels, outer.page, container, layoutPath),
+      overlays: innerOverlays(outer.overlays, outer.page, container, layoutPath),
       depth: outer.depth + 1,
     };
-    const { viewModels, userViewModels, registry, layoutEngines, actions, predicates, appearances } = scope;
+    const { viewModels, overlays, registry, layoutEngines, actions, predicates, appearances } = scope;
     const cells = resolveCells(resolved.cells, {
       viewModels,
-      userViewModels,
+      overlays,
       page: outer.page,
       registry,
       layoutEngines,

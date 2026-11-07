@@ -50,6 +50,12 @@ export interface PageViewProps {
   page: string;
   viewModels: ViewModels;
   userViewModels?: UserViewModels | undefined;
+  /**
+   * The roles the user holds (doc/roles-design.md), in the session's order
+   * from the broadest to the most specific: their entries in
+   * `viewModels.roles` are read between the base and the user's overlay.
+   */
+  roles?: readonly string[] | undefined;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   /** Host actions that `call` reactions may invoke. */
@@ -92,6 +98,7 @@ export function PageView({
   page,
   viewModels,
   userViewModels,
+  roles,
   registry,
   layoutEngines,
   actions,
@@ -111,7 +118,7 @@ export function PageView({
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
   const plan = usePagePlan(
-    { viewModels, userViewModels, page, registry, layoutEngines, actions, predicates, appearances },
+    { viewModels, userViewModels, roles, page, registry, layoutEngines, actions, predicates, appearances },
     providedPlan,
   );
   useReactions(bus, store, plan, actions);
@@ -121,6 +128,7 @@ export function PageView({
     plan,
     viewModels,
     userViewModels,
+    roles,
     registry,
     layoutEngines,
     actions,

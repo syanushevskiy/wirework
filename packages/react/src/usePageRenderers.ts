@@ -5,14 +5,15 @@
  */
 import { createElement, useCallback, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
-import type {
-  ActionRegistry,
-  AppearanceRegistry,
-  LayoutEngineRegistry,
-  PredicateRegistry,
-  ResolvedCell,
-  ResolvedPage,
-  WidgetRegistry,
+import {
+  overlayLayers,
+  type ActionRegistry,
+  type AppearanceRegistry,
+  type LayoutEngineRegistry,
+  type PredicateRegistry,
+  type ResolvedCell,
+  type ResolvedPage,
+  type WidgetRegistry,
 } from "@wirework/engine";
 import { CellChrome, type WrapCell } from "./CellChrome";
 import { CellView } from "./CellView";
@@ -23,6 +24,8 @@ export interface PageRenderersInput {
   plan: ResolvedPage;
   viewModels: ViewModels;
   userViewModels: UserViewModels | undefined;
+  /** The roles the user holds, in the session's order (doc/roles-design.md). */
+  roles: readonly string[] | undefined;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry | undefined;
@@ -43,6 +46,7 @@ export function usePageRenderers({
   plan,
   viewModels,
   userViewModels,
+  roles,
   registry,
   layoutEngines,
   actions,
@@ -96,12 +100,12 @@ export function usePageRenderers({
     [editable, onEditCell, onRemoveCell, onEditLayout, wrapCell],
   );
 
-  /** What the layouts inside this page's containers render with (PageContext). */
+  /** What the layouts inside this page's containers render with (PageContext): the overlay layers made once here. */
   const scope = useMemo<PageScope>(
     () => ({
       page,
       viewModels,
-      userViewModels,
+      overlays: overlayLayers(viewModels, roles, userViewModels),
       registry,
       layoutEngines,
       actions,
@@ -112,7 +116,7 @@ export function usePageRenderers({
       onError: (report: PageError) => reporter.current?.(report),
       depth: 0,
     }),
-    [page, viewModels, userViewModels, registry, layoutEngines, actions, predicates, appearances, store, bus],
+    [page, viewModels, userViewModels, roles, registry, layoutEngines, actions, predicates, appearances, store, bus],
   );
 
   return { cells, cellById, renderCell, renderChrome, scope };

@@ -153,7 +153,7 @@ export function WidgetStory({
         : {
             page: "storybook",
             viewModels: inside.viewModels ?? { pages: {}, widgets: {} },
-            userViewModels: undefined,
+            overlays: [],
             registry: inside.registry,
             layoutEngines: inside.layoutEngines,
             actions: undefined,

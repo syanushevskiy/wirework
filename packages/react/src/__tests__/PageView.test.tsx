@@ -67,6 +67,25 @@ describe("PageView", () => {
     expect(problem.textContent).toBe('Unknown widget "ghost"');
   });
 
+  it("shows the page as the user's roles see it, the last role's view winning (doc/roles-design.md)", () => {
+    const admin = { engine: "list", cells: [cell(), cell({ id: "c2" })] };
+    const withRoles = {
+      ...echoModels(),
+      roles: {
+        admin: { pages: { demo: { view: "admin", templates: { admin } } } },
+        ops: { pages: { demo: { view: "default" } } },
+      },
+    };
+    const { rerender } = renderPage({ viewModels: withRoles, roles: ["admin"] });
+    expect(screen.getByTestId("page").getAttribute("data-view")).toBe("admin");
+    expect(screen.getAllByTestId("echo")).toHaveLength(2);
+    rerender({ viewModels: withRoles, roles: ["admin", "ops"] });
+    expect(screen.getByTestId("page").getAttribute("data-view")).toBe("default");
+    expect(screen.getAllByTestId("echo")).toHaveLength(1);
+    rerender({ viewModels: withRoles, roles: ["ops", "admin"] });
+    expect(screen.getByTestId("page").getAttribute("data-view")).toBe("admin");
+  });
+
   it("says when the user's overlay is ignored, and still shows the shared page", () => {
     const broken = { pages: { demo: { veiw: "compact" } } } as unknown as UserViewModels;
     renderPage({ userViewModels: broken });

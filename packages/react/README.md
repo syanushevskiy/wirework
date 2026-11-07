@@ -39,7 +39,10 @@ ww-<name>` in the host's stylesheet.
   bus from `PageContext` (`PageScope`, provided by `PageView`; the cell's
   id from `CellKeyContext`), its cells reacting under the nested page name
   (`overview/card-1`) and their overlay entries under the chain key
-  (`card-1/button`), never editable in place; four deep at most, a
+  (`card-1/button`) — every layer's, a role's entry as much as the user's
+  (`PageScope.overlays` — `userViewModels` until 6 November 2026 —,
+  `PageView.roles`; doc/roles-design.md) —, never
+  editable in place; four deep at most, a
   problem placeholder beyond; outside a page only how many widgets it
   holds. Its element is `data-testid="layout"`.
 - `ErrorBoundary`, `WidgetErrorBoundary`, `LayoutErrorBoundary` (`OnError`,

@@ -61,6 +61,36 @@ describe("NestedLayout", () => {
     expect(nested.querySelector('[data-testid="cell"][data-cell="inner"]')).not.toBeNull();
   });
 
+  it("reads the role layer for the cells inside a container, the user's own choice over it (doc/roles-design.md)", () => {
+    const store = createStore({ demo: { text: "inside", other: "elsewhere" } });
+    const models = viewModels([cell({ id: "box-1", widget: "box", model: "widgets.box" })], {
+      box: { default: { content: layout([cell({ id: "inner" })]) } },
+      echo: { default: { inputs: { value: "demo.text" } }, other: { inputs: { value: "demo.other" } } },
+    });
+    const withRoles = {
+      ...models,
+      roles: { admin: { pages: { demo: { cells: { "box-1/inner": { view: "other" } } } } } },
+    };
+    const page = (roles: string[], userViewModels?: { pages: Record<string, unknown> }) => (
+      <PageView
+        page="demo"
+        viewModels={withRoles}
+        roles={roles}
+        userViewModels={userViewModels as never}
+        registry={registryWith(box, echo)}
+        layoutEngines={layoutEngines()}
+        store={store}
+        bus={createEventBus()}
+      />
+    );
+    const { rerender } = render(page([]));
+    expect(screen.getByTestId("echo").textContent).toBe("inside");
+    rerender(page(["admin"]));
+    expect(screen.getByTestId("echo").textContent).toBe("elsewhere");
+    rerender(page(["admin"], { pages: { demo: { cells: { "box-1/inner": { view: "default" } } } } }));
+    expect(screen.getByTestId("echo").textContent).toBe("inside");
+  });
+
   it("outside a page says only what it holds", () => {
     render(<NestedLayout template={layout([cell(), cell({ id: "c2" })])} />);
     expect(screen.getByTestId("layout-preview").textContent).toBe("2 widgets inside");
