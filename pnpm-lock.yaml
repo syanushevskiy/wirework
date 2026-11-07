@@ -206,6 +206,9 @@ importers:
       '@wirework/antd-builder':
         specifier: workspace:*
         version: link:../packages/antd-builder
+      '@wirework/view-data-models-examples':
+        specifier: workspace:*
+        version: link:../packages/view-data-models-examples
       playwright-bdd:
         specifier: 'catalog:'
         version: 8.5.1(@playwright/test@1.55.0)

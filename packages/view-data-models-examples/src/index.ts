@@ -44,9 +44,10 @@ export type DemoPage = (typeof DEMO_PAGES)[number];
  * The demo application. Widget templates are grouped by the page that uses
  * them (`widgets.<page>.*`). Every layout is already vertically compact:
  * react-grid-layout will not move anything on mount, so an edit session
- * starts from exactly what is written here.
+ * starts from exactly what is written here. The BASE: what every user gets;
+ * the roles' layers follow (`demoViewModels.roles`).
  */
-export const demoViewModels: ViewModels = {
+const demoBase = {
   pages: {
     /** Landing page: widgets talking through the store, plus what the GLOBAL state knows. */
     overview: {
@@ -287,6 +288,18 @@ export const demoViewModels: ViewModels = {
             template: "default",
             x: 9,
             y: 6,
+            w: 3,
+            h: 2,
+          },
+          // The WIREWORK ADMIN's button (doc/roles-design.md): one more widget for a role is a condition on the
+          // user's roles, not a layout of its own — a button-sized blank for everybody else.
+          {
+            id: "button-delete-run",
+            widget: "antd-button",
+            model: "widgets.runs.deleteRun",
+            template: "default",
+            x: 9,
+            y: 8,
             w: 3,
             h: 2,
           },
@@ -564,7 +577,7 @@ export const demoViewModels: ViewModels = {
         default: { inputs: { text: "app.user.name" }, text: "Signing in…", tone: "muted" },
       },
       role: {
-        default: { inputs: { text: "app.user.role" }, text: "role", tone: "info" },
+        default: { inputs: { text: "app.user.title" }, text: "title", tone: "info" },
       },
     },
     runs: {
@@ -720,6 +733,22 @@ export const demoViewModels: ViewModels = {
           when: [{ path: "runs.selected", is: "empty", not: true }],
           appear: "fade",
           disappear: "fade",
+        },
+      },
+      // The WIREWORK ADMIN's button: shown by the user's roles — the host's `user/has-role` — while a run is
+      // selected. The deletion is a SERVER call the session must be allowed (the fake server refuses the others);
+      // then the list is asked again, and the row is gone.
+      deleteRun: {
+        default: {
+          label: "Delete run",
+          variant: "danger",
+          on: {
+            clicked: [{ call: "runs/delete-selected" }, { call: "table-view/load", with: { into: "runs" } }],
+          },
+          when: [
+            { path: "runs.selected", is: "empty", not: true },
+            { path: "app.user.roles", is: "user/has-role", to: "wirework-admin" },
+          ],
         },
       },
     },
@@ -907,6 +936,57 @@ export const demoViewModels: ViewModels = {
       echoPermissions: {
         default: { inputs: { value: "app.permissions" }, label: "app.permissions (global)" },
       },
+      // The ADMIN's card (doc/roles-design.md): a view of the settings page of the admin's own holds it.
+      danger: {
+        default: {
+          title: "Danger zone",
+          content: {
+            engine: "react-grid-layout",
+            cells: [
+              {
+                id: "button-reset-settings",
+                widget: "antd-button",
+                model: "widgets.settings.resetAll",
+                template: "default",
+                x: 0,
+                y: 0,
+                w: 4,
+                h: 1,
+              },
+            ],
+          },
+        },
+      },
+      resetAll: {
+        default: { label: "Reset every setting", variant: "danger", on: { clicked: [{ call: "settings/reset-all" }] } },
+      },
+      // The WIREWORK ADMIN's card (doc/roles-design.md): who is signed in, a table the server describes.
+      sessions: {
+        default: {
+          title: "Sessions",
+          content: {
+            engine: "react-grid-layout",
+            cells: [
+              {
+                id: "table-sessions",
+                widget: "antd-table",
+                model: "widgets.settings.sessionsTable",
+                template: "default",
+                x: 0,
+                y: 0,
+                w: 12,
+                h: 3,
+              },
+            ],
+          },
+        },
+      },
+      sessionsTable: {
+        default: {
+          inputs: { rows: "sessions.data", loading: "sessions.loading", columns: "sessions.columns" },
+          on: { load: [{ call: "table-view/load", with: { url: "/api/v1/view/sessions", into: "sessions" } }] },
+        },
+      },
     },
     cards: {
       // A card on the GRID: a statistic, the counter that moves it, a button that resets it.
@@ -1061,6 +1141,87 @@ export const demoViewModels: ViewModels = {
   },
 };
 
+/** The runs table as the shared page declares it — the admin's template below differs from it in one line. */
+const runsTable = demoBase.widgets.runs.table.default;
+/** The settings page's cells, which the roles' views build on. */
+const settingsCells = demoBase.pages.settings.default.cells;
+const dangerCard = {
+  id: "card-danger",
+  widget: "antd-card",
+  model: "widgets.settings.danger",
+  template: "default",
+  x: 0,
+  y: 5,
+  w: 12,
+  h: 2,
+};
+const sessionsCard = {
+  id: "card-sessions",
+  widget: "antd-card",
+  model: "widgets.settings.sessions",
+  template: "default",
+  x: 0,
+  y: 7,
+  w: 12,
+  h: 4,
+};
+
+/**
+ * The ROLE layer (doc/roles-design.md): what a role's pages are, on top of
+ * the base — the user overlay's shape, keyed by role. A role sets only what
+ * differs; the session lists a user's roles from the broadest to the most
+ * specific (`samplePeople`), and the later role wins per thing.
+ *
+ *  - admin: the runs table on its `admin` TEMPLATE (the same table, loaded
+ *    from the admin's view of every owner's runs — an Owner column and the
+ *    server's Owner filter in the bar), and the settings page in a VIEW of
+ *    its own: the default's cells plus the Danger-zone card.
+ *  - Wirework admin: the settings page in a view of its own on top of the
+ *    admin's — both cards. The later role wins on the one page both set;
+ *    the runs page stays the admin's. Their Delete button is in the SHARED
+ *    runs layout under a `when`: one more widget is a condition, not a view.
+ */
+export const demoViewModels: ViewModels = {
+  ...demoBase,
+  widgets: {
+    ...demoBase.widgets,
+    runs: {
+      ...demoBase.widgets.runs,
+      table: {
+        default: runsTable,
+        admin: {
+          ...runsTable,
+          on: {
+            ...runsTable.on,
+            load: [{ call: "table-view/load", with: { ...runsTable.on.load[0]?.with, url: "/api/v1/view/runs/all" } }],
+          },
+        },
+      },
+    },
+  },
+  roles: {
+    admin: {
+      pages: {
+        runs: { cells: { "table-main": { view: "admin" } } },
+        settings: {
+          view: "admin",
+          templates: { admin: { engine: "react-grid-layout", cells: [...settingsCells, dangerCard] } },
+        },
+      },
+    },
+    "wirework-admin": {
+      pages: {
+        settings: {
+          view: "wirework-admin",
+          templates: {
+            "wirework-admin": { engine: "react-grid-layout", cells: [...settingsCells, dangerCard, sessionsCard] },
+          },
+        },
+      },
+    },
+  },
+};
+
 /**
  * Failure-path fixture: every cell of page "broken" is wrong in a different
  * way. Self-contained (own widget templates). For engine tests and hosts
@@ -1210,11 +1371,38 @@ export const demoAppState: { app: { settings: UserSettings } } = {
   app: { settings: { pageSize: "5", autoRefresh: false } },
 };
 
-/** What the fake session request answers with (the lists come from the host's catalog). */
-export const sampleSession: { user: { name: string; role: string }; permissions: Permissions } = {
-  user: { name: "Alex Tester", role: "QA engineer" },
-  permissions: { editPages: true },
+/**
+ * Who the user is, as the session answers it: a name, a title, and the
+ * ROLES they hold (doc/roles-design.md) from the broadest to the most
+ * specific — the server knows a Wirework admin is also an admin, so the list
+ * says so and the configuration never has to.
+ */
+export interface SessionUser {
+  /** Who: the key "Sign in as" picks a person by. */
+  id: DemoRole;
+  name: string;
+  /** The job title, for display. */
+  title: string;
+  roles: string[];
+}
+
+/** The roles the demo application grants, in order of strength — and the three people "Sign in as" offers. */
+export const DEMO_ROLES = ["qa", "admin", "wirework-admin"] as const;
+export type DemoRole = (typeof DEMO_ROLES)[number];
+
+export const samplePeople: Record<DemoRole, SessionUser> = {
+  qa: { id: "qa", name: "Alex Tester", title: "QA engineer", roles: ["qa"] },
+  admin: { id: "admin", name: "Sam Keeper", title: "Administrator", roles: ["qa", "admin"] },
+  "wirework-admin": {
+    id: "wirework-admin",
+    name: "Robin Root",
+    title: "Wirework administrator",
+    roles: ["qa", "admin", "wirework-admin"],
+  },
 };
+
+/** What every session answers may do. */
+export const samplePermissions: Permissions = { editPages: true };
 
 /**
  * The DATA each page's visit starts with. Server data is deliberately NOT

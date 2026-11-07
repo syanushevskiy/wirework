@@ -11,6 +11,7 @@
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@wirework/antd-builder": "workspace:*",
+    "@wirework/view-data-models-examples": "workspace:*",
     "playwright-bdd": "catalog:",
     "typescript": "catalog:"
   }

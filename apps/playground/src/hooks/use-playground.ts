@@ -28,9 +28,11 @@ import { useStorePath } from "@wirework/react";
 import {
   DEFAULT_BUILDER_NAMING,
   builderPage,
+  roleOf,
   useBuilder,
   useCommit,
   usePageEditing,
+  usePageExport,
   usePageToolbar,
   usePageViews,
   type AddLock,
@@ -40,7 +42,9 @@ import {
   type PlacedWidget,
   type SaveTrees,
 } from "@wirework/builder";
+import { DEMO_ROLES, samplePeople, type DemoRole } from "@wirework/view-data-models-examples";
 import type { PageVisit, Playground } from "../boot";
+import { PAGE_ROUTES } from "../routes";
 import { useDemoBridge } from "./use-demo-bridge";
 
 /** The page the widget builder adds to. */
@@ -93,10 +97,33 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    */
   const [at, setAt] = useState<string | undefined>(undefined);
 
+  /**
+   * ROLES (doc/roles-design.md): the ones this user holds arrive with the
+   * session (app.user.roles, from the broadest to the most specific) and
+   * the ones the application grants with its lists (app.lists.roles, in
+   * that same order) — the roles a builder may edit for. The builder page
+   * has no session: nobody holds a role there, and none is on offer until
+   * a list is put in the store.
+   */
+  const roles = useStorePath<string[]>(store, "app.user.roles");
+  const knownRoles = useStorePath<string[]>(store, "app.lists.roles");
+  /** Who is signed in, as the session says. */
+  const person = useStorePath<DemoRole>(store, "app.user.id");
+
   /** LIVE validation of what is in the store — builder, editor and inspector edits included. */
   const report = useMemo(
-    () => validateViewModels({ registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances }),
-    [registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances],
+    () =>
+      validateViewModels({
+        registry,
+        layoutEngines,
+        viewModels,
+        userViewModels,
+        actions,
+        predicates,
+        appearances,
+        knownRoles,
+      }),
+    [registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances, knownRoles],
   );
 
   /** This demo's own host-side wiring — not the builder's and not the engine's. */
@@ -131,8 +158,24 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   /** THE write path: everything that changes a page goes through it. */
   const commit = useCommit({ store, save: persist });
 
-  /** With the overlay on, edits are the USER's; without it they change the shared page. */
-  const target: EditTarget = withUserOverlay ? "user" : "base";
+  /**
+   * With the overlay on, edits are the USER's; with a role chosen in the
+   * toolbar they are that ROLE's (doc/roles-design.md); otherwise they
+   * change the shared page. The page is shown AS the target sees it: this
+   * user's roles with the overlay on; for a role, the application's roles
+   * up to it — what a person holding it sees; for everyone, none.
+   */
+  const [roleTarget, setRoleTarget] = useState<string | undefined>(undefined);
+  const target = useMemo<EditTarget>(
+    () => (withUserOverlay ? "user" : roleTarget === undefined ? "base" : { role: roleTarget }),
+    [withUserOverlay, roleTarget],
+  );
+  const viewerRoles = useMemo(() => {
+    const role = roleOf(target);
+    if (role === undefined) return target === "user" ? roles : [];
+    const held = knownRoles?.indexOf(role) ?? -1;
+    return held === -1 ? [role] : knownRoles?.slice(0, held + 1);
+  }, [target, roles, knownRoles]);
   const editing = usePageEditing({
     commit,
     canEdit: canEditPages,
@@ -144,7 +187,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     page,
     at,
     target,
-    withUserOverlay,
+    roles: viewerRoles,
     trees,
     naming: DEFAULT_BUILDER_NAMING,
   });
@@ -155,20 +198,52 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   const wrapInCard = useCallback((cellId: string) => wrapCell(cellId, CARD_WIDGET), [wrapCell]);
 
-  /** Toggling the overlay changes the edit target — an open session ends. */
+  /** Toggling the overlay changes the edit target — an open session ends, and a role chosen is let go. */
   const toggleUserOverlay = useCallback(
     (checked: boolean) => {
       cancelEditing();
       setOverlayWanted(checked);
+      if (checked) setRoleTarget(undefined);
+    },
+    [cancelEditing],
+  );
+  /** Choosing the role to edit for changes the edit target too — the overlay goes off, edits are the role's. */
+  const selectRole = useCallback(
+    (role: string | undefined) => {
+      cancelEditing();
+      setRoleTarget(role);
+      if (role !== undefined) setOverlayWanted(false);
     },
     [cancelEditing],
   );
 
   /**
+   * "Sign in as" (doc/roles-design.md): the session request goes out again
+   * for another of the demo's people, and the page is opened again as them.
+   * The people on offer, as a select shows them, on the demo's pages only.
+   */
+  const people = useMemo(
+    () =>
+      page === BUILDER_PAGE
+        ? undefined
+        : DEMO_ROLES.map((id) => ({ value: id, label: `${samplePeople[id].name} (${samplePeople[id].title})` })),
+    [page],
+  );
+  const signInAs = useCallback(
+    (value: string) => {
+      const next = DEMO_ROLES.find((id) => id === value);
+      const path = store.get<string>("route.path");
+      if (next !== undefined && path !== undefined) void playground.signIn(next, path);
+    },
+    [playground, store],
+  );
+
+  /**
    * Why the builder's Add is not offered right now, if it is not. Adding
    * always changes the SHARED page: not without the permission, not under
-   * an open edit session (it would be silently dropped), and not in a
-   * user's own view (the overlay carries settings, view and layout only).
+   * an open edit session (it would be silently dropped), not in a user's
+   * own view (the overlay carries settings, view and layout only) and not
+   * for a role (its layout places the widgets the page has).
    */
   const addLock: AddLock | undefined = !canEditPages
     ? "permission"
@@ -176,7 +251,9 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
       ? "editing"
       : target === "user"
         ? "user-view"
-        : undefined;
+        : target !== "base"
+          ? "role-view"
+          : undefined;
 
   /**
    * The page changed under the user's hands — a widget ADDED, a page edit
@@ -277,12 +354,15 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     overlayLock,
     onToggleOverlay: toggleUserOverlay,
     target,
+    knownRoles,
+    onSelectRole: selectRole,
   });
 
   /**
    * The page's VIEWS (doc/page-views-design.md): the team's prebuilt
-   * templates and the user's own, chosen in the overlay; Save as and Import
-   * write where the edit target says — the overlay, or the shared page.
+   * templates, the held roles' and the user's own, chosen in the overlay or
+   * for a role; Save as and Import write where the edit target says — the
+   * overlay, the role's entry, or the shared page.
    */
   const views = usePageViews({
     commit,
@@ -291,10 +371,21 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     page,
     trees,
     target,
-    withUserOverlay,
+    roles: viewerRoles,
     shown: editing.activeView,
     cancelEditing,
   });
+
+  /**
+   * The whole SHARED page as a file (doc/pages-as-code-design.md): what an
+   * admin downloads and hands to a developer. The route is this host's to
+   * know — the file carries it so a page can be loaded at its address.
+   */
+  const route = useMemo(() => {
+    const found = PAGE_ROUTES.find((candidate) => candidate.page === page);
+    return found === undefined ? undefined : { path: found.path, title: found.title, menu: found.menu };
+  }, [page]);
+  const exporting = usePageExport({ registry, layoutEngines, viewModels, page, route, editLock });
 
   return {
     registry,
@@ -309,6 +400,12 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     rejections,
     page,
     target,
+    /** The roles the page is shown as (doc/roles-design.md): the user's, or the one edited for. */
+    roles: viewerRoles,
+    /** "Sign in as": the demo's people as options, the one signed in, and the switch — on the demo's pages only. */
+    people,
+    person,
+    signInAs,
     adding,
     addLock,
     addWidget,
@@ -316,6 +413,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     wrapInCard,
     toolbar,
     views,
+    exporting,
     ...editing,
     reloadKey,
   };

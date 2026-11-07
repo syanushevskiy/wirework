@@ -1,6 +1,7 @@
 /** The application around the pages: navigation, the console, the fake servers, the panels, the state inspector, boot validation. */
 import { expect } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
+import { requests, type Console } from "../support/console";
 import { live, PAGE_PATHS } from "../support/page";
 import { editStateJson } from "../support/state";
 
@@ -56,18 +57,6 @@ Then("{string} in the console answers {string}", async ({ page }, command: strin
 
 /* ---------------------------- fake servers ---------------------------- */
 
-/** What the playground reports on the console as `wirework.requests()` (apps/playground/src/api/requests.ts). */
-interface RequestCounts {
-  pending: number;
-  answered: number;
-}
-
-/** The playground's console API, as the steps below see it. */
-type Console = Window & {
-  wireworkHoldAnswers?: boolean;
-  wirework?: { requests: () => RequestCounts; releaseAnswers: () => void };
-};
-
 /**
  * The fake servers keep every answer back until "the server has had time to
  * answer" — so a scenario can look at a page as it is BEFORE its data
@@ -89,10 +78,7 @@ Given("the server is slow to answer", async ({ page }) => {
 When("the server has had time to answer", async ({ page }) => {
   await page.evaluate(() => (window as Console).wirework?.releaseAnswers());
   await expect
-    .poll(
-      () => page.evaluate((): RequestCounts => (window as Console).wirework?.requests() ?? { pending: 0, answered: 0 }),
-      { message: "the fake servers still have a request in flight" },
-    )
+    .poll(() => requests(page), { message: "the fake servers still have a request in flight" })
     .toMatchObject({ pending: 0 });
 });
 

@@ -9,12 +9,12 @@ Feature: User overlay on the builder page
   Scenario: The overlay becomes available with the first widget
     Given I open the "builder" page
     Then the user overlay is not available
-    And the edit target is "view models"
+    And the edit target is "everyone"
     When I choose the "antd-label" widget
     And I set the setting "text" to "Shared text"
     And I add the widget
     Then the user overlay is available and off
-    And the edit target is "view models"
+    And the edit target is "everyone"
 
   Scenario: With the overlay on, a widget edit is saved as the user's settings
     Given I open the "builder" page
@@ -22,7 +22,7 @@ Feature: User overlay on the builder page
     And I set the setting "text" to "Shared text"
     And I add the widget
     And I enable the user overlay
-    Then the edit target is "user overlay"
+    Then the edit target is "me"
     When I edit the page
     And I edit the cell "custom-1"
     And I set the setting "text" to "My text"
@@ -98,11 +98,11 @@ Feature: User overlay on the builder page
     And I set the setting "text" to "first"
     And I add the widget
     And I enable the user overlay
-    Then the edit target is "user overlay"
+    Then the edit target is "me"
     When I switch to the "builder" page
     Then the user overlay is not available
     When I switch to the "overview" page
-    Then the edit target is "user overlay"
+    Then the edit target is "me"
     When I disable the user overlay
     And I switch to the "overview" page
-    Then the edit target is "user overlay"
+    Then the edit target is "me"

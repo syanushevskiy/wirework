@@ -96,6 +96,15 @@
   font-size: 0.85em;
 }
 
+/* "Sign in as": the host's switch between the demo's people, above the page toolbar. */
+.pg-sign-in {
+  margin-bottom: 0.5rem;
+}
+
+.pg-sign-in-select.pg-sign-in-select {
+  min-width: 14rem;
+}
+
 /* ---- state inspector ---- */
 
 /* Element + class: antd's own textarea rule is a single class too. */

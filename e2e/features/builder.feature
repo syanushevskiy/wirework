@@ -188,7 +188,7 @@ Feature: Widget builder
 
   Scenario: A placed widget can be modified and removed
     Given I open the "builder" page
-    Then the edit target is "view models"
+    Then the edit target is "everyone"
     When I choose the "antd-label" widget
     And I set the setting "text" to "before"
     And I add the widget
@@ -217,7 +217,7 @@ Feature: Widget builder
     When I edit the page
     And I drag the cell "custom-2" onto the cell "custom-1"
     And I save the page
-    Then the edit target is "view models"
+    Then the edit target is "everyone"
     And the page uses the "default" view
     And the cell "custom-2" is placed at x 0 y 0 w 12 h 2
     # Two placed widgets and one saved session: three commits, each handed to the host.

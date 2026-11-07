@@ -18,7 +18,7 @@ Feature: User view models
 
   Scenario: Modifying a widget on a demo page is saved in the user overlay
     Given I open the "overview" page
-    Then the edit target is "user overlay"
+    Then the edit target is "me"
     When I edit the page
     And I edit the cell "label-main"
     And I set the setting "text" to "Edited via overlay"
@@ -89,7 +89,7 @@ Feature: User view models
     And I disable the user overlay
     Then the widget editor is closed
     And the page mode is "view"
-    And the edit target is "view models"
+    And the edit target is "everyone"
     And the label reads "Wirework playground"
 
   Scenario: Layout edits on a demo page become the user's own template

@@ -44,7 +44,7 @@ import {
 import { createEventBus } from "@wirework/events";
 import type { EventBus, Store } from "@wirework/schema";
 import { layerStores } from "@wirework/store";
-import type { DemoPage } from "@wirework/view-data-models-examples";
+import type { DemoPage, DemoRole } from "@wirework/view-data-models-examples";
 import type { Navigator } from "./actions/nav-actions";
 import { installDemo } from "./demo/install";
 import { createPlaygroundStore } from "./devtools";
@@ -173,5 +173,18 @@ export function boot({ navigator }: { navigator: Navigator }) {
     return visitOf("builder", page, createPlaygroundStore("builder", page.initialState(route)));
   };
 
-  return { ...registries, rejections: demo.rejections, openDemoPage, openBuilder };
+  /**
+   * "Sign in as" another person (doc/roles-design.md): the session request
+   * goes out again and rewrites the application's global state — the user
+   * with their roles, the permissions, the lists — and once it has answered
+   * the page at `path` is opened AGAIN, a fresh visit: its data starts over
+   * and it loads by the new roles, as any page does on opening.
+   */
+  const signIn = async (person: DemoRole, path: string): Promise<void> => {
+    if (demoSession === undefined) return;
+    await demo.signIn(demoSession.shared, person);
+    navigator.go(path);
+  };
+
+  return { ...registries, rejections: demo.rejections, openDemoPage, openBuilder, signIn };
 }

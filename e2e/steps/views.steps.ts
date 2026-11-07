@@ -1,4 +1,7 @@
-/** Page views: the list of a page's prebuilt and own views, choosing one, Save as, Rename, Delete, Share and Import. */
+/**
+ * Page views: the list of a page's prebuilt and own views, choosing one, Save as, Rename, Delete, Share and Import —
+ * and Export page, the whole shared page as a file (doc/pages-as-code-design.md).
+ */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { chooseOption, closeDropdown, confirmButton, dropdown, option } from "../support/antd";
@@ -105,4 +108,60 @@ Then("the view panel says {string}", async ({ page }, text: string) => {
 
 Then("the view panel is closed", async ({ page }) => {
   await expect(page.getByTestId("page-view-panel")).toHaveCount(0);
+});
+
+/* ------------------------------- export ------------------------------- */
+
+When("I export the page", async ({ page }) => {
+  await page.getByTestId("page-export-open").click();
+  await expect(page.getByTestId("page-export-panel")).toBeVisible();
+});
+
+Then("the exported page JSON contains {string}", async ({ page }, fragment: string) => {
+  await expect(page.getByTestId("page-export-json")).toHaveValue(literally(fragment));
+});
+
+/** The user's own views never travel with the page: the file is the SHARED page. */
+Then("the exported page JSON does not contain {string}", async ({ page }, fragment: string) => {
+  await expect(page.getByTestId("page-export-json")).not.toHaveValue(literally(fragment));
+});
+
+/**
+ * The download: the browser's, caught as an event. The step keeps the file
+ * for the assertion that follows, on the page object (one scenario is one
+ * page).
+ */
+const downloaded = new WeakMap<Page, { name: string; text: string }>();
+
+When("I download the exported page", async ({ page }) => {
+  const waiting = page.waitForEvent("download");
+  await page.getByTestId("page-export-download").click();
+  const download = await waiting;
+  const chunks: Buffer[] = [];
+  // Boundary cast: a Readable yields `any`; a download's stream yields bytes.
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk as Buffer);
+  downloaded.set(page, { name: download.suggestedFilename(), text: Buffer.concat(chunks).toString("utf8") });
+});
+
+Then(
+  "the downloaded file is {string} and holds the page {string}",
+  async ({ page }, fileName: string, pageName: string) => {
+    const file = downloaded.get(page);
+    expect(file?.name).toBe(fileName);
+    expect(JSON.parse(file?.text ?? "")).toMatchObject({ kind: "wirework-page", version: 1, page: pageName });
+  },
+);
+
+When("I close the export panel", async ({ page }) => {
+  await page.getByTestId("page-export-close").click();
+});
+
+Then("the export panel is closed", async ({ page }) => {
+  await expect(page.getByTestId("page-export-panel")).toHaveCount(0);
+});
+
+/** Locked, and saying why on hover (the title on the button's wrapper, as the toolbar's locks do). */
+Then("the page cannot be exported", async ({ page }) => {
+  await expect(page.getByTestId("page-export-open")).toBeDisabled();
+  await expect(page.getByTestId("page-export-open").locator("xpath=..")).toHaveAttribute("title", /permissions/);
 });

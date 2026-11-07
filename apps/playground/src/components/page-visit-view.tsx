@@ -6,9 +6,9 @@
  * which composes the @wirework/builder hooks. The router keys this component
  * by visit, so every piece of UI state here starts over with the visit.
  */
-import { Typography } from "antd";
+import { Flex, Select, Typography } from "antd";
 import { PageView } from "@wirework/react";
-import { PageToolbar, PageViews, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
+import { PageExport, PageToolbar, PageViews, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 import type { PageVisit, Playground } from "../boot";
 import { BUILDER_PAGE, usePlayground } from "../hooks/use-playground";
 import { CollapsibleCard } from "./collapsible-card";
@@ -35,13 +35,19 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     page,
     layoutPage,
     target,
+    roles,
+    people,
+    person,
+    signInAs,
     adding,
     addLock,
     addWidget,
     editLayout,
     wrapInCard,
+    templateChoice,
     toolbar,
     views,
+    exporting,
     shownViewModels,
     shownUserViewModels,
     editing,
@@ -103,10 +109,27 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
       </div>
 
       <div>
+        {/* "Sign in as" (doc/roles-design.md): the HOST's, not a widget — the session request goes out again for the person picked. */}
+        {people ? (
+          <Flex gap="small" align="center" className="pg-sign-in" data-visit={visit.id}>
+            <label htmlFor="sign-in-as">Signed in as</label>
+            <Select<string>
+              id="sign-in-as"
+              data-testid="sign-in-as"
+              className="pg-sign-in-select"
+              size="small"
+              {...(person === undefined ? { placeholder: "signing in…" } : { value: person })}
+              onChange={signInAs}
+              options={people}
+            />
+          </Flex>
+        ) : null}
         {/* Page toolbar: engine of the shown template, the edit session, the edit target. */}
         <PageToolbar toolbar={toolbar} />
         {/* The page's views: prebuilt and the user's own, chosen, saved, shared as JSON. */}
         <PageViews views={views} />
+        {/* The whole shared page as a file, for an admin to hand to a developer (doc/pages-as-code-design.md). */}
+        <PageExport export={exporting} />
         <Typography.Paragraph type="secondary" data-testid="visit-note" className="pg-note">
           {page === BUILDER_PAGE
             ? "Opening this page starts it from its initial state: no data at all."
@@ -129,13 +152,16 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
 
         {editingCell ? (
           <WidgetEditor
-            key={editingCell.key}
+            /* A fresh form per cell — and per template: a template chosen for an overlay prefills the form anew. */
+            key={`${editingCell.key}:${editingCell.template ?? ""}`}
             cell={editingCell}
             store={store}
             actions={actions}
             predicates={predicates}
             appearances={appearances}
-            bindingsLocked={target === "user"}
+            /* An overlay — the user's own view, a role's — carries settings (and, for a role, a template choice), never wiring. */
+            bindingsLocked={target !== "base"}
+            templates={templateChoice}
             onSave={saveWidget}
             onCancel={clearCell}
           />
@@ -146,6 +172,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
           page={layoutPage}
           viewModels={shownViewModels}
           userViewModels={shownUserViewModels}
+          roles={roles}
           registry={registry}
           layoutEngines={layoutEngines}
           actions={actions}

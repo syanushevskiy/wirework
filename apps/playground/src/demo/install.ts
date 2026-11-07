@@ -13,7 +13,8 @@ import { gridstackEngine } from "@wirework/engine-gridstack";
 import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
 import type { Store } from "@wirework/schema";
 import { createTableViewActions } from "@wirework/table-view";
-import { sampleRuns, type DemoPage, type Run } from "@wirework/view-data-models-examples";
+import { z } from "zod";
+import { demoAppState, sampleRuns, type DemoPage, type DemoRole, type Run } from "@wirework/view-data-models-examples";
 import { standardContracts } from "@wirework/widget-contracts";
 import { antdTestWidgets, brokenWidgets, createAntdWidgets } from "@wirework/antd-widgets";
 import { createFilterActions } from "../actions/filter-actions";
@@ -22,8 +23,9 @@ import { createOverviewLoader, createRunLoader, createRunsActions } from "../act
 import { createSessionLoader } from "../actions/session-loader";
 import { createRunsServer } from "../api/runs-server";
 import { createSessionApi } from "../api/session-api";
+import { createSessionsEndpoint } from "../api/sessions-server";
 import { suiteOptionsFor } from "../api/suites-catalog";
-import { RUNS_VIEW_URL, createFakeTransport } from "../api/transport";
+import { RUNS_ALL_VIEW_URL, RUNS_VIEW_URL, SESSIONS_VIEW_URL, createFakeTransport, forbidden } from "../api/transport";
 import type { PlaygroundPage, Registries } from "../boot";
 import { statusBadgeContract } from "../contracts/status-badge";
 import { CopyCell } from "../widgets/copy-cell";
@@ -46,6 +48,8 @@ export interface Demo {
   sessionState: Record<string, unknown>;
   /** A session starts: the fake servers start over and the session request goes out. */
   startSession(shared: Store): void;
+  /** "Sign in as" another of the demo's people (doc/roles-design.md): the session request goes out again; resolves when it answered. */
+  signIn(shared: Store, person: DemoRole): Promise<void>;
   pages: Record<DemoPage, PlaygroundPage>;
   builderPage: PlaygroundPage;
 }
@@ -90,9 +94,31 @@ export function installDemo(
     description: "console.log the event (debugging)",
     handler: ({ event, args }) => console.log("[action log-event]", event, args),
   });
+  // The admin's Danger zone (doc/roles-design.md): the settings back to what the application starts with.
+  actions.register({
+    name: "settings/reset-all",
+    description: "Put every setting back to its default",
+    handler: ({ store }) => store.set("app.settings", demoAppState.app.settings),
+  });
   // Server-side data for the demo: a fake server with real latency.
   const runsServer = createRunsServer({ seed: sampleRuns, total: 23, latencyMs: 600 });
-  const loadSession = createSessionLoader(createSessionApi({ latencyMs: 300 }));
+  const sessionApi = createSessionApi({ latencyMs: 300 });
+  const loadSession = createSessionLoader(sessionApi);
+  // The Wirework admin's button (doc/roles-design.md): a role-only ACTION is a server call the session must be
+  // allowed — never a store write a condition hides. The fake server refuses every other session.
+  actions.register({
+    name: "runs/delete-selected",
+    description: "Delete the run at runs.selected on the server (Wirework admins only)",
+    handler: async ({ store }) => {
+      const id = store.get("runs.selected");
+      if (typeof id !== "string" || id === "") return;
+      if (!sessionApi.current().roles.includes("wirework-admin")) {
+        throw new Error("DELETE /api/v1/runs answered 403 Forbidden: your session may not delete runs");
+      }
+      await runsServer.deleteRun(id);
+      store.set("runs.selected", undefined);
+    },
+  });
   // What the pages' own `load` reactions call (viewModels.on.<page>): the
   // overview's numbers, one run — plus opening the selected run.
   for (const action of createRunsActions({
@@ -104,8 +130,18 @@ export function installDemo(
   }
   // Tables the SERVER describes (@wirework/table-view): one generic
   // action, the URL comes from the page. The playground's "network" is the
-  // fake server; a real host passes `fetchTransport` instead.
-  const transport = createFakeTransport({ [RUNS_VIEW_URL]: (request) => runsServer.fetchView(request) });
+  // fake server; a real host passes `fetchTransport` instead. Every request
+  // carries the SESSION, and the admin's view refuses a session without the
+  // admin role (doc/roles-design.md): the page asks, the server decides.
+  const transport = createFakeTransport(
+    {
+      [RUNS_VIEW_URL]: (request) => runsServer.fetchView(request),
+      [RUNS_ALL_VIEW_URL]: (request, session) =>
+        session.roles.includes("admin") ? runsServer.fetchViewAll(request) : forbidden(RUNS_ALL_VIEW_URL),
+      [SESSIONS_VIEW_URL]: createSessionsEndpoint({ latencyMs: 300 }),
+    },
+    () => ({ roles: sessionApi.current().roles }),
+  );
   for (const action of createTableViewActions({ transport })) actions.register(action);
   // Dependent filters: the suites on offer follow the applications chosen.
   for (const action of createFilterActions(suiteOptionsFor)) actions.register(action);
@@ -121,6 +157,15 @@ export function installDemo(
     description: "A failed run the server would accept again (its id is even)",
     phrase: "can be retried",
     test: (run) => isRetryable(run),
+  });
+  // The roles the user holds are a LIST (app.user.roles, doc/roles-design.md): "has the role" reads it —
+  // "is one of" and "equals" are for a single value and do not apply to the list.
+  predicates.register({
+    name: "user/has-role",
+    description: "The list of roles at the path contains the given role name (for app.user.roles)",
+    phrase: "has the role",
+    argument: z.string().min(1),
+    test: (roles, role: string) => Array.isArray(roles) && roles.includes(role),
   });
 
   // An appearance of this application's own: the name here, the keyframes
@@ -144,6 +189,7 @@ export function installDemo(
       runsServer.reset();
       void loadSession(shared);
     },
+    signIn: (shared, person) => loadSession(shared, person),
     pages: demoPages(runsServer),
     builderPage,
   };

@@ -35,8 +35,16 @@ export interface RunsStats {
 export interface RunsServer {
   /** The view table API of the runs list: resolves after the simulated latency. */
   fetchView(request: TableViewRequest): Promise<TableViewResponse>;
+  /**
+   * The ADMIN's view of the list (doc/roles-design.md): every owner's runs,
+   * with an `owner` column the server offers a filter for. The same list,
+   * the same clock — a page change here moves time like one on the plain view.
+   */
+  fetchViewAll(request: TableViewRequest): Promise<TableViewResponse>;
   /** One run as it is now, or undefined when there is none with this id. Time does not move. */
   fetchRun(id: string): Promise<Run | undefined>;
+  /** Delete one run (doc/roles-design.md: the Wirework admin's button). Time does not move. */
+  deleteRun(id: string): Promise<void>;
   /** The overview's numbers. Time does not move. */
   fetchStats(): Promise<RunsStats>;
   /** Back to the initial runs. Requests still in flight no longer move time. */
@@ -78,21 +86,40 @@ function buildRows(seed: readonly Run[], total: number): Run[] {
   return rows;
 }
 
-/** A run as the view table API serves it: one flat record, keyed by the column ids. */
-type ViewRow = Record<"id" | "name" | "reference" | "inbound" | "state" | "message", string>;
+/** A run as the view table API serves it: one flat record, keyed by the column ids — the owner on the admin's view only. */
+type ViewRow = Record<"id" | "name" | "reference" | "inbound" | "state" | "message", string> & { owner?: string };
 
-const toViewRow = (run: Run): ViewRow => ({
+/** Who a run belongs to: the server's knowledge, by the id's parity so a scenario can assert it. */
+const ownerOf = (run: Run): string => (Number(run.id) % 2 === 0 ? "alice" : "bob");
+
+const toViewRow = (run: Run, withOwner: boolean): ViewRow => ({
   id: run.id,
   name: run.name,
   reference: run.reference,
   inbound: run.inbound,
   state: run.status.state,
   message: run.status.message,
+  ...(withOwner ? { owner: ownerOf(run) } : {}),
 });
 
 /** The description of the runs table. `null` among filter values is the API's "rows without a value". */
-const describeRuns = (rows: readonly ViewRow[]): NonNullable<TableViewResponse["metadata"]> => ({
+const describeRuns = (rows: readonly ViewRow[], withOwner: boolean): NonNullable<TableViewResponse["metadata"]> => ({
   columnDefinitions: [
+    // The admin's view alone has an owner, and offers a filter for it (the page may still keep it out of the bar).
+    ...(withOwner
+      ? [
+          {
+            id: "owner",
+            headerName: "Owner",
+            type: "varchar(l)",
+            description: null,
+            filterValues: ["alice", "bob"],
+            isFilterable: true,
+            isHidden: false,
+            isSortable: true,
+          },
+        ]
+      : []),
     {
       id: "id",
       headerName: "#",
@@ -174,12 +201,12 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
   /** Bumped by `reset`: an answer from before a reset must not move the new timeline. */
   let epoch = 0;
 
-  const answerView = (request: TableViewRequest): TableViewResponse => {
-    const all = rows.map(toViewRow);
+  const answerView = (request: TableViewRequest, withOwner: boolean): TableViewResponse => {
+    const all = rows.map((run) => toViewRow(run, withOwner));
     const selected = select(all, request.dataFilter);
     const { limit, offset } = request.dataFilter;
     return {
-      ...(request.metadata ? { metadata: describeRuns(all) } : {}),
+      ...(request.metadata ? { metadata: describeRuns(all, withOwner) } : {}),
       ...(request.totalRecords ? { totalRecords: selected.length } : {}),
       data: selected.slice(offset, offset + limit),
     };
@@ -193,16 +220,24 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
       }),
     );
 
+  /** One answer of the list, moving time one step after it — unless a reset came in between. */
+  const listView = (request: TableViewRequest, withOwner: boolean): Promise<TableViewResponse> => {
+    const started = epoch;
+    return roundTrip(() => {
+      const answer = answerView(request, withOwner);
+      if (started === epoch) rows = rows.map(advance);
+      return answer;
+    });
+  };
+
   return {
-    fetchView: (request) => {
-      const started = epoch;
-      return roundTrip(() => {
-        const answer = answerView(request);
-        if (started === epoch) rows = rows.map(advance);
-        return answer;
-      });
-    },
+    fetchView: (request) => listView(request, false),
+    fetchViewAll: (request) => listView(request, true),
     fetchRun: (id) => roundTrip(() => rows.find((row) => row.id === id)),
+    deleteRun: (id) =>
+      roundTrip(() => {
+        rows = rows.filter((row) => row.id !== id);
+      }),
     fetchStats: () =>
       roundTrip(() => {
         const count = (state: string): number => rows.filter((row) => row.status.state === state).length;

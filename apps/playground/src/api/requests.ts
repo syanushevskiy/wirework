@@ -1,8 +1,10 @@
 /**
  * What the demo's fake servers have been asked and what they have answered
  * — so a test can wait for "the server has had time to answer" as a FACT
- * (nothing in flight) instead of a sleep. Every fake request goes through
- * `tracked`; `requests()` is on the console as `wirework.requests()`.
+ * (nothing in flight) instead of a sleep, and assert WHICH view a page
+ * asked for (`asked`: the URLs, in order — doc/roles-design.md). Every fake
+ * request goes through `tracked`; `requests()` is on the console as
+ * `wirework.requests()`.
  *
  * A test that wants to see the page BEFORE the answers (a loading label, an
  * empty table) holds them: `window.wireworkHoldAnswers = true` before the
@@ -19,6 +21,7 @@ declare global {
 
 let pending = 0;
 let answered = 0;
+const asked: string[] = [];
 
 /** The gate every held answer waits behind, made when the first request finds the hold set. */
 let gate: { opened: Promise<void>; open: () => void } | undefined;
@@ -35,8 +38,10 @@ function currentGate(): { opened: Promise<void> } | undefined {
   return gate;
 }
 
-export function tracked<T>(request: Promise<T>): Promise<T> {
+/** Count a request until it is answered (or failed); `url` names what was asked, for the log. */
+export function tracked<T>(request: Promise<T>, url?: string): Promise<T> {
   pending += 1;
+  if (url !== undefined) asked.push(url);
   const held = currentGate();
   const delivered = held
     ? request.then(
@@ -68,6 +73,8 @@ export interface RequestCounts {
   pending: number;
   /** Requests answered (or failed) since the application started. */
   answered: number;
+  /** The URLs asked of the view table API since the application started, in order. */
+  asked: readonly string[];
 }
 
-export const requests = (): RequestCounts => ({ pending, answered });
+export const requests = (): RequestCounts => ({ pending, answered, asked: [...asked] });
