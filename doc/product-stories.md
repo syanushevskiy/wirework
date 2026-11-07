@@ -1,10 +1,11 @@
 # Product stories — Xsight Wirework
 
-One epic, twenty-eight stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
-on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25), two on 2 November 2026 (WW-26, WW-27) and
-one on 3 November 2026 (WW-28), six to do (WW-15 to WW-20). Written for
-managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-28) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+One epic, thirty-one stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25), two on 2 November 2026 (WW-26, WW-27),
+one on 3 November 2026 (WW-28), one on 5 November 2026 (WW-30) and one on 6 November 2026 (WW-31), seven to do
+(WW-15 to WW-20, WW-29). Written
+for managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
+WW-16 to WW-20, WW-21 to WW-31) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -797,3 +798,124 @@ buttons measured and wrapping as the window narrows, classes saved into the user
 the builder, the unknown class, a card's flex content edited as the page); the engine's unit tests (`engine.test.ts`:
 the promises, rows appended and dropped, classes set and cleared, every move, `validate`; `classes.test.ts`: Tailwind's
 names and values, the three names Tailwind 4.3.4 lacks kept out, the merge, the strangers).
+
+### WW-29 · Xsight Wirework - Pages as code: a page built in the builder lands in the application's source
+
+**Type:** User feature · **Status:** To do (designed 4 November 2026, doc/pages-as-code-design.md)
+
+**Short description:** As an admin, I build a page in the builder — a new page with its own address and menu entry, or
+a change to an existing one — and when I save it, it is written as a page file in the application's source, so that it
+reaches every user through the application's normal release, with a reviewer and a history, and without a developer
+typing it in. I work in an AUTHORING copy of the application; every Save page writes the page's file; the toolbar
+tells me where it went; a developer (later: a button) turns the change into a pull request that the automatic checks
+validate. In production nobody writes the shared pages; personal views keep working.
+
+**Acceptance criteria:**
+
+- **Given** the application in authoring mode, **when** I open the builder, choose "New page", name it "Inventory"
+  and give it the address /demo/inventory in the menu, **then** an empty page opens on the default engine, which I may
+  change while it is empty.
+- **Given** a page I am building, **when** I add widgets and save the page, **then** the toolbar says the page was
+  saved to its file (`src/pages/inventory.page.json`), the page is in the menu at its address, and it looks to me as
+  it will to its users, my personal view on or off.
+- **Given** a saved page file, **when** the application starts again, **then** the page is there as saved — its
+  layouts, the widgets inside its cards, its prebuilt views and what it loads.
+- **Given** a page file that names a widget, an engine or an action the application does not have, **when** the
+  automatic checks run, **then** they fail naming the file and the problem, before any user sees the page.
+- **Given** the application in production, **then** the builder cannot write the shared pages, and my personal view
+  of a page is saved as today.
+- **Given** a saved page (phase 3), **when** I press "Propose", **then** a pull request with my page file opens and
+  its link shows in the toolbar.
+
+**Verified by (planned):** `pages-as-code.feature` (its first scenarios are WW-30's); the engine's `pages-file` tests
+(a page cut into a file and merged back for every demo page, conflicting widget templates reported, the name rule); the
+dev-server plugin's handler test; the configuration check run by CI.
+
+### WW-30 · Xsight Wirework - Export a page as one JSON file to hand to a developer
+
+**Type:** User feature · **Status:** Done (built 5 Nov, doc/pages-as-code-design.md "Built")
+
+**Short description:** As an admin — a product owner, a QA, a developer of another team — I build or change a page in
+the builder and export the WHOLE page as one JSON file, `<page>.page.json`, so that I can send it to a developer, who
+puts it in the application's source and ships it with the next release, without typing my page in. The file holds
+everything the page is as configuration: its prebuilt views, what it loads when it opens, every widget its cells use
+down into its cards and tabs, and its address and menu entry. My own personal view is never in it: the file is the
+shared page. Exporting is an administrator's act and waits for the editing permission, like Edit page. This is the
+first step of WW-29 (pages as code): the file an admin exports today is the file the authoring mode will write by
+itself tomorrow, and the developer's merge of it into the application is a function the engine provides.
+
+**Acceptance criteria:**
+
+- **Given** the overview page, **when** I press Export page, **then** a panel shows the page as JSON — kind
+  `wirework-page`, the page's name and address, both prebuilt views, its `load` reaction and its widgets — and
+  **when** I press Download, **then** the browser saves `overview.page.json` holding that page.
+- **Given** I saved a view of my own, **when** I export the page, **then** my view is not in the file.
+- **Given** the cards page — two cards as docking panes, a grid in one and flex rows in the other — **when** I export
+  it, **then** the file holds the widgets inside both cards, three layout engines deep.
+- **Given** a page I built in the builder with a label, **when** I export it, **then** the file holds the label's cell
+  and its template with the text I typed.
+- **Given** my permissions do not include editing pages, **then** Export page is disabled and says why on hover.
+- **Given** an exported file, **when** a developer merges it into the application's view models with the engine's
+  function, **then** the result validates exactly as the page did, and two files that hold the same widget template
+  differently are reported by name.
+
+**Delivered:** 5 November 2026.
+
+**Verified by:** `pages-as-code.feature` (the overview exported whole and downloaded, my own view left out, the cards
+page three engines deep, a page built in the builder, no export without the permission); the engine's
+`pages-file.test.ts` (the cut through a container, export and parse, merge into a tree that validates like the
+original and over another tree, the two conflicts); the builder's `use-page-export.test.tsx` (the file, the panel, the
+download through `save`, the lock).
+
+### WW-31 · Xsight Wirework - Roles: one page that differs for an admin — extra filters, other actions, a card of their own
+
+**Type:** User feature · **Status:** Done (designed 5 November 2026, doc/roles-design.md; built 6 November 2026)
+
+**Short description:** As a page builder, I make one page look like each user's job: an admin opening the runs page
+gets an extra Owner filter and a table that loads every owner's runs through the admin's request, and a Retry tag the
+others never see, and a Danger-zone card on the settings page; a Wirework admin gets the admin's runs page with a Delete
+button and a settings page with a Sessions card on top — while everybody else gets the page as it is, with no blank
+where those widgets would be. I
+configure it in one place per role: which view of the page a role sees,
+which template a widget uses for that role (the admin's table template carries the admin's load action and its
+filter), and the settings a role changes. To hide one widget for a role I keep using "Show when" with the user's
+roles. What the server answers stays the server's decision from the session: a role changes what the page shows and
+asks for, never what a user is allowed to receive.
+
+**Acceptance criteria:**
+
+- **Given** I am signed in as QA, **when** I open the runs page, **then** the table loads the runs view with its four
+  columns; **when** I sign in as admin, **then** the table loads the admin's view of every owner's runs, with an Owner
+  column and an Owner filter the server offers, and choosing an owner re-requests the list with that owner; **when** I
+  sign in as QA again, **then** the page is the page as it is, the owner choice gone with it.
+- **Given** the settings page, **then** as QA it holds the four cells it has today, with no blank for anyone's card;
+  **when** I sign in as admin, **then** it holds the Danger-zone card too, whose button puts every setting back.
+- **Given** I hold several roles — QA, admin and Wirework admin, as the session lists them from the broadest to the most
+  specific — **when** I open the runs page, **then** I see the admin's table with the Wirework admin's Delete button
+  shown once a run is selected (the single-widget case, written as a condition "the user's roles has the role …"), and
+  deleting removes the run from the list; **when** I open the settings page, **then** I see the Wirework admin's view
+  with both cards, the Sessions card listing the signed-in people from the server: the most specific role that says
+  something about a page wins there, and the others' pages stay as they are.
+- **Given** I saved a personal view of a page as QA, **when** I am signed in as admin, **then** my view is still mine
+  and still shown; **when** I choose no view, **then** I see the admin's page; and **when** I edit the admin's page I
+  see, **then** the edit is my own copy of it, the admin's view and the shared page untouched.
+- **Given** the builder with "edits → role: admin", **when** I move a cell, save a view or pick a widget's template and
+  save, **then** the change is in the admin's configuration, the shared page is untouched, and the page shown while I
+  edit is the page as an admin sees it.
+- **Given** a role's configuration that names a view or a widget template nobody has, **when** the application starts,
+  **then** the validation names the role, the page and the missing name, and a role the application does not grant is a
+  warning.
+- **Given** a QA session, **when** the admin's request is sent anyway — or the Wirework admin's deletion —, **then** the
+  server refuses it: the role decides the page, the session decides the data.
+
+**Delivered:** 6 November 2026. Reviewed by the tiger team on 7 November 2026 and amended: the conflict warning of the
+design was dropped (it fired on the intended case, a stronger role overriding a weaker one on the same page), the
+Danger-zone card returned to the admin, the Owner filter is the server's own in the filter bar, Delete is a server
+call, and Retry stayed everyone's.
+
+**Verified by:** `roles.feature` (9 scenarios: the runs table as QA, as admin and as QA again, the refused request, the
+admin's Danger zone, the Wirework admin's two pages with the deletion, a personal view surviving the sign-in and an
+admin's edit of the role's page as their own copy, editing for a role in the builder, a template chosen for a role, the
+validation's warnings); the engine's role tests in `resolve.test.ts`, `validate.test.ts`, `trees.test.ts`,
+`nesting.test.ts` and `pages-file.test.ts`; the React adapter's role tests; the builder's role tests in
+`use-page-editing.test.tsx`, `use-page-views.test.tsx` and `page-views.test.ts`; the toolbar story `ForARole`.
