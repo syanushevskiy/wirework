@@ -1,36 +1,46 @@
 /**
  * Page VIEWS as pure functions (doc/page-views-design.md): a view is a page
  * template as the user sees it, and its KIND is where it lives — a base
- * template (`viewModels.pages.<page>.<name>`, prebuilt) or one of the
- * user's own (`userViewModels.pages.<page>.templates.<name>`, mine). Nothing
- * here is stored: the list is derived from the two trees, the file is the
- * template with its page and name around it.
+ * template (`viewModels.pages.<page>.<name>`, prebuilt), one of a ROLE's
+ * (`viewModels.roles.<role>.pages.<page>.templates.<name>`, the role's —
+ * prebuilt for that role, doc/roles-design.md) or one of the user's own
+ * (`userViewModels.pages.<page>.templates.<name>`, mine). Nothing here is
+ * stored: the list is derived from the trees, the file is the template with
+ * its page and name around it.
  */
 import { isPlainObject, type PageViewModel } from "@wirework/schema";
 import { errorText, resolveTemplate, type LayoutEngineRegistry } from "@wirework/engine";
 import type { ViewProblem } from "./locks";
 import type { EditableTrees } from "./use-commit";
 
-export type PageViewKind = "base" | "user";
+export type PageViewKind = PageViewChoice["kind"];
 
-export interface PageViewChoice {
-  name: string;
-  kind: PageViewKind;
-}
+export type PageViewChoice =
+  { name: string; kind: "base" } | { name: string; kind: "role"; role: string } | { name: string; kind: "user" };
 
 /**
- * Every view of a page, prebuilt ones first, in the trees' order. A user
- * template with a base template's name shadows it (`pageTemplates`: same
- * name, user wins), so it is listed once, as the user's.
+ * Every view of a page: the prebuilt ones, then each role's in the order
+ * the roles are given, then the user's — the layers in the order they
+ * apply. A later layer's template with an earlier one's name shadows it
+ * (`pageTemplates`: same name, the later wins), so it is listed once, as
+ * the later layer's.
  */
-export function pageViews({ viewModels, userViewModels }: EditableTrees, page: string): PageViewChoice[] {
-  const own = Object.keys(userViewModels.pages?.[page]?.templates ?? {});
-  return [
-    ...Object.keys(viewModels.pages?.[page] ?? {})
-      .filter((name) => !own.includes(name))
-      .map((name): PageViewChoice => ({ name, kind: "base" })),
-    ...own.map((name): PageViewChoice => ({ name, kind: "user" })),
+export function pageViews(
+  { viewModels, userViewModels }: EditableTrees,
+  page: string,
+  roles: readonly string[] = [],
+): PageViewChoice[] {
+  const layers: { choice: (name: string) => PageViewChoice; names: string[] }[] = [
+    { choice: (name) => ({ name, kind: "base" }), names: Object.keys(viewModels.pages?.[page] ?? {}) },
+    ...roles.map((role) => ({
+      choice: (name: string): PageViewChoice => ({ name, kind: "role", role }),
+      names: Object.keys(viewModels.roles?.[role]?.pages?.[page]?.templates ?? {}),
+    })),
+    { choice: (name) => ({ name, kind: "user" }), names: Object.keys(userViewModels.pages?.[page]?.templates ?? {}) },
   ];
+  return layers.flatMap(({ choice, names }, index) =>
+    names.filter((name) => !layers.slice(index + 1).some((later) => later.names.includes(name))).map(choice),
+  );
 }
 
 /** `base` when free, else the first free `base-2`, `base-3`, … */
@@ -44,7 +54,7 @@ export function freeTemplateName(base: string, taken: readonly string[]): string
 /**
  * The first thing wrong with a name for a view, or undefined. No dots: the
  * cell schema forbids them in template names for the same reason (editors
- * join names into paths). `taken` is every view of the page, both kinds.
+ * join names into paths). `taken` is every view of the page, every kind.
  */
 export function templateNameProblem(name: string, taken: readonly string[]): ViewProblem | undefined {
   if (name.trim() === "") return { kind: "empty-name" };

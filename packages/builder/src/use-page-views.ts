@@ -1,24 +1,26 @@
 /**
  * ALL page-views logic lives here (guidelines: render-only components): the
- * list of a page's views — the team's prebuilt templates and the user's own
- * — which one is shown, choosing another, and the five things a user does
- * with views: Save as (a copy of the shown one under a new name), Rename
- * and Delete (their own only), Share (the shown one as a JSON file) and
- * Import (such a file, as a new view). doc/page-views-design.md.
+ * list of a page's views — the team's prebuilt templates, the roles' own and
+ * the user's own — which one is shown, choosing another, and the five
+ * things a user does with views: Save as (a copy of the shown one under a
+ * new name), Rename and Delete (their own only), Share (the shown one as a
+ * JSON file) and Import (such a file, as a new view). doc/page-views-design.md.
  *
  * Writes follow the EDIT TARGET, like every other edit: with the overlay on
- * a new view is the user's own; with it off, a prebuilt one — that is how
- * an administrator ships alternatives. Choosing a view is a preference and
- * needs no permission; making, renaming, deleting and importing one change
- * a page and are gated by `editLock`, exactly like Edit page. Every write
- * goes through `commit`.
+ * a new view is the user's own; editing for a ROLE it is that role's
+ * (doc/roles-design.md), and choosing a view sets what the role sees; with
+ * neither it is a prebuilt one — that is how an administrator ships
+ * alternatives. Choosing a view is a preference and needs no permission;
+ * making, renaming, deleting and importing one change a page and are gated
+ * by `editLock`, exactly like Edit page. Every write goes through `commit`.
  *
  * The panel (a name to type, a JSON to read or paste) is state of this hook
  * too, so the component only renders it.
  */
 import { useCallback, useMemo, useState } from "react";
-import type { PageViewModel } from "@wirework/schema";
+import type { PageViewModel, UserViewModels } from "@wirework/schema";
 import {
+  overlayLayers,
   pageTemplates,
   putPageTemplate,
   putUserPageTemplate,
@@ -39,7 +41,7 @@ import {
   type PageViewChoice,
 } from "./page-views";
 import type { Commit, EditableTrees, TreesChange } from "./use-commit";
-import type { EditTarget } from "./use-page-editing";
+import { overlayTargetOf, roleOf, type EditTarget } from "./use-page-editing";
 
 /** What the panel under the list is for. */
 export type PageViewPanelKind = "save-as" | "rename" | "import" | "share";
@@ -62,10 +64,14 @@ export interface PageViewsInput {
   layoutEngines: LayoutEngineRegistry;
   page: string;
   trees: EditableTrees;
-  /** Where a new view goes: `"user"` makes it the user's own, `"base"` a prebuilt one. */
+  /** Where a new view goes and whose choice the list changes: `"user"` the user's own (the overlay on), a role's, or `"base"` a prebuilt one. */
   target: EditTarget;
-  /** The choice lives in the user overlay: with it off the page shows its default and nothing can be chosen. */
-  withUserOverlay: boolean;
+  /**
+   * The roles the page is shown AS (doc/roles-design.md): the viewer's, or
+   * the one edited for. Their templates are offered as the role's, their
+   * chosen view is what the page falls back to.
+   */
+  roles?: readonly string[] | undefined;
   /** The view the page resolved to (`plan.view`); undefined while the page does not resolve. */
   shown: string | undefined;
   /** Choosing, saving or deleting a view changes what is on screen: an open edit session ends. */
@@ -79,45 +85,61 @@ export function usePageViews({
   page,
   trees,
   target,
-  withUserOverlay,
+  roles,
   shown,
   cancelEditing,
 }: PageViewsInput) {
-  const views = useMemo(() => pageViews(trees, page), [trees, page]);
+  const role = roleOf(target);
+  /** The overlay the target writes (use-page-editing's): none for the shared page. */
+  const overlay = useMemo(() => overlayTargetOf(target), [target]);
+  const views = useMemo(() => pageViews(trees, page, roles), [trees, page, roles]);
   const shownView = useMemo(() => views.find((view) => view.name === shown), [views, shown]);
   const taken = useMemo(() => views.map((view) => view.name), [views]);
   /** The shown template as its engine validated it — what a copy and a file are made of. */
   const shownTemplate = useMemo<PageViewModel | undefined>(() => {
     if (shown === undefined) return undefined;
-    return resolveTemplate(layoutEngines, pageTemplates(trees.viewModels, trees.userViewModels, page)?.[shown])
-      .template;
-  }, [layoutEngines, trees, page, shown]);
+    const overlays = overlayLayers(trees.viewModels, roles, target === "user" ? trees.userViewModels : undefined);
+    return resolveTemplate(layoutEngines, pageTemplates(trees.viewModels, overlays, page)?.[shown]).template;
+  }, [layoutEngines, trees, page, roles, target, shown]);
 
-  const viewsLock: ViewsLock | undefined = views.length === 0 ? "no-page" : withUserOverlay ? undefined : "overlay-off";
+  const viewsLock: ViewsLock | undefined =
+    views.length === 0 ? "no-page" : target === "base" ? "overlay-off" : undefined;
   const canManage = editLock === undefined;
-  const canRename = canManage && shownView?.kind === "user";
+  /** The shown view is the TARGET's own: the user's with the user target, the role's with that role's. */
+  const ownShown =
+    shownView !== undefined &&
+    (target === "user" ? shownView.kind === "user" : shownView.kind === "role" && shownView.role === role);
+  const canRename = canManage && ownShown;
   const canRemove = canRename;
   const canShare = shownTemplate !== undefined;
 
   const [panel, setPanel] = useState<PageViewPanel | undefined>(undefined);
   const close = useCallback(() => setPanel(undefined), []);
 
+  /** Commit a change of the target's overlay — the user's own, or the role's entry. The locks above keep the shared page out. */
+  const commitOverlay = useCallback(
+    (update: (entry: UserViewModels) => UserViewModels) => {
+      if (overlay !== undefined) commit(overlay.write(trees, update));
+    },
+    [overlay, trees, commit],
+  );
+
   const select = useCallback(
     (name: string) => {
       if (viewsLock !== undefined) return;
       cancelEditing();
-      commit({ userViewModels: selectUserPageView(trees.userViewModels, page, name) });
+      commitOverlay((entry) => selectUserPageView(entry, page, name));
     },
-    [viewsLock, cancelEditing, commit, trees, page],
+    [viewsLock, cancelEditing, commitOverlay, page],
   );
 
-  /** A new view, where the edit target says: the user's own (and shown at once) or a prebuilt one. */
+  /** A new view, where the edit target says: the user's own or the role's (and shown at once), or a prebuilt one. */
   const put = useCallback(
     (name: string, template: PageViewModel): TreesChange =>
-      target === "user"
-        ? { userViewModels: putUserPageTemplate(trees.userViewModels, page, name, template) }
-        : { viewModels: putPageTemplate(trees.viewModels, page, name, template) },
-    [target, trees, page],
+      overlay === undefined
+        ? { viewModels: putPageTemplate(trees.viewModels, page, name, template) }
+        : overlay.write(trees, (entry) => putUserPageTemplate(entry, page, name, template)),
+    [overlay, trees, page],
   );
 
   const openSaveAs = useCallback(() => {
@@ -155,7 +177,7 @@ export function usePageViews({
       if (shown === undefined || !canRename) return refuse({ kind: "no-view" });
       const problem = templateNameProblem(name, taken);
       if (problem) return refuse(problem);
-      commit({ userViewModels: renameUserPageTemplate(trees.userViewModels, page, shown, name) });
+      commitOverlay((entry) => renameUserPageTemplate(entry, page, shown, name));
       return close();
     }
     if (panel.kind === "save-as") {
@@ -184,20 +206,20 @@ export function usePageViews({
     shownTemplate,
     taken,
     commit,
-    trees,
+    commitOverlay,
     page,
     cancelEditing,
     put,
     layoutEngines,
   ]);
 
-  /** Delete the shown view (the user's own only): the page goes back to its default. */
+  /** Delete the shown view (the target's own only): the page goes back to its default. */
   const remove = useCallback(() => {
     if (!canRemove || shown === undefined) return;
     cancelEditing();
     setPanel(undefined);
-    commit({ userViewModels: removeUserPageTemplate(trees.userViewModels, page, shown) });
-  }, [canRemove, shown, cancelEditing, commit, trees, page]);
+    commitOverlay((entry) => removeUserPageTemplate(entry, page, shown));
+  }, [canRemove, shown, commitOverlay, page, cancelEditing]);
 
   return {
     views,

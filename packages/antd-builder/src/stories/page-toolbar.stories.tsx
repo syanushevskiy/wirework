@@ -3,6 +3,7 @@ import { expect, fn } from "storybook/test";
 import {
   usePageToolbar,
   type EditLock,
+  type EditTarget,
   type EngineLock,
   type OverlayLock,
   type PageToolbarInput,
@@ -17,12 +18,14 @@ type Args = {
   editLock: EditLock | undefined;
   overlay: boolean;
   overlayLock: OverlayLock | undefined;
-  target: "base" | "user";
+  target: EditTarget;
+  knownRoles?: readonly string[] | undefined;
   onSelectEngine: (engine: string) => void;
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
   onToggleOverlay: (on: boolean) => void;
+  onSelectRole?: ((role: string | undefined) => void) | undefined;
 };
 
 /** The toolbar as the hook decides it: the args are the facts a host composes from its session and builder. */
@@ -58,6 +61,7 @@ const meta = {
     editLock: { control: "select", options: [undefined, "permission", "loading"] },
     overlayLock: { control: "select", options: [undefined, "no-widgets"] },
     target: { control: "select", options: ["base", "user"] },
+    knownRoles: { control: false },
   },
   render: (args) => <Toolbar {...args} />,
 } satisfies Meta<Args>;
@@ -70,7 +74,7 @@ export const Viewing: Story = {
   play: async ({ canvas, userEvent, args }) => {
     await expect(canvas.getByTestId("engine")).toHaveTextContent("react-grid-layout");
     await expect(canvas.getByTestId("page-mode")).toHaveTextContent("view");
-    await expect(canvas.getByTestId("edit-target")).toHaveTextContent("edits → user overlay");
+    await expect(canvas.getByTestId("edit-target")).toHaveTextContent("edits → me");
     await userEvent.click(canvas.getByRole("button", { name: "Edit page" }));
     await expect(args.onEdit).toHaveBeenCalled();
   },
@@ -102,6 +106,21 @@ export const EmptyBuilder: Story = {
     await expect(canvas.getByRole("combobox")).toBeVisible();
     await expect(canvas.getByRole("checkbox", { name: "user overlay" })).toBeDisabled();
     await expect(canvas.getByTitle("Add a widget first — there is nothing to personalise yet")).toBeVisible();
+  },
+};
+
+/** Editing FOR A ROLE (doc/roles-design.md): the roles the host lists, "everyone" for none, and where edits go says the role. */
+export const ForARole: Story = {
+  args: {
+    overlay: false,
+    target: { role: "admin" },
+    knownRoles: ["qa", "admin", "wirework-admin"],
+    onSelectRole: fn(),
+  },
+  play: async ({ canvas, args }) => {
+    await expect(canvas.getByTestId("edit-target")).toHaveTextContent("edits → role: admin");
+    await expect(canvas.getByTestId("edit-role")).toHaveTextContent("admin");
+    await expect(args.onSelectRole).not.toHaveBeenCalled();
   },
 };
 

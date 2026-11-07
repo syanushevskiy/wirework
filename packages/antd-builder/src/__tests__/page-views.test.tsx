@@ -20,13 +20,13 @@ import { layoutEngines, treesWithViews } from "./fixtures";
 interface HarnessProps {
   editLock?: EditLock | undefined;
   target?: EditTarget;
-  withUserOverlay?: boolean;
+  roles?: readonly string[] | undefined;
   shown?: string | undefined;
   onCommit: (change: TreesChange) => void;
 }
 
 /** The component on a live hook: commits land in local state, so the list follows them like a store would. */
-function Harness({ editLock, target = "user", withUserOverlay = true, shown = "mine", onCommit }: HarnessProps) {
+function Harness({ editLock, target = "user", roles, shown = "mine", onCommit }: HarnessProps) {
   const [trees, setTrees] = useState<EditableTrees>(treesWithViews);
   const commit: Commit = (change) => {
     onCommit(change);
@@ -39,7 +39,7 @@ function Harness({ editLock, target = "user", withUserOverlay = true, shown = "m
     page: "demo",
     trees,
     target,
-    withUserOverlay,
+    roles,
     shown,
     cancelEditing: () => undefined,
   });
@@ -63,12 +63,20 @@ describe("PageViews", () => {
   });
 
   it("locks Rename and Delete on a prebuilt view, and the whole list while the overlay is off", () => {
-    renderViews({ shown: "compact", withUserOverlay: false });
+    renderViews({ shown: "compact", target: "base" });
     expect(screen.getByTestId("page-view-kind").textContent).toBe("prebuilt");
     expect(screen.getByTestId<HTMLButtonElement>("view-rename").disabled).toBe(true);
     expect(screen.getByTestId<HTMLButtonElement>("view-delete").disabled).toBe(true);
     expect(screen.getByTestId("page-view-select").className).toContain("disabled");
     expect(screen.getByTitle(/Turn the user overlay on/)).toBeTruthy();
+  });
+
+  it("editing for a role, the list is open and the user's own view is not the role's to rename (doc/roles-design.md)", () => {
+    renderViews({ shown: "compact", target: { role: "admin" }, roles: ["admin"] });
+    expect(screen.getByTestId("page-view-kind").textContent).toBe("prebuilt");
+    expect(screen.getByTestId("page-view-select").className).not.toContain("disabled");
+    expect(screen.getByTestId<HTMLButtonElement>("view-rename").disabled).toBe(true);
+    expect(screen.getByTestId<HTMLButtonElement>("view-save-as").disabled).toBe(false);
   });
 
   it("locks what changes a page without the permission, and says why", () => {

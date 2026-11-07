@@ -34,6 +34,22 @@ describe("pageViews", () => {
     ]);
     expect(pageViews(treesWithCounter(), "nope")).toEqual([]);
   });
+
+  it("lists each held role's templates after the prebuilt ones, in the roles' order, shadowed by later layers", () => {
+    const trees = treesWithViews();
+    trees.viewModels.roles = {
+      admin: { pages: { demo: { templates: { admin: compact, compact } } } },
+      "wirework-admin": { pages: { demo: { templates: { admin: compact, mine: compact } } } },
+      ops: { pages: { demo: { templates: { ops: compact } } } },
+    };
+    expect(pageViews(trees, "demo", ["admin", "wirework-admin"])).toEqual([
+      { name: "default", kind: "base" },
+      { name: "admin", kind: "role", role: "wirework-admin" },
+      { name: "mine", kind: "user" },
+      { name: "compact", kind: "user" },
+    ]);
+    expect(pageViews(trees, "demo", ["ops"]).map((view) => view.name)).toEqual(["default", "ops", "mine", "compact"]);
+  });
 });
 
 describe("freeTemplateName / templateNameProblem", () => {

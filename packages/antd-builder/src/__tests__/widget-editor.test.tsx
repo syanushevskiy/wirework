@@ -6,11 +6,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createStore } from "@wirework/store";
-import { WidgetEditor } from "../widget-editor";
+import { WidgetEditor, type WidgetEditorProps } from "../widget-editor";
 import { portFieldId, reactionFieldId, settingFieldId } from "../widget-form";
 import { actions, placedCounter } from "./fixtures";
 
-function renderEditor(bindingsLocked = false) {
+function renderEditor(bindingsLocked = false, templates?: WidgetEditorProps["templates"]) {
   const onSave = vi.fn();
   const onCancel = vi.fn();
   const cell = placedCounter();
@@ -20,6 +20,7 @@ function renderEditor(bindingsLocked = false) {
       store={createStore({ demo: { count: 1 } })}
       actions={actions()}
       bindingsLocked={bindingsLocked}
+      templates={templates}
       onSave={onSave}
       onCancel={onCancel}
     />,
@@ -56,7 +57,14 @@ describe("WidgetEditor", () => {
 
   it("locks the bindings for a user's own view", () => {
     renderEditor(true);
-    expect(screen.getByTestId("bindings-locked")).toBeTruthy();
     expect(screen.getByTestId<HTMLInputElement>(reactionFieldId("changed", "set")).disabled).toBe(true);
+    expect(screen.getByTestId("bindings-locked")).toBeTruthy();
+    expect(screen.queryByTestId("cell-template")).toBeNull();
+  });
+
+  it("offers the cell's templates when the editing hook gives them (a role's view for the cell)", () => {
+    renderEditor(true, { names: ["default", "admin"], chosen: "default", choose: vi.fn() });
+    expect(screen.getByTestId("cell-template")).toBeTruthy();
+    expect(screen.getByTestId("cell-template").textContent).toContain("default");
   });
 });

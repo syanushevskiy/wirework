@@ -152,6 +152,19 @@
   margin-bottom: 0.5rem;
 }
 
+/* ---- page export: the whole page as a file (doc/pages-as-code-design.md) ---- */
+
+.ww-builder-export {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  justify-items: start;
+}
+
+.ww-builder-export > .ww-builder-view-panel {
+  justify-self: stretch;
+}
+
 .ww-builder-view-option {
   display: inline-flex;
   align-items: center;

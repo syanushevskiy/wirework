@@ -19,20 +19,29 @@ import { PageToolbar, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder
 
 - `PageToolbar` takes what `usePageToolbar` returns (`toolbar`) and,
   optionally, `texts` — the words for the lock codes and the edit targets
-  (`DEFAULT_PAGE_TOOLBAR_TEXTS` is English).
+  (`DEFAULT_PAGE_TOOLBAR_TEXTS` is English: edits go to "everyone", "me"
+  or "role: {role}"). With roles to edit for (doc/roles-design.md) it
+  shows the choice "for everyone / a role" (`edit-role`).
 - `PageViews` takes what `usePageViews` returns (`views`) and, optionally,
   `texts` (`DEFAULT_PAGE_VIEW_TEXTS`): the page's views in one list grouped
-  into _prebuilt_ and _mine_, the shown one chosen, and Save as / Rename /
-  Delete / Share / Import, with a panel under the row for the name or the
-  JSON (`viewProblemText` says a refusal in words).
+  into _prebuilt_, the held roles' (_role: admin_) and _mine_, the shown one
+  chosen, and Save as / Rename / Delete / Share / Import, with a panel under
+  the row for the name or the JSON (`viewProblemText` says a refusal in
+  words).
+- `PageExport` takes what `usePageExport` returns (`export`) and, optionally,
+  `texts` (`DEFAULT_PAGE_EXPORT_TEXTS`): the button "Export page…" and a
+  panel with the whole shared page as JSON, read-only, Close and "Download
+  `<page>.page.json`" (doc/pages-as-code-design.md).
 - `WidgetBuilder` takes the registries, the store, the actions, the
   predicates a condition may pick (optional: the standard ones alone), the
   page name, `addLock` (why adding is not offered right now, or
   `undefined`), `lockTexts` (its words, `DEFAULT_ADD_LOCK_TEXTS` unless you
   say otherwise) and `onAdd`.
 - `WidgetEditor` takes the cell, the store, the actions, the predicates,
-  `bindingsLocked` and `onSave` / `onCancel`. It is a panel the host places
-  above the page, never a drawer over it.
+  `bindingsLocked`, optionally `templates` (the builder's `TemplateChoice`:
+  the cell's widget templates to pick from when editing for a role, shown
+  as `cell-template`) and `onSave` / `onCancel`.
+  It is a panel the host places above the page, never a drawer over it.
 
 The edit session and where pages are saved are the host's — see
 `@wirework/builder`.
@@ -42,13 +51,14 @@ The edit session and where pages are saved are the host's — see
 These components expose `data-testid`s that a suite drives the builder
 through: `layout-toolbar`, `engine-select`, `engine`, `page-edit`,
 `page-save`, `page-cancel`, `page-mode`, `pending-changes`,
-`toggle-user-overlay`, `edit-target`, `page-views`, `page-view-select` (with
+`toggle-user-overlay`, `edit-role`, `edit-target`, `page-views`, `page-view-select` (with
 `data-kind`), `page-view-kind`, `view-save-as`, `view-rename`, `view-delete`,
 `view-share`, `view-import`, `page-view-panel` (with `data-panel`),
 `view-name`, `view-json`, `view-problem`, `view-apply`, `view-cancel`,
-`widget-builder`, `add-widget`,
+`page-export`, `page-export-open`, `page-export-panel`, `page-export-json`,
+`page-export-download`, `page-export-close`, `widget-builder`, `add-widget`,
 `add-widget-locked`, `widget-selected`, `widget-palette`, `widget-search`,
-`widget-browse`, `widget-card`, `widget-editor`, `widget-save`,
+`widget-browse`, `widget-card`, `widget-editor`, `cell-template`, `widget-save`,
 `widget-cancel`, `bindings-locked`, `widget-conditions`,
 `widget-conditions-always`, `widget-condition` (with `data-index`), and per
 field `port-input-<port>`, `setting-<name>` (a named list's entries under

@@ -26,7 +26,7 @@ import {
 interface Props {
   canEdit: boolean;
   target: EditTarget;
-  withUserOverlay: boolean;
+  roles?: readonly string[] | undefined;
   trees: EditableTrees;
   at?: string | undefined;
 }
@@ -36,7 +36,6 @@ function setup(overrides: Partial<Props> = {}) {
   const initialProps: Props = {
     canEdit: true,
     target: "base",
-    withUserOverlay: false,
     trees: treesWithCounter(),
     ...overrides,
   };
@@ -105,15 +104,12 @@ describe("usePageEditing — the session", () => {
     expect(result.current.editing).toBe(false);
   });
 
-  it("reports a change the engine refuses and counts nothing", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("a change the engine refuses throws at the moment it is made, and counts nothing", () => {
     const { result } = setup();
     act(() => result.current.startEditing());
-    act(() => result.current.changeLayout({ engine: "list", cells: "nope" }));
+    expect(() => act(() => result.current.changeLayout({ engine: "list", cells: "nope" }))).toThrow();
     expect(result.current.pendingChanges).toBe(0);
     expect(result.current.cells).toHaveLength(1);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('does not fit the "list" engine');
   });
 
   it("refuses to commit a session whose permission went away", () => {
@@ -196,7 +192,7 @@ describe("usePageEditing — the ops", () => {
   });
 
   it("writes settings only into the user's overlay, and leaves the shared page alone", () => {
-    const { result, initialProps } = setup({ target: "user", withUserOverlay: true });
+    const { result, initialProps } = setup({ target: "user" });
     act(() => result.current.startEditing());
     act(() => result.current.selectCell("custom-1"));
     const editing = result.current.editingCell;
@@ -213,7 +209,7 @@ describe("usePageEditing — the ops", () => {
   });
 
   it("copies a shown PREBUILT view into the user's own 'my-own' — numbered when that name is taken", () => {
-    const { result } = setup({ target: "user", withUserOverlay: true });
+    const { result } = setup({ target: "user" });
     act(() => result.current.startEditing());
     act(() => result.current.changeLayout(emptyList));
     expect(result.current.shownUserViewModels?.pages?.["demo"]).toEqual({
@@ -223,7 +219,7 @@ describe("usePageEditing — the ops", () => {
 
     const trees = treesWithCounter();
     trees.userViewModels = { pages: { demo: { view: "default", templates: { "my-own": emptyList } } } };
-    const taken = setup({ target: "user", withUserOverlay: true, trees });
+    const taken = setup({ target: "user", trees });
     act(() => taken.result.current.startEditing());
     act(() => taken.result.current.changeLayout(emptyList));
     expect(taken.result.current.shownUserViewModels?.pages?.["demo"]).toMatchObject({
@@ -236,7 +232,7 @@ describe("usePageEditing — the ops", () => {
     const trees = treesWithCounter();
     const mine = { engine: "list", cells: [cell()] };
     trees.userViewModels = { pages: { demo: { view: "mine", templates: { mine } } } };
-    const { result } = setup({ target: "user", withUserOverlay: true, trees });
+    const { result } = setup({ target: "user", trees });
     act(() => result.current.startEditing());
     act(() => result.current.removeCellById("custom-1"));
     expect(result.current.shownUserViewModels?.pages?.["demo"]).toMatchObject({
@@ -246,14 +242,167 @@ describe("usePageEditing — the ops", () => {
     expect(Object.keys(result.current.shownUserViewModels?.pages?.["demo"]?.templates ?? {})).toEqual(["mine"]);
   });
 
-  it("closes the editor when the edit target changes under it", () => {
-    const { result, rerender, initialProps } = setup();
+  describe("for a ROLE (doc/roles-design.md): the same ops, written into the role's entry", () => {
+    const admin = { role: "admin" } as const;
+    const withRole = () => {
+      const trees = treesWithCounter();
+      trees.viewModels.widgets["custom"] = {
+        "custom-1": {
+          default: { inputs: { value: "demo.count" }, on: { changed: [{ set: "demo.count" }] } },
+          loud: { inputs: { value: "demo.count" }, on: { changed: [{ set: "demo.count" }] }, label: "LOUD" },
+        },
+      };
+      return trees;
+    };
+
+    it("copies a shown prebuilt view into the role's own, named after the role, and shows the page as the role sees it", () => {
+      const { result, initialProps } = setup({ target: admin, roles: ["admin"], trees: withRole() });
+      act(() => result.current.startEditing());
+      act(() => result.current.changeLayout(emptyList));
+      expect(result.current.shownViewModels.roles).toEqual({
+        admin: { pages: { demo: { view: "admin", templates: { admin: emptyList } } } },
+      });
+      expect(result.current.shownViewModels.pages).toEqual(initialProps.trees.viewModels.pages);
+      expect(result.current.shownUserViewModels).toBeUndefined();
+      expect(result.current.activeView).toBe("admin");
+      expect(result.current.cells).toHaveLength(0);
+    });
+
+    it("writes a widget's settings and its chosen template into the role's entry, the shared page untouched", () => {
+      const { result, initialProps } = setup({ target: admin, roles: ["admin"], trees: withRole() });
+      act(() => result.current.startEditing());
+      act(() => result.current.setCellView("custom-1", "loud"));
+      expect(result.current.cells[0]?.template).toBe("loud");
+      act(() => result.current.selectCell("custom-1"));
+      const editing = result.current.editingCell;
+      if (!editing) throw new Error("no cell selected");
+      act(() => result.current.saveWidget(editing, { inputs: { value: "demo.other" }, on: {} }, { label: "Admin" }));
+      expect(result.current.shownViewModels.roles).toEqual({
+        admin: { pages: { demo: { cells: { "custom-1": { view: "loud", settings: { loud: { label: "Admin" } } } } } } },
+      });
+      expect(result.current.shownViewModels.widgets).toEqual(initialProps.trees.viewModels.widgets);
+      expect(result.current.cells[0]?.viewModel).toMatchObject({ inputs: { value: "demo.count" }, label: "Admin" });
+    });
+
+    it("a user's view beats the role's while both are shown; a shared-page target chooses no template", () => {
+      const trees = withRole();
+      trees.viewModels.roles = { admin: { pages: { demo: { cells: { "custom-1": { view: "loud" } } } } } };
+      trees.userViewModels = { pages: { demo: { cells: { "custom-1": { view: "default" } } } } };
+      const asUser = setup({ target: "user", roles: ["admin"], trees });
+      expect(asUser.result.current.cells[0]?.template).toBe("default");
+      const asAdmin = setup({ target: admin, roles: ["admin"], trees });
+      expect(asAdmin.result.current.cells[0]?.template).toBe("loud");
+      const { result } = setup({ trees });
+      act(() => result.current.startEditing());
+      act(() => result.current.setCellView("custom-1", "loud"));
+      expect(result.current.pendingChanges).toBe(0);
+    });
+  });
+
+  it("closes the editor when the edit target or the location changes under it", () => {
+    const { result, rerender, initialProps } = setup({ trees: treesWithBoxedCounter(), at: "custom-2" });
     act(() => result.current.startEditing());
     act(() => result.current.selectCell("custom-1"));
     expect(result.current.editingCell).toBeDefined();
 
-    rerender({ ...initialProps, target: "user", withUserOverlay: true });
+    rerender({ ...initialProps, target: "user" });
     expect(result.current.editingCell).toBeUndefined();
+    rerender(initialProps);
+    act(() => result.current.selectCell("custom-1"));
+    expect(result.current.editingCell).toBeDefined();
+    rerender({ ...initialProps, at: undefined });
+    expect(result.current.editingCell).toBeUndefined();
+  });
+
+  it("a session survives a change of location: every op lands where it was made", () => {
+    const { result, rerender, initialProps } = setup({ trees: treesWithBoxedCounter() });
+    act(() => result.current.startEditing());
+    const boxOnly = [cell({ id: "custom-2", widget: "box", model: "widgets.custom.custom-2" })];
+    act(() => result.current.changeLayout({ engine: "list", cells: boxOnly }));
+    rerender({ ...initialProps, at: "custom-2" });
+    act(() => result.current.changeLayout(emptyList));
+    expect(result.current.pendingChanges).toBe(2);
+    expect(result.current.shownViewModels.pages["demo"]?.["default"]).toMatchObject({ cells: [{ id: "custom-2" }] });
+    expect(result.current.shownViewModels.widgets["custom"]).toMatchObject({
+      "custom-2": { default: { content: emptyList } },
+    });
+  });
+
+  it("the role target: a role's own copy under a container, and the inner cell under its chain key — the commit carries them", () => {
+    const admin = { role: "admin" } as const;
+    const { result, commit } = setup({
+      target: admin,
+      roles: ["admin"],
+      trees: treesWithBoxedCounter(),
+      at: "custom-2",
+    });
+    act(() => result.current.startEditing());
+    act(() => result.current.selectCell("custom-1"));
+    const editing = result.current.editingCell;
+    if (!editing) throw new Error("no cell selected");
+    act(() => result.current.saveWidget(editing, { inputs: {}, on: {} }, { label: "Admin's" }));
+    act(() => result.current.changeLayout(emptyList));
+    act(() => result.current.save());
+    const committed = commit.mock.calls[0]?.[0];
+    expect(committed && "viewModels" in committed ? committed.viewModels.roles : undefined).toEqual({
+      admin: {
+        pages: {
+          demo: {
+            cells: {
+              "custom-2/custom-1": { settings: { default: { label: "Admin's" } } },
+              "custom-2": { settings: { default: { content: emptyList } } },
+            },
+          },
+        },
+      },
+    });
+    expect(committed && "viewModels" in committed ? committed.viewModels.widgets : undefined).toEqual(
+      treesWithBoxedCounter().viewModels.widgets,
+    );
+  });
+
+  it("offers the editing cell's templates to a role's editor only, and choosing one is the role's view for the cell", () => {
+    const trees = treesWithCounter();
+    trees.viewModels.widgets["custom"] = {
+      "custom-1": {
+        default: { inputs: { value: "demo.count" }, on: { changed: [{ set: "demo.count" }] } },
+        loud: { inputs: { value: "demo.count" }, on: { changed: [{ set: "demo.count" }] }, label: "LOUD" },
+      },
+    };
+    const asAdmin = setup({ target: { role: "admin" }, roles: ["admin"], trees });
+    act(() => asAdmin.result.current.startEditing());
+    act(() => asAdmin.result.current.selectCell("custom-1"));
+    expect(asAdmin.result.current.templateChoice).toMatchObject({ names: ["default", "loud"], chosen: "default" });
+    act(() => asAdmin.result.current.templateChoice?.choose("loud"));
+    expect(asAdmin.result.current.editingCell?.template).toBe("loud");
+    expect(asAdmin.result.current.templateChoice?.chosen).toBe("loud");
+    expect(asAdmin.result.current.shownViewModels.roles?.["admin"]?.pages?.["demo"]?.cells).toEqual({
+      "custom-1": { view: "loud" },
+    });
+    // Not for the user's own view, nor on the shared page; nor for a widget with one template.
+    for (const target of ["user", "base"] as const) {
+      const other = setup({ target, roles: ["admin"], trees });
+      act(() => other.result.current.startEditing());
+      act(() => other.result.current.selectCell("custom-1"));
+      expect(other.result.current.templateChoice).toBeUndefined();
+    }
+    const one = setup({ target: { role: "admin" }, roles: ["admin"], trees: treesWithCounter() });
+    act(() => one.result.current.startEditing());
+    act(() => one.result.current.selectCell("custom-1"));
+    expect(one.result.current.templateChoice).toBeUndefined();
+  });
+
+  it("a role shown a lower role's view copies it under the role's own name", () => {
+    const trees = treesWithCounter();
+    trees.viewModels.roles = { qa: { pages: { demo: { view: "qa", templates: { qa: emptyList } } } } };
+    const { result } = setup({ target: { role: "admin" }, roles: ["qa", "admin"], trees });
+    expect(result.current.activeView).toBe("qa");
+    act(() => result.current.startEditing());
+    act(() => result.current.changeLayout({ engine: "list", cells: [cell()] }));
+    expect(result.current.shownViewModels.roles).toEqual({
+      qa: { pages: { demo: { view: "qa", templates: { qa: emptyList } } } },
+      admin: { pages: { demo: { view: "admin", templates: { admin: { engine: "list", cells: [cell()] } } } } },
+    });
   });
 });
 
@@ -279,7 +428,6 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
       trees: treesWithBoxedCounter(),
       at: "custom-2",
       target: "user",
-      withUserOverlay: true,
     });
     expect(result.current.cells.map((cell) => cell.key)).toEqual(["custom-1"]);
     act(() => result.current.startEditing());
@@ -295,7 +443,7 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
   });
 
   it("customises a widget inside a container under its chain key, and shows it so", () => {
-    const { result } = setup({ trees: treesWithBoxedCounter(), at: "custom-2", target: "user", withUserOverlay: true });
+    const { result } = setup({ trees: treesWithBoxedCounter(), at: "custom-2", target: "user" });
     act(() => result.current.startEditing());
     act(() => result.current.selectCell("custom-1"));
     const editing = result.current.editingCell;
@@ -313,7 +461,7 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     trees.userViewModels = {
       pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
     };
-    const { result } = setup({ trees, target: "user", withUserOverlay: true });
+    const { result } = setup({ trees, target: "user" });
     act(() => result.current.startEditing());
     act(() => result.current.selectCell("custom-2"));
     const editing = result.current.editingCell;
@@ -329,12 +477,34 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     trees.userViewModels = {
       pages: { demo: { cells: { "custom-2/custom-1": { settings: { default: { label: "Mine" } } } } } },
     };
-    const { result } = setup({ trees, at: "custom-2", target: "user", withUserOverlay: true });
+    const { result } = setup({ trees, at: "custom-2", target: "user" });
     act(() => result.current.startEditing());
     act(() => result.current.removeCellById("custom-1"));
     expect(result.current.cells).toEqual([]);
     expect(result.current.shownUserViewModels).toEqual({
       pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
+    });
+  });
+
+  it("the user's commit under a container carries the user's copy and nothing else; a container's own form keeps its layout", () => {
+    const { result, commit, initialProps } = setup({ trees: treesWithBoxedCounter(), at: "custom-2", target: "user" });
+    act(() => result.current.startEditing());
+    act(() => result.current.changeLayout(emptyList));
+    act(() => result.current.save());
+    expect(commit.mock.calls[0]?.[0]).toEqual({
+      viewModels: initialProps.trees.viewModels,
+      userViewModels: { pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } } },
+    });
+
+    // On the shared page, saving the box's own form (no layout in it) keeps the layout the box holds.
+    const base = setup({ trees: treesWithBoxedCounter() });
+    act(() => base.result.current.startEditing());
+    act(() => base.result.current.selectCell("custom-2"));
+    const editing = base.result.current.editingCell;
+    if (!editing) throw new Error("no cell selected");
+    act(() => base.result.current.saveWidget(editing, { inputs: {}, on: {} }, { title: "Renamed" }));
+    expect(base.result.current.shownViewModels.widgets["custom"]).toMatchObject({
+      "custom-2": { default: { title: "Renamed", content: { engine: "list", cells: [cell()] } } },
     });
   });
 
@@ -386,7 +556,7 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     act(() => result.current.startEditing());
     act(() => result.current.wrapCell("custom-1", "counter"));
     expect(result.current.pendingChanges).toBe(0);
-    const user = setup({ target: "user", withUserOverlay: true });
+    const user = setup({ target: "user" });
     act(() => user.result.current.startEditing());
     act(() => user.result.current.wrapCell("custom-1", "box"));
     expect(user.result.current.pendingChanges).toBe(0);

@@ -22,6 +22,8 @@ export const DEFAULT_ADD_LOCK_TEXTS: Record<AddLock, string> = {
   permission: "You may not change pages.",
   editing: "Save or cancel the page edit to add widgets.",
   "user-view": "Adding a widget changes the shared page — turn the user overlay off to add one.",
+  "role-view":
+    "Adding a widget changes the shared page: edit for everyone, add it, then edit for the role again and place it in the role's view.",
 };
 
 export interface WidgetBuilderProps {

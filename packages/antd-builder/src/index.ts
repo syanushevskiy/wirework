@@ -29,6 +29,9 @@ export type { PageToolbarProps, PageToolbarTexts } from "./page-toolbar";
 export { DEFAULT_PAGE_VIEW_TEXTS, PageViews, viewProblemText } from "./page-views";
 export type { PageViewsProps, PageViewTexts } from "./page-views";
 
+export { DEFAULT_PAGE_EXPORT_TEXTS, PageExport } from "./page-export";
+export type { PageExportProps, PageExportTexts } from "./page-export";
+
 export { WidgetPalette } from "./widget-palette";
 export type { WidgetPaletteProps } from "./widget-palette";
 

@@ -1,7 +1,8 @@
 /**
  * Page views — ONLY presentation (logic in @wirework/builder's
  * usePageViews): the list of a page's views grouped into the team's
- * PREBUILT ones and the user's own (MINE), the shown one chosen, and the
+ * PREBUILT ones, the held ROLES' (doc/roles-design.md) and the user's own
+ * (MINE), the shown one chosen, and the
  * five actions — Save as, Rename, Delete, Share, Import — with a panel
  * under the row for the name to type or the JSON to read or paste. Every
  * lock and every refusal the hook reports as a code is said here in words:
@@ -23,9 +24,10 @@ export interface PageViewTexts {
 }
 
 export const DEFAULT_PAGE_VIEW_TEXTS: PageViewTexts = {
-  kinds: { base: "prebuilt", user: "mine" },
+  kinds: { base: "prebuilt", role: "role", user: "mine" },
   viewsLocks: {
-    "overlay-off": "Turn the user overlay on to choose a view — without it the page shows its default",
+    "overlay-off":
+      "Turn the user overlay on to choose a view for yourself, or edit for a role to choose for it — editing for everyone, the page shows its default",
     "no-page": "This page has no views",
   },
   editLocks: DEFAULT_PAGE_TOOLBAR_TEXTS.editLocks,
@@ -75,13 +77,16 @@ export function PageViews({ views, texts }: PageViewsProps) {
   const choiceLock = viewsLock === undefined ? undefined : words.viewsLocks[viewsLock];
   const manageLock = editLock === undefined ? undefined : words.editLocks[editLock];
 
+  /** A role's view is labelled with the role: "role: admin". */
+  const kindText = (view: PageViewChoice): string =>
+    view.kind === "role" ? `${words.kinds.role}: ${view.role}` : words.kinds[view.kind];
   const option = (view: PageViewChoice) => ({
     value: view.name,
     // antd puts a string label into the option's title; a node needs the name given as one.
     title: view.name,
     label: (
       <span className="ww-builder-view-option">
-        {view.name} <Tag className="ww-builder-view-kind">{words.kinds[view.kind]}</Tag>
+        {view.name} <Tag className="ww-builder-view-kind">{kindText(view)}</Tag>
       </span>
     ),
   });
@@ -105,12 +110,12 @@ export function PageViews({ views, texts }: PageViewsProps) {
             disabled={viewsLock !== undefined}
             {...(shown === undefined ? {} : { value: shown.name })}
             onChange={views.select}
-            options={[group("base"), group("user")].filter((entry) => entry.options.length > 0)}
+            options={[group("base"), group("role"), group("user")].filter((entry) => entry.options.length > 0)}
           />
         </span>
         {shown === undefined ? null : (
           <Typography.Text type="secondary" data-testid="page-view-kind">
-            {words.kinds[shown.kind]}
+            {kindText(shown)}
           </Typography.Text>
         )}
         {/* A locked button says why on hover: the reason on the control's own wrapper, like the toolbar's switch. */}

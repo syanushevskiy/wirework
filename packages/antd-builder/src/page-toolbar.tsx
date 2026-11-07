@@ -2,8 +2,9 @@
  * Page toolbar — ONLY presentation (logic in @wirework/builder's
  * usePageToolbar): the engine of the shown template (a choice while the
  * page is empty), Edit / Save / Cancel with the pending count, the
- * user-overlay switch and where edits go. Every lock the hook reports as a
- * code is said here in words — the defaults below, or the host's own.
+ * user-overlay switch, the role edited for (doc/roles-design.md) and where
+ * edits go. Every lock the hook reports as a code is said here in words —
+ * the defaults below, or the host's own.
  */
 import { Breadcrumb, Button, Checkbox, Flex, Select, Space, Tag, Typography } from "antd";
 import type { EditLock, EditTarget, OverlayLock, PageToolbarState } from "@wirework/builder";
@@ -13,8 +14,10 @@ export interface PageToolbarTexts {
   editLocks: Record<EditLock, string>;
   /** Why the overlay cannot be turned on, by reason. */
   overlayLocks: Record<OverlayLock, string>;
-  /** Where edits go, by target. */
-  targets: Record<EditTarget, string>;
+  /** Where edits go, by target; `{role}` in the role's text is filled in. */
+  targets: { base: string; user: string; role: string };
+  /** The role choice's entry for no role: edits for everyone. */
+  everyone: string;
 }
 
 export const DEFAULT_PAGE_TOOLBAR_TEXTS: PageToolbarTexts = {
@@ -23,14 +26,26 @@ export const DEFAULT_PAGE_TOOLBAR_TEXTS: PageToolbarTexts = {
     loading: "Whether you may edit pages is not known yet",
   },
   overlayLocks: { "no-widgets": "Add a widget first — there is nothing to personalise yet" },
-  targets: { user: "user overlay", base: "view models" },
+  targets: { base: "everyone", user: "me", role: "role: {role}" },
+  everyone: "everyone",
 };
+
+/** The words for a target. */
+const targetText = (target: EditTarget, texts: PageToolbarTexts): string =>
+  target === "base"
+    ? texts.targets.base
+    : target === "user"
+      ? texts.targets.user
+      : texts.targets.role.replace("{role}", target.role);
 
 export interface PageToolbarProps {
   toolbar: PageToolbarState;
   /** The words for the codes the hook reports; the defaults are English. */
   texts?: Partial<PageToolbarTexts> | undefined;
 }
+
+/** The role choice's value for "everyone": antd's Select has no value for nothing chosen. */
+const EVERYONE = "";
 
 export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
   const words = { ...DEFAULT_PAGE_TOOLBAR_TEXTS, ...texts };
@@ -46,6 +61,7 @@ export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
     overlay,
     overlayLock,
     target,
+    roleChoice,
   } = toolbar;
   const last = crumbs.length - 1;
 
@@ -132,8 +148,26 @@ export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
           user overlay
         </Checkbox>
       </span>
+      {/* The role edited for (doc/roles-design.md): everyone, or one of the roles the host lists. */}
+      {roleChoice ? (
+        <>
+          <label htmlFor="edit-role">for</label>
+          <Select
+            id="edit-role"
+            data-testid="edit-role"
+            className="ww-builder-field-narrow"
+            size="small"
+            value={roleChoice.chosen ?? EVERYONE}
+            onChange={(value: string) => toolbar.selectRole?.(value === EVERYONE ? undefined : value)}
+            options={[
+              { value: EVERYONE, label: words.everyone },
+              ...roleChoice.roles.map((role) => ({ value: role, label: role })),
+            ]}
+          />
+        </>
+      ) : null}
       <Tag data-testid="edit-target" className="ww-builder-toolbar-target">
-        edits → {words.targets[target]}
+        edits → {targetText(target, words)}
       </Tag>
     </Flex>
   );

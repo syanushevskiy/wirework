@@ -28,14 +28,14 @@ store from them — nothing in this package restores anything.
 
 ## What a host provides
 
-| To                                                       | What                                                                                                                                                                                                                            |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useCommit`                                              | the store, `save`                                                                                                                                                                                                               |
-| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name and `at` (the layout inside a chain of containers, else the page), the edit target (`"base"` or `"user"`), the trees, the `BuilderNaming` |
-| `useBuilder`                                             | `commit`, `canEdit`, the widget and layout-engine registries, the page name and `at`, a `BuilderNaming`, `cancelEditing`, `onAdded` (told what was placed: a `PlacedWidget` — id, widget, the paths of the layouts it holds)    |
-| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions, the predicates a condition may pick (the standard ones alone when absent) and, for the builder, `addLock`: why Add is not offered                                                       |
-| `usePageToolbar`                                         | the page and `at` with `onGoTo` (the breadcrumb), the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target                    |
-| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, whether the overlay is on, the shown view (`plan.view`), `cancelEditing`                                                                     |
+| To                                                       | What                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useCommit`                                              | the store, `save`                                                                                                                                                                                                                                                                                                         |
+| `usePageEditing`                                         | `commit`, `canEdit`, the registries (widgets, layout engines, actions), the page name and `at` (the layout inside a chain of containers, else the page), the edit target (`"base"`, `"user"` or `{ role }` — the user overlay is on exactly for `"user"`), the roles the page is shown as, the trees, the `BuilderNaming` |
+| `useBuilder`                                             | `commit`, `canEdit`, the widget and layout-engine registries, the page name and `at`, a `BuilderNaming`, `cancelEditing`, `onAdded` (told what was placed: a `PlacedWidget` — id, widget, the paths of the layouts it holds)                                                                                              |
+| `useWidgetBuilder` / `useWidgetEditor` / `useWidgetForm` | the registries, the store, the actions, the predicates a condition may pick (the standard ones alone when absent) and, for the builder, `addLock`: why Add is not offered                                                                                                                                                 |
+| `usePageToolbar`                                         | the page and `at` with `onGoTo` (the breadcrumb), the facts of the session and the builder: engines, engine and its lock, editing and the pending count, the edit lock, the overlay and its lock, the target, the roles a builder may edit for with `onSelectRole`                                                        |
+| `usePageViews`                                           | `commit`, the edit lock, the layout engines, the page name, the trees, the target, the roles the page is shown as, the shown view (`plan.view`), `cancelEditing`                                                                                                                                                          |
 
 Every hook takes ONE input object. `canEdit` is required everywhere a hook
 can write: the builder never assumes this user may change pages, and it
@@ -72,6 +72,45 @@ view with it off. A view travels as a JSON file — `pageViewFile`,
 `exportPageView`, `parsePageViewFile` (`PageViewFile`: kind
 `wirework-page-view`, version 1, page, name, template) — so users share
 layouts and your application decides where the files go.
+
+## Roles
+
+A page read through the user's ROLES (doc/roles-design.md): the engine folds
+the base, then the entries of `viewModels.roles.<role>` for the roles the
+session lists, then the user's overlay. The builder's third edit target is
+a role: `EditTarget` is `"base" | "user" | { role }` (`roleOf`), and every
+overlay op — a moved cell, a saved view, a widget's settings, a chosen
+template (`setCellView`), a card's content — writes the role's entry through
+the engine's `updateRole` with the same functions that write the user's
+(`overlayTargetOf`). The page shown while editing for a role is the page as
+the role sees it: the host resolves with the application's roles up to it and no
+user overlay. `usePageToolbar` offers the roles the host lists
+(`knownRoles`, `roleChoice`); `usePageViews` lists a held role's templates
+as the role's (`PageViewChoice` of kind `"role"`, with the role's name)
+and, editing for a role, chooses, saves, renames and deletes the role's
+own, writing through the same `overlayTargetOf`. Add is locked for a role
+(`AddLock` `"role-view"`): a role's layout places the widgets the shared
+page has. The editing hook's `templateChoice` offers the editing cell's
+widget templates as the role's choice (`TemplateChoice`).
+
+Breaking since 6 November 2026: `PageViewsInput.withUserOverlay` and
+`PageEditingInput.withUserOverlay` are gone (the target says it);
+`PageToolbarInput.roles` is `knownRoles`; a layout change the engine
+refuses throws from `changeLayout` instead of warning on the console.
+
+## Export page
+
+The WHOLE shared page as one file (doc/pages-as-code-design.md): the
+engine's `pageFile` — the page's prebuilt templates, its `on`, the widget
+templates its cells reference down into its containers, and the route your
+application gives it — as `<page>.page.json`. `usePageExport` takes the
+registries, the shared tree, the page, the route (optional), the edit lock
+(exporting is an administrator's act and waits for the permission like Edit
+page) and, optionally, `save(fileName, text)` — the browser's download
+unless you say otherwise (`downloadTextFile`). It opens a panel with the
+text and downloads it; nothing is committed, the user's overlay never
+travels. A developer merges a received file into the application's view
+models with the engine's `mergePageFiles([file], viewModels)`.
 
 ## Hooks
 
@@ -122,4 +161,6 @@ layouts and your application decides where the files go.
 - `usePageViews` — the page's views: the list with each one's kind, the
   shown one, choosing another, Save as / Rename / Delete / Share / Import and
   the panel they open.
+- `usePageExport` — the whole shared page as a file to download and hand to
+  a developer: `canExport`, the panel with the text, `download`.
 - `usePathCombobox` — autocomplete over existing store paths.

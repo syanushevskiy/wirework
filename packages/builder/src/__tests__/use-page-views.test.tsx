@@ -15,7 +15,7 @@ import { enginesWith, listEngine, treesWithCounter } from "./fixtures";
 interface Props {
   editLock: EditLock | undefined;
   target: EditTarget;
-  withUserOverlay: boolean;
+  roles?: readonly string[] | undefined;
   shown: string | undefined;
   trees: EditableTrees;
 }
@@ -36,7 +36,6 @@ function setup(overrides: Partial<Props> = {}) {
   const initialProps: Props = {
     editLock: undefined,
     target: "user",
-    withUserOverlay: true,
     shown: "mine",
     trees: treesWithViews(),
     ...overrides,
@@ -69,7 +68,7 @@ describe("usePageViews — the list", () => {
   });
 
   it("locks the choice while the overlay is off, and when the page has no views", () => {
-    expect(setup({ withUserOverlay: false }).result.current.viewsLock).toBe("overlay-off");
+    expect(setup({ target: "base" }).result.current.viewsLock).toBe("overlay-off");
     const trees = treesWithCounter();
     trees.viewModels.pages = {};
     expect(setup({ trees, shown: undefined }).result.current.viewsLock).toBe("no-page");
@@ -84,9 +83,73 @@ describe("usePageViews — the list", () => {
   });
 
   it("chooses nothing while the overlay is off", () => {
-    const { result, commit } = setup({ withUserOverlay: false });
+    const { result, commit } = setup({ target: "base" });
     act(() => result.current.select("compact"));
     expect(commit).not.toHaveBeenCalled();
+  });
+});
+
+describe("usePageViews — for a ROLE (doc/roles-design.md)", () => {
+  const admin = { engine: "list", cells: [] };
+  /** The admin's own "admin" view, chosen by the admin; the user holds qa and admin. */
+  const treesWithRole = (): EditableTrees => {
+    const trees = treesWithViews();
+    trees.viewModels.roles = { admin: { pages: { demo: { view: "admin", templates: { admin } } } } };
+    return trees;
+  };
+  const committedRole = (commit: ReturnType<typeof vi.fn<Commit>>) => {
+    const change = commit.mock.calls[0]?.[0];
+    return change && "viewModels" in change ? change.viewModels.roles?.["admin"]?.pages?.["demo"] : undefined;
+  };
+
+  it("lists the held roles' templates as the role's, prebuilt for them — and the user never renames them", () => {
+    const { result } = setup({ trees: treesWithRole(), roles: ["qa", "admin"], shown: "admin" });
+    expect(result.current.views).toEqual([
+      { name: "default", kind: "base" },
+      { name: "compact", kind: "base" },
+      { name: "admin", kind: "role", role: "admin" },
+      { name: "mine", kind: "user" },
+    ]);
+    expect(result.current.shown).toEqual({ name: "admin", kind: "role", role: "admin" });
+    expect(result.current.canRename).toBe(false);
+    expect(result.current.canShare).toBe(true);
+  });
+
+  it("editing for the role: choosing a view sets the role's, Save as makes the role's own, Rename and Delete work on it", () => {
+    const { result, commit } = setup({
+      trees: treesWithRole(),
+      target: { role: "admin" },
+      roles: ["admin"],
+      shown: "admin",
+    });
+    expect(result.current.viewsLock).toBeUndefined();
+    expect(result.current.canRename).toBe(true);
+    act(() => result.current.select("compact"));
+    expect(committedRole(commit)).toMatchObject({ view: "compact" });
+
+    commit.mockClear();
+    act(() => result.current.openSaveAs());
+    act(() => result.current.setName("wide"));
+    act(() => result.current.submit());
+    expect(committedRole(commit)).toEqual({ view: "wide", templates: { admin, wide: admin } });
+
+    commit.mockClear();
+    act(() => result.current.remove());
+    expect(committedRole(commit)).toEqual({ templates: {} });
+    // The user's overlay is never touched when editing for a role.
+    const { userViewModels } = treesWithRole();
+    expect(
+      commit.mock.calls.every(
+        ([change]) =>
+          !("userViewModels" in change) || JSON.stringify(change.userViewModels) === JSON.stringify(userViewModels),
+      ),
+    ).toBe(true);
+  });
+
+  it("a prebuilt view shown for the role is not the role's to rename", () => {
+    const { result } = setup({ trees: treesWithRole(), target: { role: "admin" }, roles: ["admin"], shown: "compact" });
+    expect(result.current.canRename).toBe(false);
+    expect(result.current.canRemove).toBe(false);
   });
 });
 
@@ -102,7 +165,7 @@ describe("usePageViews — Save as", () => {
   });
 
   it("makes a PREBUILT view when the target is the shared page", () => {
-    const { result, commit } = setup({ target: "base", withUserOverlay: false, shown: "default" });
+    const { result, commit } = setup({ target: "base", shown: "default" });
     act(() => result.current.openSaveAs());
     act(() => result.current.setName("team-wide"));
     act(() => result.current.submit());

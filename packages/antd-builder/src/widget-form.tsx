@@ -821,7 +821,8 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
         <Typography.Text strong>Show when</Typography.Text>
         {conditions.length === 0 ? (
           <Typography.Text type="secondary" data-testid="widget-conditions-always">
-            Always. Add a condition to show this widget only while the page&apos;s data says so.
+            Always. Add a condition to show this widget only while the page&apos;s data says so — or only to a role (the
+            user&apos;s roles has the role …). For a page that differs by role, edit for the role instead.
           </Typography.Text>
         ) : (
           <Flex vertical gap="small" component="ul" className="ww-builder-reactions">

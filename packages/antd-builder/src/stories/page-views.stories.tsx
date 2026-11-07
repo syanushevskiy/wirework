@@ -8,13 +8,12 @@ import { layoutEngines, treesWithViews } from "../__tests__/fixtures";
 type Args = {
   editLock: EditLock | undefined;
   target: EditTarget;
-  withUserOverlay: boolean;
   shown: string;
   onCommit: (change: unknown) => void;
 };
 
 /** The component on a live hook: a commit lands in local state, so the list follows it as it would a store. */
-function Views({ editLock, target, withUserOverlay, shown, onCommit }: Args) {
+function Views({ editLock, target, shown, onCommit }: Args) {
   const [trees, setTrees] = useState<EditableTrees>(treesWithViews);
   const [view, setView] = useState(shown);
   const commit: Commit = (change) => {
@@ -29,7 +28,6 @@ function Views({ editLock, target, withUserOverlay, shown, onCommit }: Args) {
     page: "demo",
     trees,
     target,
-    withUserOverlay,
     shown: view,
     cancelEditing: () => undefined,
   });
@@ -39,7 +37,7 @@ function Views({ editLock, target, withUserOverlay, shown, onCommit }: Args) {
 /** The views of a page — the team's prebuilt ones and the user's own — chosen from one list, saved, shared as JSON. */
 const meta = {
   title: "Builder/PageViews",
-  args: { editLock: undefined, target: "user", withUserOverlay: true, shown: "mine", onCommit: fn() },
+  args: { editLock: undefined, target: "user", shown: "mine", onCommit: fn() },
   argTypes: {
     editLock: { control: "select", options: [undefined, "permission", "loading"] },
     target: { control: "select", options: ["user", "base"] },
@@ -110,7 +108,7 @@ export const WithoutPermission: Story = {
 
 /** With the overlay off the page shows its default and no view can be chosen; Save as then makes a PREBUILT view. */
 export const OverlayOff: Story = {
-  args: { target: "base", withUserOverlay: false, shown: "default" },
+  args: { target: "base", shown: "default" },
   play: async ({ canvas, userEvent, args }) => {
     await expect(canvas.getByTitle(/Turn the user overlay on/)).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Save as…" }));
