@@ -196,6 +196,91 @@ describe("resolvePage", () => {
     expect(resolved.cells[0]?.viewModel).toMatchObject({ label: "OVERRIDE" });
   });
 
+  describe("the role layer (doc/roles-design.md): base, then the roles in the order given, then the user", () => {
+    const templates3 = {
+      counter: {
+        default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] }, label: "Base" },
+        loud: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] }, label: "LOUD" },
+        quiet: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] }, label: "quiet" },
+      },
+    };
+    const layout = (ids: string[]) => ({ engine: "list", cells: ids.map((id) => cell({ id })) });
+    const viewModels = {
+      ...page([cell()], templates3),
+      roles: {
+        qa: { pages: { demo: { cells: { c1: { settings: { default: { label: "QA" } } } } } } },
+        admin: {
+          pages: {
+            demo: {
+              view: "admin",
+              templates: { admin: layout(["c1", "c2"]) },
+              cells: { c1: { view: "loud", settings: { loud: { label: "Admin" } } } },
+            },
+          },
+        },
+        "wirework-admin": { pages: { demo: { cells: { c1: { view: "quiet" } } } } },
+      },
+    };
+    const first = (resolved: ReturnType<typeof plan>) => {
+      if (resolved.problem !== undefined) throw new Error(resolved.problem);
+      return { view: resolved.view, cells: resolved.cells.length, c1: resolved.cells[0] };
+    };
+
+    it("reads nothing of the roles without a list, and a role without an entry is nothing", () => {
+      expect(first(plan({ viewModels }))).toMatchObject({ view: "default", cells: 1 });
+      expect(first(plan({ viewModels, roles: ["nobody"] }))).toMatchObject({ view: "default", cells: 1 });
+    });
+
+    it("a role's view and templates, and its cells' templates and settings", () => {
+      const admin = first(plan({ viewModels, roles: ["qa", "admin"] }));
+      expect(admin).toMatchObject({ view: "admin", cells: 2 });
+      expect(admin.c1?.template).toBe("loud");
+      expect(admin.c1?.viewModel).toMatchObject({ label: "Admin" });
+      // The QA's settings are for the default template, which the admin's view does not use.
+      expect(first(plan({ viewModels, roles: ["qa"] })).c1?.viewModel).toMatchObject({ label: "QA" });
+    });
+
+    it("later wins per thing: the Wirework admin keeps the admin's page and overrides the cell's template", () => {
+      const wireworkAdmin = first(plan({ viewModels, roles: ["qa", "admin", "wirework-admin"] }));
+      expect(wireworkAdmin).toMatchObject({ view: "admin", cells: 2 });
+      expect(wireworkAdmin.c1?.template).toBe("quiet");
+      // The same roles the other way round: the admin's cell template wins.
+      expect(first(plan({ viewModels, roles: ["wirework-admin", "admin"] })).c1?.template).toBe("loud");
+    });
+
+    it("the user's own choice beats every role, and a user's settings merge over a role's", () => {
+      const user = first(
+        plan({
+          viewModels,
+          roles: ["qa", "admin"],
+          userViewModels: {
+            pages: { demo: { view: "default", cells: { c1: { settings: { loud: { label: "Mine" } } } } } },
+          },
+        }),
+      );
+      expect(user).toMatchObject({ view: "default", cells: 1 });
+      expect(user.c1?.template).toBe("loud");
+      expect(user.c1?.viewModel).toMatchObject({ label: "Mine" });
+    });
+
+    it("a role's missing view or cell template falls back and is reported", () => {
+      const missing = {
+        ...viewModels,
+        roles: { ops: { pages: { demo: { view: "gone", cells: { c1: { view: "nope" } } } } } },
+      };
+      const resolved = plan({ viewModels: missing, roles: ["ops"] });
+      if (resolved.problem !== undefined) throw new Error(resolved.problem);
+      expect(resolved.fallback).toEqual({ requested: "gone", used: "default" });
+      expect(resolved.cells[0]?.fallback).toEqual({ requested: "nope", used: "default" });
+    });
+
+    it("reads the layers given ready-made instead of the roles — a layout inside a container's", () => {
+      const resolved = plan({ viewModels, overlays: [{ pages: { demo: { cells: { c1: { view: "loud" } } } } }] });
+      if (resolved.problem !== undefined) throw new Error(resolved.problem);
+      expect(resolved.cells[0]?.template).toBe("loud");
+    });
+  });
+
   it("reports a reaction calling an unregistered action", () => {
     const resolved = plan({
       viewModels: page([cell()], {

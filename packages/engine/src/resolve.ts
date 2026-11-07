@@ -11,10 +11,16 @@
  * them (doc/layout-engines-design.md).
  *
  * Fallback chain per cell template:
- *   user-selected view -> cell's `template` -> "default" -> problem.
+ *   user-selected view -> the roles' views, the most specific role first ->
+ *   cell's `template` -> "default" -> problem.
  * A fallback that engages is REPORTED on the resolved cell/page, never
  * silent — and so is a user overlay that had to be ignored, and the layout
  * engine's own validation warnings.
+ *
+ * The LAYERS (layers.ts, doc/roles-design.md): the base is read through
+ * the entries of the roles the user holds — `roles`, in the session's order
+ * from the broadest to the most specific — then the user's own overlay;
+ * the last layer that sets a thing wins (`ResolveLayers`).
  */
 import {
   getPath,
@@ -32,6 +38,7 @@ import {
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
+import { cellViewCandidates, foldSettings, overlayLayers, viewCandidates, type Overlays } from "./layers";
 import { errorText, issuesText, problemText } from "./messages";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
@@ -122,13 +129,9 @@ export interface ResolvedPageProblem extends ResolvedPageBase {
 
 export type ResolvedPage = ResolvedPagePlan | ResolvedPageProblem;
 
-export interface ResolveInput {
+/** What every resolution takes, whichever way the layers are given. */
+export interface ResolveCommon {
   viewModels: ViewModels;
-  /**
-   * The user overlay. `resolvePage` checks it once (`checkOverlay`); a
-   * direct `resolveCells` caller passes an already checked one.
-   */
-  userViewModels?: UserViewModels | undefined;
   page: string;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
@@ -139,6 +142,21 @@ export interface ResolveInput {
   /** The appearances `appear` and `disappear` may name; the standard ones alone when absent. */
   appearances?: AppearanceRegistry | undefined;
 }
+
+/**
+ * How the base is read (doc/roles-design.md) — ONE of two ways:
+ *  - a PAGE: the roles the user holds, in the session's order from the
+ *    broadest to the most specific (their entries in `viewModels.roles` are
+ *    read between the base and the user's overlay), and the user's overlay,
+ *    which `resolvePage` checks once (`checkOverlay`) and reports;
+ *  - a LAYOUT INSIDE A CONTAINER: the layers ready-made, as the cells of
+ *    that layout see them (`innerOverlays`).
+ */
+export type ResolveLayers =
+  | { roles?: readonly string[] | undefined; userViewModels?: UserViewModels | undefined; overlays?: undefined }
+  | { overlays: Overlays; roles?: undefined; userViewModels?: undefined };
+
+export type ResolveInput = ResolveCommon & ResolveLayers;
 
 /** The registries a template is checked against. */
 export interface CheckRegistries {
@@ -161,6 +179,16 @@ export function checkOverlay(userViewModels: UserViewModels | undefined): {
     ? { overlay: parsed.data }
     : { problem: `user view models ignored: ${issuesText(parsed.error)}` };
 }
+
+/** The layers a resolution reads the base through: the ones given, else the fold of the roles' entries and the user's overlay. */
+const layersOf = (input: ResolveInput): Overlays =>
+  input.overlays ?? overlayLayers(input.viewModels, input.roles, input.userViewModels);
+
+/** The same resolution over layers given ready-made. */
+const withOverlays = (
+  { viewModels, page, registry, layoutEngines, actions, predicates, appearances }: ResolveCommon,
+  overlays: Overlays,
+): ResolveInput => ({ viewModels, page, registry, layoutEngines, actions, predicates, appearances, overlays });
 
 /**
  * The template map a cell's `model` path points at, or undefined when the
@@ -291,11 +319,13 @@ export function checkTemplate(
 }
 
 /**
- * One cell of a page: registry lookup, template selection (with the user's
- * overlay), validation by the widget's own schema and the contract check.
+ * One cell of a page: registry lookup, template selection (through the
+ * layers: the user's choice, then the roles' from the most specific), the
+ * settings of every layer merged in order, validation by the widget's own
+ * schema and the contract check.
  */
-function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): ResolvedCell {
-  const { viewModels, userViewModels, page, registry, actions, predicates, appearances } = input;
+function resolveCell(cell: CellBase, input: ResolveInput, overlays: Overlays, duplicate: boolean): ResolvedCell {
+  const { viewModels, page, registry, actions, predicates, appearances } = input;
   const base = { key: cell.id, widget: cell.widget, model: cell.model } as const;
 
   const definition = registry.get(cell.widget);
@@ -312,26 +342,28 @@ function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): R
   }
 
   // Per-CELL customisation (two cells of one widget type stay independent).
-  const userWidget = userViewModels?.pages?.[page]?.cells?.[cell.id];
-  // Fallback chain: user view -> cell template -> "default".
-  const picked = pickTemplate(templateMap, [userWidget?.view, cell.template, "default"]);
+  // Fallback chain: the user's view -> the roles' views, the last role's first -> cell template -> "default".
+  const wanted = cellViewCandidates(overlays, page, cell.id);
+  const picked = pickTemplate(templateMap, [...wanted, cell.template, "default"]);
   if (!picked) {
     return {
       ...base,
       definition,
-      problem: {
-        kind: "missing-template",
-        path: cell.model,
-        template: userWidget?.view ?? cell.template,
-      },
+      problem: { kind: "missing-template", path: cell.model, template: wanted[0] ?? cell.template },
     };
   }
 
-  const checked = checkTemplate(definition, templateMap[picked.name], userWidget?.settings?.[picked.name], {
-    actions,
-    predicates,
-    appearances,
-  });
+  // Every layer's settings for the template, in order: a role may retitle a card, and the user retitle it again.
+  const checked = checkTemplate(
+    definition,
+    templateMap[picked.name],
+    foldSettings(overlays, page, cell.id, picked.name),
+    {
+      actions,
+      predicates,
+      appearances,
+    },
+  );
   const chosen = { template: picked.name, ...(picked.fallback === undefined ? {} : { fallback: picked.fallback }) };
   if (checked.problem) {
     return { ...base, definition, ...chosen, problem: checked.problem };
@@ -346,11 +378,12 @@ function resolveCell(cell: CellBase, input: ResolveInput, duplicate: boolean): R
  * problems, so one emit can never fire another cell's reactions.
  */
 export function resolveCells(cells: readonly CellBase[], input: ResolveInput): ResolvedCell[] {
+  const overlays = layersOf(input);
   const seen = new Set<string>();
   return cells.map((cell) => {
     const repeated = seen.has(cell.id);
     seen.add(cell.id);
-    return resolveCell(cell, input, repeated);
+    return resolveCell(cell, input, overlays, repeated);
   });
 }
 
@@ -362,17 +395,20 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
   // The page's own reactions belong to the BASE view models only: a user's view never carries any.
   const pageReactions = checkPageReactions(viewModels, page, input.actions);
   const notes = { on: pageReactions.on, ...(overlayProblem === undefined ? {} : { overlayProblem }) };
+  // The layers: the roles' entries in the session's order, then the user's — made once, read everywhere below.
+  const overlays = input.overlays ?? overlayLayers(viewModels, input.roles, userViewModels);
 
-  // Base templates with the user's own layered on top.
-  const templates = pageTemplates(viewModels, userViewModels, page);
+  // Base templates with the roles' and the user's own layered on top.
+  const templates = pageTemplates(viewModels, overlays, page);
   if (!templates) {
     return { page, view: "default", problem: `Unknown page "${page}"`, ...notes };
   }
 
-  const userView = userViewModels?.pages?.[page]?.view;
-  const picked = pickTemplate(templates, [userView, "default"]);
+  // The shown view: the user's if set, else the last role's that is set, else "default".
+  const chosen = viewCandidates(overlays, page);
+  const picked = pickTemplate(templates, [...chosen, "default"]);
   if (!picked) {
-    const view = userView ?? "default";
+    const view = chosen[0] ?? "default";
     return { page, view, problem: `Page "${page}" has no template "${view}"`, ...notes };
   }
 
@@ -393,6 +429,6 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
     engine: resolution.engine.name,
     template: resolution.template,
     warnings: [...resolution.warnings, ...(pageReactions.problem === undefined ? [] : [pageReactions.problem])],
-    cells: resolveCells(resolution.cells, { ...input, userViewModels }),
+    cells: resolveCells(resolution.cells, withOverlays(input, overlays)),
   };
 }

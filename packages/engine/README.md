@@ -24,13 +24,37 @@ template, `ResolvedCell`s and warnings, or a page problem; every cell is a
 is reported. `resolveTemplate` (a `TemplateResolution`) validates one page
 template with its engine.
 
+The base is read through LAYERS (doc/roles-design.md): the entries of
+`viewModels.roles.<role>` for the roles the user holds (`ResolveInput.roles`,
+in the session's order from the broadest to the most specific), then the
+user's overlay — the last layer that sets a thing wins, per page view, cell
+template and setting. `overlayLayers(viewModels, roles, userViewModels)`
+builds the list (`Overlays`) and `pageTemplates(viewModels, overlays, page)`
+layers the templates. The input says the layers ONE of two ways
+(`ResolveLayers`): `roles` and `userViewModels` for a page, or `overlays`
+ready-made for a layout inside a container (`innerOverlays`,
+`innerOverlaysAt`). `updateRole` writes a role's entry with the same
+functions that write the user's overlay; `selectUserCellView` chooses a
+cell's template in an overlay.
+
+Breaking since 6 November 2026: `pageTemplates` and `locateLayoutAt` take a
+list of overlays instead of one; `innerOverlayAt` became `innerOverlaysAt`
+over a list; `ValidateInput` is no longer `Omit<ResolveInput, "page">`.
+
 ## Validation
 
-`validateViewModels(input)` walks every template of both trees at boot and
-reports each problem with its location and severity — and into every layout
-a container holds (`… (#card-1) content cell[0] (#inner)`), refusing one
-nested deeper than `MAX_LAYOUT_DEPTH`. `problemText`, `errorText` and
-`issuesText` turn thrown values and validator issues into sentences.
+`validateViewModels(input)` walks every template of every tree at boot —
+the shared page as everyone sees it, then once more through each layer (a
+role's entry read with the roles before it in `knownRoles`' order, the
+user's overlay) at the layer's location (`roles.admin pages.runs.default`,
+`user pages.runs.templates.mine`), so a problem a layer causes names the
+layer and what the shared page reported is not repeated — and into every
+layout a container holds (`… (#card-1) content cell[0] (#inner)`), refusing
+one nested deeper than `MAX_LAYOUT_DEPTH`. It warns about a layer's view
+nobody has and a role outside `knownRoles` (the application's roles, when
+the host gives them).
+`problemText`, `errorText` and `issuesText` turn thrown values and
+validator issues into sentences.
 
 ## Appearances
 
@@ -48,8 +72,9 @@ registered — part of `contractProblems`, given `ResolveInput.appearances`.
 doc/containers-design.md: a container's template holds a page template in
 a setting its definition names in `contains`. `layoutsOf(definition,
 viewModel)` lists the layouts held (`{ path, template }` — `content`, or
-`tabs.0.content` for an item of a list); `innerCellKey` and `innerOverlay`
-give the overlay as the cells inside see it (`card-1/button`);
+`tabs.0.content` for an item of a list); `innerCellKey`, `innerOverlay` and
+`innerOverlays` give the overlay layers as the cells inside see them
+(`card-1/button`);
 `chainSteps(at)` reads a chain of containers; `layoutPathAt(layoutEngines,
 viewModels, page, at)` finds where such a layout lives in the view models;
 `cellsWithin(registry, layoutEngines, viewModels, template)` lists a

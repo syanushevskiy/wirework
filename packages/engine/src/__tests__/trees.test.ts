@@ -8,8 +8,10 @@ import {
   removeUserCell,
   removeUserPageTemplate,
   renameUserPageTemplate,
+  selectUserCellView,
   selectUserPageView,
   updatePageTemplate,
+  updateRole,
   updateUserCellSettings,
   updateUserPageTemplate,
   updateWidgetTemplate,
@@ -23,10 +25,51 @@ const shown = { engine: "list", cells: [{ id: "shown" }] } as never;
 const mark = (template: unknown) => ({ ...(template as object), edited: true }) as never;
 
 describe("pageTemplates", () => {
-  it("layers the user's templates over the base ones by name", () => {
+  it("layers the overlays' templates over the base ones by name, in order — the later wins", () => {
     const user: UserViewModels = { pages: { demo: { templates: { default: { engine: "mine" } } } } };
-    expect(pageTemplates(base, user, "demo")).toMatchObject({ default: { engine: "mine" }, wide: { engine: "list" } });
-    expect(pageTemplates(base, undefined, "nope")).toBeUndefined();
+    expect(pageTemplates(base, [user], "demo")).toMatchObject({
+      default: { engine: "mine" },
+      wide: { engine: "list" },
+    });
+    const role: UserViewModels = {
+      pages: { demo: { templates: { default: { engine: "role" }, admin: { engine: "admin" } } } },
+    };
+    expect(pageTemplates(base, [role, user], "demo")).toMatchObject({
+      default: { engine: "mine" },
+      admin: { engine: "admin" },
+      wide: { engine: "list" },
+    });
+    expect(pageTemplates(base, [], "nope")).toBeUndefined();
+    expect(pageTemplates(base, [role], "nope")).toBeUndefined();
+  });
+});
+
+describe("selectUserCellView", () => {
+  it("chooses a cell's template, keeps its settings, and goes back to the cell's own on undefined", () => {
+    const chosen = selectUserCellView(
+      { pages: { demo: { cells: { c1: { settings: { loud: {} } } } } } },
+      "demo",
+      "c1",
+      "loud",
+    );
+    expect(chosen).toEqual({ pages: { demo: { cells: { c1: { view: "loud", settings: { loud: {} } } } } } });
+    expect(selectUserCellView(chosen, "demo", "c1", undefined)).toEqual({
+      pages: { demo: { cells: { c1: { settings: { loud: {} } } } } },
+    });
+    expect(selectUserCellView({}, "demo", "c2", "x")).toEqual({ pages: { demo: { cells: { c2: { view: "x" } } } } });
+  });
+});
+
+describe("updateRole", () => {
+  it("writes a role's entry with the overlay ops, creating it when absent and keeping the other roles", () => {
+    const withAdmin = updateRole(base, "admin", (entry) => selectUserPageView(entry, "demo", "wide"));
+    expect(withAdmin.roles).toEqual({ admin: { pages: { demo: { view: "wide" } } } });
+    const withBoth = updateRole(withAdmin, "ops", (entry) => putUserPageTemplate(entry, "demo", "ops", shown));
+    expect(withBoth.roles).toEqual({
+      admin: { pages: { demo: { view: "wide" } } },
+      ops: { pages: { demo: { view: "ops", templates: { ops: shown } } } },
+    });
+    expect(base.roles).toBeUndefined();
   });
 });
 

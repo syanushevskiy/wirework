@@ -14,7 +14,7 @@
  */
 import { z } from "zod";
 import { RESERVED_VIEW_MODEL_KEYS } from "../contracts/settings";
-import { pageViewModelSchema } from "./view-models";
+import { pageViewModelSchema } from "./page-template";
 
 /**
  * One template's settings overrides. SETTINGS only: `inputs`, `on` and

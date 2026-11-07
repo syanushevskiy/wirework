@@ -1,21 +1,32 @@
 /**
- * Boot-time validation: walk every page template — base AND the user's own
- * — validate each with its layout engine, then check every cell.
+ * Boot-time validation: walk every page template — base, the roles' own
+ * and the user's own — validate each with its layout engine, then check
+ * every cell.
  *
  * Cell checking is NOT re-implemented here: `resolveCells` is the single
  * pipeline and this pass maps its problems. What is added on top is what
- * only a whole-tree walk can see: structural shape of both trees, EVERY
- * template a cell could pick (a user may select any of them later), user
- * views that do not exist, and overlay config nobody reads.
+ * only a whole-tree walk can see: structural shape of every tree, EVERY
+ * template a cell could pick (a user may select any of them later), views
+ * that do not exist, and overlay config nobody reads.
+ *
+ * The LAYERS (doc/roles-design.md): the shared page is checked as everyone
+ * sees it (`pages.runs.default`), then once more through each layer — a
+ * role's entry read with the roles before it in the application's order
+ * (`knownRoles`), the user's overlay — at the layer's own location
+ * (`roles.admin pages.runs.default`, `user pages.runs.templates.mine`), so
+ * a problem a layer causes names the layer; what the shared page already
+ * reported is not repeated. A layer's own templates are checked the same
+ * way. The fold itself is the resolver's: nothing here folds by hand.
  *
  * Problems carry a SEVERITY: a fallback that engaged, or overlay config that
  * is simply dead, is a warning (the page renders as designed); an unknown
  * widget is an error. `ok` counts errors only.
  */
-import { viewModelsSchema, type CellBase } from "@wirework/schema";
+import { viewModelsSchema, type CellBase, type UserViewModels } from "@wirework/schema";
+import { foldSettings, type Overlays } from "./layers";
 import { resolveTemplate } from "./layout-engines";
 import { issuesText } from "./messages";
-import { MAX_LAYOUT_DEPTH, innerOverlay, layoutsOf } from "./nesting";
+import { MAX_LAYOUT_DEPTH, innerOverlay, innerOverlays, layoutsOf } from "./nesting";
 import { checkPageReactions } from "./page-events";
 import type { WidgetRegistry } from "./registry";
 import {
@@ -25,8 +36,9 @@ import {
   resolveCells,
   widgetTemplates,
   type CellProblem,
-  type ResolveInput,
+  type ResolveCommon,
 } from "./resolve";
+import { pageTemplates } from "./trees";
 
 export type ProblemSeverity = "error" | "warning";
 
@@ -47,9 +59,27 @@ export interface ValidationReport {
 }
 
 /** What `resolvePage` takes, minus the page: validation walks every page. */
-export type ValidateInput = Omit<ResolveInput, "page">;
+export type ValidateInput = Omit<ResolveCommon, "page"> & {
+  userViewModels?: UserViewModels | undefined;
+  /**
+   * Every role the application grants, in order from the broadest to the
+   * most specific, when the host knows them: a role entry outside the list
+   * is dead configuration — a warning — and a role is checked with the roles
+   * before it, as a user holding it would see the page. Absent: the roles
+   * in the tree's order, none dead.
+   */
+  knownRoles?: readonly string[] | undefined;
+};
 
 type Report = (location: string, message: string) => void;
+
+/** One overlay layer and how a user holding it reads the base: the roles before it, then itself. */
+interface Layer {
+  /** `roles.admin`, `user`. */
+  name: string;
+  entry: UserViewModels;
+  overlays: Overlays;
+}
 
 /** How a cell problem reads in a boot report. */
 function cellProblemMessage(problem: CellProblem, registry: WidgetRegistry): string {
@@ -70,7 +100,7 @@ function cellProblemMessage(problem: CellProblem, registry: WidgetRegistry): str
 }
 
 export function validateViewModels(input: ValidateInput): ValidationReport {
-  const { viewModels, layoutEngines } = input;
+  const { viewModels, knownRoles } = input;
   const problems: ValidationProblem[] = [];
   const error: Report = (location, message) => {
     problems.push({ location, message, severity: "error" });
@@ -79,7 +109,7 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
     problems.push({ location, message, severity: "warning" });
   };
 
-  // Shape-check BOTH trees first: everything below reads through them.
+  // Shape-check EVERY tree first: everything below reads through them (the roles' entries with the tree's).
   const baseShape = viewModelsSchema.safeParse(viewModels);
   if (!baseShape.success) {
     error("viewModels", `invalid view models: ${issuesText(baseShape.error)}`);
@@ -88,38 +118,69 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
   const { overlay, problem: overlayProblem } = checkOverlay(input.userViewModels);
   if (overlayProblem !== undefined) error("userViewModels", `${overlayProblem} — the overlay is ignored entirely`);
 
-  const pageNames = new Set([...Object.keys(viewModels.pages ?? {}), ...Object.keys(overlay?.pages ?? {})]);
+  const roles = viewModels.roles ?? {};
+  const roleNames = knownRoles === undefined ? Object.keys(roles) : [...knownRoles, ...Object.keys(roles)];
+  Object.keys(roles)
+    .filter((role) => knownRoles !== undefined && !knownRoles.includes(role))
+    .forEach((role) =>
+      warn(
+        `roles.${role}`,
+        `role "${role}" is held by nobody (the application's roles: ${knownRoles?.join(", ") || "none"})`,
+      ),
+    );
+  const roleEntries = [...new Set(roleNames)].map((role) => roles[role]).filter((entry) => entry !== undefined);
+  const layers: Layer[] = [
+    ...[...new Set(roleNames)].flatMap((role, index) => {
+      const entry = roles[role];
+      return entry === undefined ? [] : [{ name: `roles.${role}`, entry, overlays: roleEntries.slice(0, index + 1) }];
+    }),
+    ...(overlay === undefined ? [] : [{ name: "user", entry: overlay, overlays: [overlay] }]),
+  ];
+
+  const pageNames = new Set([
+    ...Object.keys(viewModels.pages ?? {}),
+    ...layers.flatMap((layer) => Object.keys(layer.entry.pages ?? {})),
+  ]);
 
   for (const pageName of pageNames) {
     const baseTemplates = viewModels.pages?.[pageName] ?? {};
-    const userTemplates = overlay?.pages?.[pageName]?.templates ?? {};
-    // The user's own templates are validated like base ones, at their own location.
-    const entries = [
-      ...Object.entries(baseTemplates).map(([name, raw]) => ({ raw, location: `pages.${pageName}.${name}` })),
-      ...Object.entries(userTemplates).map(([name, raw]) => ({
-        raw,
-        location: `user pages.${pageName}.templates.${name}`,
-      })),
-    ];
+    const common = { ...input, page: pageName };
 
-    for (const { raw: rawPage, location } of entries) {
-      const resolution = resolveTemplate(layoutEngines, rawPage);
-      if (resolution.problem !== undefined) {
-        error(location, resolution.problem);
-        continue;
-      }
-      // At boot the engine's findings fail the check; at render they are warnings on the plan.
-      for (const message of resolution.warnings) error(location, message);
-      validateCells(resolution.cells, location, { ...input, userViewModels: overlay, page: pageName }, error, warn);
+    // The shared page as everyone sees it; what it reports is not repeated for a layer — nor is what an earlier layer reported.
+    const reported = new Set<string>();
+    for (const [name, raw] of Object.entries(baseTemplates)) {
+      const remember: Report = (location, message) => reported.add(`${location}:${message}`);
+      const location = `pages.${pageName}.${name}`;
+      validateTemplate(raw, location, { ...common, overlays: [] }, undefined, error, warn, remember);
     }
 
-    // User-selected page views must exist among base + user templates.
-    const userPageView = overlay?.pages?.[pageName]?.view;
-    if (userPageView !== undefined && !pickTemplate({ ...baseTemplates, ...userTemplates }, [userPageView])) {
-      warn(
-        `user pages.${pageName}`,
-        `user-selected page view "${userPageView}" does not exist — will fall back to "default"`,
-      );
+    for (const { name: layerName, entry, overlays } of layers) {
+      const page = entry.pages?.[pageName];
+      const key = (location: string, message: string) => `${location.slice(layerName.length + 1)}:${message}`;
+      const once =
+        (report: Report): Report =>
+        (location, message) => {
+          if (!reported.has(key(location, message))) report(location, message);
+        };
+      const remember: Report = (location, message) => reported.add(key(location, message));
+      // The shared page through this layer: a problem the layer causes, at the layer's location.
+      for (const [name, raw] of Object.entries(baseTemplates)) {
+        const location = `${layerName} pages.${pageName}.${name}`;
+        validateTemplate(raw, location, { ...common, overlays }, entry, once(error), once(warn), remember);
+      }
+      // The layer's own templates, like base ones, at their own location.
+      for (const [name, raw] of Object.entries(page?.templates ?? {})) {
+        const location = `${layerName} pages.${pageName}.templates.${name}`;
+        validateTemplate(raw, location, { ...common, overlays }, entry, error, warn);
+      }
+      // The layer's chosen view must exist among what it sees.
+      if (page?.view !== undefined && !pickTemplate(pageTemplates(viewModels, overlays, pageName) ?? {}, [page.view])) {
+        warn(`${layerName} pages.${pageName}`, `page view "${page.view}" does not exist — will fall back to "default"`);
+      }
+      // A layer's page with its own templates is a real page; without any it is dead config.
+      if (page !== undefined && !Object.hasOwn(viewModels.pages ?? {}, pageName) && !page.templates) {
+        warn(`${layerName} pages.${pageName}`, `references unknown page "${pageName}"`);
+      }
     }
   }
 
@@ -134,26 +195,56 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
     if (problem !== undefined) error(`on.${pageName}`, problem);
   }
 
-  for (const [userPageName, userPage] of Object.entries(overlay?.pages ?? {})) {
-    // A user page with its own templates is a real page; without any it is dead config.
-    if (!Object.hasOwn(viewModels.pages ?? {}, userPageName) && !userPage.templates) {
-      warn(`user pages.${userPageName}`, `user view model references unknown page "${userPageName}"`);
-    }
-  }
-
   return report(problems);
 }
 
-/** Every cell of one template, through the SAME pipeline the renderer uses — and into the layouts a container holds. */
+type CellsInput = ResolveCommon & { overlays: Overlays };
+
+/** One page template: its engine's verdict, then every cell. */
+function validateTemplate(
+  raw: unknown,
+  location: string,
+  input: CellsInput,
+  own: UserViewModels | undefined,
+  error: Report,
+  warn: Report,
+  remember: Report = () => undefined,
+): void {
+  const resolution = resolveTemplate(input.layoutEngines, raw);
+  if (resolution.problem !== undefined) {
+    error(location, resolution.problem);
+    remember(location, resolution.problem);
+    return;
+  }
+  // At boot the engine's findings fail the check; at render they are warnings on the plan.
+  for (const message of resolution.warnings) {
+    error(location, message);
+    remember(location, message);
+  }
+  const both =
+    (report: Report): Report =>
+    (where, message) => {
+      report(where, message);
+      remember(where, message);
+    };
+  validateCells(resolution.cells, location, input, own, both(error), both(warn));
+}
+
+/**
+ * Every cell of one template, through the SAME pipeline the renderer uses —
+ * and into the layouts a container holds. `own` is the layer being checked:
+ * its dead settings are reported, not the layers before it.
+ */
 function validateCells(
   cells: readonly CellBase[],
   location: string,
-  input: ResolveInput,
+  input: CellsInput,
+  own: UserViewModels | undefined,
   error: Report,
   warn: Report,
   depth = 0,
 ): void {
-  const { page, registry, userViewModels: overlay } = input;
+  const { page, registry, overlays } = input;
 
   resolveCells(cells, input).forEach((resolved, index) => {
     const cellLocation = `${location} cell[${index}] (#${resolved.key})`;
@@ -175,8 +266,9 @@ function validateCells(
           continue;
         }
         for (const message of inner.warnings) error(innerLocation, message);
-        const innerInput = { ...input, userViewModels: innerOverlay(overlay, page, resolved.key, path) };
-        validateCells(inner.cells, innerLocation, innerInput, error, warn, depth + 1);
+        const innerInput = { ...input, overlays: innerOverlays(overlays, page, resolved.key, path) };
+        const innerOwn = innerOverlay(own, page, resolved.key, path);
+        validateCells(inner.cells, innerLocation, innerInput, innerOwn, error, warn, depth + 1);
       }
     }
     if (resolved.fallback) {
@@ -189,12 +281,11 @@ function validateCells(
     // A repeated id was reported above; its templates belong to the first cell.
     const templateMap = widgetTemplates(input.viewModels, resolved.model);
     if (!templateMap || !resolved.definition || resolved.problem?.kind === "duplicate-cell-id") return;
-    const userWidget = overlay?.pages?.[page]?.cells?.[resolved.key];
 
     // The templates this cell does not show today: a user may select any of them.
     for (const [name, template] of Object.entries(templateMap)) {
       if (name === resolved.template || template === undefined || template === null) continue;
-      const checked = checkTemplate(resolved.definition, template, userWidget?.settings?.[name], {
+      const checked = checkTemplate(resolved.definition, template, foldSettings(overlays, page, resolved.key, name), {
         actions: input.actions,
         predicates: input.predicates,
         appearances: input.appearances,
@@ -204,12 +295,12 @@ function validateCells(
       }
     }
 
-    // User settings for templates that do not exist are dead config.
-    for (const settingsKey of Object.keys(userWidget?.settings ?? {})) {
-      if (!Object.hasOwn(templateMap, settingsKey)) {
-        warn(cellLocation, `user settings reference unknown template "${settingsKey}" at "${resolved.model}"`);
-      }
-    }
+    // The layer's settings for templates that do not exist are dead config.
+    Object.keys(own?.pages?.[page]?.cells?.[resolved.key]?.settings ?? {})
+      .filter((settingsKey) => !Object.hasOwn(templateMap, settingsKey))
+      .forEach((settingsKey) =>
+        warn(cellLocation, `settings reference unknown template "${settingsKey}" at "${resolved.model}"`),
+      );
   });
 }
 

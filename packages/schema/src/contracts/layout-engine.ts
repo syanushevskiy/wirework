@@ -12,7 +12,7 @@
  * drag/resize/drop): placements by id for a grid, a whole model document
  * for a docking layout. `applyChange` must be pure — hosts replay changes.
  */
-import type { CellBase, PageViewModel } from "../models/view-models";
+import type { CellBase, PageViewModel } from "../models/page-template";
 import type { Validator } from "./widget";
 
 /**

@@ -10,7 +10,8 @@ import { createRegistry, validateViewModels } from "../index";
 import {
   innerCellKey,
   innerOverlay,
-  innerOverlayAt,
+  innerOverlays,
+  innerOverlaysAt,
   layoutPathAt,
   layoutsOf,
   locateLayoutAt,
@@ -102,13 +103,13 @@ describe("the layout at a chain — located, as the user sees it, and the user's
   };
 
   it("finds the base layout's path and the container's setting that holds it, for a setting and for an item of a list", () => {
-    expect(locateLayoutAt(engines, viewModels, undefined, "demo", "box-1")).toEqual({
+    expect(locateLayoutAt(engines, viewModels, [], "demo", "box-1")).toEqual({
       path: ["widgets", "box-1", "default", "content"],
       container: { key: "box-1", template: "default" },
       holder: { setting: "content", value: inner, within: [] },
       template: inner,
     });
-    expect(locateLayoutAt(engines, viewModels, undefined, "demo", "box-1/tabs.0.content")).toMatchObject({
+    expect(locateLayoutAt(engines, viewModels, [], "demo", "box-1/tabs.0.content")).toMatchObject({
       path: ["widgets", "box-1", "default", "tabs", "0", "content"],
       holder: { setting: "tabs", within: ["0", "content"] },
       template: layout([cell({ id: "a1" })]),
@@ -119,57 +120,83 @@ describe("the layout at a chain — located, as the user sees it, and the user's
       "default",
       "content",
     ]);
-    expect(locateLayoutAt(engines, viewModels, undefined, "demo", "nobody")).toBeUndefined();
-    expect(locateLayoutAt(engines, viewModels, undefined, "demo", "box-1/nobody")).toBeUndefined();
+    expect(locateLayoutAt(engines, viewModels, [], "demo", "nobody")).toBeUndefined();
+    expect(locateLayoutAt(engines, viewModels, [], "demo", "box-1/nobody")).toBeUndefined();
   });
 
   it("shows the user's own copy under the container's overlay key, a layout inside it read from that copy", () => {
-    expect(locateLayoutAt(engines, viewModels, overlay, "demo", "box-1")).toMatchObject({ template: mine });
+    expect(locateLayoutAt(engines, viewModels, [overlay], "demo", "box-1")).toMatchObject({ template: mine });
     // The user's copy of box-1 has no "inner" cell any more, so the chain below it leads nowhere for them.
-    expect(locateLayoutAt(engines, viewModels, overlay, "demo", "box-1/inner")).toBeUndefined();
+    expect(locateLayoutAt(engines, viewModels, [overlay], "demo", "box-1/inner")).toBeUndefined();
     const base = { pages: overlay.pages.demo.cells["box-1/inner"] };
     expect(
       locateLayoutAt(
         engines,
         viewModels,
-        { pages: { demo: { cells: { "box-1/inner": base.pages } } } },
+        [{ pages: { demo: { cells: { "box-1/inner": base.pages } } } }],
         "demo",
         "box-1/inner",
       ),
     ).toMatchObject({ container: { key: "box-1/inner", template: "default" }, template: layout([]) });
   });
 
+  it("reads a container's layout through every layer in order: a role's copy, then the user's over it", () => {
+    const role = { pages: { demo: { cells: { "box-1": { settings: { default: { content: layout([]) } } } } } } };
+    expect(locateLayoutAt(engines, viewModels, [role], "demo", "box-1")).toMatchObject({ template: layout([]) });
+    expect(locateLayoutAt(engines, viewModels, [role, overlay], "demo", "box-1")).toMatchObject({ template: mine });
+    // A role's own page template is searched for the chain's first cell like a base one.
+    const roleLayout = {
+      pages: { demo: { templates: { admin: layout([cell({ id: "box-2", widget: "box", model: "widgets.box-1" })]) } } },
+    };
+    expect(locateLayoutAt(engines, viewModels, [roleLayout], "demo", "box-2")).toMatchObject({
+      container: { key: "box-2", template: "default" },
+      template: inner,
+    });
+  });
+
   it("writes the user's own copy as the container's setting, the user's other settings kept — the whole list for a tab", () => {
-    const located = locateLayoutAt(engines, viewModels, undefined, "demo", "box-1");
+    const located = locateLayoutAt(engines, viewModels, [], "demo", "box-1");
     if (!located) throw new Error("not located");
     const own = { pages: { demo: { cells: { "box-1": { settings: { default: { title: "Mine" } } } } } } };
     expect(updateUserLayoutAt(own, "demo", located, mine)).toEqual({
       pages: { demo: { cells: { "box-1": { settings: { default: { title: "Mine", content: mine } } } } } },
     });
-    const tab = locateLayoutAt(engines, viewModels, undefined, "demo", "box-1/tabs.0.content");
+    const tab = locateLayoutAt(engines, viewModels, [], "demo", "box-1/tabs.0.content");
     if (!tab) throw new Error("not located");
     expect(updateUserLayoutAt({}, "demo", tab, mine)).toEqual({
       pages: { demo: { cells: { "box-1": { settings: { default: { tabs: [{ key: "a", content: mine }] } } } } } },
     });
   });
 
-  it("narrows the overlay to the cells of the layout at a chain, keyed under the nested page name", () => {
-    expect(innerOverlayAt(overlay, "demo", "box-1", "demo/box-1")).toEqual({
-      pages: {
-        "demo/box-1": {
-          cells: {
-            inner: { settings: { default: { content: layout([]) } } },
-            mine: { view: "loud" },
-            "inner/deep": { view: "deep" },
+  it("narrows every overlay to the cells of the layout at a chain, keyed under the nested page name", () => {
+    expect(innerOverlaysAt([overlay], "demo", "box-1", "demo/box-1")).toEqual([
+      {
+        pages: {
+          "demo/box-1": {
+            cells: {
+              inner: { settings: { default: { content: layout([]) } } },
+              mine: { view: "loud" },
+              "inner/deep": { view: "deep" },
+            },
           },
         },
       },
-    });
-    expect(innerOverlayAt(overlay, "demo", "box-1/inner", "demo/box-1/inner")).toEqual({
-      pages: { "demo/box-1/inner": { cells: { deep: { view: "deep" } } } },
-    });
-    expect(innerOverlayAt(overlay, "demo", "nobody", "demo/nobody")).toBeUndefined();
-    expect(innerOverlayAt(undefined, "demo", "box-1", "demo/box-1")).toBeUndefined();
+    ]);
+    expect(innerOverlaysAt([overlay], "demo", "box-1/inner", "demo/box-1/inner")).toEqual([
+      { pages: { "demo/box-1/inner": { cells: { deep: { view: "deep" } } } } },
+    ]);
+    // A layer with nothing for the cells inside is left out, so the list keeps the order of the ones that have.
+    const role = { pages: { demo: { cells: { "box-1/mine": { view: "role" } } } } };
+    expect(innerOverlaysAt([role, {}, overlay], "demo", "box-1", "demo/box-1").map((o) => o.pages)).toEqual([
+      { "demo/box-1": { cells: { mine: { view: "role" } } } },
+      expect.objectContaining({ "demo/box-1": expect.objectContaining({ cells: expect.anything() }) }),
+    ]);
+    expect(innerOverlaysAt([overlay], "demo", "nobody", "demo/nobody")).toEqual([]);
+    expect(innerOverlaysAt([], "demo", "box-1", "demo/box-1")).toEqual([]);
+    expect(innerOverlays([role, overlay], "demo", "box-1", "content")).toEqual([
+      { pages: { demo: { cells: { mine: { view: "role" } } } } },
+      innerOverlay(overlay, "demo", "box-1", "content"),
+    ]);
   });
 });
 

@@ -12,21 +12,39 @@ import {
   type UserViewModels,
   type ViewModels,
 } from "@wirework/schema";
+import type { Overlays } from "./layers";
 
 /**
- * Page templates as the user sees them: base templates with the user's own
- * layered on top (same name -> user wins). Undefined when the page exists
- * in neither tree. Defensive against a structurally broken tree (state
- * inspector) — that must surface as a page problem, not a TypeError.
+ * Page templates as a user sees them: the base templates with each
+ * overlay's own layered on top in order (same name -> the later wins) — the
+ * user's roles, then the user (layers.ts). Undefined when no tree has the
+ * page. Defensive against a structurally broken tree (state inspector) —
+ * that must surface as a page problem, not a TypeError.
  */
 export function pageTemplates(
   viewModels: ViewModels,
-  userViewModels: UserViewModels | undefined,
+  overlays: Overlays,
   page: string,
 ): Record<string, unknown> | undefined {
   const base = viewModels.pages?.[page];
-  const user = userViewModels?.pages?.[page]?.templates;
-  return base === undefined && user === undefined ? undefined : { ...base, ...user };
+  const own = overlays
+    .map((overlay) => overlay.pages?.[page]?.templates)
+    .filter((templates) => templates !== undefined);
+  return base === undefined && own.length === 0 ? undefined : Object.assign({}, base, ...own);
+}
+
+/**
+ * One ROLE's entry of the view models (doc/roles-design.md), rebuilt
+ * immutably (created when absent): the overlay ops below write a role's
+ * pages exactly as they write a user's — `updateRole(viewModels, "admin",
+ * (entry) => putUserPageTemplate(entry, page, name, template))`.
+ */
+export function updateRole(
+  viewModels: ViewModels,
+  role: string,
+  update: (entry: UserViewModels) => UserViewModels,
+): ViewModels {
+  return { ...viewModels, roles: { ...viewModels.roles, [role]: update(viewModels.roles?.[role] ?? {}) } };
 }
 
 /** Replace one BASE page template immutably; unknown page/template -> same tree. */
@@ -155,6 +173,20 @@ export function updateUserCellSettings(
       ...userPage,
       cells: { ...cells, [cellId]: { ...cell, settings: { ...cell.settings, [template]: overrides } } },
     };
+  });
+}
+
+/** Choose one cell's widget template in the USER overlay (`view`); `undefined` goes back to the cell's own. Its settings stay. */
+export function selectUserCellView(
+  userViewModels: UserViewModels,
+  page: string,
+  cellId: string,
+  view: string | undefined,
+): UserViewModels {
+  return updateUserPage(userViewModels, page, (userPage) => {
+    const cells = userPage.cells ?? {};
+    const { view: _previous, ...cell } = cells[cellId] ?? {};
+    return { ...userPage, cells: { ...cells, [cellId]: { ...cell, ...(view === undefined ? {} : { view }) } } };
   });
 }
 

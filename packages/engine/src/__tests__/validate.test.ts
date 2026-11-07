@@ -10,13 +10,19 @@ const templates = {
 const registry = () => registryWith(counter, plain);
 const engines = () => enginesWith(listEngine);
 
-const check = (viewModels: unknown, userViewModels?: unknown, actions = createActions()): ValidationReport =>
+const check = (
+  viewModels: unknown,
+  userViewModels?: unknown,
+  actions = createActions(),
+  knownRoles?: readonly string[],
+): ValidationReport =>
   validateViewModels({
     registry: registry(),
     layoutEngines: engines(),
     viewModels: viewModels as never,
     userViewModels: userViewModels as never,
     actions,
+    knownRoles,
   });
 
 const messages = (report: ValidationReport, severity: "error" | "warning") =>
@@ -87,8 +93,8 @@ describe("validateViewModels", () => {
     });
     expect(messages(report, "warning")).toEqual(
       expect.arrayContaining([
-        expect.stringMatching(/user-selected page view "nope" does not exist/),
-        expect.stringMatching(/user settings reference unknown template "ghost"/),
+        expect.stringMatching(/page view "nope" does not exist/),
+        expect.stringMatching(/settings reference unknown template "ghost"/),
         expect.stringMatching(/unknown page "other"/),
       ]),
     );
@@ -129,6 +135,87 @@ describe("validateViewModels", () => {
     });
     expect(report.problems[0]?.location).toBe("user pages.demo.templates.mine");
     expect(report.problems[0]?.message).toMatch(/unknown layout engine/);
+  });
+
+  describe("the role layer (doc/roles-design.md)", () => {
+    const layout = (ids: string[]) => ({ engine: "list", cells: ids.map((id) => cell({ id })) });
+    const withRoles = (roles: unknown) => ({ ...page([cell()], templates), roles });
+
+    it("validates a role's own templates at their location and passes a healthy entry", () => {
+      const healthy = check(
+        withRoles({ admin: { pages: { demo: { view: "admin", templates: { admin: layout(["c1", "c2"]) } } } } }),
+      );
+      expect(healthy).toMatchObject({ ok: true, problems: [] });
+      const broken = check(withRoles({ admin: { pages: { demo: { templates: { admin: { engine: "nope" } } } } } }));
+      expect(broken.errors[0]?.location).toBe("roles.admin pages.demo.templates.admin");
+      expect(broken.errors[0]?.message).toMatch(/unknown layout engine/);
+    });
+
+    it("reports a problem a role's settings cause at the role's location, and the shared page's problems once", () => {
+      const report = check(
+        withRoles({
+          admin: { pages: { demo: { cells: { c1: { settings: { default: { label: 42 } } } } } } },
+          ops: { pages: { demo: {} } },
+        }),
+      );
+      expect(report.errors.map((problem) => problem.location)).toEqual([
+        "roles.admin pages.demo.default cell[0] (#c1)",
+      ]);
+      expect(report.errors[0]?.message).toMatch(/rejected by the widget/);
+      // A problem of the shared page itself is reported there, and not again per layer.
+      const shared = check({ ...page([cell({ widget: "ghost" })], templates), roles: { admin: {}, ops: {} } });
+      expect(shared.errors.map((problem) => problem.location)).toEqual(["pages.demo.default cell[0] (#c1)"]);
+    });
+
+    it("checks a role's view against the roles before it in the application's order", () => {
+      const withView = withRoles({
+        admin: { pages: { demo: { templates: { admin: layout(["c1"]) } } } },
+        "wirework-admin": { pages: { demo: { view: "admin" } } },
+      });
+      expect(check(withView, undefined, createActions(), ["qa", "admin", "wirework-admin"]).warnings).toEqual([]);
+      expect(messages(check(withView, undefined, createActions(), ["wirework-admin", "admin"]), "warning")).toEqual([
+        expect.stringMatching(/page view "admin" does not exist/),
+      ]);
+    });
+
+    it("reports a role's view and cell template nobody has; an entry that is not an overlay fails the tree's shape", () => {
+      expect(messages(check(withRoles({ bad: { pages: [] } })), "error")).toEqual([
+        expect.stringMatching(/invalid view models: roles.bad.pages/),
+      ]);
+      expect(messages(check(withRoles({ "Not Kebab": {} })), "error")).toEqual([
+        expect.stringMatching(/invalid view models: roles.*kebab-case/),
+      ]);
+      const report = check(
+        withRoles({
+          admin: { pages: { demo: { view: "gone", cells: { c1: { view: "nope", settings: { ghost: {} } } } } } },
+        }),
+      );
+      expect(messages(report, "warning")).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/page view "gone" does not exist/),
+          expect.stringMatching(/template "nope" missing at "widgets.counter"/),
+          expect.stringMatching(/settings reference unknown template "ghost"/),
+        ]),
+      );
+      expect(report.problems.find((problem) => problem.message.includes('"gone"'))?.location).toBe(
+        "roles.admin pages.demo",
+      );
+      expect(report.ok).toBe(true);
+    });
+
+    it("warns about a role nobody holds when the application's roles are known, and about an unknown page", () => {
+      const report = check(
+        { ...page([cell()], templates), roles: { ops: { pages: { other: {} } } } },
+        undefined,
+        createActions(),
+        ["qa", "admin"],
+      );
+      expect(messages(report, "warning")).toEqual([
+        expect.stringMatching(/role "ops" is held by nobody \(the application's roles: qa, admin\)/),
+        expect.stringMatching(/references unknown page "other"/),
+      ]);
+      expect(check(withRoles({ qa: {} }), undefined, createActions(), ["qa"]).warnings).toEqual([]);
+    });
   });
 
   it("agrees with the renderer about a reaction calling an unknown action", () => {

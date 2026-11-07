@@ -23,15 +23,18 @@ export type { ConditionNode, ParsedExpression } from "./expressions";
 export { createLayoutEngines, resolveTemplate } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
 export { layoutEngineProblems } from "./layout-engine-checks";
-export { resolveCells, resolvePage } from "./resolve";
-export type { CellProblem, ResolvedCell, ResolvedCellOk, ResolvedPage, ResolveInput } from "./resolve";
+export { resolveCells, resolvePage, widgetTemplates } from "./resolve";
+export type { CellProblem, ResolvedCell, ResolvedCellOk, ResolvedPage, ResolveInput, ResolveLayers } from "./resolve";
+export { overlayLayers } from "./layers";
+export type { Overlays } from "./layers";
 export {
   MAX_LAYOUT_DEPTH,
   cellsWithin,
   chainSteps,
   innerCellKey,
   innerOverlay,
-  innerOverlayAt,
+  innerOverlays,
+  innerOverlaysAt,
   layoutChain,
   layoutPathAt,
   layoutsOf,
@@ -39,7 +42,10 @@ export {
   updateUserLayoutAt,
 } from "./nesting";
 export type { ChainStep, HeldLayout, LocatedLayout } from "./nesting";
+export { exportPageFile, mergePageFiles, pageFile, pageFileName, parsePageFile } from "./pages-file";
+export type { MergedPages, PageFileInput } from "./pages-file";
 export { validateViewModels } from "./validate";
+export type { ValidateInput, ValidationProblem, ValidationReport } from "./validate";
 export { createEmitter } from "./emitter";
 export { readableStore } from "./readable";
 export { bindCellReactions, bindReactions, defaultReaction, sameReaction, withDefaultReactions } from "./reactions";
@@ -53,8 +59,10 @@ export {
   removeUserCell,
   removeUserPageTemplate,
   renameUserPageTemplate,
+  selectUserCellView,
   selectUserPageView,
   updatePageTemplate,
+  updateRole,
   updateUserCellSettings,
   updateUserPageTemplate,
   updateWidgetTemplate,

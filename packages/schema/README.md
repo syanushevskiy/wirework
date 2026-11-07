@@ -47,12 +47,16 @@ against, plus the shared path rules. Depends on zod only.
 ## Models
 
 - `ViewModels` / `viewModelsSchema` — pages (`PageViewModel`,
-  `pageViewModelSchema`, `Templates`), widget templates and page-level
-  reactions; `CellBase` / `cellBaseSchema` is what every layout engine's
-  cell carries.
-- `UserViewModels` / `userViewModelsSchema` — a user's overlay:
-  `PageUserViewModel` (template choice, own templates, cells) and
-  `WidgetUserViewModel` (template choice, settings), every level strict.
+  `pageViewModelSchema`, `Templates`), widget templates, page-level
+  reactions and `roles` (doc/roles-design.md): what a ROLE's pages are, in
+  the user overlay's shape, keyed by role name (`ROLE_NAME`); `CellBase` /
+  `cellBaseSchema` is what every layout engine's cell carries.
+- `UserViewModels` / `userViewModelsSchema` — a user's overlay (and a
+  role's entry): `PageUserViewModel` (template choice, own templates, cells)
+  and `WidgetUserViewModel` (template choice, settings), every level strict.
+- `PageFile` / `pageFileSchema` — one page as a file (doc/pages-as-code-design.md):
+  its templates, `on`, the widgets its cells reference, its `route`, and
+  `roles` — what every role says about the page.
 
 ## Names and paths
 

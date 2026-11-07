@@ -20,6 +20,13 @@ export const ACTION_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z][a-z0-9]*(?:
  * namespace ("runs/retryable").
  */
 export const PREDICATE_NAME = ACTION_NAME;
+/**
+ * Role names (doc/roles-design.md): the action grammar — `admin`,
+ * `ops/on-call` — so a role is a word in a condition's sentence and a key
+ * of `viewModels.roles`. What the names mean is the host's: they come from
+ * its session, and may as well be permissions.
+ */
+export const ROLE_NAME = ACTION_NAME;
 /** An appearance's name (`fade`, `slide-up`, a host's `drop`): kebab-case, the suffix of its `@keyframes ww-<name>`. */
 export const APPEARANCE_NAME = KEBAB_NAME;
 

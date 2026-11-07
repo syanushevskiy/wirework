@@ -14,6 +14,7 @@ import {
   type UserViewModels,
   type ViewModels,
 } from "@wirework/schema";
+import { foldSettings, type Overlays } from "./layers";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { deepMerge } from "./paths";
 import type { WidgetRegistry } from "./registry";
@@ -118,17 +119,18 @@ export interface LocatedLayout {
  * Where the layout `at` a chain lives and what it is — or undefined when
  * the chain leads nowhere. The chain's first cell is looked for in every
  * template of the page (a view is a layout of the same cells); the layouts
- * below are read from the widget templates, each under the user's settings
- * for its container when `userViewModels` is given.
+ * below are read from the widget templates, each under the overlays'
+ * settings for its container — the roles' then the user's (layers.ts),
+ * none for the shared page as it is.
  */
 export function locateLayoutAt(
   layoutEngines: LayoutEngineRegistry,
   viewModels: ViewModels,
-  userViewModels: UserViewModels | undefined,
+  overlays: Overlays,
   page: string,
   at: string,
 ): LocatedLayout | undefined {
-  let templates: unknown[] = Object.values(pageTemplates(viewModels, undefined, page) ?? {});
+  let templates: unknown[] = Object.values(pageTemplates(viewModels, overlays, page) ?? {});
   let located: LocatedLayout | undefined;
   const steps = chainSteps(at);
   for (const [index, step] of steps.entries()) {
@@ -138,7 +140,7 @@ export function locateLayoutAt(
     const above = steps[index - 1];
     const key = above === undefined ? step.cell : `${above.at}/${step.cell}`;
     const base = getPath(viewModels, [...cell.model.split("."), cell.template]);
-    const seen = deepMerge(base, userViewModels?.pages?.[page]?.cells?.[key]?.settings?.[cell.template]);
+    const seen = deepMerge(base, foldSettings(overlays, page, key, cell.template));
     const [setting = "", ...within] = step.layoutPath.split(".");
     located = {
       path: [...cell.model.split("."), cell.template, ...step.layoutPath.split(".")],
@@ -161,7 +163,7 @@ export const layoutPathAt = (
   viewModels: ViewModels,
   page: string,
   at: string,
-): string[] | undefined => locateLayoutAt(layoutEngines, viewModels, undefined, page, at)?.path;
+): string[] | undefined => locateLayoutAt(layoutEngines, viewModels, [], page, at)?.path;
 
 /**
  * A user's OWN layout inside a container: written into the user overlay as
@@ -182,23 +184,26 @@ export function updateUserLayoutAt(
 }
 
 /**
- * The user overlay as the cells of the layout `at` a chain see it: narrowed
- * step by step (`innerOverlay`), keyed under `name` — the nested page name
- * a builder shows the layout as. Undefined when there is nothing for them.
+ * The overlays as the cells of the layout `at` a chain see them: each
+ * narrowed step by step (`innerOverlay`), keyed under `name` — the nested
+ * page name a builder shows the layout as. A layer with nothing for them
+ * is left out.
  */
-export function innerOverlayAt(
-  userViewModels: UserViewModels | undefined,
+export const innerOverlaysAt = (overlays: Overlays, page: string, at: string, name: string): UserViewModels[] =>
+  chainSteps(at)
+    .reduce<Overlays>((layers, step) => innerOverlays(layers, page, step.cell, step.layoutPath), overlays)
+    .map((inner) => inner.pages?.[page])
+    .filter((cells) => cells !== undefined)
+    .map((cells) => ({ pages: { [name]: cells } }));
+
+/** Every overlay layer as the cells INSIDE a container see it (`innerOverlay` of each); a layer with nothing for them is left out. */
+export const innerOverlays = (
+  overlays: Overlays,
   page: string,
-  at: string,
-  name: string,
-): UserViewModels | undefined {
-  const inner = chainSteps(at).reduce<UserViewModels | undefined>(
-    (overlay, step) => innerOverlay(overlay, page, step.cell, step.layoutPath),
-    userViewModels,
-  );
-  const cells = inner?.pages?.[page];
-  return cells === undefined ? undefined : { pages: { [name]: cells } };
-}
+  container: string,
+  layoutPath: string,
+): UserViewModels[] =>
+  overlays.map((overlay) => innerOverlay(overlay, page, container, layoutPath)).filter((inner) => inner !== undefined);
 
 /**
  * Every cell of a layout, the ones inside its containers included — what a

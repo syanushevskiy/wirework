@@ -5,47 +5,18 @@
  * owns the rest of the template's shape and validates it
  * (contracts/layout-engine.ts, doc/layout-engines-design.md). The core
  * knows only two things: the `engine` name, and that every cell carries
- * `CellBase` (identity + widget binding) whatever the engine.
+ * `CellBase` (identity + widget binding) whatever the engine
+ * (page-template.ts).
  *
  * Team-tiger review applied: arrays not numeric-keyed records (stable
  * ordering), `template` not `default`, widget templates validated by each
  * widget's own Validator at registration/boot (see contracts/widget.ts).
  */
 import { z } from "zod";
+import { ROLE_NAME } from "../contracts/names";
 import { pageBindingsSchema, type PageBindings } from "../contracts/page-events";
-
-/** Fields every cell has, whatever the engine: identity + widget binding. */
-export const cellBaseSchema = z.object({
-  /**
-   * Stable cell id, unique within the page: identity is never positional —
-   * reordering cells must not remount or re-key widgets.
-   */
-  id: z.string().min(1),
-  /** Registered widget type (WidgetDefinition.type). */
-  widget: z.string().min(1),
-  /** Dot-path into the view models tree holding this widget's templates. */
-  model: z.string().min(1),
-  /**
-   * Which template of that view model to use by default. No dots: template
-   * names are joined into dot paths by editors, so a "v1.0" would write to
-   * a nested branch and lose the edit.
-   */
-  template: z
-    .string()
-    .min(1)
-    .regex(/^[^.]+$/, "template names must not contain a dot"),
-});
-export type CellBase = z.infer<typeof cellBaseSchema>;
-
-/**
- * Core shape of a page template: the engine name. Everything else belongs
- * to that engine and is validated by its plugin.
- */
-export const pageViewModelSchema = z.object({ engine: z.string().min(1) }).passthrough();
-export type PageViewModel = z.infer<typeof pageViewModelSchema>;
-
-/** Named templates of a view model ("default", "simple", "e2e", ...). */
-export type Templates<T> = Record<string, T>;
+import { userViewModelsSchema, type UserViewModels } from "./user-view-models";
+import { pageViewModelSchema, type PageViewModel, type Templates } from "./page-template";
 
 /**
  * Root view models tree.
@@ -56,11 +27,17 @@ export type Templates<T> = Record<string, T>;
  * what to load when the page opens. Beside the templates, not inside one:
  * they hold for every template of the page, and a user's copy of a template
  * never carries reactions.
+ * `roles`: what a ROLE's pages are, on top of the base (doc/roles-design.md):
+ * the user overlay's shape — a page's view, own templates, a cell's widget
+ * template and settings — keyed by role name. Resolution folds the base,
+ * then the user's roles in the session's order, then the user's own
+ * overlay; a role picks templates and never carries wiring, like a user.
  */
 export interface ViewModels {
   pages: Record<string, Templates<PageViewModel>>;
   widgets: Record<string, unknown>;
   on?: Record<string, PageBindings> | undefined;
+  roles?: Record<string, UserViewModels> | undefined;
 }
 
 // `satisfies`, not an annotation: the annotation would erase `.shape`/`.extend`.
@@ -68,4 +45,7 @@ export const viewModelsSchema = z.object({
   pages: z.record(z.string(), z.record(z.string(), pageViewModelSchema)),
   widgets: z.record(z.string(), z.unknown()),
   on: z.record(z.string(), pageBindingsSchema).optional(),
+  roles: z
+    .record(z.string().regex(ROLE_NAME, "a role name is kebab-case, one namespace at most"), userViewModelsSchema)
+    .optional(),
 }) satisfies z.ZodType<ViewModels>;
