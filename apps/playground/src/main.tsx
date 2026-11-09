@@ -4,6 +4,7 @@ import { App as AntApp } from "antd";
 import "antd/dist/reset.css";
 import "@wirework/react/styles.css";
 import "@wirework/engine-flex-rows/styles.css";
+import "@wirework/engine-css-grid/styles.css";
 import "@wirework/engine-react-grid-layout/styles.css";
 import "@wirework/engine-gridstack/styles.css";
 import "@wirework/engine-flexlayout/styles.css";

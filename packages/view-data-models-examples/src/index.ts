@@ -347,94 +347,33 @@ const demoBase = {
       },
     },
     /** One run. Which one came through the ROUTER: the host puts the URL's parameters at `route`. */
+    // A css-grid SKELETON (doc/css-grid-design.md): `areas` is CSS's own
+    // grid-template-areas whose tokens are the cells' ids — the name over
+    // two columns with the Back button in the third, a status row of three,
+    // the error line with the Retry tag beside it, the route echo across.
     run: {
       default: {
-        engine: "react-grid-layout",
+        engine: "css-grid",
+        columns: ["1fr", "1fr", "12rem"],
+        areas: [
+          "label-run-name label-run-name button-back",
+          "status-run tag-run-reference label-run-message",
+          "label-run-error label-run-error tag-run-retry",
+          "echo-route echo-route echo-route",
+        ],
         cells: [
-          {
-            id: "label-run-name",
-            widget: "antd-label",
-            model: "widgets.run.name",
-            template: "default",
-            x: 0,
-            y: 0,
-            w: 9,
-            h: 1,
-          },
-          {
-            id: "button-back",
-            widget: "antd-button",
-            model: "widgets.run.back",
-            template: "default",
-            x: 9,
-            y: 0,
-            w: 3,
-            h: 2,
-          },
+          { id: "label-run-name", widget: "antd-label", model: "widgets.run.name", template: "default" },
+          { id: "button-back", widget: "antd-button", model: "widgets.run.back", template: "default" },
           // An application-defined widget (status-badge) next to standard ones.
-          {
-            id: "status-run",
-            widget: "status-badge",
-            model: "widgets.run.status",
-            template: "default",
-            x: 0,
-            y: 1,
-            w: 3,
-            h: 1,
-          },
-          {
-            id: "tag-run-reference",
-            widget: "antd-tag",
-            model: "widgets.run.reference",
-            template: "default",
-            x: 3,
-            y: 1,
-            w: 3,
-            h: 1,
-          },
-          {
-            id: "label-run-message",
-            widget: "antd-label",
-            model: "widgets.run.message",
-            template: "default",
-            x: 6,
-            y: 1,
-            w: 3,
-            h: 1,
-          },
-          // Hidden until the server says there is no such run (`when`).
-          {
-            id: "label-run-error",
-            widget: "antd-label",
-            model: "widgets.run.error",
-            template: "default",
-            x: 0,
-            y: 2,
-            w: 9,
-            h: 1,
-          },
+          { id: "status-run", widget: "status-badge", model: "widgets.run.status", template: "default" },
+          { id: "tag-run-reference", widget: "antd-tag", model: "widgets.run.reference", template: "default" },
+          { id: "label-run-message", widget: "antd-label", model: "widgets.run.message", template: "default" },
+          // Hidden until the server says there is no such run (`when`); its slots stay.
+          { id: "label-run-error", widget: "antd-label", model: "widgets.run.error", template: "default" },
           // Shown by a predicate of the APPLICATION's own (`runs/retryable`,
           // doc/conditions-design.md): a failed run with an even id.
-          {
-            id: "tag-run-retry",
-            widget: "antd-tag",
-            model: "widgets.run.retry",
-            template: "default",
-            x: 9,
-            y: 2,
-            w: 3,
-            h: 1,
-          },
-          {
-            id: "echo-route",
-            widget: "antd-echo",
-            model: "widgets.run.route",
-            template: "default",
-            x: 0,
-            y: 3,
-            w: 9,
-            h: 1,
-          },
+          { id: "tag-run-retry", widget: "antd-tag", model: "widgets.run.retry", template: "default" },
+          { id: "echo-route", widget: "antd-echo", model: "widgets.run.route", template: "default" },
         ],
       },
     },
@@ -491,10 +430,11 @@ const demoBase = {
       },
     },
     /**
-     * Two cards side by side on FLEXLAYOUT — a docking layout, each card the
-     * one tab of a tabset the user may drag and resize — each card holding a
-     * layout on an engine of its own: a grid in one, FLEX ROWS in the other
-     * (doc/flex-rows-design.md). Three engines on one page.
+     * Three cards on FLEXLAYOUT — a docking layout, each card the one tab of
+     * a tabset the user may drag and resize — two side by side and one below
+     * them, each card holding a layout on an engine of its own: a grid in one,
+     * FLEX ROWS in the next (doc/flex-rows-design.md), a CSS GRID of template
+     * areas in the third (doc/css-grid-design.md). Four engines on one page.
      */
     cards: {
       default: {
@@ -502,23 +442,45 @@ const demoBase = {
         cells: [
           { id: "card-counter", widget: "antd-card", model: "widgets.cards.counter", template: "default" },
           { id: "card-profile", widget: "antd-card", model: "widgets.cards.profile", template: "default" },
+          { id: "card-session", widget: "antd-card", model: "widgets.cards.session", template: "default" },
         ],
         model: {
           global: {},
           layout: {
             type: "row",
             children: [
+              // FlexLayout alternates orientation per nesting: the root row lays
+              // out side by side, the row inside it stacks, the one inside that
+              // is side by side again — so the two cards sit above the third.
               {
-                type: "tabset",
-                id: "counter",
-                weight: 40,
-                children: [{ type: "tab", id: "card-counter", name: "Counter", component: "cell" }],
-              },
-              {
-                type: "tabset",
-                id: "profile",
-                weight: 60,
-                children: [{ type: "tab", id: "card-profile", name: "Profile", component: "cell" }],
+                type: "row",
+                weight: 100,
+                children: [
+                  {
+                    type: "row",
+                    weight: 60,
+                    children: [
+                      {
+                        type: "tabset",
+                        id: "counter",
+                        weight: 40,
+                        children: [{ type: "tab", id: "card-counter", name: "Counter", component: "cell" }],
+                      },
+                      {
+                        type: "tabset",
+                        id: "profile",
+                        weight: 60,
+                        children: [{ type: "tab", id: "card-profile", name: "Profile", component: "cell" }],
+                      },
+                    ],
+                  },
+                  {
+                    type: "tabset",
+                    id: "session",
+                    weight: 40,
+                    children: [{ type: "tab", id: "card-session", name: "Session", component: "cell" }],
+                  },
+                ],
               },
             ],
           },
@@ -1136,6 +1098,47 @@ const demoBase = {
       },
       greeting: {
         default: { inputs: { text: "app.settings.displayName" }, text: "Type a name to be greeted", tone: "muted" },
+      },
+      // A card on a CSS GRID (doc/css-grid-design.md): the signed-in person as
+      // a skeleton — the name over two columns with their title in the third,
+      // their roles across the row below. `areas` is CSS's own template areas,
+      // every token the id of a cell inside; "Sign in as" changes all three.
+      session: {
+        default: {
+          title: "Session on a CSS grid",
+          content: {
+            engine: "css-grid",
+            columns: ["1fr", "1fr", "10rem"],
+            areas: [
+              "label-session-name label-session-name tag-session-title",
+              "echo-session-roles echo-session-roles echo-session-roles",
+            ],
+            cells: [
+              {
+                id: "label-session-name",
+                widget: "antd-label",
+                model: "widgets.cards.sessionName",
+                template: "default",
+              },
+              { id: "tag-session-title", widget: "antd-tag", model: "widgets.cards.sessionTitle", template: "default" },
+              {
+                id: "echo-session-roles",
+                widget: "antd-echo",
+                model: "widgets.cards.sessionRoles",
+                template: "default",
+              },
+            ],
+          },
+        },
+      },
+      sessionName: {
+        default: { inputs: { text: "app.user.name" }, text: "Signing in…", tone: "accent" },
+      },
+      sessionTitle: {
+        default: { inputs: { text: "app.user.title" }, text: "title", tone: "info" },
+      },
+      sessionRoles: {
+        default: { inputs: { value: "app.user.roles" }, label: "Roles (from the session)" },
       },
     },
   },

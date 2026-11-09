@@ -73,6 +73,19 @@ cells: [{ id, widget, model, template, x, y, w, h }] }`; change payload =
   classes, or a cell moved to a row and index; `validate` names unknown
   classes. Edit mode: a bar per row and a handle per cell with four arrows
   and a field for the classes; chrome sits in the handle.
+- `@wirework/engine-css-grid` — `{ engine, areas, columns?, rows?, gap?,
+cells }`: a CSS grid of SLOTS whose `areas` is CSS's own
+  `grid-template-areas`, one string per row, its tokens the cells' ids and
+  `.` an empty slot — the cell's id IS its area (doc/css-grid-design.md);
+  change payload = the whole picture (with the tracks when the grid grew
+  or shrank) or the tracks; `validate` names a non-rectangle (which CSS
+  would silently drop, so the renderer leaves the picture unset), a token
+  that is no cell, a cell with no slot, a size that is not CSS. Edit mode:
+  a ghost per slot as the drop target (the trailing "+" ones grow the
+  grid), a handle bar to drag and a resize corner per item, a drop on held slots
+  refused, and a TYPED form above the grid — a select per slot, row and
+  column buttons, a number-and-unit field per track. Chrome sits in the
+  handle. The demo's run page, and the third card of the cards page.
 - `@wirework/engine-gridstack` — `{ engine, cols?, cellHeight?, cells: [{
 ..., x, y, w, h }] }`; the library OWNS the item DOM, so each cell's
   content (chrome + widget) is portalled into the content element gridstack

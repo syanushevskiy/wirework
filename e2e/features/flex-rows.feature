@@ -11,7 +11,8 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
   Scenario: The cards page is a FlexLayout of two cards side by side, a grid inside one and flex rows inside the other
     Given I open the "cards" page
     Then the page layout uses the "flexlayout" engine
-    And the page has 2 cells
+    # A third card on a CSS grid sits below the two (css-grid.feature).
+    And the page has 3 cells
     And the cells "card-counter, card-profile" sit side by side
     And the container "card-counter" runs on the "react-grid-layout" engine
     And the container "card-profile" runs on the "flex-rows" engine
@@ -138,4 +139,4 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     Then the cell "switch-profile-refresh" has the flex classes "shrink-0 self-start"
     When I follow the breadcrumb "cards"
     Then the page layout uses the "flexlayout" engine
-    And the page has 2 cells
+    And the page has 3 cells

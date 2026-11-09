@@ -31,7 +31,9 @@ Feature: Pages as code — the whole page as a file
     When I export the page
     Then the exported page JSON contains '"engine": "flexlayout"'
     And the exported page JSON contains '"engine": "flex-rows"'
+    And the exported page JSON contains '"engine": "css-grid"'
     And the exported page JSON contains '"widgets.cards.nameAlice": {'
+    And the exported page JSON contains '"widgets.cards.sessionName": {'
     And the exported page JSON contains '"widgets.cards.reset": {'
     And the exported page JSON contains '"path": "/demo/cards"'
     When I close the export panel

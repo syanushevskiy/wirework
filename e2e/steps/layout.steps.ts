@@ -1,7 +1,7 @@
 /** Page layout: the engine and view in use, cells and their placement, the edit session (drag, resize, save, cancel). */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { dragBetween, gridItem, settledBox } from "../support/grid";
+import { dragBetween, dragOnto, gridItem, settledBox } from "../support/grid";
 import { cell, live } from "../support/page";
 
 const { When, Then } = createBdd();
@@ -291,4 +291,115 @@ When("I widen the cell {string} by {int} column(s)", async ({ page }, id: string
   // Land well past the rounding boundary of the target column.
   await page.mouse.move(startX + (columns + 0.4) * unit, startY, { steps: 12 });
   await page.mouse.up();
+});
+
+/* ---- css grid (doc/css-grid-design.md): a grid of slots, the picture drawn by drag or filled from the slot table ---- */
+
+/** The page's OWN grid (a card on css-grid has one of its own); DOM rows and columns count from 0, scenarios from 1. */
+const ownGrid = (page: Page) => live(page).locator(`xpath=.//*[@data-testid="css-grid" ${OWN}]`);
+const gridCell = (page: Page, id: string) => live(page).locator(`[data-testid="css-grid-item"][data-cell="${id}"]`);
+const ghost = (page: Page, row: number, column: number) =>
+  ownGrid(page).locator(`[data-testid="css-grid-ghost"][data-row="${row - 1}"][data-column="${column - 1}"]`);
+const slot = (page: Page, row: number, column: number) =>
+  live(page).locator(`[data-testid="css-grid-slot"][data-row="${row - 1}"][data-column="${column - 1}"]`);
+const track = (page: Page, testId: string, attribute: string, index: number) =>
+  live(page).locator(`[data-testid="${testId}"][${attribute}="${index - 1}"]`);
+
+Then("the grid has {int} row(s) and {int} column(s)", async ({ page }, rows: number, columns: number) => {
+  await expect(ownGrid(page)).toHaveAttribute("data-rows", String(rows));
+  await expect(ownGrid(page)).toHaveAttribute("data-columns", String(columns));
+});
+
+Then("the grid columns are sized {string}", async ({ page }, sizes: string) => {
+  await expect(ownGrid(page)).toHaveAttribute("data-column-sizes", sizes);
+});
+
+Then("the grid rows are sized {string}", async ({ page }, sizes: string) => {
+  await expect(ownGrid(page)).toHaveAttribute("data-row-sizes", sizes);
+});
+
+/** The rectangle of slots a cell fills, "rowStart-columnStart/rowEnd-columnEnd" counted from 1: "1-1/1-2". */
+Then("the cell {string} fills the slots {string}", async ({ page }, id: string, span: string) => {
+  await expect(gridCell(page, id)).toHaveAttribute("data-area", span);
+});
+
+Then("there are no slot selects", async ({ page }) => {
+  await expect(ownGrid(page)).toBeVisible();
+  await expect(page.getByTestId("css-grid-slot")).toHaveCount(0);
+});
+
+/** Drag by the handle bar's label (where a hand lands) until the pointer is over the slot; the trailing "+" slots grow the grid. */
+When(
+  "I drag the cell {string} to the slot row {int} column {int}",
+  async ({ page }, id: string, row: number, column: number) => {
+    await dragOnto(page, gridCell(page, id).getByTestId("css-grid-handle-label"), ghost(page, row, column));
+  },
+);
+
+/** Drag the resize corner onto the slot that becomes the cell's bottom-right. */
+When(
+  "I resize the cell {string} to the slot row {int} column {int}",
+  async ({ page }, id: string, row: number, column: number) => {
+    await dragOnto(page, gridCell(page, id).getByTestId("css-grid-resize"), ghost(page, row, column));
+  },
+);
+
+Then("the drop is refused because the slot holds {string}", async ({ page }, id: string) => {
+  await expect(page.getByTestId("css-grid-refusal")).toContainText(`holds "${id}"`);
+});
+
+/** The slot table: "empty" or a cell id. */
+When(
+  "I put {string} into the slot row {int} column {int}",
+  async ({ page }, id: string, row: number, column: number) => {
+    await slot(page, row, column).selectOption(id === "empty" ? "" : id);
+  },
+);
+
+Then(
+  "the slot row {int} column {int} offers {string}",
+  async ({ page }, row: number, column: number, options: string) => {
+    await expect(slot(page, row, column).locator("option")).toHaveText(options.split(", "));
+  },
+);
+
+Then("the slot row {int} column {int} is marked invalid", async ({ page }, row: number, column: number) => {
+  await expect(slot(page, row, column)).toHaveAttribute("aria-invalid", "true");
+});
+
+Then("the row {int} is empty", async ({ page }, row: number) => {
+  const selects = live(page).locator(`[data-testid="css-grid-slot"][data-row="${row - 1}"]`);
+  await expect(selects.first()).toBeVisible();
+  for (const select of await selects.all()) await expect(select).toHaveValue("");
+});
+
+When("I add a column", async ({ page }) => {
+  await page.getByTestId("css-grid-add-column").click();
+});
+
+When("I add a row", async ({ page }) => {
+  await page.getByTestId("css-grid-add-row").click();
+});
+
+When("I remove row {int}", async ({ page }, row: number) => {
+  await track(page, "css-grid-remove-row", "data-row", row).click();
+});
+
+Then("the row {int} cannot be removed", async ({ page }, row: number) => {
+  const button = track(page, "css-grid-remove-row", "data-row", row);
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAttribute("title", /no other slot/);
+});
+
+/** The typed track field: the unit first (it commits with the number shown), then the number, Enter commits. */
+When("I set column {int} to {int} {string}", async ({ page }, column: number, size: number, unit: string) => {
+  const field = track(page, "css-grid-column", "data-column", column);
+  await field.getByTestId("css-grid-column-unit").selectOption(unit);
+  await field.getByTestId("css-grid-column-number").fill(String(size));
+  await field.getByTestId("css-grid-column-number").press("Enter");
+});
+
+/** A row sized by a keyword (auto, min-content, max-content). */
+When("I set row {int} to {string}", async ({ page }, row: number, keyword: string) => {
+  await track(page, "css-grid-row-size", "data-row", row).getByTestId("css-grid-row-size-unit").selectOption(keyword);
 });

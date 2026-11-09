@@ -1,0 +1,175 @@
+/*
+ * css-grid engine styles — semantic classes only; themable via --ww-*.
+ * Scoped under the renderer's root. What the template says — the areas,
+ * the tracks, the gap — is inline style computed from it (useCssGridView)
+ * and wins over the defaults here.
+ */
+.ww-css-grid-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-gap, 0.5rem);
+}
+
+.ww-css-grid {
+  display: grid;
+  gap: var(--ww-gap, 0.5rem);
+  min-width: 0;
+}
+
+.ww-css-grid .ww-css-grid-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ww-css-grid .ww-css-grid-item > .ww-cell,
+.ww-css-grid .ww-css-grid-item > .ww-cell-problem {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---- edit mode: a ghost per slot, a handle and a corner per item, the form above ---- */
+
+.ww-css-grid .ww-css-grid-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+  color: var(--ww-color-muted, var(--ant-color-text-secondary, #6b7280));
+  font-size: 0.75rem;
+  border: 1px dashed var(--ww-color-border, var(--ant-color-border, #d1d5db));
+  border-radius: 0.25rem;
+  background: var(--ww-color-row-bar, var(--ant-color-fill-quaternary, #f1f5f9));
+}
+
+.ww-css-grid .ww-css-grid-ghost[data-new] {
+  border-style: dotted;
+}
+
+.ww-css-grid .ww-css-grid-ghost[data-hover="free"] {
+  border-color: var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
+}
+
+.ww-css-grid .ww-css-grid-ghost[data-hover="blocked"],
+.ww-css-grid .ww-css-grid-ghost[data-refused="true"] {
+  border-color: var(--ww-color-danger, var(--ant-color-error, #dc2626));
+  background: var(--ww-color-danger-bg, var(--ant-color-error-bg, #fee2e2));
+}
+
+.ww-page[data-layout-mode="edit"] .ww-css-grid .ww-css-grid-item {
+  outline: 1px dashed var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+  border-radius: 0.25rem;
+  background: var(--ww-color-field, var(--ant-color-bg-container, #fff));
+}
+
+.ww-css-grid .ww-css-grid-handle {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ww-gap, 0.5rem);
+  padding: 0 var(--ww-gap, 0.5rem);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  color: var(--ww-color-handle-text, var(--ant-color-primary-text, #1e3a8a));
+  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
+  border-radius: 0.25rem 0.25rem 0 0;
+  /* A drag that starts here must never select text across the page. */
+  user-select: none;
+}
+
+.ww-css-grid .ww-css-grid-handle[data-draggable="true"] {
+  cursor: grab;
+  touch-action: none;
+}
+
+.ww-css-grid .ww-css-grid-handle:not([data-draggable]) .ww-css-grid-grip {
+  opacity: 0.4;
+}
+
+.ww-css-grid .ww-css-grid-handle-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ww-css-grid .ww-css-grid-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1rem;
+  height: 1rem;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--ww-color-edit, var(--ant-color-primary, #2563eb)) 50%);
+  border-radius: 0 0 0.25rem 0;
+}
+
+.ww-css-grid-form {
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  overflow-x: auto;
+}
+
+.ww-css-grid-form .ww-css-grid-table {
+  border-collapse: separate;
+  border-spacing: 0.25rem;
+}
+
+.ww-css-grid-form th,
+.ww-css-grid-form td {
+  padding: 0;
+  font-weight: normal;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ww-css-grid-form td.ww-css-grid-held {
+  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
+  border-radius: 0.25rem;
+}
+
+.ww-css-grid-form .ww-css-grid-slot,
+.ww-css-grid-form .ww-css-grid-unit,
+.ww-css-grid-form .ww-css-grid-number {
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  padding: 0 0.25rem;
+  color: inherit;
+  background: var(--ww-color-field, var(--ant-color-bg-container, #fff));
+  border: 1px solid var(--ww-color-border, var(--ant-color-border, #d1d5db));
+  border-radius: 0.25rem;
+}
+
+.ww-css-grid-form .ww-css-grid-slot {
+  min-width: 6rem;
+}
+
+.ww-css-grid-form .ww-css-grid-number {
+  width: 3.5rem;
+}
+
+.ww-css-grid-form .ww-css-grid-slot[aria-invalid="true"] {
+  border-color: var(--ww-color-danger, var(--ant-color-error, #dc2626));
+}
+
+.ww-css-grid-form .ww-css-grid-track {
+  display: inline-flex;
+  gap: 0.125rem;
+  align-items: center;
+}
+
+.ww-css-grid-form .ww-css-grid-track-raw {
+  font-family: monospace;
+}
+
+.ww-css-grid-form .ww-css-grid-refusal {
+  margin: 0;
+  color: var(--ww-color-danger, var(--ant-color-error, #dc2626));
+}

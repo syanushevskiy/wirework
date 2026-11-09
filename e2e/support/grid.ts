@@ -48,3 +48,19 @@ export async function dragBetween(page: Page, from: Locator, to: Locator) {
   await page.mouse.move(b.x + grabX, b.y + grabY, { steps: 12 });
   await page.mouse.up();
 }
+
+/**
+ * Grab `from` at its centre and release with the POINTER over the centre
+ * of `to` — for a drop the slot under the pointer decides (css-grid), where
+ * a wide handle's preserved offset would carry the pointer past the slot.
+ */
+export async function dragOnto(page: Page, from: Locator, to: Locator) {
+  await page.getByTestId("page").scrollIntoViewIfNeeded();
+  await from.scrollIntoViewIfNeeded();
+  const a = await settledBox(from);
+  const b = await settledBox(to);
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
+  await page.mouse.up();
+}

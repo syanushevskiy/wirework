@@ -127,6 +127,9 @@ importers:
       '@wirework/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@wirework/engine-css-grid':
+        specifier: workspace:*
+        version: link:../../packages/engine-css-grid
       '@wirework/engine-flex-rows':
         specifier: workspace:*
         version: link:../../packages/engine-flex-rows
@@ -419,6 +422,33 @@ importers:
       '@wirework/widget-contracts':
         specifier: workspace:*
         version: link:../widget-contracts
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@26.4.1)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@30.1.1)(lightningcss@1.32.0)
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
+
+  packages/engine-css-grid:
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.18
+      '@wirework/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@wirework/react':
+        specifier: workspace:*
+        version: link:../react
+      '@wirework/schema':
+        specifier: workspace:*
+        version: link:../schema
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

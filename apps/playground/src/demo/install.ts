@@ -7,6 +7,7 @@
  * this file; a real application replaces it with its own registrations.
  */
 import { errorText } from "@wirework/engine";
+import { cssGridEngine } from "@wirework/engine-css-grid";
 import { flexRowsEngine } from "@wirework/engine-flex-rows";
 import { flexLayoutEngine } from "@wirework/engine-flexlayout";
 import { gridstackEngine } from "@wirework/engine-gridstack";
@@ -73,6 +74,7 @@ export function installDemo(
   // Layout engines are plugins too: a page template names one.
   layoutEngines.register(reactGridLayoutEngine);
   layoutEngines.register(flexRowsEngine);
+  layoutEngines.register(cssGridEngine);
   layoutEngines.register(gridstackEngine);
   layoutEngines.register(flexLayoutEngine);
 
