@@ -32,8 +32,20 @@ export type { Commit, CommitInput, EditableTrees, SaveError, SaveTrees, TreesCha
 export { DEFAULT_BUILDER_NAMING, builderPage, modelNamespaceOf, numberedIds, useBuilder } from "./use-builder";
 export type { BuilderInput, BuilderNaming, PlacedWidget } from "./use-builder";
 
-export { USER_PAGE_TEMPLATE, overlayTargetOf, roleOf, usePageEditing } from "./use-page-editing";
-export type { EditTarget, OverlayTarget, PageEditingInput, SaveOutcome, TemplateChoice } from "./use-page-editing";
+export {
+  USER_PAGE_TEMPLATE,
+  changeLayoutOp,
+  overlayTargetOf,
+  plannedInput,
+  removeCellOp,
+  roleOf,
+  saveWidgetOp,
+  setCellViewOp,
+  wrapCellOp,
+} from "./page-edits";
+export type { EditContext, EditLocation, EditTarget, Op, OverlayTarget } from "./page-edits";
+export { usePageEditing } from "./use-page-editing";
+export type { PageEditingInput, SaveOutcome, TemplateChoice } from "./use-page-editing";
 
 export { usePageToolbar } from "./use-page-toolbar";
 export type { LayoutCrumb, PageToolbarInput, PageToolbarState } from "./use-page-toolbar";

@@ -8,7 +8,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { EditLock } from "../locks";
 import type { Commit, EditableTrees } from "../use-commit";
-import type { EditTarget } from "../use-page-editing";
+import type { EditTarget } from "../page-edits";
 import { usePageViews } from "../use-page-views";
 import { enginesWith, listEngine, treesWithCounter } from "./fixtures";
 

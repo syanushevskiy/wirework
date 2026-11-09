@@ -143,7 +143,12 @@ models with the engine's `mergePageFiles([file], viewModels)`.
 - `useWidgetEditor` — the form prefilled from a placed widget.
 - `usePageEditing` — the edit session: layout changes, widget edits and
   removals as pure ops replayed over the live trees, committed on Save;
-  `wrapCell(cellId, widget)` puts a cell into a new container. With `at`
+  `wrapCell(cellId, widget)` puts a cell into a new container. The ops
+  themselves are `page-edits.ts`, pure functions of an `EditContext` (the
+  location, the widgets, the naming, the shown view) and plain trees —
+  `changeLayoutOp`, `removeCellOp`, `wrapCellOp`, `saveWidgetOp`,
+  `setCellViewOp`, and `plannedInput` for the shown layout's plan — so the
+  routing by target and location is tested without a hook. With `at`
   (doc/containers-design.md — a chain of containers, `card-1`,
   `tabs-1/tabs.0.content`) the session edits the layout INSIDE a container's
   template, shown as the page under its nested name (`layoutPage`); every

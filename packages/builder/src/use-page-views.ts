@@ -41,7 +41,7 @@ import {
   type PageViewChoice,
 } from "./page-views";
 import type { Commit, EditableTrees, TreesChange } from "./use-commit";
-import { overlayTargetOf, roleOf, type EditTarget } from "./use-page-editing";
+import { overlayTargetOf, roleOf, type EditTarget } from "./page-edits";
 
 /** What the panel under the list is for. */
 export type PageViewPanelKind = "save-as" | "rename" | "import" | "share";

@@ -10,7 +10,8 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BUILDER_NAMING } from "../use-builder";
 import type { Commit, EditableTrees } from "../use-commit";
-import { usePageEditing, type EditTarget } from "../use-page-editing";
+import type { EditTarget } from "../page-edits";
+import { usePageEditing } from "../use-page-editing";
 import {
   actions,
   box,

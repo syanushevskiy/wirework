@@ -10,7 +10,7 @@
  */
 import { chainSteps } from "@wirework/engine";
 import type { EditLock, EngineLock, OverlayLock } from "./locks";
-import { roleOf, type EditTarget } from "./use-page-editing";
+import { roleOf, type EditTarget } from "./page-edits";
 
 /** One step of the breadcrumb from the page down to the layout shown: the page, then a container per step. */
 export interface LayoutCrumb {
