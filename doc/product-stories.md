@@ -1,11 +1,11 @@
 # Product stories — Xsight Wirework
 
-One epic, thirty-one stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+One epic, thirty-three stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
 on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25), two on 2 November 2026 (WW-26, WW-27),
-one on 3 November 2026 (WW-28), one on 5 November 2026 (WW-30) and one on 6 November 2026 (WW-31), seven to do
-(WW-15 to WW-20, WW-29). Written
+one on 3 November 2026 (WW-28), one on 5 November 2026 (WW-30), one on 6 November 2026 (WW-31) and one on
+7 November 2026 (WW-32), eight to do (WW-15 to WW-20, WW-29, WW-33). Written
 for managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-31) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-32) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -919,3 +919,90 @@ admin's edit of the role's page as their own copy, editing for a role in the bui
 validation's warnings); the engine's role tests in `resolve.test.ts`, `validate.test.ts`, `trees.test.ts`,
 `nesting.test.ts` and `pages-file.test.ts`; the React adapter's role tests; the builder's role tests in
 `use-page-editing.test.tsx`, `use-page-views.test.tsx` and `page-views.test.ts`; the toolbar story `ForARole`.
+
+### WW-32 · Xsight Wirework - CSS grid: a page laid out by template areas, filled from a typed form
+
+**Type:** User feature · **Status:** Done (designed and built 7 November 2026, doc/css-grid-design.md)
+
+**Short description:** As a page builder, I lay a page out as a GRID of named slots — a picture of rows where each
+slot holds one widget, and a widget spanning several slots is one area — the way a page's skeleton is drawn: the name
+over two columns, the back button in the third, a sidebar beside three rows of content. Every widget is known by its
+own id, and I draw the picture by dragging a widget onto the slot where it starts and pulling its corner over the
+slots it spans — on the page itself, with the real column sizes, a slot another widget holds refusing — or fill it
+from a form that can only hold what exists: a select per slot listing the page's widgets. I size the columns and rows
+in the same form, as a number with a unit (a fraction of the room, pixels, rem, percent) or a keyword. No class
+strings; the saved page is the picture itself, which a colleague reads. The run page shows it.
+
+**Acceptance criteria:**
+
+- **Given** the run page, **when** it opens, **then** it renders on the css-grid engine: the run's name spans the
+  first two columns with the Back button in the third, the status, reference and message share the second row, the
+  error line spans two columns with the Retry tag beside it; every widget behaves as before and the hidden ones leave
+  their slot empty.
+- **Given** the builder with css-grid picked while the page is empty, **when** I add two widgets, **then** each takes a
+  row of its own across the grid; **when** I drag the second one past the right edge onto row 1, **then** the grid has
+  a second column, the two stand side by side and row 2 is empty; **when** I remove row 2, **then** the grid has one
+  row; **when** I pull the second widget's corner one slot down, **then** it spans two rows.
+- **Given** a widget dragged onto a slot another widget holds, **then** the slot shows red with the reason, the drop
+  is refused and the picture is as it was.
+- **Given** a slot's select, **then** it offers only the page's widgets and "empty"; **when** I pick the same widget
+  in two neighbouring slots, **then** it spans them; **when** I pick it in three slots that make an L, **then** the
+  slots are marked and the page warns that the area is not a rectangle, and the warning goes when the picture is
+  rectangles again.
+- **Given** a column's size field, **when** I give column 2 the number 12 and the unit rem and save, **then** the
+  column is 12rem wide and the saved page holds it; **when** I give column 1 the number 2 and the unit fr, **then** it
+  is twice as wide as a column of 1fr; the field offers only units and keywords the browser knows.
+- **Given** a row whose only widget has no other slot, **when** I try to remove the row, **then** the button refuses
+  and says why on hover.
+- **Given** a card whose content runs on css-grid, **when** I open it through "Edit content", **then** its slots and
+  sizes are edited as the page, with the breadcrumb back.
+- **Given** a page on css-grid with my overlay on, **when** I change the picture and save, **then** the change is in
+  my own view, and with the overlay off the shared page shows the original; editing for a role, the role's.
+
+**Verified by:** `css-grid.feature` (7 scenarios: the run page as a skeleton with a hidden widget keeping its slot,
+the cards page's third card on a CSS grid below the two with the signed-in person changing on "Sign in as",
+two widgets added each taking a row and a drop past the edge growing the grid then a resize spanning two rows, a
+drop refused where another widget holds the slot, the slot table filling the same picture with the L marked and
+warned then cleared, the typed sizes in rem and fr and a keyword saved, a card's content on css-grid edited as the
+page); the engine's unit tests in `packages/engine-css-grid` (the promises of the contract, append and remove, the
+two change kinds, every validation sentence, the rectangle rule on an L, a T, two islands and a hole, a drop placed
+and refused, the grid grown and shrunk, the track sizes); the run page's scenarios in `conditions.feature` and
+`app.feature` unchanged.
+
+### WW-33 · Xsight Wirework - Documentation for page authors: an AI agent builds a page from a one-sentence ask
+
+**Type:** Enabler · **Status:** To do (designed 7 November 2026, doc/page-authoring-docs-design.md)
+
+**Short description:** As a team that embeds Wirework in its application, I want anyone — and above all the AI coding
+agents we already use — to be able to add a page without a developer explaining the library: one entry file every
+agent finds (`AGENTS.md`), a short guide to the page model and its ten rules, a catalog of exactly the widgets,
+actions, checks and layout engines THIS application has registered — generated from the code, so it is never out of
+date —, the six demo pages as readable example files with a note on what each cell proves, and one command that tells
+the author what the application would refuse before it is ever run. The rule of the set: what an author must get
+exactly right is generated or tested; prose carries only the model.
+
+**Acceptance criteria:**
+
+- **Given** the repository, **when** I open `AGENTS.md`, **then** in under sixty lines it says what Wirework is, in
+  which order to read, the ten rules of a page, the two commands, and where the host's own code is — and sends
+  maintainers of the library to CLAUDE.md.
+- **Given** `doc/authoring/page-authoring.md`, **when** I read it, **then** every section of a page file (a cell, a
+  widget template with its settings, inputs, reactions, condition and appearance, the store paths, the engines, a
+  container, the check) is explained in a few lines with one JSON fragment, and no widget's settings are described
+  there — the catalog is.
+- **Given** `pnpm docs`, **when** it runs, **then** `doc/authoring/catalog.md` lists every registered widget with its
+  settings (kind, default, description), inputs and events, every action with its parameters, every predicate with its
+  phrase, every appearance and every layout engine with the fields a cell carries — read from the registries, the same
+  source as the builder's form —, `wirework-page.schema.json` describes the page file with the registered engines'
+  templates and says in words what it cannot check, and `doc/authoring/examples/` holds the six demo pages as page
+  files; **when** a registration or a fixture changes and the folder is not regenerated, **then** `pnpm check` fails.
+- **Given** a page file with an unknown widget and a reaction writing a forbidden path, **when** I run
+  `pnpm pages:check` on it, **then** it prints the two problems as sentences with the file's name, and exits with 1;
+  **given** the six examples, **then** it prints no error.
+- **Given** `doc/authoring/examples/README.md`, **then** every cell it names exists in the file it names (a unit test).
+- **Given** an AI agent that is handed only `AGENTS.md` and `doc/authoring/` and asked in one sentence for a new
+  page, **when** it writes the page file and runs the check, **then** the file is accepted on the first or second
+  try — a trial run at the end of phase 2, its transcript kept with the story.
+
+**Verified by:** to be written — `catalog.test.ts` in the engine, `docs.test.ts` and the check command's test in the
+playground, and the trial's transcript.
