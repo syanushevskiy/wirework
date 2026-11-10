@@ -54,6 +54,8 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     editing,
     changeLayout,
     removeCellById,
+    resetLayout,
+    ownLayoutCells,
     editingCell,
     selectCell,
     clearCell,
@@ -192,6 +194,10 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
           /* A container's content is edited as a layout — the user's own copy with the overlay on; a cell is wrapped in a card on the shared page only. */
           onEditLayout={editLayout}
           wrapCell={target === "base" ? { label: "Wrap in a card", onWrap: wrapInCard } : undefined}
+          /* In a user's or a role's view every container can go back to the layout it had: its own one is dropped. */
+          resetLayout={
+            target === "base" ? undefined : { label: "Reset to original", cells: ownLayoutCells, onReset: resetLayout }
+          }
           /* After Add and after Save page the page loads again: its `load`
              event and its widgets' run by the new configuration. */
           reloadKey={reloadKey}

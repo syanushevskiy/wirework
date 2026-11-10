@@ -7,6 +7,7 @@ import { createElement, useCallback, useEffect, useMemo, useRef, type ErrorInfo,
 import type { EventBus, Store, UserViewModels, ViewModels } from "@wirework/schema";
 import {
   overlayLayers,
+  viewLayers,
   type ActionRegistry,
   type AppearanceRegistry,
   type LayoutEngineRegistry,
@@ -15,7 +16,7 @@ import {
   type ResolvedPage,
   type WidgetRegistry,
 } from "@wirework/engine";
-import { CellChrome, type WrapCell } from "./CellChrome";
+import { CellChrome, type ResetLayout, type WrapCell } from "./CellChrome";
 import { CellView } from "./CellView";
 import type { PageScope } from "./PageContext";
 import type { PageError } from "./PageView";
@@ -39,6 +40,7 @@ export interface PageRenderersInput {
   /** Edit-mode chrome of a container: open the layout it holds at `layoutPath` for editing. */
   onEditLayout?: ((cellId: string, layoutPath: string) => void) | undefined;
   wrapCell?: WrapCell | undefined;
+  resetLayout?: ResetLayout | undefined;
   onError?: ((report: PageError) => void) | undefined;
 }
 
@@ -59,6 +61,7 @@ export function usePageRenderers({
   onRemoveCell,
   onEditLayout,
   wrapCell,
+  resetLayout,
   onError,
 }: PageRenderersInput) {
   // The host's reporter, read at the moment of a report: a callback written
@@ -75,7 +78,7 @@ export function usePageRenderers({
 
   // Events are stamped with the PLAN's page — the page reactions are bound
   // to — never a separate prop that could name another page.
-  const { page } = plan;
+  const { page, view } = plan;
   const renderCell = useCallback(
     (cell: ResolvedCell): ReactNode =>
       createElement(CellView, {
@@ -93,11 +96,18 @@ export function usePageRenderers({
 
   const renderChrome = useMemo(
     () =>
-      editable && (onEditCell || onRemoveCell || onEditLayout || wrapCell)
+      editable && (onEditCell || onRemoveCell || onEditLayout || wrapCell || resetLayout)
         ? (cell: ResolvedCell): ReactNode =>
-            createElement(CellChrome, { cell, onEdit: onEditCell, onRemove: onRemoveCell, onEditLayout, wrapCell })
+            createElement(CellChrome, {
+              cell,
+              onEdit: onEditCell,
+              onRemove: onRemoveCell,
+              onEditLayout,
+              wrapCell,
+              resetLayout,
+            })
         : undefined,
-    [editable, onEditCell, onRemoveCell, onEditLayout, wrapCell],
+    [editable, onEditCell, onRemoveCell, onEditLayout, wrapCell, resetLayout],
   );
 
   /** What the layouts inside this page's containers render with (PageContext): the overlay layers made once here. */
@@ -105,7 +115,8 @@ export function usePageRenderers({
     () => ({
       page,
       viewModels,
-      overlays: overlayLayers(viewModels, roles, userViewModels),
+      // As the SHOWN view reads them: a view's own layouts inside its containers are that view's alone.
+      overlays: viewLayers(overlayLayers(viewModels, roles, userViewModels), page, view),
       registry,
       layoutEngines,
       actions,
@@ -116,7 +127,20 @@ export function usePageRenderers({
       onError: (report: PageError) => reporter.current?.(report),
       depth: 0,
     }),
-    [page, viewModels, userViewModels, roles, registry, layoutEngines, actions, predicates, appearances, store, bus],
+    [
+      page,
+      view,
+      viewModels,
+      userViewModels,
+      roles,
+      registry,
+      layoutEngines,
+      actions,
+      predicates,
+      appearances,
+      store,
+      bus,
+    ],
   );
 
   return { cells, cellById, renderCell, renderChrome, scope };

@@ -115,11 +115,52 @@ The name may be given on import, overriding the file's.
 - The playground composes them in `use-playground.ts`; the overview page
   ships a second prebuilt view, `compact`.
 
+## A view holds the layouts inside its containers (9 November 2026)
+
+Reported by the product owner: with the overlay on, a card's content was
+rearranged, "Save as" pressed — and the change was gone; saved first, it
+showed in EVERY view and could not be chosen away. Two causes. Save as
+copied the committed page and cancelled the session, so what was pending
+was dropped. And a user's layout inside a card was a setting of the card
+(`cells["card-1"].settings.default.content`): one per user, whichever view
+showed. The owner's decision: one view is the page's layout AND the layouts
+inside its cards, and every card can be reset to the original.
+
+- The overlay's page entry holds `viewCells.<view>.<cell key>` — a cell
+  entry as in `cells`, read ON TOP of `cells` while that view shows
+  (`viewLayers`, engine `layers.ts`). The projection has the overlays' own
+  shape, so resolution, the layouts inside containers (`innerOverlays`) and
+  validation read it unchanged: `resolvePage` and `PageView` project by the
+  plan's view, validation by each template's name (a `viewCells` entry for
+  a view nobody has is a warning), the builder by the page's shown view
+  (`shownView` / `shownLayers`).
+- An edit inside a container in an overlay's view lands in the overlay's
+  OWN view of the page, as a page edit does: a prebuilt view is copied
+  first ("my-own", a role's own name) and what the layers hold for the
+  shown view comes along (`foldViewCells`); the layout is written as the
+  container's setting for that view (`updateUserLayoutAt`). Rename and
+  Delete move and drop the view's `viewCells` with it.
+- Save as copies what is ON SCREEN (`usePageViews`' `shownTrees`, the
+  session's trees with its ops replayed): the template and the view's
+  cells — into the new view only; the session still ends. The views row
+  names the PAGE's view also from inside a container
+  (`usePageEditing().pageView`; the nested plan has a view of its own).
+- "Reset to original" (`cell-reset-layout`) is in the chrome of every
+  container in a user's or a role's view: `resetLayoutOp` drops the
+  overlay's own layouts inside it (the shown view's, and any held for every
+  view), a pending change like any other; disabled where there is nothing
+  of the overlay's own (`ownLayoutCells`).
+- Not changed: the settings of the widgets INSIDE a card stay per user
+  (`cells["card-1/button"]`), as every cell's settings do; a prebuilt view
+  has no layouts of its own inside cards (on the shared page the layout is
+  the card's widget template, the same in every prebuilt view); the view
+  FILE (Share / Import) still carries the page's layout only.
+
 ## Follow-up (not built)
 
-A view that carries its cells' settings: the overlay's `cells` keyed by
-view, or a view file that includes them and an import that merges them.
-Promoting a user view to prebuilt in one click (today: Share, turn the
+A view FILE that carries the layouts inside its containers (Share and
+Import move the page's layout only), and a view that carries its cells'
+other settings. Promoting a user view to prebuilt in one click (today: Share, turn the
 overlay off, Import).
 
 ## Tested

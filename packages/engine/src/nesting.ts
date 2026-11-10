@@ -18,7 +18,7 @@ import { foldSettings, type Overlays } from "./layers";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { deepMerge } from "./paths";
 import type { WidgetRegistry } from "./registry";
-import { pageTemplates, updateUserCellSettings } from "./trees";
+import { pageTemplates, updateUserViewCellSettings } from "./trees";
 
 /** How deep layouts may nest: a card in a card in a card in a card, and no further. */
 export const MAX_LAYOUT_DEPTH = 4;
@@ -166,21 +166,24 @@ export const layoutPathAt = (
 ): string[] | undefined => locateLayoutAt(layoutEngines, viewModels, [], page, at)?.path;
 
 /**
- * A user's OWN layout inside a container: written into the user overlay as
- * the container's setting that holds it (the whole `tabs` list for a tab's
- * content), the user's other settings for the container kept.
+ * A VIEW's own layout inside a container: written into the overlay as the
+ * container's setting that holds it (the whole `tabs` list for a tab's
+ * content) FOR THAT VIEW of the page (`viewCells.<view>`) — another view
+ * shows the container as it was —, what the view already holds for the
+ * container kept.
  */
 export function updateUserLayoutAt(
   userViewModels: UserViewModels,
   page: string,
+  view: string,
   located: LocatedLayout,
   template: unknown,
 ): UserViewModels {
   const { key, template: name } = located.container;
   const { setting, value, within } = located.holder;
   const held = within.length === 0 ? template : setPath(value, within, template);
-  const settings = userViewModels.pages?.[page]?.cells?.[key]?.settings?.[name] ?? {};
-  return updateUserCellSettings(userViewModels, page, key, name, { ...settings, [setting]: held });
+  const settings = userViewModels.pages?.[page]?.viewCells?.[view]?.[key]?.settings?.[name] ?? {};
+  return updateUserViewCellSettings(userViewModels, page, view, key, name, { ...settings, [setting]: held });
 }
 
 /**

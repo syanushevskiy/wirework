@@ -11,6 +11,7 @@ import {
   type PageViewModel,
   type UserViewModels,
   type ViewModels,
+  type WidgetUserViewModel,
 } from "@wirework/schema";
 import type { Overlays } from "./layers";
 
@@ -144,7 +145,14 @@ export function renameUserPageTemplate(
   if (templates === undefined || moved === undefined) return userViewModels;
   return updateUserPage(userViewModels, page, (userPage) => {
     const { [from]: _renamed, ...rest } = templates;
-    return { ...userPage, ...(userPage.view === from ? { view: to } : {}), templates: { ...rest, [to]: moved } };
+    // What the overlay holds for the view alone (the layouts inside its containers) follows the name.
+    const { [from]: held, ...others } = userPage.viewCells ?? {};
+    return {
+      ...userPage,
+      ...(userPage.view === from ? { view: to } : {}),
+      templates: { ...rest, [to]: moved },
+      ...(held === undefined ? {} : { viewCells: { ...others, [to]: held } }),
+    };
   });
 }
 
@@ -152,9 +160,56 @@ export function renameUserPageTemplate(
 export function removeUserPageTemplate(userViewModels: UserViewModels, page: string, name: string): UserViewModels {
   const templates = userViewModels.pages?.[page]?.templates;
   if (templates?.[name] === undefined) return userViewModels;
-  return updateUserPage(userViewModels, page, ({ view, ...userPage }) => {
+  return updateUserPage(userViewModels, page, ({ view, viewCells, ...userPage }) => {
     const { [name]: _removed, ...rest } = templates;
-    return { ...userPage, ...(view === undefined || view === name ? {} : { view }), templates: rest };
+    // What the overlay held for the view alone goes with it.
+    const { [name]: _held, ...others } = viewCells ?? {};
+    return {
+      ...userPage,
+      ...(view === undefined || view === name ? {} : { view }),
+      templates: rest,
+      ...(Object.keys(others).length === 0 ? {} : { viewCells: others }),
+    };
+  });
+}
+
+/**
+ * What one VIEW of a page holds for its cells alone, replaced whole — the
+ * cells a copy of a view takes along from the view it was made of
+ * (`foldViewCells`). Nothing to hold: the view's entry is dropped.
+ */
+export function putUserViewCells(
+  userViewModels: UserViewModels,
+  page: string,
+  view: string,
+  cells: Record<string, WidgetUserViewModel> | undefined,
+): UserViewModels {
+  return updateUserPage(userViewModels, page, ({ viewCells, ...userPage }) => {
+    const { [view]: _replaced, ...others } = viewCells ?? {};
+    const next = cells === undefined ? others : { ...others, [view]: cells };
+    return { ...userPage, ...(Object.keys(next).length === 0 ? {} : { viewCells: next }) };
+  });
+}
+
+/** Set one cell's settings for one widget template as ONE VIEW of the page shows it (`viewCells`). */
+export function updateUserViewCellSettings(
+  userViewModels: UserViewModels,
+  page: string,
+  view: string,
+  cellId: string,
+  template: string,
+  overrides: Record<string, unknown>,
+): UserViewModels {
+  return updateUserPage(userViewModels, page, (userPage) => {
+    const cells = userPage.viewCells?.[view] ?? {};
+    const cell = cells[cellId] ?? {};
+    return {
+      ...userPage,
+      viewCells: {
+        ...userPage.viewCells,
+        [view]: { ...cells, [cellId]: { ...cell, settings: { ...cell.settings, [template]: overrides } } },
+      },
+    };
   });
 }
 
@@ -172,6 +227,80 @@ export function updateUserCellSettings(
     return {
       ...userPage,
       cells: { ...cells, [cellId]: { ...cell, settings: { ...cell.settings, [template]: overrides } } },
+    };
+  });
+}
+
+/** One cell entry without the named settings (in every template's overrides); undefined when nothing is left of it. */
+function withoutSettings(
+  cell: WidgetUserViewModel | undefined,
+  names: readonly string[],
+): WidgetUserViewModel | undefined {
+  if (cell === undefined) return undefined;
+  const { settings: held, ...rest } = cell;
+  const settings: NonNullable<WidgetUserViewModel["settings"]> = {};
+  for (const [template, overrides] of Object.entries(held ?? {})) {
+    const kept = Object.fromEntries(Object.entries(overrides).filter(([name]) => !names.includes(name)));
+    if (Object.keys(kept).length > 0) settings[template] = kept;
+  }
+  const next = Object.keys(settings).length === 0 ? rest : { ...rest, settings };
+  return Object.keys(next).length === 0 ? undefined : next;
+}
+
+/** A map of cell entries with one replaced, or dropped when nothing is left of it. */
+function withCell(
+  cells: Record<string, WidgetUserViewModel> | undefined,
+  cellId: string,
+  cell: WidgetUserViewModel | undefined,
+): Record<string, WidgetUserViewModel> {
+  const { [cellId]: _replaced, ...others } = cells ?? {};
+  return cell === undefined ? others : { ...others, [cellId]: cell };
+}
+
+/** Whether the overlay holds any of the named settings for a cell — for every view (`cells`) or for the one given (`viewCells`). */
+export function holdsUserCellSettings(
+  userViewModels: UserViewModels,
+  page: string,
+  view: string | undefined,
+  cellId: string,
+  names: readonly string[],
+): boolean {
+  const userPage = userViewModels.pages?.[page];
+  const entries = [userPage?.cells?.[cellId], view === undefined ? undefined : userPage?.viewCells?.[view]?.[cellId]];
+  return entries.some((cell) =>
+    Object.values(cell?.settings ?? {}).some((overrides) => names.some((name) => Object.hasOwn(overrides, name))),
+  );
+}
+
+/**
+ * Drop the named settings of one cell from the overlay — what it holds for
+ * every view and what it holds for the view given — so the cell shows them
+ * as the layers below do: "Reset to original" for the layouts a container
+ * holds. The cell's other settings and its chosen template stay.
+ */
+export function resetUserCellSettings(
+  userViewModels: UserViewModels,
+  page: string,
+  view: string | undefined,
+  cellId: string,
+  names: readonly string[],
+): UserViewModels {
+  if (!holdsUserCellSettings(userViewModels, page, view, cellId, names)) return userViewModels;
+  return updateUserPage(userViewModels, page, ({ cells, viewCells, ...userPage }) => {
+    const nextCells = withCell(cells, cellId, withoutSettings(cells?.[cellId], names));
+    const { [view ?? ""]: ofView, ...otherViews } = viewCells ?? {};
+    const nextOfView =
+      view === undefined || ofView === undefined
+        ? ofView
+        : withCell(ofView, cellId, withoutSettings(ofView[cellId], names));
+    const nextViews =
+      view === undefined || nextOfView === undefined || Object.keys(nextOfView).length === 0
+        ? otherViews
+        : { ...otherViews, [view]: nextOfView };
+    return {
+      ...userPage,
+      ...(Object.keys(nextCells).length === 0 ? {} : { cells: nextCells }),
+      ...(Object.keys(nextViews).length === 0 ? {} : { viewCells: nextViews }),
     };
   });
 }

@@ -32,9 +32,11 @@
  * the layout INSIDE a container's widget template, shown as the page and
  * edited by the same ops. On the shared page the ops rewrite that template;
  * in a user's (or a role's) view they write that overlay's OWN copy of the
- * layout as the container's setting (`cells["card-1"].settings.default.content`),
- * and the cells inside are customised under their chain keys
- * (`cells["card-1/button"]`).
+ * layout as the container's setting FOR THE VIEW of the page that shows it
+ * (`viewCells["my-own"]["card-1"].settings.default.content` — a prebuilt
+ * view is copied into the overlay's own first, as a page edit copies it),
+ * so every view keeps its own layouts inside its containers; the cells
+ * inside are customised under their chain keys (`cells["card-1/button"]`).
  */
 import {
   RESERVED_VIEW_MODEL_KEYS,
@@ -51,14 +53,20 @@ import {
 } from "@wirework/schema";
 import {
   cellsWithin,
+  foldViewCells,
+  holdsUserCellSettings,
   innerOverlaysAt,
   layoutPathAt,
   locateLayoutAt,
   overlayLayers,
   pageTemplates,
+  putUserViewCells,
   removeUserCell,
+  resetUserCellSettings,
   resolveTemplate,
   selectUserCellView,
+  shownLayers,
+  shownView,
   updateRole,
   updateUserCellSettings,
   updateUserLayoutAt,
@@ -146,9 +154,18 @@ export interface EditContext extends EditLocation {
 export const chained = (...parts: (string | undefined)[]): string =>
   parts.filter((part) => part !== undefined).join("/");
 
-/** The layers a page is read through — the roles' entries, then the user's overlay when it is on — from the trees given. */
-export const layersOf = ({ target, roles }: EditLocation, source: EditableTrees): Overlays =>
-  overlayLayers(source.viewModels, roles, target === "user" ? source.userViewModels : undefined);
+/**
+ * The layers a page is read through — the roles' entries, then the user's
+ * overlay when it is on — from the trees given, as the page's SHOWN view
+ * reads them: what a layer holds for that view alone (the layouts inside
+ * its containers) on top of its cells.
+ */
+export const layersOf = ({ page, target, roles }: EditLocation, source: EditableTrees): Overlays =>
+  shownLayers(
+    source.viewModels,
+    overlayLayers(source.viewModels, roles, target === "user" ? source.userViewModels : undefined),
+    page,
+  );
 
 /**
  * What the plan of the shown layout is made of: the page itself — or the
@@ -218,9 +235,10 @@ const ownTemplateFor = (overlay: OverlayTarget, trees: EditableTrees, layers: Ov
 export const pageOp =
   (ctx: EditContext, edit: (engine: AnyLayoutEngine, template: PageViewModel) => PageViewModel): Op =>
   (source) => {
-    const { layoutEngines, page, at, target, view } = ctx;
+    const { layoutEngines, page, at, target } = ctx;
     const overlay = overlayTargetOf(target);
     if (overlay === undefined) {
+      // The shared page: a layout inside a container is the widget template's, the same in every prebuilt view.
       const located = locateShown(ctx, source);
       if (located === undefined) return source;
       return {
@@ -229,23 +247,40 @@ export const pageOp =
       };
     }
     const layers = layersOf(ctx, source);
+    // The PAGE's view, wherever the edit is: a layout inside a container belongs to the view of the page that shows it.
+    const pageView = pageViewOf(ctx, source);
+    if (pageView === undefined) return source;
+    const current = resolveTemplate(layoutEngines, pageTemplates(source.viewModels, layers, page)?.[pageView]);
+    if (current.problem !== undefined) return source;
+    const name = ownTemplateFor(overlay, source, layers, page, pageView);
+    // A copy of the shown view takes along what the layers hold for that view alone: the layouts inside its containers.
+    const carried = name === pageView ? undefined : foldViewCells(layers, page, pageView);
+    const intoOwn = (entry: UserViewModels, update: (raw: PageViewModel) => PageViewModel): UserViewModels => {
+      const next = updateUserPageTemplate(entry, page, name, current.template, update);
+      return carried === undefined ? next : putUserViewCells(next, page, name, carried);
+    };
     if (at !== undefined) {
       const located = locateLayoutAt(layoutEngines, source.viewModels, layers, page, at);
-      const current = located === undefined ? undefined : resolveTemplate(layoutEngines, located.template);
-      if (located === undefined || current === undefined || current.problem !== undefined) return source;
-      const edited = edit(current.engine, current.template);
-      return overlay.write(source, (entry) => updateUserLayoutAt(entry, page, located, edited));
+      const inner = located === undefined ? undefined : resolveTemplate(layoutEngines, located.template);
+      if (located === undefined || inner === undefined || inner.problem !== undefined) return source;
+      const edited = edit(inner.engine, inner.template);
+      // The page's layout as it is, in the overlay's own view — and the layout inside the container as THAT view's.
+      return overlay.write(source, (entry) =>
+        updateUserLayoutAt(
+          intoOwn(entry, (raw) => raw),
+          page,
+          name,
+          located,
+          edited,
+        ),
+      );
     }
-    if (view === undefined) return source;
-    const current = resolveTemplate(layoutEngines, pageTemplates(source.viewModels, layers, page)?.[view]);
-    if (current.problem !== undefined) return source;
-    const name = ownTemplateFor(overlay, source, layers, page, view);
     // The overlay's own template is raw: validated by its engine before the edit, kept as it was if it fails.
     const edited = (raw: PageViewModel): PageViewModel => {
       const own = resolveTemplate(layoutEngines, raw);
       return own.problem === undefined ? edit(own.engine, own.template) : raw;
     };
-    return overlay.write(source, (entry) => updateUserPageTemplate(entry, page, name, current.template, edited));
+    return overlay.write(source, (entry) => intoOwn(entry, edited));
   };
 
 /** Every widget template a cell of the page references — in any view of any layer, down into its containers. */
@@ -289,6 +324,38 @@ export const removeCellOp = (ctx: EditContext, cellId: string): Op => {
       ? withoutOrphans(ctx, source, remove(source))
       : overlay.write(remove(source), (entry) => removeUserCell(entry, ctx.page, key));
 };
+
+/** The PAGE's view an edit at a location belongs to — the plan's on the page, the page's own from inside a container. */
+const pageViewOf = (ctx: EditContext, source: EditableTrees): string | undefined =>
+  ctx.at === undefined ? ctx.view : shownView(source.viewModels, layersOf(ctx, source), ctx.page);
+
+/**
+ * Whether the target's overlay holds a layout of its own inside a container
+ * cell of the shown layout — what "Reset to original" would take away.
+ * Never on the shared page: there the layout IS the original.
+ */
+export function holdsOwnLayout(ctx: EditContext, source: EditableTrees, cellId: string, widget: string): boolean {
+  const overlay = overlayTargetOf(ctx.target);
+  const contains = ctx.registry.get(widget)?.contains ?? [];
+  if (overlay === undefined || contains.length === 0) return false;
+  const key = chained(ctx.at, cellId);
+  return holdsUserCellSettings(overlay.read(source), ctx.page, pageViewOf(ctx, source), key, contains);
+}
+
+/**
+ * "Reset to original" for a container cell: the overlay's own layouts
+ * inside it — the shown view's and any it holds for every view — are
+ * dropped, so the container shows the layout the layers below have (the
+ * shared page's, or a role's). Nothing on the shared page.
+ */
+export function resetLayoutOp(ctx: EditContext, cellId: string, widget: string): Op | undefined {
+  const overlay = overlayTargetOf(ctx.target);
+  const contains = ctx.registry.get(widget)?.contains ?? [];
+  if (overlay === undefined || contains.length === 0) return undefined;
+  const key = chained(ctx.at, cellId);
+  return (source) =>
+    overlay.write(source, (entry) => resetUserCellSettings(entry, ctx.page, pageViewOf(ctx, source), key, contains));
+}
 
 /**
  * Wrap a cell in a CONTAINER (doc/containers-design.md, "Wrap in a card"):

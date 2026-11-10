@@ -39,7 +39,7 @@ import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
 import { useReactions } from "./useReactions";
 import { LayoutErrorBoundary } from "./WidgetErrorBoundary";
-import type { WrapCell } from "./CellChrome";
+import type { ResetLayout, WrapCell } from "./CellChrome";
 
 /** A crash PageView isolated — in one widget's cell, or in the layout renderer — for the host to report. */
 export type PageError = { error: Error; info: ErrorInfo } & (
@@ -82,6 +82,8 @@ export interface PageViewProps {
   onEditLayout?: ((cellId: string, layoutPath: string) => void) | undefined;
   /** "Wrap in a card": put the cell into a new container — the host names the button and does the wrapping. */
   wrapCell?: WrapCell | undefined;
+  /** "Reset to original" on a container that holds a layout of the viewer's own — the host names the button and resets. */
+  resetLayout?: ResetLayout | undefined;
   /**
    * Change it to LOAD THE PAGE AGAIN — for a host that changed the page
    * while it is open (an editor after Add or Save): every widget that asks
@@ -113,6 +115,7 @@ export function PageView({
   onRemoveCell,
   onEditLayout,
   wrapCell,
+  resetLayout,
   reloadKey,
   onError,
 }: PageViewProps) {
@@ -141,6 +144,7 @@ export function PageView({
     onRemoveCell,
     onEditLayout,
     wrapCell,
+    resetLayout,
     onError,
   });
 

@@ -121,7 +121,10 @@ template, the content goes wherever the card's template goes.
   card, so a user's own layout inside it is that setting in their overlay
   (`cells["card-1"].settings.default.content`, the whole `tabs` list for a
   tab's) — built on 3 November 2026, when the product owner asked for it
-  (see "Built").
+  (see "Built"); since 9 November 2026 it is held PER VIEW of the page
+  (`viewCells["my-own"]["card-1"].settings.default.content`,
+  doc/page-views-design.md "A view holds the layouts inside its
+  containers"), with "Reset to original" on every card.
 - **A bundle** — a layout plus every widget template it references,
   recursively, for moving a page to another installation — is not built
   today for any page; when it is, a card's content travels because it is
@@ -350,7 +353,8 @@ What stands, where it differs from the design above, and why.
   their settings for the container (`locateLayoutAt`) — and every op
   writes their own copy of it as the container's setting
   (`updateUserLayoutAt`: `cells["card-1"].settings.default.content`, the
-  whole `tabs` list for a tab's content), the cells inside customised and
+  whole `tabs` list for a tab's content — since 9 November 2026 under
+  `viewCells.<the overlay's own view>`, so each view keeps its own), the cells inside customised and
   removed under their chain keys (`cells["card-1/button"]`), their overlay
   entries shown through `innerOverlayAt`; the container's own form in the
   user's view keeps that copy. Add stays the shared page's: a user's copy

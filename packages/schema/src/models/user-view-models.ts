@@ -6,7 +6,9 @@
  *    layout), selectable via `view` exactly like base templates,
  *  - per-CELL widget customisation: selected widget template and settings
  *    overrides per template (keyed by cell id — two cells of the same
- *    widget type are customised independently).
+ *    widget type are customised independently),
+ *  - the same per cell FOR ONE VIEW (`viewCells`): what only that view
+ *    shows — the layouts inside its containers (doc/page-views-design.md).
  *
  * Fallback chain: user-selected template ->
  * cell/default template -> boot-validation error. A user override referencing
@@ -52,6 +54,13 @@ export const pageUserViewModelSchema = z
     templates: z.record(z.string(), pageViewModelSchema).optional(),
     /** Widget customisations keyed by CELL id. */
     cells: z.record(z.string(), widgetUserViewModelSchema).optional(),
+    /**
+     * Widget customisations that belong to ONE VIEW of the page, by view
+     * name then cell id — read on top of `cells` while that view shows. A
+     * view's own layout INSIDE a container lives here (the container's
+     * setting that holds it), so another view shows the container as it was.
+     */
+    viewCells: z.record(z.string(), z.record(z.string(), widgetUserViewModelSchema)).optional(),
   })
   .strict();
 export type PageUserViewModel = z.infer<typeof pageUserViewModelSchema>;

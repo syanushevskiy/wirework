@@ -18,6 +18,8 @@ import {
   MAX_LAYOUT_DEPTH,
   updateUserLayoutAt,
 } from "../nesting";
+import { foldViewCells, viewLayers } from "../layers";
+import { holdsUserCellSettings, resetUserCellSettings } from "../trees";
 import { cell, counter, enginesWith, listEngine, plain, registryWith } from "./fixtures";
 
 /** A container: `content` holds a layout, `tabs` a list of items with one each. */
@@ -154,18 +156,44 @@ describe("the layout at a chain — located, as the user sees it, and the user's
     });
   });
 
-  it("writes the user's own copy as the container's setting, the user's other settings kept — the whole list for a tab", () => {
+  it("writes the user's own copy as the container's setting FOR ONE VIEW of the page, the user's settings for every view untouched — the whole list for a tab", () => {
     const located = locateLayoutAt(engines, viewModels, [], "demo", "box-1");
     if (!located) throw new Error("not located");
     const own = { pages: { demo: { cells: { "box-1": { settings: { default: { title: "Mine" } } } } } } };
-    expect(updateUserLayoutAt(own, "demo", located, mine)).toEqual({
-      pages: { demo: { cells: { "box-1": { settings: { default: { title: "Mine", content: mine } } } } } },
+    expect(updateUserLayoutAt(own, "demo", "my-own", located, mine)).toEqual({
+      pages: {
+        demo: {
+          cells: { "box-1": { settings: { default: { title: "Mine" } } } },
+          viewCells: { "my-own": { "box-1": { settings: { default: { content: mine } } } } },
+        },
+      },
     });
     const tab = locateLayoutAt(engines, viewModels, [], "demo", "box-1/tabs.0.content");
     if (!tab) throw new Error("not located");
-    expect(updateUserLayoutAt({}, "demo", tab, mine)).toEqual({
-      pages: { demo: { cells: { "box-1": { settings: { default: { tabs: [{ key: "a", content: mine }] } } } } } },
+    expect(updateUserLayoutAt({}, "demo", "my-own", tab, mine)).toEqual({
+      pages: {
+        demo: {
+          viewCells: { "my-own": { "box-1": { settings: { default: { tabs: [{ key: "a", content: mine }] } } } } },
+        },
+      },
     });
+  });
+
+  it("reads a view's own layout only while that view shows: the layers as one view reads them", () => {
+    const held = {
+      pages: { demo: { viewCells: { "my-own": { "box-1": { settings: { default: { content: mine } } } } } } },
+    };
+    expect(locateLayoutAt(engines, viewModels, viewLayers([held], "demo", "my-own"), "demo", "box-1")).toMatchObject({
+      template: mine,
+    });
+    expect(locateLayoutAt(engines, viewModels, viewLayers([held], "demo", "default"), "demo", "box-1")).toMatchObject({
+      template: inner,
+    });
+    // A copy of the view takes the layouts along; a reset takes them away, and nothing is left of the entry.
+    expect(foldViewCells([held], "demo", "my-own")).toEqual({ "box-1": { settings: { default: { content: mine } } } });
+    expect(holdsUserCellSettings(held, "demo", "my-own", "box-1", ["content"])).toBe(true);
+    expect(holdsUserCellSettings(held, "demo", "default", "box-1", ["content"])).toBe(false);
+    expect(resetUserCellSettings(held, "demo", "my-own", "box-1", ["content"])).toEqual({ pages: { demo: {} } });
   });
 
   it("narrows every overlay to the cells of the layout at a chain, keyed under the nested page name", () => {

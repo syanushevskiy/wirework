@@ -23,9 +23,9 @@ export type { ConditionNode, ParsedExpression } from "./expressions";
 export { createLayoutEngines, resolveTemplate } from "./layout-engines";
 export type { LayoutEngineRegistry, TemplateResolution } from "./layout-engines";
 export { layoutEngineProblems } from "./layout-engine-checks";
-export { resolveCells, resolvePage, widgetTemplates } from "./resolve";
+export { resolveCells, resolvePage, shownLayers, shownView, widgetTemplates } from "./resolve";
 export type { CellProblem, ResolvedCell, ResolvedCellOk, ResolvedPage, ResolveInput, ResolveLayers } from "./resolve";
-export { overlayLayers } from "./layers";
+export { foldViewCells, overlayLayers, viewLayers } from "./layers";
 export type { Overlays } from "./layers";
 export {
   MAX_LAYOUT_DEPTH,
@@ -61,9 +61,12 @@ export { emitPageLoad } from "./page-events";
 export { boundPaths, compatibleStorePaths, suggestedInputPaths } from "./paths";
 export { errorText, issuesText, problemText } from "./messages";
 export {
+  holdsUserCellSettings,
+  resetUserCellSettings,
   pageTemplates,
   putPageTemplate,
   putUserPageTemplate,
+  putUserViewCells,
   removeUserCell,
   removeUserPageTemplate,
   renameUserPageTemplate,

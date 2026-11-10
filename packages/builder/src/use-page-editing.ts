@@ -20,6 +20,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { WidgetBindings } from "@wirework/schema";
 import {
+  shownView,
   widgetTemplates,
   type ActionRegistry,
   type AppearanceRegistry,
@@ -32,8 +33,11 @@ import { usePagePlan } from "@wirework/react";
 import {
   chained,
   changeLayoutOp,
+  holdsOwnLayout,
+  layersOf,
   plannedInput,
   removeCellOp,
+  resetLayoutOp,
   roleOf,
   sameTarget,
   saveWidgetOp,
@@ -131,6 +135,11 @@ export function usePageEditing({
   const planned = useMemo(() => plannedInput(where, shown), [where, shown]);
   const plan = usePagePlan({ ...planned, registry, layoutEngines, actions, predicates, appearances });
   const activeView = plan.problem === undefined ? plan.view : undefined;
+  /** The PAGE's view, also while a layout inside a container is the one shown (its plan has a view of its own). */
+  const pageView = useMemo(
+    () => (at === undefined ? activeView : shownView(shown.viewModels, layersOf(where, shown), page)),
+    [at, activeView, shown, where, page],
+  );
   const engine = plan.problem === undefined ? plan.engine : undefined;
   const cells = useMemo<readonly ResolvedCell[]>(() => (plan.problem === undefined ? plan.cells : []), [plan]);
   /** What every op is made from: the location, the widgets, the naming, and the view the shown layout resolved to. */
@@ -218,6 +227,20 @@ export function usePageEditing({
     [mayEdit, ctx, push],
   );
 
+  /** "Reset to original": the target's own layouts inside a container cell go; it shows the layers' below again. */
+  const resetLayout = useCallback(
+    (cellId: string) => {
+      const widget = cells.find((cell) => cell.key === cellId)?.widget;
+      if (mayEdit && widget !== undefined) push(resetLayoutOp(ctx, cellId, widget));
+    },
+    [mayEdit, cells, ctx, push],
+  );
+  /** The container cells of the shown layout that hold a layout of the target's own — the ones Reset has something to do for. */
+  const ownLayoutCells = useMemo(
+    () => cells.filter((cell) => holdsOwnLayout(ctx, shown, cell.key, cell.widget)).map((cell) => cell.key),
+    [cells, ctx, shown],
+  );
+
   const saveWidget = useCallback(
     (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => {
       if (!mayEdit || cell.template === undefined) return;
@@ -259,7 +282,10 @@ export function usePageEditing({
     layoutPage: chained(page, at),
     shownViewModels: shown.viewModels,
     shownUserViewModels: target === "user" ? shown.userViewModels : undefined,
+    /** Both trees with the session's ops replayed — what a copy of the shown view is made of (usePageViews' `shownTrees`). */
+    shownTrees: shown,
     activeView,
+    pageView,
     engine,
     cells,
     editing: inSession,
@@ -271,6 +297,8 @@ export function usePageEditing({
     changeLayout,
     removeCellById,
     wrapCell,
+    resetLayout,
+    ownLayoutCells,
     editingCell,
     selectCell,
     clearCell,

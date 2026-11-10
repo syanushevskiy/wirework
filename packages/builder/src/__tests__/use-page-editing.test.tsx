@@ -8,6 +8,7 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PageUserViewModel } from "@wirework/schema";
 import { DEFAULT_BUILDER_NAMING } from "../use-builder";
 import type { Commit, EditableTrees } from "../use-commit";
 import type { EditTarget } from "../page-edits";
@@ -31,6 +32,19 @@ interface Props {
   trees: EditableTrees;
   at?: string | undefined;
 }
+
+/**
+ * An overlay's entry for the demo page after an edit INSIDE the box emptied
+ * it: the page's layout copied as the overlay's own view, shown, and the
+ * box's layout held FOR THAT VIEW (doc/page-views-design.md) — plus what
+ * the overlay holds for the cells in every view.
+ */
+const boxedOwn = (view: string, cells?: PageUserViewModel["cells"]): PageUserViewModel => ({
+  view,
+  templates: { [view]: treesWithBoxedCounter().viewModels.pages["demo"]?.["default"] ?? emptyList },
+  viewCells: { [view]: { "custom-2": { settings: { default: { content: emptyList } } } } },
+  ...(cells === undefined ? {} : { cells }),
+});
 
 function setup(overrides: Partial<Props> = {}) {
   const commit = vi.fn<Commit>();
@@ -347,14 +361,7 @@ describe("usePageEditing — the ops", () => {
     const committed = commit.mock.calls[0]?.[0];
     expect(committed && "viewModels" in committed ? committed.viewModels.roles : undefined).toEqual({
       admin: {
-        pages: {
-          demo: {
-            cells: {
-              "custom-2/custom-1": { settings: { default: { label: "Admin's" } } },
-              "custom-2": { settings: { default: { content: emptyList } } },
-            },
-          },
-        },
+        pages: { demo: boxedOwn("admin", { "custom-2/custom-1": { settings: { default: { label: "Admin's" } } } }) },
       },
     });
     expect(committed && "viewModels" in committed ? committed.viewModels.widgets : undefined).toEqual(
@@ -424,7 +431,7 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     expect(commit).toHaveBeenCalledTimes(1);
   });
 
-  it("with the overlay on, edits the layout inside a container as the USER's own copy — the container's setting in the overlay — and shows it", () => {
+  it("with the overlay on, edits the layout inside a container as the USER's own copy — the container's setting for the user's own VIEW of the page — and shows it", () => {
     const { result, initialProps, commit } = setup({
       trees: treesWithBoxedCounter(),
       at: "custom-2",
@@ -434,13 +441,29 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     act(() => result.current.startEditing());
     act(() => result.current.changeLayout(emptyList));
     expect(result.current.cells).toEqual([]);
-    // The shared page is untouched: the op went into the user's settings for the box.
+    // The shared page is untouched: the prebuilt view became the user's own, which holds the box's layout.
     expect(result.current.shownViewModels).toBe(initialProps.trees.viewModels);
-    expect(result.current.shownUserViewModels).toEqual({
-      pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
-    });
+    expect(result.current.shownUserViewModels).toEqual({ pages: { demo: boxedOwn("my-own") } });
+    expect(result.current.pageView).toBe("my-own");
     act(() => result.current.save());
     expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets a container to the original: the view's own layout inside it goes, and only then is there nothing to reset", () => {
+    const trees = treesWithBoxedCounter();
+    trees.userViewModels = { pages: { demo: boxedOwn("my-own") } };
+    const { result } = setup({ trees, target: "user" });
+    expect(result.current.ownLayoutCells).toEqual(["custom-2"]);
+    act(() => result.current.startEditing());
+    act(() => result.current.resetLayout("custom-2"));
+    expect(result.current.pendingChanges).toBe(1);
+    expect(result.current.ownLayoutCells).toEqual([]);
+    // The user's view of the page stays; the box shows the shared layout again.
+    const { viewCells: _held, ...kept } = boxedOwn("my-own");
+    expect(result.current.shownUserViewModels).toEqual({ pages: { demo: kept } });
+    // Nothing of the kind on the shared page: there the layout IS the original.
+    const base = setup({ trees: treesWithBoxedCounter() });
+    expect(base.result.current.ownLayoutCells).toEqual([]);
   });
 
   it("customises a widget inside a container under its chain key, and shows it so", () => {
@@ -482,9 +505,7 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     act(() => result.current.startEditing());
     act(() => result.current.removeCellById("custom-1"));
     expect(result.current.cells).toEqual([]);
-    expect(result.current.shownUserViewModels).toEqual({
-      pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } },
-    });
+    expect(result.current.shownUserViewModels).toEqual({ pages: { demo: boxedOwn("my-own", {}) } });
   });
 
   it("the user's commit under a container carries the user's copy and nothing else; a container's own form keeps its layout", () => {
@@ -494,7 +515,7 @@ describe("usePageEditing — layouts inside containers (doc/containers-design.md
     act(() => result.current.save());
     expect(commit.mock.calls[0]?.[0]).toEqual({
       viewModels: initialProps.trees.viewModels,
-      userViewModels: { pages: { demo: { cells: { "custom-2": { settings: { default: { content: emptyList } } } } } } },
+      userViewModels: { pages: { demo: boxedOwn("my-own") } },
     });
 
     // On the shared page, saving the box's own form (no layout in it) keeps the layout the box holds.

@@ -18,12 +18,14 @@
  * too, so the component only renders it.
  */
 import { useCallback, useMemo, useState } from "react";
-import type { PageViewModel, UserViewModels } from "@wirework/schema";
+import type { PageViewModel, UserViewModels, WidgetUserViewModel } from "@wirework/schema";
 import {
+  foldViewCells,
   overlayLayers,
   pageTemplates,
   putPageTemplate,
   putUserPageTemplate,
+  putUserViewCells,
   removeUserPageTemplate,
   renameUserPageTemplate,
   resolveTemplate,
@@ -64,6 +66,13 @@ export interface PageViewsInput {
   layoutEngines: LayoutEngineRegistry;
   page: string;
   trees: EditableTrees;
+  /**
+   * The trees as an open edit session SHOWS them (its changes replayed,
+   * `usePageEditing().shownTrees`): Save as and Share copy what is on
+   * screen, so pressing Save as with changes pending keeps them — in the
+   * new view only. Not given: the trees as they are.
+   */
+  shownTrees?: EditableTrees | undefined;
   /** Where a new view goes and whose choice the list changes: `"user"` the user's own (the overlay on), a role's, or `"base"` a prebuilt one. */
   target: EditTarget;
   /**
@@ -72,7 +81,7 @@ export interface PageViewsInput {
    * chosen view is what the page falls back to.
    */
   roles?: readonly string[] | undefined;
-  /** The view the page resolved to (`plan.view`); undefined while the page does not resolve. */
+  /** The view the PAGE shows (`usePageEditing().pageView` — the page's also while a layout inside a container is shown); undefined while the page does not resolve. */
   shown: string | undefined;
   /** Choosing, saving or deleting a view changes what is on screen: an open edit session ends. */
   cancelEditing: () => void;
@@ -84,6 +93,7 @@ export function usePageViews({
   layoutEngines,
   page,
   trees,
+  shownTrees,
   target,
   roles,
   shown,
@@ -95,12 +105,21 @@ export function usePageViews({
   const views = useMemo(() => pageViews(trees, page, roles), [trees, page, roles]);
   const shownView = useMemo(() => views.find((view) => view.name === shown), [views, shown]);
   const taken = useMemo(() => views.map((view) => view.name), [views]);
-  /** The shown template as its engine validated it — what a copy and a file are made of. */
-  const shownTemplate = useMemo<PageViewModel | undefined>(() => {
-    if (shown === undefined) return undefined;
-    const overlays = overlayLayers(trees.viewModels, roles, target === "user" ? trees.userViewModels : undefined);
-    return resolveTemplate(layoutEngines, pageTemplates(trees.viewModels, overlays, page)?.[shown]).template;
-  }, [layoutEngines, trees, page, roles, target, shown]);
+  /**
+   * The shown view AS IT IS ON SCREEN — an open session's changes included:
+   * its template as its engine validated it, what a copy and a file are
+   * made of, and what the layers hold for the view alone (the layouts
+   * inside its containers), which a copy takes along.
+   */
+  const { shownTemplate, shownCells } = useMemo(() => {
+    if (shown === undefined) return { shownTemplate: undefined, shownCells: undefined };
+    const source = shownTrees ?? trees;
+    const overlays = overlayLayers(source.viewModels, roles, target === "user" ? source.userViewModels : undefined);
+    return {
+      shownTemplate: resolveTemplate(layoutEngines, pageTemplates(source.viewModels, overlays, page)?.[shown]).template,
+      shownCells: foldViewCells(overlays, page, shown),
+    };
+  }, [layoutEngines, trees, shownTrees, page, roles, target, shown]);
 
   const viewsLock: ViewsLock | undefined =
     views.length === 0 ? "no-page" : target === "base" ? "overlay-off" : undefined;
@@ -133,12 +152,19 @@ export function usePageViews({
     [viewsLock, cancelEditing, commitOverlay, page],
   );
 
-  /** A new view, where the edit target says: the user's own or the role's (and shown at once), or a prebuilt one. */
+  /**
+   * A new view, where the edit target says: the user's own or the role's
+   * (and shown at once) — with the `cells` it holds for itself alone, a
+   * copy's layouts inside its containers — or a prebuilt one (whose
+   * containers show the shared layouts: those are the widgets' templates).
+   */
   const put = useCallback(
-    (name: string, template: PageViewModel): TreesChange =>
+    (name: string, template: PageViewModel, cells?: Record<string, WidgetUserViewModel>): TreesChange =>
       overlay === undefined
         ? { viewModels: putPageTemplate(trees.viewModels, page, name, template) }
-        : overlay.write(trees, (entry) => putUserPageTemplate(entry, page, name, template)),
+        : overlay.write(trees, (entry) =>
+            putUserViewCells(putUserPageTemplate(entry, page, name, template), page, name, cells),
+          ),
     [overlay, trees, page],
   );
 
@@ -185,7 +211,7 @@ export function usePageViews({
       const problem = templateNameProblem(name, taken);
       if (problem) return refuse(problem);
       cancelEditing();
-      commit(put(name, shownTemplate));
+      commit(put(name, shownTemplate, shownCells));
       return close();
     }
     const parsed = parsePageViewFile(panel.text, layoutEngines);
@@ -204,6 +230,7 @@ export function usePageViews({
     canRename,
     shown,
     shownTemplate,
+    shownCells,
     taken,
     commit,
     commitOverlay,

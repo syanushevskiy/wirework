@@ -38,7 +38,7 @@ import {
 } from "@wirework/schema";
 import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
-import { cellViewCandidates, foldSettings, overlayLayers, viewCandidates, type Overlays } from "./layers";
+import { cellViewCandidates, foldSettings, overlayLayers, viewCandidates, viewLayers, type Overlays } from "./layers";
 import { errorText, issuesText, problemText } from "./messages";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
@@ -429,6 +429,23 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
     engine: resolution.engine.name,
     template: resolution.template,
     warnings: [...resolution.warnings, ...(pageReactions.problem === undefined ? [] : [pageReactions.problem])],
-    cells: resolveCells(resolution.cells, withOverlays(input, overlays)),
+    // The cells are read as THIS view shows them: what a layer holds for the view alone on top of its cells.
+    cells: resolveCells(resolution.cells, withOverlays(input, viewLayers(overlays, page, picked.name))),
   };
 }
+
+/**
+ * The view of a page the layers SHOW — the user's choice, else the last
+ * role's, else "default", the first of them that exists — by the rule
+ * `resolvePage` picks with. Undefined when the page has no such template.
+ */
+export function shownView(viewModels: ViewModels, overlays: Overlays, page: string): string | undefined {
+  const templates = pageTemplates(viewModels, overlays, page);
+  return templates === undefined
+    ? undefined
+    : pickTemplate(templates, [...viewCandidates(overlays, page), "default"])?.name;
+}
+
+/** The layers as the page's SHOWN view reads them (`viewLayers` of `shownView`) — what the layouts inside its containers are read through. */
+export const shownLayers = (viewModels: ViewModels, overlays: Overlays, page: string): Overlays =>
+  viewLayers(overlays, page, shownView(viewModels, overlays, page));

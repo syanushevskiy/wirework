@@ -23,7 +23,7 @@
  * widget is an error. `ok` counts errors only.
  */
 import { viewModelsSchema, type CellBase, type UserViewModels } from "@wirework/schema";
-import { foldSettings, type Overlays } from "./layers";
+import { foldSettings, viewLayers, type Overlays } from "./layers";
 import { resolveTemplate } from "./layout-engines";
 import { issuesText } from "./messages";
 import { MAX_LAYOUT_DEPTH, innerOverlay, innerOverlays, layoutsOf } from "./nesting";
@@ -163,16 +163,28 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
           if (!reported.has(key(location, message))) report(location, message);
         };
       const remember: Report = (location, message) => reported.add(key(location, message));
+      // Every view is checked as IT reads the layers: what a layer holds for that view alone on top of its cells.
+      const as = (view: string) => ({
+        input: { ...common, overlays: viewLayers(overlays, pageName, view) },
+        own: viewLayers([entry], pageName, view)[0],
+      });
       // The shared page through this layer: a problem the layer causes, at the layer's location.
       for (const [name, raw] of Object.entries(baseTemplates)) {
         const location = `${layerName} pages.${pageName}.${name}`;
-        validateTemplate(raw, location, { ...common, overlays }, entry, once(error), once(warn), remember);
+        const { input: seen, own } = as(name);
+        validateTemplate(raw, location, seen, own, once(error), once(warn), remember);
       }
       // The layer's own templates, like base ones, at their own location.
       for (const [name, raw] of Object.entries(page?.templates ?? {})) {
         const location = `${layerName} pages.${pageName}.templates.${name}`;
-        validateTemplate(raw, location, { ...common, overlays }, entry, error, warn);
+        const { input: seen, own } = as(name);
+        validateTemplate(raw, location, seen, own, error, warn);
       }
+      // What a layer holds for a view nobody can show is dead config.
+      const known = pageTemplates(viewModels, overlays, pageName) ?? {};
+      Object.keys(page?.viewCells ?? {})
+        .filter((view) => !Object.hasOwn(known, view))
+        .forEach((view) => warn(`${layerName} pages.${pageName}`, `viewCells reference unknown page view "${view}"`));
       // The layer's chosen view must exist among what it sees.
       if (page?.view !== undefined && !pickTemplate(pageTemplates(viewModels, overlays, pageName) ?? {}, [page.view])) {
         warn(`${layerName} pages.${pageName}`, `page view "${page.view}" does not exist — will fall back to "default"`);

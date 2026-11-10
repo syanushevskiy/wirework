@@ -121,6 +121,32 @@ Feature: Containers — a card that holds other widgets
     When I enable the user overlay
     Then the cell "label-greeting" has the flex classes "w-full order-first"
 
+  Scenario: A view holds the layouts inside its cards — Save as keeps what was changed, another view shows the cards as they were, and a card resets to the original
+    Given I open the "cards" page
+    And the server has had time to answer
+    When I edit the page
+    And I edit the content of the cell "card-profile"
+    And I set the flex classes of the cell "label-greeting" to "w-full order-first"
+    # Save as with the change still pending: the new view takes it, nothing is lost.
+    And I save the view as "mine"
+    Then the cell "label-greeting" has the flex classes "w-full order-first"
+    When I follow the breadcrumb "cards"
+    Then the page uses the "mine" view, which is "mine"
+    And the cell "label-greeting" has the flex classes "w-full order-first"
+    # The card's layout belongs to the view: the prebuilt one shows the card as it was, mine as I left it.
+    When I choose the view "default"
+    Then the cell "label-greeting" has the flex classes "w-full"
+    When I choose the view "mine"
+    Then the cell "label-greeting" has the flex classes "w-full order-first"
+    # Every card has "Reset to original" in edit mode; it has something to do only where the view holds a layout of its own.
+    When I edit the page
+    Then the content of the cell "card-profile" can be reset to the original
+    And the content of the cell "card-counter" is the original
+    When I reset the content of the cell "card-profile" to the original
+    And I save the page
+    Then the cell "label-greeting" has the flex classes "w-full"
+    And the page uses the "mine" view, which is "mine"
+
   Scenario: A card's content may run on another layout engine, chosen while it is empty
     Given I open the "builder" page
     When I choose the "antd-card" widget

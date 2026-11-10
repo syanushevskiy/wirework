@@ -1,6 +1,8 @@
 /**
  * Edit-mode chrome for one cell: the Edit and Remove actions, and for a
- * container one "Edit content" per layout it holds (doc/containers-design.md).
+ * container one "Edit content" per layout it holds (doc/containers-design.md)
+ * and, where the host offers it, "Reset to original" for a layout of the
+ * viewer's own inside it.
  * Engines place it (grid handle bar, flex item header, a tab header, ...);
  * every button carries `.ww-cell-action` so drag handles can exclude it,
  * and a press on a button never propagates: a layout library that starts
@@ -18,6 +20,18 @@ export interface WrapCell {
   onWrap: (cellId: string) => void;
 }
 
+/**
+ * "Reset to original" on a container: the host names the button and knows
+ * which cells hold a layout of the viewer's own (the others have nothing to
+ * reset — the button is there, disabled) and takes it away.
+ */
+export interface ResetLayout {
+  label: string;
+  /** The keys of the cells that hold a layout of their own. */
+  cells: readonly string[];
+  onReset: (cellId: string) => void;
+}
+
 export interface CellChromeProps {
   cell: ResolvedCell;
   onEdit?: ((cellId: string) => void) | undefined;
@@ -25,10 +39,12 @@ export interface CellChromeProps {
   /** Open the layout a container holds at `layoutPath` for editing. */
   onEditLayout?: ((cellId: string, layoutPath: string) => void) | undefined;
   wrapCell?: WrapCell | undefined;
+  resetLayout?: ResetLayout | undefined;
 }
 
-export function CellChrome({ cell, onEdit, onRemove, onEditLayout, wrapCell }: CellChromeProps) {
-  const layouts = onEditLayout && cell.definition ? layoutsOf(cell.definition, cell.viewModel) : [];
+export function CellChrome({ cell, onEdit, onRemove, onEditLayout, wrapCell, resetLayout }: CellChromeProps) {
+  const held = cell.definition ? layoutsOf(cell.definition, cell.viewModel) : [];
+  const layouts = onEditLayout ? held : [];
   return (
     <span className="ww-cell-actions">
       {onEdit ? (
@@ -60,6 +76,20 @@ export function CellChrome({ cell, onEdit, onRemove, onEditLayout, wrapCell }: C
           {layouts.length === 1 ? "Edit content" : `Edit ${path}`}
         </button>
       ))}
+      {resetLayout && held.length > 0 ? (
+        <button
+          type="button"
+          className="ww-cell-action"
+          data-testid="cell-reset-layout"
+          data-cell={cell.key}
+          disabled={!resetLayout.cells.includes(cell.key)}
+          onPointerDown={keepPress}
+          onMouseDown={keepPress}
+          onClick={() => resetLayout.onReset(cell.key)}
+        >
+          {resetLayout.label}
+        </button>
+      ) : null}
       {wrapCell ? (
         <button
           type="button"

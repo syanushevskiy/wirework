@@ -178,6 +178,22 @@ When("I edit the content of the cell {string}", async ({ page }, id: string) => 
   await page.locator(`[data-testid="cell-edit-layout"][data-cell="${id}"]`).click();
 });
 
+/** Edit mode, in a user's or a role's view: "Reset to original" on a container — its own layout inside goes. */
+const resetButton = (page: Page, id: string) => page.locator(`[data-testid="cell-reset-layout"][data-cell="${id}"]`);
+
+When("I reset the content of the cell {string} to the original", async ({ page }, id: string) => {
+  await resetButton(page, id).click();
+});
+
+/** The button is always there; with nothing of the viewer's own inside the container it is disabled. */
+Then("the content of the cell {string} can be reset to the original", async ({ page }, id: string) => {
+  await expect(resetButton(page, id)).toBeEnabled();
+});
+
+Then("the content of the cell {string} is the original", async ({ page }, id: string) => {
+  await expect(resetButton(page, id)).toBeDisabled();
+});
+
 /** A container with several layouts (tabs, panels) has one "Edit …" per layout, named by its path: "tabs.1.content". */
 When("I edit the layout {string} of the cell {string}", async ({ page }, path: string, id: string) => {
   await page.locator(`[data-testid="cell-edit-layout"][data-cell="${id}"][data-layout="${path}"]`).click();

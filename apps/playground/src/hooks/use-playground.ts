@@ -374,9 +374,10 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     layoutEngines,
     page,
     trees,
+    shownTrees: editing.shownTrees,
     target,
     roles: viewerRoles,
-    shown: editing.activeView,
+    shown: editing.pageView,
     cancelEditing,
   });
 

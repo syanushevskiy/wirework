@@ -42,6 +42,8 @@ export {
   saveWidgetOp,
   setCellViewOp,
   wrapCellOp,
+  resetLayoutOp,
+  holdsOwnLayout,
 } from "./page-edits";
 export type { EditContext, EditLocation, EditTarget, Op, OverlayTarget } from "./page-edits";
 export { usePageEditing } from "./use-page-editing";
