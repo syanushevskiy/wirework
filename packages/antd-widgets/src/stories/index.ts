@@ -23,6 +23,7 @@ export {
   filterBarConformance,
   inputConformance,
   labelConformance,
+  listPositionConformance,
   multiSelectConformance,
   numberConformance,
   paginationConformance,

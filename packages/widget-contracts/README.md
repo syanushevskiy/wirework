@@ -57,6 +57,9 @@ declares:
   page. The first three bind and emit nothing: the widgets inside do that;
   the dialog is the first container with a port.
 - `paginationContract` (`PAGINATION_SIZES`, `PaginationSize`),
+  `listPositionContract` (`listPercent`) — where a scrolling list stands
+  (rows in view, of how many, as a percent) and a scale to jump along it:
+  bound to the paths an `infinite-table` keeps its `position` at —,
   `refresherContract` (`refreshScheduleSchema`, `RefreshSchedule`,
   `REFRESH_INTERVAL`, `REFRESH_TRIGGERS`, `RefreshTrigger`) — the page's
   navigation and refresh, as intents.

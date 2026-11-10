@@ -1067,7 +1067,8 @@ test.
 
 ### WW-35 · Xsight Wirework - Filters I can see in the table, and a list that becomes cards on my phone
 
-**Type:** User feature · **Status:** To do (designed 9 November 2026, doc/table-filters-cards-design.md)
+**Type:** User feature · **Status:** In progress — the filter row is built (9 November 2026), the cards are to do
+(designed 9 November 2026, doc/table-filters-cards-design.md)
 
 **Short description:** As a dashboard user, I see what a list is filtered by without opening anything — a filter row
 under the headers, a search field with a search icon for a text column and a list of values for the others, always
@@ -1089,5 +1090,6 @@ builder I turn both on with settings; nothing is wired anew.
 - **Given** the builder, **when** I set "cards" to always, **then** the table shows cards at any width; never keeps it
   a table.
 
-**Verified by:** to be written — `table-filters.feature`, the phone scenarios, the two tables' conformance sets
-extended.
+**Verified by:** the filter row — the story `FilterRow` of the infinite table (no demo page turns the row on: the
+product owner, on seeing it, wants filters only behind the header icons), and the table view's own example of a first answer (`doc/tableApi/4-data-first-response.json`) in the
+`table-view` unit tests; the cards — to be written (the phone scenarios).

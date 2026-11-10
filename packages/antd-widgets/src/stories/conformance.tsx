@@ -413,6 +413,88 @@ export function paginationConformance(
   };
 }
 
+/** `list-position` contract: where the list stands from the store, in words and as a percent; a move of the scale stored by the default reaction. */
+export function listPositionConformance(
+  definition: AnyWidgetDefinition,
+): Record<"Stands" | "Jumps" | "Vertical" | "Empty", Story> {
+  const inputs = { position: "demo.position", visible: "demo.visible", total: "demo.total" };
+  const on = { changed: [{ set: "demo.position", from: "position" }] };
+  return {
+    Stands: {
+      render: () => (
+        <WidgetStory
+          key="stands"
+          definition={definition}
+          seed={{ demo: { position: 400, visible: 25, total: 2000 } }}
+          viewModel={{ inputs, label: "Position" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("401–425 of 2 000")).toBeVisible();
+        // The last row in view, 425, is 21% into the list.
+        await expect(canvas.getByText("21%")).toBeVisible();
+        await expect(canvas.getByRole("slider", { name: "Position" })).toHaveAttribute("aria-valuenow", "400");
+      },
+    },
+    Jumps: {
+      render: () => (
+        <WidgetStory
+          key="jumps"
+          definition={definition}
+          seed={{ demo: { position: 0, visible: 25, total: 2000 } }}
+          viewModel={{ inputs, on, label: "Position" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        const scale = canvas.getByRole("slider", { name: "Position" });
+        // End is the last position there is: the one that shows the end of the list. Letting the key go is what jumps.
+        fireEvent.keyDown(scale, { key: "End", keyCode: 35, which: 35 });
+        fireEvent.keyUp(scale, { key: "End", keyCode: 35, which: 35 });
+        await waitFor(() => expect(canvas.getByTestId("story-store")).toHaveTextContent('"position": 1975'));
+        await expect(canvas.getByText("1 976–2 000 of 2 000")).toBeVisible();
+        await expect(canvas.getByText("100%")).toBeVisible();
+      },
+    },
+    Vertical: {
+      render: () => (
+        <WidgetStory
+          key="vertical"
+          definition={definition}
+          seed={{ demo: { position: 0, visible: 25, total: 2000 } }}
+          viewModel={{ inputs, on, label: "Position", vertical: true }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        const scale = canvas.getByRole("slider", { name: "Position" });
+        await expect(scale).toHaveAttribute("aria-orientation", "vertical");
+        // The start of the list is at the TOP: the handle of a list at its start sits in the upper half of the scale.
+        const track = scale.parentElement?.getBoundingClientRect();
+        const handle = scale.getBoundingClientRect();
+        await expect(track && handle.top + handle.height / 2 < track.top + track.height / 2).toBe(true);
+        // It jumps as the lying scale does.
+        fireEvent.keyDown(scale, { key: "End", keyCode: 35, which: 35 });
+        fireEvent.keyUp(scale, { key: "End", keyCode: 35, which: 35 });
+        await waitFor(() => expect(canvas.getByTestId("story-store")).toHaveTextContent('"position": 1975'));
+        const moved = scale.getBoundingClientRect();
+        await expect(track && moved.top + moved.height / 2 > track.top + track.height / 2).toBe(true);
+      },
+    },
+    Empty: {
+      render: () => (
+        <WidgetStory
+          key="empty"
+          definition={definition}
+          viewModel={{ inputs: { position: "demo.missing.position", total: "demo.missing.total" } }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("0 rows")).toBeVisible();
+        await expect(canvas.getByText("0%")).toBeVisible();
+      },
+    },
+  };
+}
+
 /** `refresher` contract: the schedule from the store, its changes and every refresh stored by the reactions. */
 export function refresherConformance(
   definition: AnyWidgetDefinition,

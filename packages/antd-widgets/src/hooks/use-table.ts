@@ -58,6 +58,7 @@ export interface TableSettings {
   columns: TableColumn[];
   rowKey: string;
   headerFilters: boolean;
+  filterRow: boolean;
 }
 
 export function useTable(
@@ -77,7 +78,16 @@ export function useTable(
   const loading = usePort(store, paths.loading, ports.loading) === true;
   const columns = useTableColumns(store, paths.columns, ports.columns, settings.columns, rows);
   const renderedRows = useRenderedRows(rows, settings.rowKey);
-  const headers = useTableHeaders(store, emit, paths, ports, columns, cells, settings.headerFilters);
+  const headers = useTableHeaders(
+    store,
+    emit,
+    paths,
+    ports,
+    columns,
+    cells,
+    settings.headerFilters,
+    settings.filterRow,
+  );
   const rowProps = useRowProps(emit);
 
   return { columns: headers.columns, rows: renderedRows, loading, rowProps, change: headers.change };

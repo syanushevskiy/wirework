@@ -13,6 +13,11 @@
  *
  * Not offered (the setting is off): the plain columns, and a `change` that
  * antd never has a reason to call.
+ *
+ * And the FILTER ROW (`filterRow`, doc/table-filters-cards-design.md): a
+ * column with a `filter` shows its control under its title (HeaderFilter),
+ * reading the same two ports and emitting the same `filter-changed` — with
+ * the dropdowns on too, both show one choice.
  */
 import { createElement, useCallback, useMemo } from "react";
 import { SearchOutlined } from "@ant-design/icons";
@@ -26,6 +31,7 @@ import type {
   TableColumn,
   tableHeaderEvents,
 } from "@wirework/widget-contracts";
+import { HeaderFilter } from "../widgets/header-filter";
 import { HeaderSearch } from "../widgets/header-search";
 import type { TableCellRenderers } from "./use-table-cell";
 import { antdColumnOf, type RenderedRow } from "./use-table-rows";
@@ -43,6 +49,26 @@ export interface TableHeadersView {
 const NOTHING_CHOSEN: FilterValues = {};
 const NOTHING_SEARCHED: SearchValues = {};
 const NO_ORDER: ColumnOrder = {};
+const NONE: string[] = [];
+
+/**
+ * The whole choice after ONE column's changed in the filter row: its values
+ * (a list) or its text replaced, everything else as it was, nothing empty
+ * left in — what `filter-changed` carries.
+ */
+export function filterChoice(
+  chosen: FilterValues,
+  searched: SearchValues,
+  property: string,
+  next: string[] | string,
+): { filterIn: FilterValues; filterLike: SearchValues } {
+  const filterIn = typeof next === "string" ? chosen : { ...chosen, [property]: next };
+  const filterLike = typeof next === "string" ? { ...searched, [property]: next.trim() } : searched;
+  return {
+    filterIn: Object.fromEntries(Object.entries(filterIn).filter(([, values]) => values.length > 0)),
+    filterLike: Object.fromEntries(Object.entries(filterLike).filter(([, text]) => text !== "")),
+  };
+}
 
 /** The antd filter and sorter props of one column, from what its `filter` and `sortable` say and what is chosen. */
 export function headerOf(
@@ -85,7 +111,9 @@ export function useTableHeaders(
   },
   columns: TableColumn[],
   cells: TableCellRenderers,
+  /** The settings: `headerFilters` (the dropdowns and the sorting) and `filterRow` (a control under each title). */
   offered: boolean,
+  filterRow: boolean,
 ): TableHeadersView {
   const chosen = usePort(store, paths.filterIn, ports.filterIn) ?? NOTHING_CHOSEN;
   const searched = usePort(store, paths.filterLike, ports.filterLike) ?? NOTHING_SEARCHED;
@@ -97,10 +125,27 @@ export function useTableHeaders(
     const tableColumns = columns.map((column, index) => {
       const base = antdColumnOf(column, index, cells);
       byKey.set(base.key, column);
-      return offered ? { ...base, ...headerOf(column, chosen, searched, order) } : base;
+      const { filter } = column;
+      return {
+        ...base,
+        ...(offered ? headerOf(column, chosen, searched, order) : {}),
+        // The filter row: the title above the column's own control.
+        ...(filterRow && filter !== undefined
+          ? {
+              title: createElement(HeaderFilter, {
+                title: column.title,
+                property: column.property,
+                filter,
+                values: chosen[column.property] ?? NONE,
+                text: searched[column.property] ?? "",
+                change: (next) => emit("filter-changed", filterChoice(chosen, searched, column.property, next)),
+              }),
+            }
+          : {}),
+      };
     });
     return { tableColumns, byKey };
-  }, [columns, cells, offered, chosen, searched, order]);
+  }, [columns, cells, offered, filterRow, chosen, searched, order, emit]);
 
   // antd reports every filter and the sorter at once; what is emitted is the
   // whole choice, in the request's own groups, nothing empty in it.

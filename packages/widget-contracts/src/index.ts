@@ -43,6 +43,7 @@ export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
 export { infiniteTableContract } from "./infinite-table";
+export { listPercent, listPositionContract } from "./list-position";
 // More of what every UI library has.
 export { switchContract } from "./switch";
 export { sliderContract } from "./slider";
@@ -94,6 +95,7 @@ import { filterBarContract } from "./filter-bar";
 import { infiniteTableContract } from "./infinite-table";
 import { inputContract } from "./input";
 import { labelContract } from "./label";
+import { listPositionContract } from "./list-position";
 import { multiSelectContract } from "./multi-select";
 import { numberContract } from "./number";
 import { paginationContract } from "./pagination";
@@ -128,6 +130,7 @@ export const standardContracts = [
   tableContract,
   filterBarContract,
   infiniteTableContract,
+  listPositionContract,
   switchContract,
   sliderContract,
   radioGroupContract,

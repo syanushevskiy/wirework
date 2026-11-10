@@ -69,6 +69,13 @@ export const isSelect = async (control: Locator): Promise<boolean> => (await con
 export const headerFilterDropdown = (page: Page) =>
   page.locator(".ant-table-filter-dropdown").locator("visible=true").last();
 
+/**
+ * The trigger of a column header's filter dropdown (the filter or search
+ * icon) — by antd's class, because a header with a filter ROW holds other
+ * buttons and icons too (the field's clear, its search icon).
+ */
+export const headerFilterTrigger = (header: Locator) => header.locator(".ant-table-filter-trigger");
+
 /** One value of the open filter dropdown's list: antd renders each as a menu item holding a checkbox and the text. */
 export const headerFilterValue = (page: Page, text: string) =>
   headerFilterDropdown(page).getByRole("menuitem", { name: text });

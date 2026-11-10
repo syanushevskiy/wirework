@@ -26,6 +26,43 @@ export interface RowWindow {
   /** Blank space above and below them, px. */
   above: number;
   below: number;
+  /** The row height the window was made with, px. */
+  rowHeight: number;
+}
+
+/**
+ * The window over a list of which only a SLICE is held (a windowed infinite
+ * table: `offset` rows before the ones held): the rows of the slice that
+ * fall into the window, as `held.slice(start, end)`, with the blank space
+ * that stands in for everything else — the rows before and after the
+ * window AND the part of the window the slice does not cover — so the
+ * scrollbar is that of the whole list.
+ */
+export function sliceWindow(shown: RowWindow, count: number, offset: number, held: number): RowWindow {
+  const { rowHeight } = shown;
+  const from = Math.min(Math.max(shown.start, offset), offset + held);
+  const to = Math.min(Math.max(shown.end, from), offset + held);
+  return {
+    start: from - offset,
+    end: to - offset,
+    above: from * rowHeight,
+    below: Math.max(0, count - to) * rowHeight,
+    rowHeight,
+  };
+}
+
+/** The first row in view and how many fit the box — where a list STANDS; `rowHeight` as measured. */
+export function rowPosition(
+  scrollTop: number,
+  boxHeight: number,
+  rowHeight: number,
+  count: number,
+): { position: number; visible: number } {
+  const height = Math.max(1, rowHeight);
+  const visible = Math.min(count, visibleRows(boxHeight, height));
+  // Half a pixel of slack: a box scrolled TO a row by arithmetic may land a hair above it.
+  const position = Math.min(Math.max(0, count - visible), Math.floor((Math.max(0, scrollTop) + 0.5) / height));
+  return { position, visible };
 }
 
 /** Rows that fit the box — at least one, so a box with no height yet still shows something to measure. */
@@ -40,8 +77,8 @@ export function rowWindow({ scrollTop, boxHeight, rowHeight, count }: RowWindowI
   const end = Math.min(count, Math.max(0, first - Math.floor(visible / 2)) + size);
   // The end of the list fills the window backwards, so the last rows never render alone.
   const start = Math.max(0, end - size);
-  return { start, end, above: start * height, below: (count - end) * height };
+  return { start, end, above: start * height, below: (count - end) * height, rowHeight: height };
 }
 
 export const sameRowWindow = (a: RowWindow, b: RowWindow): boolean =>
-  a.start === b.start && a.end === b.end && a.above === b.above && a.below === b.below;
+  a.start === b.start && a.end === b.end && a.above === b.above && a.below === b.below && a.rowHeight === b.rowHeight;

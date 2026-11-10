@@ -4,8 +4,11 @@
  * its end comes into view, renders only a WINDOW of the rows it holds (a
  * virtual list), and has the filters and the sorting in the column headers
  * — a list of values to tick, or a SEARCH icon opening a box for free text
- * — instead of a filter bar and a pagination beside it. Render-only: logic
- * in useInfiniteTable.
+ * — instead of a filter bar and a pagination beside it. WINDOWED (the
+ * setting) it holds only a slice of the list, `data-offset` rows into it,
+ * and asks for the slice around the rows in view; with its `position` port
+ * bound it says where it stands and scrolls where it is told. Render-only:
+ * logic in useInfiniteTable.
  *
  * Like the table, a factory: `createAntdInfiniteTable({ cells })` for a
  * host's own cell renderers (`createAntdWidgets({ tableCells })` makes both
@@ -32,6 +35,8 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         loading: viewModel.inputs.loading,
         columns: viewModel.inputs.columns,
         total: viewModel.inputs.total,
+        offset: viewModel.inputs.offset,
+        position: viewModel.inputs.position,
         filterIn: viewModel.inputs.filterIn,
         filterLike: viewModel.inputs.filterLike,
         orderBy: viewModel.inputs.orderBy,
@@ -41,7 +46,9 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         columns: viewModel.columns,
         rowKey: viewModel.rowKey,
         headerFilters: viewModel.headerFilters,
+        filterRow: viewModel.filterRow,
         height: viewModel.height,
+        windowed: viewModel.windowed,
       },
       cells,
     );
@@ -52,7 +59,10 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         data-testid="antd-infinite-table"
         data-path={viewModel.inputs.rows}
         data-loading={view.loading}
+        data-filter-row={viewModel.filterRow}
         data-held={view.held}
+        data-offset={view.offset}
+        data-windowed={viewModel.windowed}
         data-total={view.total}
         data-window={view.window}
       >

@@ -39,7 +39,7 @@ export const builderViewModels: ViewModels = {
 };
 
 /** The demo application's pages, in menu order. "run" is reached from the runs list, not the menu. */
-export const DEMO_PAGES = ["overview", "runs", "history", "run", "settings", "cards", "roles"] as const;
+export const DEMO_PAGES = ["overview", "runs", "history", "archive", "run", "settings", "cards", "roles"] as const;
 export type DemoPage = (typeof DEMO_PAGES)[number];
 
 /**
@@ -242,6 +242,7 @@ export const demoPageData: Record<DemoPage, Record<string, unknown>> = {
   // Nothing chosen yet, so no suites on offer.
   runs: { filters: { applications: [], suiteOptions: [], suites: [] } },
   history: {},
+  archive: {},
   run: {},
   settings: {},
   cards: { demo: { counter: 0 } },

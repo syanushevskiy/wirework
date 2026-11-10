@@ -20,6 +20,21 @@
  *   rows above and below the window are blank space of their height, so
  *   the scrollbar and the end of the list are where they would be with
  *   every row rendered.
+ * - WINDOWED (the `windowed` setting; doc/row-window-design.md, "A slice of
+ *   the list"): the widget does not hold the list either — only a SLICE of
+ *   it, the rows from `offset` on. Its scrollbar spans the `total`; when the
+ *   rows in view are not among the ones held (and nothing is loading) it
+ *   EMITS `window` with the offset the next slice should begin at — the
+ *   rows in view in its middle — and the reactions replace the slice:
+ *   `{ set: "<into>.wanted", from: "offset" }`, then `{ call:
+ *   "table-view/load", with: { into, window: true } }`. `more` is never
+ *   emitted. Ten thousand rows on the server are two hundred in the store
+ *   and two dozen in the DOM.
+ * - WHERE THE LIST STANDS is the `position` port: the first row in view,
+ *   0-based in the whole list. The widget emits `position-changed` as it
+ *   scrolls (written back by default) and SCROLLS to the position when
+ *   something else changes it — a `list-position` widget bound to the same
+ *   path shows where the list is and jumps anywhere in it.
  *
  * Implementations render the table inside a scrolling box of `height`
  * pixels with its header staying in view, expose what `table` exposes plus
@@ -45,6 +60,19 @@ export const infiniteTableContract = defineContract({
         value: z.number().int().min(0),
         required: false,
       },
+      offset: {
+        description:
+          "Store path holding where in the whole list the rows held begin, 0-based (optional; a windowed list's slice — the loader writes it)",
+        value: z.number().int().min(0),
+        required: false,
+        default: 0,
+      },
+      position: {
+        description:
+          "Store path holding the first row in view, 0-based in the whole list (optional; the list writes it as it scrolls and scrolls to it when something else changes it — a list-position widget)",
+        value: z.number().int().min(0),
+        required: false,
+      },
     },
   },
   events: {
@@ -56,6 +84,20 @@ export const infiniteTableContract = defineContract({
       payload: z.object({ offset: z.number().int().min(0) }),
       primary: "offset",
     },
+    window: {
+      description:
+        "Windowed list: fired when the rows in view are not among the ones held; carries the offset the next slice should begin at — store it and call table-view/load with window: true",
+      payload: z.object({ offset: z.number().int().min(0) }),
+      primary: "offset",
+    },
+    "position-changed": {
+      description:
+        "Fired as the list scrolls, with the first row in view (0-based in the whole list) and how many rows are in view",
+      payload: z.object({ position: z.number().int().min(0), visible: z.number().int().min(0) }),
+      // Where the list stands is state a list-position widget reads: written back by default when the port is bound.
+      primary: "position",
+      writesBack: "position",
+    },
   },
   settings: z.object({
     ...tableSettings,
@@ -65,6 +107,12 @@ export const infiniteTableContract = defineContract({
       .default(true)
       .describe("Offer each column's filter and sorting in its header (what the column's filter and sortable say)"),
     height: z.number().int().min(100).default(400).describe("Height of the scrolling list, in pixels"),
+    windowed: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Hold only a SLICE of a long list: the scrollbar spans the total, and scrolling out of the rows held asks for the slice there (the `window` event) instead of appending — needs the total and offset ports",
+      ),
   }),
   preview: {
     seed: {

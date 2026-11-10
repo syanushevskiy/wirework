@@ -49,6 +49,51 @@
   min-width: 14rem;
 }
 
+/* The filter row: a column's title above its own filter control; the titles of all columns stay on one line. */
+.ww-table__header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.ww-table__filter {
+  min-width: 7rem;
+  font-weight: normal;
+}
+
+/*
+ * A table with a sticky header renders every title a second time, in a row of no height it measures the column
+ * widths by: the control there keeps its width (the column needs it) and is out of the keyboard's and a reader's reach.
+ */
+.ww-table .ant-table-measure-row .ww-table__filter {
+  visibility: hidden;
+}
+
+.ww-table[data-filter-row="true"] .ant-table-thead > tr > th {
+  vertical-align: top;
+}
+
+/* The scale of a list's position takes the room the words leave; the words stay on one line. */
+.ww-list-position__scale {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+}
+
+/* Upright, the scale takes the height its cell gives — beside a list, the list's own. */
+.ww-list-position--vertical {
+  height: 100%;
+  min-height: 10rem;
+}
+
+.ww-list-position--vertical .ww-list-position__scale {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 6rem;
+}
+
+.ww-list-position .ant-typography {
+  white-space: nowrap;
+}
+
 /* A select fills its cell, like an input does — a number and a date too. */
 .ww-select,
 .ww-number,

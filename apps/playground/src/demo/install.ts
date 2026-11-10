@@ -26,7 +26,15 @@ import { createRunsServer } from "../api/runs-server";
 import { createSessionApi } from "../api/session-api";
 import { createSessionsEndpoint } from "../api/sessions-server";
 import { suiteOptionsFor } from "../api/suites-catalog";
-import { RUNS_ALL_VIEW_URL, RUNS_VIEW_URL, SESSIONS_VIEW_URL, createFakeTransport, forbidden } from "../api/transport";
+import {
+  ARCHIVE_TOTAL,
+  ARCHIVE_VIEW_URL,
+  RUNS_ALL_VIEW_URL,
+  RUNS_VIEW_URL,
+  SESSIONS_VIEW_URL,
+  createFakeTransport,
+  forbidden,
+} from "../api/transport";
 import type { PlaygroundPage, Registries } from "../boot";
 import { statusBadgeContract } from "../contracts/status-badge";
 import { pageViewModels } from "../pages";
@@ -107,6 +115,8 @@ export function installDemo(
   });
   // Server-side data for the demo: a fake server with real latency.
   const runsServer = createRunsServer({ seed: sampleRuns, total: 23, latencyMs: 600 });
+  // The archive: the same kind of list, long — two thousand runs nobody holds whole (the windowed list's demo).
+  const archiveServer = createRunsServer({ seed: sampleRuns, total: ARCHIVE_TOTAL, latencyMs: 300 });
   const sessionApi = createSessionApi({ latencyMs: 300 });
   const loadSession = createSessionLoader(sessionApi);
   // The Wirework admin's button (doc/roles-design.md): a role-only ACTION is a server call the session must be
@@ -144,6 +154,7 @@ export function installDemo(
   const transport = createFakeTransport(
     {
       [RUNS_VIEW_URL]: (request) => runsServer.fetchView(request),
+      [ARCHIVE_VIEW_URL]: (request) => archiveServer.fetchView(request),
       [RUNS_ALL_VIEW_URL]: (request, session) =>
         session.roles.includes("admin") ? runsServer.fetchViewAll(request) : forbidden(RUNS_ALL_VIEW_URL),
       [SESSIONS_VIEW_URL]: createSessionsEndpoint({ latencyMs: 300 }),
@@ -199,7 +210,7 @@ export function installDemo(
       void loadSession(shared);
     },
     signIn: (shared, person) => loadSession(shared, person),
-    pages: demoPages(runsServer),
+    pages: demoPages(runsServer, archiveServer),
     builderPage,
   };
 }

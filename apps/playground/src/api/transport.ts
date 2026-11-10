@@ -16,6 +16,9 @@ import type { TableViewRequest, TableViewTransport } from "@wirework/table-view"
 import { tracked } from "./requests";
 
 export const RUNS_VIEW_URL = "/api/v1/view/runs";
+/** The archive: the runs of years, a list too long to hold — served in slices to a windowed list. */
+export const ARCHIVE_VIEW_URL = "/api/v1/view/archive";
+export const ARCHIVE_TOTAL = 2000;
 /** The admin's view: every owner's runs, with an `owner` column. */
 export const RUNS_ALL_VIEW_URL = "/api/v1/view/runs/all";
 /** The signed-in users — the Wirework admin's Sessions card. */

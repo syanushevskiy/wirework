@@ -38,11 +38,19 @@ import "@wirework/antd-widgets/styles.css";
   both. Both tables offer each column's filter in its
   header — antd's list of values, or a search icon for free text — and
   sorting on a header click, when the `headerFilters` setting says so (off
-  for the table, on for the infinite table). The infinite table scrolls
+  for the table, on for the infinite table) — and, with `filterRow` on, each
+  column's filter UNDER its title, always in view: a search field for free
+  text, a list of values otherwise (`data-testid="table-filter"`, named
+  "Filter <title>"), the same choice the header dropdowns write. The infinite table scrolls
   inside its own box, asks for more rows at its end, and renders only a
   WINDOW of the rows it holds — twice the box's height, the rest blank space
   of the right height (doc/row-window-design.md) — so it is a virtual list;
-  `data-held` says how many rows it holds, `data-window` which render. Its
+  `data-held` says how many rows it holds, `data-window` which render. With
+  `windowed` on it holds only a SLICE of the list (`data-offset` rows into
+  it) and asks for the slice around the rows in view (`window`); with its
+  `position` port bound it says where it stands and scrolls where it is
+  told — `antdListPosition` beside it shows that and jumps along the list (lying, or
+  with `vertical` upright with the start of the list at its top). Its
   box takes the keyboard focus, so End, Home and Page Down scroll it. The
   events each widget emits are exported as types (`ButtonEvents`,
   `InputEvents`, `TableEvents`, `InfiniteTableEvents`, …). Peer:

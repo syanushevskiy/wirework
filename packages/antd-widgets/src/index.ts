@@ -8,7 +8,7 @@
  * them). If a widget ever needs engine, store or bus internals, the widget
  * contract has leaked. No widget writes the store — every state change is
  * an emitted event plus a reaction. Label, button, input, pagination,
- * refresher, select, multi-select, filter-bar, tag, checkbox, progress,
+ * list-position, refresher, select, multi-select, filter-bar, tag, checkbox, progress,
  * alert, table, infinite-table, switch, slider, radio-group, rate,
  * statistic, divider, number, date, date-range, descriptions, result,
  * steps, timeline and the containers card, tabs, collapse and dialog
@@ -34,6 +34,7 @@ import { antdFilterBar } from "./widgets/antd-filter-bar";
 import { antdInfiniteTable, createAntdInfiniteTable } from "./widgets/antd-infinite-table";
 import { antdInput } from "./widgets/antd-input";
 import { antdLabel } from "./widgets/antd-label";
+import { antdListPosition } from "./widgets/antd-list-position";
 import { antdMultiSelect } from "./widgets/antd-multi-select";
 import { antdNumber } from "./widgets/antd-number";
 import { antdPagination } from "./widgets/antd-pagination";
@@ -70,6 +71,7 @@ export {
   antdInfiniteTable,
   antdInput,
   antdLabel,
+  antdListPosition,
   antdMultiSelect,
   antdNumber,
   antdPagination,
@@ -100,6 +102,7 @@ export { LABEL_TONES, VALIDATION_RULES } from "@wirework/widget-contracts";
 export type { ButtonEvents } from "./widgets/antd-button";
 export type { InputEvents } from "./widgets/antd-input";
 export type { PaginationEvents } from "./widgets/antd-pagination";
+export type { ListPositionEvents } from "./widgets/antd-list-position";
 export type { RefresherEvents } from "./widgets/antd-refresher";
 export type { CounterEvents } from "./widgets/antd-counter";
 export type { TableEvents } from "./widgets/antd-table";
@@ -138,6 +141,7 @@ export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyW
     antdButton,
     antdInput,
     antdPagination,
+    antdListPosition,
     antdRefresher,
     antdSelect,
     antdTag,

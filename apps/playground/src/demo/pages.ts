@@ -36,7 +36,7 @@ const demoPage = (name: DemoPage, onOpen?: (store: Store) => void): PlaygroundPa
   ...(onOpen ? { onOpen } : {}),
 });
 
-export function demoPages(runsServer: RunsServer): Record<DemoPage, PlaygroundPage> {
+export function demoPages(runsServer: RunsServer, archiveServer: RunsServer): Record<DemoPage, PlaygroundPage> {
   return {
     // Its numbers are loaded by the PAGE's `load` reaction (viewModels.on.overview).
     overview: demoPage("overview"),
@@ -57,6 +57,9 @@ export function demoPages(runsServer: RunsServer): Record<DemoPage, PlaygroundPa
     // table's `load`, grown by its `more`. The server starts over with every
     // visit here too, so the rows scrolled into view are always the same.
     history: demoPage("history", () => runsServer.reset()),
+    // Two thousand runs as a WINDOWED list (widgets.archive.table): the store holds a slice of two hundred, the
+    // DOM two dozen, and the list-position widget under it says where the list stands and jumps along it.
+    archive: demoPage("archive", () => archiveServer.reset()),
     // The run is loaded by the PAGE's `load` reaction (viewModels.on.run);
     // which run: the router's parameter, at route.params.runId.
     run: demoPage("run"),

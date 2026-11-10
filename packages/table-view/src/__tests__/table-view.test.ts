@@ -219,6 +219,51 @@ describe("the loader", () => {
     expect(store.get("jobs.error")).toBeUndefined();
   });
 
+  it("makes the table of the FIRST answer (the API's own example): the columns, each with its in-table filter, and the rows", async () => {
+    const urls: string[] = [];
+    const transport: TableViewTransport = async (url) => {
+      urls.push(url);
+      return example("4-data-first-response.json");
+    };
+    const store = createStore({});
+    await createTableViewLoader(transport)(store, { url: "api/view/v1/runs", into: "runs" });
+
+    expect(urls).toEqual(["api/view/v1/runs"]);
+    const columns =
+      store.get<{ title: string; property: string; filter?: unknown; sortable?: boolean }[]>("runs.columns");
+    expect(columns?.map((column) => column.title)).toEqual([
+      "Job ID",
+      "Host",
+      "State",
+      "Service",
+      "Build",
+      "Trace port",
+      "Failure Detail",
+      "Auto Restart",
+      "Created At",
+      "Modified At",
+      "Output Path",
+      "Total",
+    ]);
+    // Filterable without values: a search field. With values: a list of them (the server's null left out).
+    expect(columns?.[0]).toEqual({ title: "Job ID", property: "job_id", filter: { kind: "text" }, sortable: true });
+    expect(columns?.[1]?.filter).toEqual({
+      kind: "values",
+      options: ["DEHOSTQA401118", "local", "invalidCredentials", "DEHOSTQD401877", "FRNODEKP2XT5"].map((value) => ({
+        value,
+      })),
+    });
+    // The server says nothing about the rest: no filter in the table for them.
+    expect(columns?.slice(2).every((column) => column.filter === undefined && column.sortable === undefined)).toBe(
+      true,
+    );
+    expect(store.get<{ job_id: number }[]>("runs.data")?.map((row) => row.job_id)).toEqual([900341, 900340, 900298]);
+    // This answer does not count the rows: no total, so nothing claims to know how many there are.
+    expect(store.get("runs.total")).toBeUndefined();
+    expect(store.get("runs.error")).toBeUndefined();
+    expect(store.get("runs.loading")).toBe(false);
+  });
+
   it("re-requests the declared view by name: rows only, with what the user asked for", async () => {
     const { requests, transport } = exampleServer();
     const load = createTableViewLoader(transport);
@@ -385,6 +430,38 @@ describe("the loader", () => {
     // A plain re-request replaces them, from the first page.
     await load(store, { into: "t" });
     expect(store.get<unknown[]>("t.data")).toHaveLength(5);
+  });
+
+  it("with window: replaces the rows held with the slice at <into>.wanted and says where it begins; the page stays", async () => {
+    const all = Array.from({ length: 100 }, (_, index) => ({ id: String(index + 1) }));
+    const requests: TableViewRequest[] = [];
+    const transport: TableViewTransport = async (_url, request) => {
+      requests.push(request);
+      const { offset, limit } = request.dataFilter;
+      return { totalRecords: all.length, data: all.slice(offset, offset + limit) };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    await load(store, { url: "/x", into: "t", pageSize: 20 });
+    // Every answer that replaces the rows says where they begin: the first page begins the list.
+    expect(store.get("t.offset")).toBe(0);
+    store.set("t.wanted", 40);
+    await load(store, { into: "t", window: true });
+    expect(requests[1]?.dataFilter).toMatchObject({ offset: 40, limit: 20 });
+    expect(store.get<{ id: string }[]>("t.data")?.map((row) => row.id)).toEqual(all.slice(40, 60).map((row) => row.id));
+    expect(store.get("t.offset")).toBe(40);
+    expect(store.get("t.page")).toBe(1);
+    // A slice asked for behind the end is the last one there is.
+    store.set("t.wanted", 500);
+    await load(store, { into: "t", window: true });
+    expect(store.get("t.offset")).toBe(80);
+    expect(store.get<unknown[]>("t.data")).toHaveLength(20);
+    // Appended rows begin where the ones held did.
+    store.set("t.wanted", 0);
+    await load(store, { into: "t", window: true });
+    await load(store, { into: "t", more: true });
+    expect(store.get("t.offset")).toBe(0);
+    expect(store.get<unknown[]>("t.data")).toHaveLength(40);
   });
 });
 

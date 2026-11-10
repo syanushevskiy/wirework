@@ -27,6 +27,12 @@
  *   with both filters, whole — empty ones left out, so they go into a
  *   request as they are — or `sort-changed` with the whole order; the
  *   reactions write them back and re-request.
+ * - With the `filterRow` setting on, a column's `filter` is a control UNDER
+ *   its header, always in view (doc/table-filters-cards-design.md): a search
+ *   field with a search icon for free text — Enter or leaving the field
+ *   applies it —, a list of values to pick otherwise. It reads the same
+ *   `filterIn` / `filterLike` ports and emits the same `filter-changed`, so
+ *   the header dropdowns, a filter bar and the row are views of one choice.
  * - A click on a row EMITS `row-selected` with the row's key and the row
  *   itself, so a reaction stores either (`from: "key"`, `from: "row.name"`).
  * - A plain click on a LINK cell EMITS `link-clicked` with the address
@@ -42,7 +48,9 @@
  * `data-row-key`, each cell's property as `data-property` and its kind as
  * `data-cell`; a tag cell exposes its tone as `data-tone`; the filter
  * trigger of a values column shows a filter icon, that of a text column a
- * SEARCH icon. They emit `load` AFTER mounting — once the page has bound
+ * SEARCH icon; a control of the filter row is `data-testid="table-filter"`
+ * with its column's title as `data-column`, what is chosen as `data-values`
+ * and the role searchbox or combobox, named "Filter <title>". They emit `load` AFTER mounting — once the page has bound
  * its reactions — and only once per mount (React's StrictMode mounts twice).
  */
 import { z } from "zod";
@@ -192,6 +200,12 @@ export const tableSettings = {
     .boolean()
     .default(false)
     .describe("Offer each column's filter and sorting in its header (what the column's filter and sortable say)"),
+  filterRow: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Show each column's filter IN the table, under its header: a search field for text, a list of values otherwise — always visible, so the table says what it shows",
+    ),
 };
 
 export const tableContract = defineContract({

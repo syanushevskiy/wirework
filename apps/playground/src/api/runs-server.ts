@@ -97,7 +97,8 @@ function buildRows(seed: readonly Run[], total: number): Run[] {
       name: `E2E Run # ${98765 + index}`,
       reference: `REF${59456735 + index}`,
       inbound: `IND${557327 + index}`,
-      started: `2026-10-${String(25 - (index - seeded)).padStart(2, "0")} 09:00`,
+      // A real calendar day however long the list: the 25th of October 2026, minus one day per row.
+      started: `${new Date(Date.UTC(2026, 9, 25 - (index - seeded))).toISOString().slice(0, 10)} 09:00`,
       status: STATUSES[index % STATUSES.length] ?? QUEUED,
     });
   }

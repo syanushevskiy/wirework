@@ -8,6 +8,8 @@
  *   <into>.filters    [{ id, label, options }]         -> the filter bar's `filters` port
  *   <into>.data       the rows                         -> the table's `rows` port
  *   <into>.total      all rows on the server           -> the pagination's / infinite table's `total` port
+ *   <into>.offset     where the rows held begin in the whole list -> a windowed infinite table's `offset` port
+ *   <into>.wanted     the offset a windowed list asked for (its `window` reaction writes it; read by `window: true`)
  *   <into>.loading    true while a request is in flight
  *   <into>.error      what failed (the last good rows stay)
  *
@@ -87,6 +89,18 @@ export const tableViewArgsSchema = z
       .boolean()
       .optional()
       .describe("More: append the rows after those held (an infinite list's `more`). Off or not set: replace them"),
+    /**
+     * Per CALL: ask for the SLICE of rows that begins at `<into>.wanted` —
+     * what a windowed list's `window` reaction does after storing the offset
+     * it asked for — and replace the rows held with it. The page is not
+     * touched; `<into>.offset` says where the slice begins.
+     */
+    window: z
+      .boolean()
+      .optional()
+      .describe(
+        "Window: replace the rows held with the slice that begins at <into>.wanted (a windowed list's `window`). Off or not set: the page asked for",
+      ),
     pageSize: tableViewSchema.shape.pageSize,
     columns: tableViewSchema.shape.columns,
     filters: tableViewSchema.shape.filters,
@@ -98,6 +112,7 @@ export type TableViewArgs = z.infer<typeof tableViewArgsSchema>;
 export type TableViewLoader = (store: Store, args: unknown) => Promise<void>;
 
 const positiveInt = z.number().int().min(1);
+const offsetSchema = z.number().int().min(0);
 const chosenSchema = filterValuesSchema;
 const searchedSchema = searchValuesSchema;
 /** What the date-range widgets wrote: a [from, to] pair of texts per column. */
@@ -155,7 +170,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       );
     }
     // `metadata` and `more` belong to this call; everything else but `into` declares the view.
-    const { into, metadata, more, ...declared } = parsed.data;
+    const { into, metadata, more, window: slice, ...declared } = parsed.data;
     const at = (name: string): string => `${into}.${name}`;
 
     // A call with a url DECLARES the view; one without re-requests the declared one.
@@ -188,8 +203,10 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       const pageSize = store.getAs(at("pageSize"), positiveInt) ?? view.pageSize ?? DEFAULT_PAGE_SIZE;
       // MORE: the rows after the ones held, which the answer is appended to.
       const held = more ? (store.getAs(at("data"), rowsSchema) ?? []) : undefined;
+      // WINDOW: the slice that begins where the list asked, replacing the one held.
+      const wanted = slice ? (store.getAs(at("wanted"), offsetSchema) ?? 0) : undefined;
       const query: TableViewQuery = {
-        offset: held === undefined ? (page - 1) * pageSize : held.length,
+        offset: held !== undefined ? held.length : (wanted ?? (page - 1) * pageSize),
         limit: pageSize,
         filterIn: store.getAs(at("filterIn"), chosenSchema) ?? {},
         filterLike: store.getAs(at("filterLike"), searchedSchema),
@@ -204,7 +221,8 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       const total = answer.totalRecords ?? undefined;
       if (held === undefined && total !== undefined && total > 0 && query.offset >= total) {
         page = Math.ceil(total / pageSize);
-        query.offset = (page - 1) * pageSize;
+        // A slice asked for behind the end is the last one there is; a page, the last page.
+        query.offset = wanted === undefined ? (page - 1) * pageSize : Math.max(0, total - pageSize);
         const again = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, false), signal));
         if (!isLatest()) return;
         answer = { ...answer, ...again, metadata: answer.metadata ?? again.metadata };
@@ -220,9 +238,11 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         if (held === undefined) store.set(at("data"), answer.data);
         else if (answer.data.length > 0) store.set(at("data"), [...held, ...answer.data]);
       }
+      // Where in the whole list the rows held begin: a windowed list reads it; appended rows begin where they did.
+      if (held === undefined) store.set(at("offset"), query.offset);
       if (answer.totalRecords !== undefined && answer.totalRecords !== null)
         store.set(at("total"), answer.totalRecords);
-      if (held === undefined) store.set(at("page"), page);
+      if (held === undefined && wanted === undefined) store.set(at("page"), page);
       store.set(at("pageSize"), pageSize);
       store.set(at("error"), undefined);
     } catch (error) {

@@ -1,6 +1,7 @@
 # In-table filters and rows as cards — a filter row under the headers, and a table that becomes cards on a narrow screen
 
-Written 9 November 2026 (story WW-35, not built). The ask: "design
+Written 9 November 2026 (story WW-35; phase 1, the filter row, built the
+same day — "Built" at the end; the cards not built). The ask: "design
 in-table filters with search icon for text filters, and also a switch for
 small screens so every row becomes a card".
 
@@ -274,6 +275,42 @@ drop it if the day runs out.
    with the filter controls, both tables switching on `view`, the sessions
    table `always`, the phone scenarios at 480 pixels including `more` on
    the history list; the sort select last.
+
+## Built — phase 1, the filter row (9 November 2026)
+
+The table a `table-view/load` call makes of the server's FIRST answer
+(`doc/tableApi/4-data-first-response.json`, pinned in the `table-view`
+tests) now shows its columns with their filters in the table. What was
+built, and where it departs from the design above:
+
+- `filterRow` is the one setting added; `cards` and `cardsBelow` come with
+  phase 2 — a setting that does nothing would sit in the builder's form.
+- `HeaderFilter` (render-only, `useHeaderFilter`) is the column's title above
+  its control; `useTableHeaders` builds it for every column with a `filter`
+  and emits `filter-changed` through `filterChoice` — the whole choice with
+  one column's replaced. The text is a draft until Enter or blur; the clear
+  icon applies "no text". The control stops its own clicks and keys, so the
+  header cell around it never sorts (a Select's popup included).
+- The search field is `role="searchbox"` on a text input, not
+  `type="search"`: the browser's own clear cross would stand next to antd's.
+- A table with a sticky header (the infinite table) renders every title a
+  second time in a row it measures widths by; the copy of the control there
+  is `visibility: hidden` — it keeps the column's width, and is out of the
+  keyboard's and a screen reader's reach. A test reads the filters it can
+  SEE.
+- Sorting stays with `headerFilters`: the filter row alone does not sort.
+- NO demo page has it on. The history page had (with its header dropdowns)
+  for an hour; the product owner's word on seeing it: a filter is not to be
+  seen in the header, only when its icon is clicked — which is what
+  `headerFilters` does. The setting stays, off by default, proven by the
+  `FilterRow` story; `table-filters.feature` went with the demo. The header steps of the suite now find the
+  dropdown's trigger through `support/antd.ts` (`headerFilterTrigger`): a
+  header with a filter row holds other buttons and icons.
+- One thing the example shows that nothing answers yet: that first answer
+  carries NO `totalRecords`, so `<into>.total` stays unset — a pagination
+  has nothing to count and an infinite table asks for no more. Whether the
+  server always counts when asked (`totalRecords: true` is in every
+  request) is the open question.
 
 ## Later
 

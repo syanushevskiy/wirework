@@ -120,6 +120,65 @@ groups. `useTable` and `useInfiniteTable` both call it.
 - `@wirework/view-data-models-examples`: the runs table offers its headers
   and wires `filter-changed` / `sort-changed` like the bar.
 
+## A slice of the list, and where the list stands (9 November 2026)
+
+The product owner's ask: "a component like a pagination for an infinite
+list, knowing the limit, updated as I scroll to show where I stand — 400
+rows scrolled, where that is from 1 to 100% — that I can use to jump, say
+to 40%. The list should not keep all the records but work in a sliced
+window: fetching 200 rows, 25 in the DOM."
+
+The window above bounds the DOM; the STORE still grew with every `more`,
+and a jump to 40% of ten thousand rows would have meant loading four
+thousand. Two additions, each usable alone:
+
+- **A windowed list** — `windowed: true` on `infinite-table`. The widget
+  holds a SLICE: the rows at the `rows` port begin `offset` rows into the
+  list (a new optional port; the loader writes `<into>.offset`). The row
+  window runs over the whole list (`total` rows, so the scrollbar is the
+  whole list's), `sliceWindow` (pure, `row-window.ts`) picks the slice's
+  rows that fall into it and makes the blank space stand in for everything
+  else. When the window is not inside the slice — and nothing is loading,
+  and the page has bound its reactions — the widget emits `window` with the
+  offset of the slice that has the window in its MIDDLE (as many rows as it
+  holds now); the reactions store it and call `table-view/load` with
+  `window: true`, which asks for `pageSize` rows from `<into>.wanted` and
+  REPLACES the rows (a slice asked for behind the end is the last one).
+  `more` is never emitted. Asked once per set of rows and place, and never
+  for the slice already held, so a server with fewer rows than it said is
+  not asked in a loop. While a slice is on its way the rows in view are
+  blank space; the list does not jump.
+- **Where the list stands** — the `position` port (optional): the first row
+  in view, 0-based in the whole list. With it bound the widget emits
+  `position-changed` `{ position, visible }` a frame after a scroll
+  (written back by default), and when something else writes the position
+  it scrolls there. A position told before the rows were measured is kept:
+  when the measured row height differs from the one it was scrolled by,
+  the box is put at the same ROW again — until the user scrolls. Unbound,
+  nothing is emitted: the history page's event log is as it was.
+- **`list-position`** — the 32nd standard contract, the pagination's
+  sibling for a list that scrolls: `position`, `total` and (optional)
+  `visible` in; "401–425 of 2 000", a percent (how far the LAST row in view
+  is into the list — `listPercent`, one rule for every implementation) and
+  a scale over the positions 0 … total − visible out; `changed`
+  `{ position }` when the scale is let go, written back by default. While
+  the handle is dragged the words follow it and the list does not: a
+  windowed list is asked for one place, not for every one passed. It knows
+  no list — bound to the same paths as a table's `position` and `total` the
+  two follow each other.
+
+Weighed and left: appending both ways and trimming the far end (a growing
+and shrinking array, two events, and a jump would still load everything
+between); a page-sized cache of several slices (the same widget with a
+loader that keeps more — later, if the blank frames while scrolling fast
+are felt); the scale inside the table widget (a page may want it in
+another cell, or not at all).
+
+The demo: the ARCHIVE page — 2 000 runs, a slice of 200, the scale under
+the list. `list-position.feature`, the `Windowed` story, the
+`listPositionConformance` set, `row-window.test.ts` (`sliceWindow`,
+`rowPosition`), `table-view.test.ts` ("with window").
+
 ## Follow-up (not built)
 
 A row height per row (measured and remembered) for lists whose rows wrap.

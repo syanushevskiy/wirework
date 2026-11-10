@@ -6,6 +6,7 @@ export const PAGE_PATHS: Record<string, string> = {
   overview: "/demo",
   runs: "/demo/runs",
   history: "/demo/history",
+  archive: "/demo/archive",
   settings: "/demo/settings",
   cards: "/demo/cards",
   roles: "/demo/roles",

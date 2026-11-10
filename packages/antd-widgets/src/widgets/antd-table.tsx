@@ -43,12 +43,23 @@ export function createAntdTable({ cells }: AntdTableOptions = {}) {
         orderBy: viewModel.inputs.orderBy,
       },
       tableContract.io.inputs,
-      { columns: viewModel.columns, rowKey: viewModel.rowKey, headerFilters: viewModel.headerFilters },
+      {
+        columns: viewModel.columns,
+        rowKey: viewModel.rowKey,
+        headerFilters: viewModel.headerFilters,
+        filterRow: viewModel.filterRow,
+      },
       cells,
     );
 
     return (
-      <div className="ww-table" data-testid="antd-table" data-path={viewModel.inputs.rows} data-loading={loading}>
+      <div
+        className="ww-table"
+        data-testid="antd-table"
+        data-path={viewModel.inputs.rows}
+        data-loading={loading}
+        data-filter-row={viewModel.filterRow}
+      >
         <Table
           size="small"
           pagination={false}
