@@ -2,7 +2,7 @@
  *  with antd Typography. Render-only: all logic in useEchoValue. */
 import { Flex, Typography } from "antd";
 import { z } from "zod";
-import { ioBindingsSchema, NO_EVENTS, type WidgetIO, type WidgetProps } from "@wirework/schema";
+import { NO_EVENTS, widgetBindingsSchema, type WidgetIO, type WidgetProps } from "@wirework/schema";
 import { defineWidget } from "@wirework/react";
 import { useEchoValue } from "../hooks/use-echo-value";
 
@@ -12,7 +12,8 @@ const io = {
   },
 } satisfies WidgetIO;
 
-const viewModel = ioBindingsSchema(io).extend({
+// The full bindings, like every widget: an echo may carry a condition (`when`) and an appearance too.
+const viewModel = widgetBindingsSchema(io, NO_EVENTS).extend({
   label: z.string().optional(),
 });
 

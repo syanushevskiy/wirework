@@ -1,0 +1,9 @@
+{
+  "admin": {
+    "cells": {
+      "table-main": {
+        "view": "admin"
+      }
+    }
+  }
+}

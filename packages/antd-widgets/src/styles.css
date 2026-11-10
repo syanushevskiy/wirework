@@ -49,9 +49,24 @@
   min-width: 14rem;
 }
 
-/* A select fills its cell, like an input does. */
-.ww-select {
+/* A select fills its cell, like an input does — a number and a date too. */
+.ww-select,
+.ww-number,
+.ww-date {
   width: 100%;
+}
+
+/* A dialog shown IN PLACE (previews, stories): antd renders it inside this positioned box instead of over the page. */
+.ww-dialog--inline {
+  position: relative;
+  min-height: 16rem;
+  overflow: hidden;
+}
+
+.ww-dialog--inline .ant-modal-root,
+.ww-dialog--inline .ant-modal-mask,
+.ww-dialog--inline .ant-modal-wrap {
+  position: absolute;
 }
 
 /* Filters side by side, each wide enough for a couple of chosen values. */

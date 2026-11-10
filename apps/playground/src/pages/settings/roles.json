@@ -1,0 +1,172 @@
+{
+  "admin": {
+    "view": "admin",
+    "templates": {
+      "admin": {
+        "engine": "react-grid-layout",
+        "cells": [
+          {
+            "id": "label-settings",
+            "widget": "antd-label",
+            "model": "widgets.settings.title",
+            "template": "default",
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 1
+          },
+          {
+            "id": "card-preferences",
+            "widget": "antd-card",
+            "model": "widgets.settings.preferences",
+            "template": "default",
+            "x": 0,
+            "y": 1,
+            "w": 12,
+            "h": 5
+          },
+          {
+            "id": "echo-settings",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echoSettings",
+            "template": "default",
+            "x": 0,
+            "y": 6,
+            "w": 6,
+            "h": 2
+          },
+          {
+            "id": "echo-permissions",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echoPermissions",
+            "template": "default",
+            "x": 6,
+            "y": 6,
+            "w": 6,
+            "h": 2
+          },
+          {
+            "id": "card-danger",
+            "widget": "antd-card",
+            "model": "widgets.settings.danger",
+            "template": "default",
+            "x": 0,
+            "y": 8,
+            "w": 12,
+            "h": 2,
+            "templates": {
+              "default": {
+                "title": "Danger zone",
+                "content": {
+                  "engine": "react-grid-layout",
+                  "cells": [
+                    {
+                      "id": "button-reset-settings",
+                      "widget": "antd-button",
+                      "model": "widgets.settings.resetAll",
+                      "template": "default",
+                      "x": 0,
+                      "y": 0,
+                      "w": 4,
+                      "h": 1
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "wirework-admin": {
+    "view": "wirework-admin",
+    "templates": {
+      "wirework-admin": {
+        "engine": "react-grid-layout",
+        "cells": [
+          {
+            "id": "label-settings",
+            "widget": "antd-label",
+            "model": "widgets.settings.title",
+            "template": "default",
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 1
+          },
+          {
+            "id": "card-preferences",
+            "widget": "antd-card",
+            "model": "widgets.settings.preferences",
+            "template": "default",
+            "x": 0,
+            "y": 1,
+            "w": 12,
+            "h": 5
+          },
+          {
+            "id": "echo-settings",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echoSettings",
+            "template": "default",
+            "x": 0,
+            "y": 6,
+            "w": 6,
+            "h": 2
+          },
+          {
+            "id": "echo-permissions",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echoPermissions",
+            "template": "default",
+            "x": 6,
+            "y": 6,
+            "w": 6,
+            "h": 2
+          },
+          {
+            "id": "card-danger",
+            "widget": "antd-card",
+            "model": "widgets.settings.danger",
+            "template": "default",
+            "x": 0,
+            "y": 8,
+            "w": 12,
+            "h": 2
+          },
+          {
+            "id": "card-sessions",
+            "widget": "antd-card",
+            "model": "widgets.settings.sessions",
+            "template": "default",
+            "x": 0,
+            "y": 10,
+            "w": 12,
+            "h": 4,
+            "templates": {
+              "default": {
+                "title": "Sessions",
+                "content": {
+                  "engine": "react-grid-layout",
+                  "cells": [
+                    {
+                      "id": "table-sessions",
+                      "widget": "antd-table",
+                      "model": "widgets.settings.sessionsTable",
+                      "template": "default",
+                      "x": 0,
+                      "y": 0,
+                      "w": 12,
+                      "h": 3
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

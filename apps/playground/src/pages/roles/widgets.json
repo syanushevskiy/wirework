@@ -1,0 +1,38 @@
+{
+  "widgets.roles.approval": {
+    "default": {
+      "inputs": {
+        "value": "roles.approval"
+      },
+      "label": "Approval — admin only"
+    }
+  },
+  "widgets.roles.approve": {
+    "default": {
+      "label": "Approve — admin only",
+      "on": {
+        "clicked": [
+          {
+            "set": "roles.approval",
+            "value": "approved by the admin"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.roles.how": {
+    "default": {
+      "text": "Everyone sees the note. The admin sees this card in its \"admin\" template — roles.json picks it for the admin — which holds a button and its echo as well. Sign in as admin above to see them.",
+      "tone": "muted"
+    }
+  },
+  "widgets.roles.note": {
+    "default": {
+      "inputs": {
+        "value": "app.settings.note"
+      },
+      "label": "Your note — everyone",
+      "placeholder": "type anything"
+    }
+  }
+}

@@ -44,6 +44,8 @@ export const inputContract = defineContract({
     validation: z.enum(VALIDATION_RULES).default("none").describe("Premade validation rule"),
     pattern: z.string().optional().describe("Custom rule: a regular expression the text must match"),
     patternMessage: z.string().optional().describe("Message shown when the custom rule fails"),
+    // A long text is the same field with more lines: the ports and the rules do not change, so the kind does not.
+    rows: z.number().int().min(2).optional().describe("Lines of a multi-line field; a single line when absent"),
   }),
   preview: {
     seed: { preview: { text: "Sample" } },

@@ -10,8 +10,10 @@
  * an emitted event plus a reaction. Label, button, input, pagination,
  * refresher, select, multi-select, filter-bar, tag, checkbox, progress,
  * alert, table, infinite-table, switch, slider, radio-group, rate,
- * statistic, divider and the containers card, tabs and collapse IMPLEMENT
- * the standard contracts; counter, echo and crash are demo/test widgets.
+ * statistic, divider, number, date, date-range, descriptions, result,
+ * steps, timeline and the containers card, tabs, collapse and dialog
+ * IMPLEMENT the standard contracts; counter, echo and crash are demo/test
+ * widgets.
  */
 import { z } from "zod";
 import type { AnyWidgetDefinition } from "@wirework/schema";
@@ -22,6 +24,10 @@ import { antdCheckbox } from "./widgets/antd-checkbox";
 import { antdCollapse } from "./widgets/antd-collapse";
 import { antdCounter } from "./widgets/antd-counter";
 import { antdCrash } from "./widgets/antd-crash";
+import { antdDate } from "./widgets/antd-date";
+import { antdDateRange } from "./widgets/antd-date-range";
+import { antdDescriptions, createAntdDescriptions, type AntdDescriptionsOptions } from "./widgets/antd-descriptions";
+import { antdDialog } from "./widgets/antd-dialog";
 import { antdDivider } from "./widgets/antd-divider";
 import { antdEcho } from "./widgets/antd-echo";
 import { antdFilterBar } from "./widgets/antd-filter-bar";
@@ -29,18 +35,22 @@ import { antdInfiniteTable, createAntdInfiniteTable } from "./widgets/antd-infin
 import { antdInput } from "./widgets/antd-input";
 import { antdLabel } from "./widgets/antd-label";
 import { antdMultiSelect } from "./widgets/antd-multi-select";
+import { antdNumber } from "./widgets/antd-number";
 import { antdPagination } from "./widgets/antd-pagination";
 import { antdProgress } from "./widgets/antd-progress";
 import { antdRadioGroup } from "./widgets/antd-radio-group";
 import { antdRate } from "./widgets/antd-rate";
 import { antdRefresher } from "./widgets/antd-refresher";
+import { antdResult } from "./widgets/antd-result";
 import { antdSelect } from "./widgets/antd-select";
 import { antdSlider } from "./widgets/antd-slider";
 import { antdStatistic } from "./widgets/antd-statistic";
+import { antdSteps } from "./widgets/antd-steps";
 import { antdSwitch } from "./widgets/antd-switch";
 import { antdTable, createAntdTable, type AntdTableOptions } from "./widgets/antd-table";
 import { antdTabs } from "./widgets/antd-tabs";
 import { antdTag } from "./widgets/antd-tag";
+import { antdTimeline } from "./widgets/antd-timeline";
 
 export {
   antdAlert,
@@ -50,6 +60,10 @@ export {
   antdCollapse,
   antdCounter,
   antdCrash,
+  antdDate,
+  antdDateRange,
+  antdDescriptions,
+  antdDialog,
   antdDivider,
   antdEcho,
   antdFilterBar,
@@ -57,22 +71,27 @@ export {
   antdInput,
   antdLabel,
   antdMultiSelect,
+  antdNumber,
   antdPagination,
   antdProgress,
   antdRadioGroup,
   antdRate,
   antdRefresher,
+  antdResult,
   antdSelect,
   antdSlider,
   antdStatistic,
+  antdSteps,
   antdSwitch,
   antdTable,
   antdTabs,
   antdTag,
+  antdTimeline,
+  createAntdDescriptions,
   createAntdInfiniteTable,
   createAntdTable,
 };
-export type { AntdTableOptions };
+export type { AntdDescriptionsOptions, AntdTableOptions };
 export type { InfiniteTableEvents } from "./widgets/antd-infinite-table";
 export type { TableCellProps, TableCellRenderer, TableCellRenderers } from "./hooks/use-table-cell";
 export { validate } from "./validation";
@@ -92,9 +111,16 @@ export type { SwitchEvents } from "./widgets/antd-switch";
 export type { SliderEvents } from "./widgets/antd-slider";
 export type { RadioGroupEvents } from "./widgets/antd-radio-group";
 export type { RateEvents } from "./widgets/antd-rate";
+export type { NumberEvents } from "./widgets/antd-number";
+export type { DateEvents } from "./widgets/antd-date";
+export type { DateRangeEvents } from "./widgets/antd-date-range";
+export type { DescriptionsEvents } from "./widgets/antd-descriptions";
+export type { ResultEvents } from "./widgets/antd-result";
+export type { DialogEvents } from "./widgets/antd-dialog";
+export type { StepsEvents } from "./widgets/antd-steps";
 
 export interface AntdWidgetsOptions {
-  /** Cell renderers the host's tables offer by name (see createAntdTable). */
+  /** Cell renderers the host's tables — and its descriptions — offer by name (see createAntdTable). */
   tableCells?: AntdTableOptions["cells"];
 }
 
@@ -107,6 +133,8 @@ export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyW
     antdCounter,
     tableCells === undefined ? antdTable : createAntdTable({ cells: tableCells }),
     tableCells === undefined ? antdInfiniteTable : createAntdInfiniteTable({ cells: tableCells }),
+    // A fact sheet shows the table's cells: the host's renderers serve it too.
+    tableCells === undefined ? antdDescriptions : createAntdDescriptions({ cells: tableCells }),
     antdButton,
     antdInput,
     antdPagination,
@@ -123,9 +151,16 @@ export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyW
     antdRate,
     antdStatistic,
     antdDivider,
+    antdNumber,
+    antdDate,
+    antdDateRange,
+    antdResult,
+    antdSteps,
+    antdTimeline,
     antdCard,
     antdTabs,
     antdCollapse,
+    antdDialog,
   ];
 }
 

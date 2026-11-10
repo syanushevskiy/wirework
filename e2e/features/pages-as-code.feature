@@ -8,7 +8,20 @@ Feature: Pages as code — the whole page as a file
   own views are never in the file; exporting waits for the editing
   permission, like Edit page.
 
-  Scenario: The overview is exported whole — both prebuilt views, what it loads, its widgets and its address — but not my own view
+  Scenario: A page's view models come from its folder when the page opens — that page's alone
+    # Every demo page is a folder of the application's source, pages/<page>/ — page.json, viewModel.json,
+    # widgets.json — and the store gets that page's view models when it opens: nothing of another page's.
+    Given I open the "roles" page
+    And the server has had time to answer
+    Then the page has 1 cells
+    And the state editor "views" contains '"card-roles"'
+    And the state editor "views" contains '"card": {'
+    And the state editor "views" does not contain '"table-main"'
+    When I switch to the "runs" page
+    And the server has had time to answer
+    Then the state editor "views" contains '"table-main"'
+    And the state editor "views" contains '"admin"'
+    And the state editor "views" does not contain '"card-roles"'
     Given I open the "overview" page
     And the server has had time to answer
     When I save the view as "mine-only"
@@ -46,7 +59,10 @@ Feature: Pages as code — the whole page as a file
     Then the exported page JSON contains '"templates": {'
     And the exported page JSON contains '"roles": {'
     And the exported page JSON contains '"wirework-admin": {'
-    And the exported page JSON contains '"widgets.settings.danger": {'
+    # The Danger-zone card is a container: its template is NESTED in the admin view's cell, the table inside the
+    # Sessions card is a widget of its own.
+    And the exported page JSON contains '"model": "widgets.settings.danger"'
+    And the exported page JSON does not contain '"widgets.settings.danger": {'
     And the exported page JSON contains '"widgets.settings.sessionsTable": {'
 
   Scenario: A page built in the builder exports with the widgets it was given

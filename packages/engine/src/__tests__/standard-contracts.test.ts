@@ -29,6 +29,14 @@ describe("standard contracts", () => {
         "alert",
         "multi-select",
         "table",
+        "number",
+        "date",
+        "date-range",
+        "descriptions",
+        "result",
+        "dialog",
+        "steps",
+        "timeline",
       ]),
     );
   });

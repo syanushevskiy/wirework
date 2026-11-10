@@ -29,18 +29,34 @@ function AntdInput({ viewModel, store, emit }: ContractProps<typeof inputContrac
       <label htmlFor={id}>
         <Typography.Text>{viewModel.label}</Typography.Text>
       </label>
-      <Input
-        id={id}
-        type={viewModel.type}
-        data-testid="antd-input"
-        data-path={viewModel.inputs.value}
-        data-valid={valid}
-        aria-invalid={!valid}
-        status={valid ? "" : "error"}
-        {...(viewModel.placeholder === undefined ? {} : { placeholder: viewModel.placeholder })}
-        value={value}
-        onChange={(event) => change(event.target.value)}
-      />
+      {viewModel.rows === undefined ? (
+        <Input
+          id={id}
+          type={viewModel.type}
+          data-testid="antd-input"
+          data-path={viewModel.inputs.value}
+          data-valid={valid}
+          aria-invalid={!valid}
+          status={valid ? "" : "error"}
+          {...(viewModel.placeholder === undefined ? {} : { placeholder: viewModel.placeholder })}
+          value={value}
+          onChange={(event) => change(event.target.value)}
+        />
+      ) : (
+        // A long text is the same field with more lines: the same ports, rules and alert.
+        <Input.TextArea
+          id={id}
+          rows={viewModel.rows}
+          data-testid="antd-input"
+          data-path={viewModel.inputs.value}
+          data-valid={valid}
+          aria-invalid={!valid}
+          status={valid ? "" : "error"}
+          {...(viewModel.placeholder === undefined ? {} : { placeholder: viewModel.placeholder })}
+          value={value}
+          onChange={(event) => change(event.target.value)}
+        />
+      )}
       {message ? (
         <Typography.Text type="danger" role="alert" data-testid="antd-input-message">
           {message}

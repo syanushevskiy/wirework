@@ -1,9 +1,9 @@
 /** The application around the pages: navigation, the console, the fake servers, the panels, the state inspector, boot validation. */
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { requests, type Console } from "../support/console";
 import { live, PAGE_PATHS } from "../support/page";
-import { editStateJson } from "../support/state";
+import { applyEditor, configurationEditor, editStateJson, stateJson } from "../support/state";
 
 const { Given, When, Then } = createBdd();
 
@@ -140,12 +140,28 @@ When("I try to put into the store at {string}:", async ({ page }, path: string, 
   await editStateJson(page, path, JSON.parse(json), false);
 });
 
+/** Every editor of the panel, read as one text: a page's data and views, the settings and the session alike. */
 Then("the state JSON contains {string}", async ({ page }, fragment: string) => {
-  await expect.poll(async () => page.getByTestId("state-editor").inputValue()).toContain(fragment);
+  await expect.poll(() => stateJson(page)).toContain(fragment);
 });
 
 Then("the state JSON does not contain {string}", async ({ page }, fragment: string) => {
-  await expect.poll(async () => page.getByTestId("state-editor").inputValue()).not.toContain(fragment);
+  await expect.poll(() => stateJson(page)).not.toContain(fragment);
+});
+
+const stateEditor = (page: Page, key: string) =>
+  page.getByTestId("state-editor").and(page.locator(`[data-section="${key}"]`));
+
+Then("the state editor {string} contains {string}", async ({ page }, key: string, fragment: string) => {
+  await expect.poll(() => stateEditor(page, key).inputValue()).toContain(fragment);
+});
+
+Then("the state editor {string} does not contain {string}", async ({ page }, key: string, fragment: string) => {
+  await expect.poll(() => stateEditor(page, key).inputValue()).not.toContain(fragment);
+});
+
+Then("the state panel has {int} editor(s)", async ({ page }, count: number) => {
+  await expect(page.getByTestId("state-editor")).toHaveCount(count);
 });
 
 When("I edit the state JSON setting {string} to {int}", async ({ page }, path: string, value: number) => {
@@ -156,9 +172,11 @@ When("I edit the state JSON setting {string} to {string}", async ({ page }, path
   await editStateJson(page, path, value);
 });
 
+/** The whole text of the page's views editor replaced — an edit the inspector is expected to refuse. */
 When("I replace the state JSON with {string}", async ({ page }, text: string) => {
-  await page.getByTestId("state-editor").fill(text);
-  await page.getByTestId("state-apply").click();
+  const editor = await configurationEditor(page);
+  await editor.fill(text);
+  await applyEditor(page, editor, false);
 });
 
 Then("the state error is shown", async ({ page }) => {

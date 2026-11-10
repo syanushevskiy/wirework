@@ -11,11 +11,16 @@
  * demo/pages.ts): a real host keeps this file and replaces those.
  *
  * Two kinds of state:
- *  - The demo APPLICATION's state outlives its pages: the configuration
- *    (`viewModels`, `userViewModels`) and the GLOBAL data at `app` — who the
- *    user is, what they may do, their settings, lists every page needs. It
- *    lives in one store for as long as the user stays in the application,
- *    and starts over when they come back from the builder (or reload).
+ *  - The demo APPLICATION's state outlives its pages: the user's own views
+ *    (`userViewModels`) and the GLOBAL data at `app` — who the user is, what
+ *    they may do, their settings, lists every page needs. It lives in one
+ *    store for as long as the user stays in the application, and starts
+ *    over when they come back from the builder (or reload). The PAGE's view
+ *    models (`viewModels`) live there too, but hold ONE page at a time: when
+ *    a page opens, the store gets that page's — from its folder
+ *    (src/pages/<page>/), or as this session last saw them after an edit or
+ *    a save, which the session remembers per page as a server would —
+ *    and nothing of another page's.
  *  - A page VISIT gets its own store and event bus, created from the page's
  *    initial state: the little data it starts with and the `route` the
  *    router matched — nothing of any other page, and no server data.
@@ -102,6 +107,8 @@ export interface PageVisit {
 interface AppSession {
   shared: Store;
   start(): void;
+  /** A page opens: the store's view models become that page's — remembered from an earlier visit, or its folder's. */
+  enter(page: DemoPage): void;
 }
 
 export type Playground = ReturnType<typeof boot>;
@@ -126,12 +133,21 @@ export function boot({ navigator }: { navigator: Navigator }) {
   const openDemoSession = (): AppSession => {
     const shared = createPlaygroundStore("app", demo.sessionState);
     let started = false;
+    // The pages' view models as this session last saw them — an inspector edit, a saved page — this demo's
+    // stand-in for the server a host would ask. The page shown is the only one in the store.
+    const remembered = new Map<DemoPage, unknown>();
+    let current: DemoPage | undefined;
     return {
       shared,
       start: () => {
         if (started) return;
         started = true;
         demo.startSession(shared);
+      },
+      enter: (page) => {
+        if (current !== undefined) remembered.set(current, shared.get("viewModels"));
+        shared.setConfig("viewModels", remembered.get(page) ?? demo.pageViewModels(page));
+        current = page;
       },
     };
   };
@@ -154,9 +170,10 @@ export function boot({ navigator }: { navigator: Navigator }) {
     };
   };
 
-  /** A visit of a demo page: its own store under the application's long-lived one. */
+  /** A visit of a demo page: its own store under the application's long-lived one, which now holds this page's view models. */
   const openDemoPage = (name: DemoPage, route: RouteInfo): PageVisit => {
     const session = (demoSession ??= openDemoSession());
+    session.enter(name);
     const page = demo.pages[name];
     const store = layerStores({
       page: createPlaygroundStore(name, page.initialState(route)),

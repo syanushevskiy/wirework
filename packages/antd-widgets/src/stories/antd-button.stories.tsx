@@ -25,6 +25,8 @@ export const Playground: Story = playground(antdButton);
 const conformance = buttonConformance(antdButton);
 export const Default: Story = conformance.Default;
 export const SetsAFlag: Story = conformance.SetsAFlag;
+export const Confirms: Story = conformance.Confirms;
+export const CancelsConfirm: Story = conformance.CancelsConfirm;
 
 /** The four variants side by side: primary, secondary, dashed and danger — antd's `type`, plus `danger` on the last. */
 export const Variants: Story = {

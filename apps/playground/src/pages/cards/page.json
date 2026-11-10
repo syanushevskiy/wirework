@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "cards",
+  "route": {
+    "path": "/demo/cards",
+    "title": "Cards",
+    "menu": true
+  }
+}

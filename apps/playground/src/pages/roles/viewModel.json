@@ -1,0 +1,101 @@
+{
+  "templates": {
+    "default": {
+      "engine": "flex-rows",
+      "rows": [
+        {
+          "cells": [
+            {
+              "id": "card-roles",
+              "widget": "antd-card",
+              "model": "widgets.roles.card",
+              "template": "default",
+              "classes": "w-full",
+              "templates": {
+                "default": {
+                  "title": "One card, two roles",
+                  "content": {
+                    "engine": "flex-rows",
+                    "rows": [
+                      {
+                        "cells": [
+                          {
+                            "id": "input-note",
+                            "widget": "antd-input",
+                            "model": "widgets.roles.note",
+                            "template": "default",
+                            "classes": "w-full"
+                          }
+                        ]
+                      },
+                      {
+                        "cells": [
+                          {
+                            "id": "label-how",
+                            "widget": "antd-label",
+                            "model": "widgets.roles.how",
+                            "template": "default",
+                            "classes": "w-full"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "admin": {
+                  "title": "One card, two roles — the admin's",
+                  "content": {
+                    "engine": "flex-rows",
+                    "rows": [
+                      {
+                        "cells": [
+                          {
+                            "id": "input-note",
+                            "widget": "antd-input",
+                            "model": "widgets.roles.note",
+                            "template": "default",
+                            "classes": "w-full"
+                          }
+                        ]
+                      },
+                      {
+                        "classes": "items-end gap-4",
+                        "cells": [
+                          {
+                            "id": "button-approve",
+                            "widget": "antd-button",
+                            "model": "widgets.roles.approve",
+                            "template": "default",
+                            "classes": "flex-none"
+                          },
+                          {
+                            "id": "echo-approval",
+                            "widget": "antd-echo",
+                            "model": "widgets.roles.approval",
+                            "template": "default",
+                            "classes": "flex-1"
+                          }
+                        ]
+                      },
+                      {
+                        "cells": [
+                          {
+                            "id": "label-how",
+                            "widget": "antd-label",
+                            "model": "widgets.roles.how",
+                            "template": "default",
+                            "classes": "w-full"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

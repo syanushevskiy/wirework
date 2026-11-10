@@ -171,6 +171,63 @@ conformance set and an antd implementation):
 - `divider` — display, nothing bound: `text`, `orientation` (where the
   title sits), `dashed`; role=separator.
 
+The dashboard set (added 2026-11-09, doc/more-widgets-design.md; each
+with a conformance set and an antd implementation, each on a demo page):
+
+- `number` — controlled: `value` port a finite number or `null` (the
+  field is EMPTY — never 0), `changed { value }` written back; `label`,
+  `placeholder`, `min`, `max` (above `min`, a rule on the settings),
+  `step`, `precision`, `prefix`, `suffix`; role=spinbutton named by the
+  label with `aria-valuemin` / `aria-valuemax`.
+- `date` — controlled: `value` port TEXT — `YYYY-MM-DD`, or an ISO
+  date-time with its offset when `withTime`; "" = nothing picked —,
+  `changed { value }` written back; `label`, `placeholder`, `withTime`,
+  `picker` (date / week / month / year), `format` (what is SHOWN, never
+  what is stored), `allowClear`; a textbox named by the label that takes a
+  typed date (Enter picks it). The store, the page file and the overlay
+  are JSON: a date is a string and never a Date; the server decides what a
+  day means.
+- `date-range` — controlled like `date` with a pair `[from, to]`
+  (`["", ""]` = nothing), `changed { value }` whole, written back; a group
+  named by the label holding two textboxes. Bound to
+  `<view>.filterBetween.<column>` it filters a server-described table with
+  no other wiring: the loader sends what is there (`@wirework/table-view`).
+- `descriptions` — one record as a FACT SHEET: `record` port (an object),
+  optional `loading`; `items` the TABLE's columns without `filter` and
+  `sortable` (`{ title, property, cell? }` — the same cell kinds and the
+  host's renderers, so a status, a link or the host's "copy" show the same
+  way in a table and a fact sheet), `title`, `columns`, `size`,
+  `bordered`; a plain click on a link cell emits `link-clicked { href,
+property, record }`. The antd implementation is a factory,
+  `createAntdDescriptions({ cells })`, given the table's renderers.
+- `result` — an OUTCOME: optional `title` / `detail` ports replacing the
+  static texts; `status` (`success`, `error`, `info`, `warning`,
+  `not-found`, `forbidden`, `failed` — antd's 404 / 403 / 500 by their
+  meaning), `title`, `detail`, `action` (one button emitting `clicked
+{ label }`); role=status, role=alert for `error`, `forbidden` and
+  `failed`. Placed under a `when` like any widget; it knows nothing about
+  requests.
+- `steps` — a PIPELINE: `current` port (a position from 0, or a step's
+  key), optional `failed` port (the current step shown as an error);
+  `items` a NAMED LIST (`key`, `label`, `description?`) a builder adds and
+  names like a tabs widget's tabs, `label`, `direction`, `small`,
+  `clickable` (a clicked step emits `changed { current: key }`, written
+  back); a list named by the label exposing the current key as
+  `data-current`.
+- `timeline` — a HISTORY: `items` port (`[{ text, time?, title?,
+tone? }]`, data from the server), `mode`, `reverse`, `pending` (an open
+  last entry); each entry exposes its tone as `data-tone`.
+- `dialog` — a CONTAINER with a port (doc/containers-design.md): `open`
+  port, `changed { open: false }` written back when the user closes it
+  (the close icon, the mask, Escape); `title`, `as` (modal / drawer),
+  `placement`, `width`, `inline` (shown in place — previews, stories),
+  `content` (a layout, `contains`). A button opens it with a `set` on the
+  path; the content is edited where any container's is ("Edit content").
+- Two SETTINGS instead of two kinds: `input.rows` (a long text is the same
+  field with more lines — the same ports, rules and alert) and
+  `button.confirm` (a question asked before the click counts; `clicked` is
+  emitted on OK only).
+
 The validation RULE SET belongs to the contract (builders must render it
 uniformly); the rule semantics are implemented per widget package and
 checked by conformance stories.

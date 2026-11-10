@@ -30,20 +30,19 @@ function setup(editLock: EditLock | undefined = undefined, page = "demo") {
 }
 
 describe("usePageExport", () => {
-  it("makes the page's file — views, route and the widgets down into the box — and never the user's own views", () => {
+  it("makes the page's file — views with the box's layout nested in its cell, route and the widgets inside — and never the user's own views", () => {
     const { result, trees } = setup();
     expect(result.current.canExport).toBe(true);
     expect(result.current.fileName).toBe("demo.page.json");
+    const custom = trees.viewModels.widgets["custom"] as Record<string, unknown>;
+    const page = trees.viewModels.pages["demo"]?.["default"] as { engine: string; cells: Record<string, unknown>[] };
     expect(result.current.file).toEqual({
       kind: "wirework-page",
       version: 1,
       page: "demo",
       route,
-      templates: trees.viewModels.pages["demo"],
-      widgets: {
-        "widgets.custom.custom-1": (trees.viewModels.widgets["custom"] as Record<string, unknown>)["custom-1"],
-        "widgets.custom.custom-2": (trees.viewModels.widgets["custom"] as Record<string, unknown>)["custom-2"],
-      },
+      templates: { default: { ...page, cells: [{ ...page.cells[0], templates: custom["custom-2"] }] } },
+      widgets: { "widgets.custom.custom-1": custom["custom-1"] },
     });
     expect(JSON.stringify(result.current.file)).not.toContain("mine");
   });

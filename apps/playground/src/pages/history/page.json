@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "history",
+  "route": {
+    "path": "/demo/history",
+    "title": "History",
+    "menu": true
+  }
+}

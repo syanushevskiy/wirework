@@ -64,10 +64,16 @@ When("I edit for everyone", async ({ page }) => {
   await expect(page.getByTestId("edit-target")).toHaveText("edits → everyone");
 });
 
-/** Adding changes the shared page: locked while a role is edited for, and the lock says what to do. */
-Then("adding widgets waits for the edits to be for everyone", async ({ page }) => {
-  await expect(page.getByTestId("add-widget")).toBeDisabled();
-  await expect(page.getByTestId("add-widget-locked")).toContainText("edit for everyone");
+/** "Add a role" in the toolbar: the name typed, Enter adds it to the roles the application grants (app.lists.roles). */
+When("I add the role {string}", async ({ page }, role: string) => {
+  const field = page.getByTestId("add-role");
+  await field.fill(role);
+  await field.press("Enter");
+});
+
+/** A name that is not a role name, or a role already there: the field says so and nothing is added. */
+Then("the new role name is refused", async ({ page }) => {
+  await expect(page.getByTestId("add-role")).toHaveAttribute("aria-invalid", "true");
 });
 
 /** In the widget editor of a role's cell: the widget's templates on offer, one chosen as the role's view for the cell. */

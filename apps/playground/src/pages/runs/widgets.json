@@ -1,0 +1,391 @@
+{
+  "widgets.runs.applicationsFilter": {
+    "default": {
+      "inputs": {
+        "value": "filters.applications",
+        "options": "app.lists.applications"
+      },
+      "on": {
+        "changed": [
+          {
+            "call": "filters/sync-suites"
+          }
+        ]
+      },
+      "label": "Applications",
+      "placeholder": "choose applications"
+    }
+  },
+  "widgets.runs.deleteRun": {
+    "default": {
+      "label": "Delete run",
+      "variant": "danger",
+      "confirm": "Delete this run?",
+      "on": {
+        "clicked": [
+          {
+            "call": "runs/delete-selected"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ]
+      },
+      "when": [
+        {
+          "path": "runs.selected",
+          "is": "empty",
+          "not": true
+        },
+        {
+          "path": "app.user.roles",
+          "is": "user/has-role",
+          "to": "wirework-admin"
+        }
+      ]
+    }
+  },
+  "widgets.runs.echoSelectedRun": {
+    "default": {
+      "inputs": {
+        "value": "runs.selected"
+      },
+      "label": "Selected run"
+    }
+  },
+  "widgets.runs.error": {
+    "default": {
+      "inputs": {
+        "text": "runs.error"
+      },
+      "text": "",
+      "tone": "danger"
+    }
+  },
+  "widgets.runs.filterBar": {
+    "default": {
+      "inputs": {
+        "filters": "runs.filters",
+        "value": "runs.filterIn"
+      },
+      "on": {
+        "changed": [
+          {
+            "set": "runs.page",
+            "value": 1
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ]
+      },
+      "placeholder": "any"
+    }
+  },
+  "widgets.runs.openRun": {
+    "default": {
+      "label": "Open run",
+      "on": {
+        "clicked": [
+          {
+            "call": "runs/open-selected"
+          }
+        ]
+      },
+      "when": [
+        {
+          "path": "runs.selected",
+          "is": "empty",
+          "not": true
+        }
+      ],
+      "appear": "fade",
+      "disappear": "fade"
+    }
+  },
+  "widgets.runs.pagination": {
+    "default": {
+      "inputs": {
+        "page": "runs.page",
+        "total": "runs.total",
+        "pageSize": "runs.pageSize"
+      },
+      "on": {
+        "changed": [
+          {
+            "set": "runs.pageSize",
+            "from": "pageSize"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "widgets.runs.refresher": {
+    "default": {
+      "inputs": {
+        "schedule": "runs.autoRefresh",
+        "busy": "runs.loading"
+      },
+      "on": {
+        "refresh": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "widgets.runs.startedRange": {
+    "default": {
+      "inputs": {
+        "value": "runs.filterBetween.started"
+      },
+      "label": "Started between",
+      "on": {
+        "changed": [
+          {
+            "set": "runs.page",
+            "value": 1
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "widgets.runs.suitesFilter": {
+    "default": {
+      "inputs": {
+        "value": "filters.suites",
+        "options": "filters.suiteOptions"
+      },
+      "label": "Test suites",
+      "placeholder": "choose applications first"
+    }
+  },
+  "widgets.runs.table": {
+    "default": {
+      "inputs": {
+        "rows": "runs.data",
+        "loading": "runs.loading",
+        "columns": "runs.columns",
+        "filterIn": "runs.filterIn",
+        "filterLike": "runs.filterLike",
+        "orderBy": "runs.orderBy"
+      },
+      "headerFilters": true,
+      "on": {
+        "load": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "url": "/api/v1/view/runs",
+              "into": "runs",
+              "metadata": true,
+              "pageSize": 5,
+              "columns": {
+                "inbound": {
+                  "hidden": true
+                },
+                "id": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "name": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "reference": {
+                  "cell": {
+                    "kind": "custom",
+                    "name": "copy"
+                  }
+                },
+                "state": {
+                  "cell": {
+                    "kind": "tag",
+                    "tones": {
+                      "Success": "success",
+                      "Failed": "danger",
+                      "Running": "info",
+                      "Queued": "default"
+                    }
+                  }
+                }
+              },
+              "filters": {
+                "inbound": false,
+                "name": {
+                  "label": "Suite",
+                  "values": ["Nightly regression", "Smoke suite", "Migration check"]
+                }
+              }
+            }
+          }
+        ],
+        "filter-changed": [
+          {
+            "set": "runs.filterIn",
+            "from": "filterIn"
+          },
+          {
+            "set": "runs.filterLike",
+            "from": "filterLike"
+          },
+          {
+            "set": "runs.page",
+            "value": 1
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ],
+        "sort-changed": [
+          {
+            "set": "runs.orderBy",
+            "from": "orderBy"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ],
+        "link-clicked": [
+          {
+            "call": "nav/follow"
+          }
+        ]
+      }
+    },
+    "admin": {
+      "inputs": {
+        "rows": "runs.data",
+        "loading": "runs.loading",
+        "columns": "runs.columns",
+        "filterIn": "runs.filterIn",
+        "filterLike": "runs.filterLike",
+        "orderBy": "runs.orderBy"
+      },
+      "headerFilters": true,
+      "on": {
+        "load": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "url": "/api/v1/view/runs/all",
+              "into": "runs",
+              "metadata": true,
+              "pageSize": 5,
+              "columns": {
+                "inbound": {
+                  "hidden": true
+                },
+                "id": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "name": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "reference": {
+                  "cell": {
+                    "kind": "custom",
+                    "name": "copy"
+                  }
+                },
+                "state": {
+                  "cell": {
+                    "kind": "tag",
+                    "tones": {
+                      "Success": "success",
+                      "Failed": "danger",
+                      "Running": "info",
+                      "Queued": "default"
+                    }
+                  }
+                }
+              },
+              "filters": {
+                "inbound": false,
+                "name": {
+                  "label": "Suite",
+                  "values": ["Nightly regression", "Smoke suite", "Migration check"]
+                }
+              }
+            }
+          }
+        ],
+        "filter-changed": [
+          {
+            "set": "runs.filterIn",
+            "from": "filterIn"
+          },
+          {
+            "set": "runs.filterLike",
+            "from": "filterLike"
+          },
+          {
+            "set": "runs.page",
+            "value": 1
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ],
+        "sort-changed": [
+          {
+            "set": "runs.orderBy",
+            "from": "orderBy"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "runs"
+            }
+          }
+        ],
+        "link-clicked": [
+          {
+            "call": "nav/follow"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -349,6 +349,15 @@ describe("the loader", () => {
     expect(requests[0]?.dataFilter.filterLike).toEqual({ host_name: "qa" });
   });
 
+  it("sends what the date ranges picked, from <into>.filterBetween — a range with both ends empty is not sent", async () => {
+    const { requests, transport } = exampleServer();
+    const store = createStore({
+      jobs: { filterBetween: { started: ["2026-11-01", "2026-11-09"], finished: ["", ""] } },
+    });
+    await createTableViewLoader(transport)(store, { url: "/api/v1/view/jobs", into: "jobs" });
+    expect(requests[0]?.dataFilter.filterBetween).toEqual({ started: ["2026-11-01", "2026-11-09"] });
+  });
+
   it("with more: asks for the rows after the ones held and appends them; the page stays", async () => {
     const all = Array.from({ length: 12 }, (_, index) => ({ id: String(index + 1) }));
     const requests: TableViewRequest[] = [];

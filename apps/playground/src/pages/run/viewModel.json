@@ -1,0 +1,128 @@
+{
+  "templates": {
+    "default": {
+      "engine": "css-grid",
+      "columns": ["1fr", "1fr", "12rem"],
+      "areas": [
+        "label-run-name status-run button-back",
+        "steps-run steps-run steps-run",
+        "descriptions-run descriptions-run timeline-run",
+        "result-run result-run button-retry",
+        "dialog-retry dialog-retry dialog-retry",
+        "echo-route echo-route echo-route"
+      ],
+      "cells": [
+        {
+          "id": "label-run-name",
+          "widget": "antd-label",
+          "model": "widgets.run.name",
+          "template": "default"
+        },
+        {
+          "id": "status-run",
+          "widget": "status-badge",
+          "model": "widgets.run.status",
+          "template": "default"
+        },
+        {
+          "id": "button-back",
+          "widget": "antd-button",
+          "model": "widgets.run.back",
+          "template": "default"
+        },
+        {
+          "id": "steps-run",
+          "widget": "antd-steps",
+          "model": "widgets.run.pipeline",
+          "template": "default"
+        },
+        {
+          "id": "descriptions-run",
+          "widget": "antd-descriptions",
+          "model": "widgets.run.facts",
+          "template": "default"
+        },
+        {
+          "id": "timeline-run",
+          "widget": "antd-timeline",
+          "model": "widgets.run.history",
+          "template": "default"
+        },
+        {
+          "id": "result-run",
+          "widget": "antd-result",
+          "model": "widgets.run.missing",
+          "template": "default"
+        },
+        {
+          "id": "button-retry",
+          "widget": "antd-button",
+          "model": "widgets.run.retry",
+          "template": "default"
+        },
+        {
+          "id": "dialog-retry",
+          "widget": "antd-dialog",
+          "model": "widgets.run.retryDialog",
+          "template": "default",
+          "templates": {
+            "default": {
+              "inputs": {
+                "open": "run.retry.open"
+              },
+              "title": "Retry run",
+              "content": {
+                "engine": "flex-rows",
+                "rows": [
+                  {
+                    "cells": [
+                      {
+                        "id": "input-retry-reason",
+                        "widget": "antd-input",
+                        "model": "widgets.run.retryReason",
+                        "template": "default",
+                        "classes": "w-full"
+                      }
+                    ]
+                  },
+                  {
+                    "classes": "justify-end gap-2",
+                    "cells": [
+                      {
+                        "id": "button-retry-cancel",
+                        "widget": "antd-button",
+                        "model": "widgets.run.retryCancel",
+                        "template": "default",
+                        "classes": "flex-none"
+                      },
+                      {
+                        "id": "button-retry-confirm",
+                        "widget": "antd-button",
+                        "model": "widgets.run.retryConfirm",
+                        "template": "default",
+                        "classes": "flex-none"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "echo-route",
+          "widget": "antd-echo",
+          "model": "widgets.run.route",
+          "template": "default"
+        }
+      ]
+    }
+  },
+  "on": {
+    "load": [
+      {
+        "call": "run/load"
+      }
+    ]
+  }
+}

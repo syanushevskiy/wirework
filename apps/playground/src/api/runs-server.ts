@@ -32,6 +32,17 @@ export interface RunsStats {
   passRate: number;
 }
 
+/** One entry of a run's history, as the server tells it — the shape the timeline widget shows. */
+export interface RunEvent {
+  time?: string;
+  title?: string;
+  text: string;
+  tone?: "default" | "info" | "success" | "warning" | "danger";
+}
+
+/** A run as its page gets it: the record plus its history. */
+export type RunDetails = Run & { history: RunEvent[] };
+
 export interface RunsServer {
   /** The view table API of the runs list: resolves after the simulated latency. */
   fetchView(request: TableViewRequest): Promise<TableViewResponse>;
@@ -41,10 +52,12 @@ export interface RunsServer {
    * the same clock — a page change here moves time like one on the plain view.
    */
   fetchViewAll(request: TableViewRequest): Promise<TableViewResponse>;
-  /** One run as it is now, or undefined when there is none with this id. Time does not move. */
-  fetchRun(id: string): Promise<Run | undefined>;
+  /** One run as it is now, with its history, or undefined when there is none with this id. Time does not move. */
+  fetchRun(id: string): Promise<RunDetails | undefined>;
   /** Delete one run (doc/roles-design.md: the Wirework admin's button). Time does not move. */
   deleteRun(id: string): Promise<void>;
+  /** Queue one run again, noting why (the run page's Retry dialog). Time does not move. */
+  retryRun(id: string, reason: string): Promise<void>;
   /** The overview's numbers. Time does not move. */
   fetchStats(): Promise<RunsStats>;
   /** Back to the initial runs. Requests still in flight no longer move time. */
@@ -69,7 +82,11 @@ function advance(run: Run): Run {
   }
 }
 
-/** Seeded rows first, then generated ones continuing the id sequence. */
+/**
+ * Seeded rows first, then generated ones continuing the id sequence — each
+ * started one day earlier than the one before, in October, so a date range
+ * over the seeded runs' November days selects a known few.
+ */
 function buildRows(seed: readonly Run[], total: number): Run[] {
   const rows = [...seed];
   const seeded = rows.length;
@@ -80,14 +97,43 @@ function buildRows(seed: readonly Run[], total: number): Run[] {
       name: `E2E Run # ${98765 + index}`,
       reference: `REF${59456735 + index}`,
       inbound: `IND${557327 + index}`,
+      started: `2026-10-${String(25 - (index - seeded)).padStart(2, "0")} 09:00`,
       status: STATUSES[index % STATUSES.length] ?? QUEUED,
     });
   }
   return rows;
 }
 
+/** `started` some minutes later, as text — the history's times; every run starts on a full hour. */
+const minutesAfter = (started: string, minutes: number): string =>
+  `${started.slice(0, 14)}${String(minutes).padStart(2, "0")}`;
+
+/** A run's history as the server tells it: queued when it started, then what has happened since — and every retry. */
+function historyOf(run: Run, retries: readonly string[]): RunEvent[] {
+  const { state, message } = run.status;
+  return [
+    { time: run.started, text: "Queued", tone: "default" },
+    ...(state === "Queued"
+      ? []
+      : [{ time: minutesAfter(run.started, 1), text: "Running on qa-1", tone: "info" as const }]),
+    ...(state === "Success"
+      ? [{ time: minutesAfter(run.started, 7), text: "Finished", tone: "success" as const }]
+      : []),
+    ...(state === "Failed"
+      ? [{ time: minutesAfter(run.started, 7), title: "Failed", text: message, tone: "danger" as const }]
+      : []),
+    ...retries.map((reason) => ({
+      title: "Retried",
+      text: reason === "" ? "no reason given" : reason,
+      tone: "warning" as const,
+    })),
+  ];
+}
+
 /** A run as the view table API serves it: one flat record, keyed by the column ids — the owner on the admin's view only. */
-type ViewRow = Record<"id" | "name" | "reference" | "inbound" | "state" | "message", string> & { owner?: string };
+type ViewRow = Record<"id" | "name" | "reference" | "inbound" | "started" | "state" | "message", string> & {
+  owner?: string;
+};
 
 /** Who a run belongs to: the server's knowledge, by the id's parity so a scenario can assert it. */
 const ownerOf = (run: Run): string => (Number(run.id) % 2 === 0 ? "alice" : "bob");
@@ -97,6 +143,7 @@ const toViewRow = (run: Run, withOwner: boolean): ViewRow => ({
   name: run.name,
   reference: run.reference,
   inbound: run.inbound,
+  started: run.started,
   state: run.status.state,
   message: run.status.message,
   ...(withOwner ? { owner: ownerOf(run) } : {}),
@@ -161,20 +208,38 @@ const describeRuns = (rows: readonly ViewRow[], withOwner: boolean): NonNullable
       isHidden: false,
       isSortable: true,
     },
-    // The server itself hides this one: a page shows it only by asking to.
+    // The server itself hides these two: a page shows them only by asking to — and filters by `started` with a range.
     { id: "message", headerName: "Message", type: "clob", description: null, filterValues: null, isHidden: true },
+    { id: "started", headerName: "Started", type: "timestamp", description: null, filterValues: null, isHidden: true },
   ],
   enableFilter: true,
   enableSorting: true,
 });
 
-/** The rows a request's `dataFilter` selects, in its order — before paging. `filterLike` is a case-blind "contains". */
+/** A `filterBetween` value as the date-range widget sends it: [from, to], either end "" for open. Anything else is ignored. */
+const rangeOf = (value: unknown): [string, string] | undefined =>
+  Array.isArray(value) && value.length === 2 && value.every((end) => typeof end === "string")
+    ? // The one cast: the two checks above are exactly what the tuple type says.
+      (value as [string, string])
+    : undefined;
+
+/**
+ * The rows a request's `dataFilter` selects, in its order — before paging.
+ * `filterLike` is a case-blind "contains"; `filterBetween` compares the
+ * column's text with the ends as text (ISO dates sort as text), the `to`
+ * end over the column's first characters so a day includes its whole day.
+ */
 function select(
   rows: readonly ViewRow[],
-  { filterIn, filterLike, orderBy }: TableViewRequest["dataFilter"],
+  { filterBetween, filterIn, filterLike, orderBy }: TableViewRequest["dataFilter"],
 ): ViewRow[] {
   const field = (row: ViewRow, column: string): string | undefined =>
     (row as Record<string, string | undefined>)[column];
+  const between = (row: ViewRow, column: string, range: [string, string]): boolean => {
+    const [from, to] = range;
+    const value = field(row, column) ?? "";
+    return (from === "" || value >= from) && (to === "" || value.slice(0, to.length) <= to);
+  };
   const selected = rows.filter(
     (row) =>
       Object.entries(filterIn).every(
@@ -182,7 +247,11 @@ function select(
       ) &&
       Object.entries(filterLike).every(([column, text]) =>
         (field(row, column) ?? "").toLowerCase().includes(String(text).toLowerCase()),
-      ),
+      ) &&
+      Object.entries(filterBetween).every(([column, value]) => {
+        const range = rangeOf(value);
+        return range === undefined || between(row, column, range);
+      }),
   );
   // Later keys break the ties of earlier ones; the sort is stable.
   return Object.entries(orderBy).reduceRight<ViewRow[]>(
@@ -198,6 +267,8 @@ function select(
 
 export function createRunsServer(options: { seed: readonly Run[]; total: number; latencyMs: number }): RunsServer {
   let rows = buildRows(options.seed, options.total);
+  /** Why each run was queued again, in order — told in its history. */
+  let retries = new Map<string, string[]>();
   /** Bumped by `reset`: an answer from before a reset must not move the new timeline. */
   let epoch = 0;
 
@@ -233,10 +304,19 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
   return {
     fetchView: (request) => listView(request, false),
     fetchViewAll: (request) => listView(request, true),
-    fetchRun: (id) => roundTrip(() => rows.find((row) => row.id === id)),
+    fetchRun: (id) =>
+      roundTrip(() => {
+        const run = rows.find((row) => row.id === id);
+        return run === undefined ? undefined : { ...run, history: historyOf(run, retries.get(id) ?? []) };
+      }),
     deleteRun: (id) =>
       roundTrip(() => {
         rows = rows.filter((row) => row.id !== id);
+      }),
+    retryRun: (id, reason) =>
+      roundTrip(() => {
+        rows = rows.map((row) => (row.id === id ? { ...row, status: QUEUED } : row));
+        retries.set(id, [...(retries.get(id) ?? []), reason]);
       }),
     fetchStats: () =>
       roundTrip(() => {
@@ -252,6 +332,7 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
     reset: () => {
       epoch += 1;
       rows = buildRows(options.seed, options.total);
+      retries = new Map();
     },
   };
 }

@@ -1,23 +1,81 @@
-/** The state inspector: the way a scenario puts data into the store, as a person would. */
-import { expect, type Page } from "@playwright/test";
+/**
+ * The state inspector: the way a scenario puts data into the store, as a
+ * person would. On a demo page the panel is four editors
+ * (apps/playground/src/state-sections.ts) — the page's own data, the page's
+ * own views (its part of `viewModels` / `userViewModels`, nothing of another
+ * page's), the global settings (`app.settings`, shown as the settings object
+ * itself) and the global session (the rest of `app`, shown as that object);
+ * the builder has one. A path picks its editor.
+ */
+import { expect, type Locator, type Page } from "@playwright/test";
+
+const APP = "app";
+const SETTINGS = "app.settings";
+const CONFIG_ROOTS = new Set(["viewModels", "userViewModels"]);
+
+/** Which editor a path belongs to, and the path INSIDE that editor's JSON. */
+function sectionOf(path: string): { key: string; path: string } {
+  if (path === SETTINGS || path.startsWith(`${SETTINGS}.`))
+    return { key: "settings", path: path.slice(SETTINGS.length + 1) };
+  if (path === APP || path.startsWith(`${APP}.`)) return { key: "session", path: path.slice(APP.length + 1) };
+  return { key: CONFIG_ROOTS.has(path.split(".")[0] ?? "") ? "views" : "page", path };
+}
 
 /**
- * Set one path in the inspector's JSON (creating missing parents) and apply
+ * The editor of a section — or the only one, where the panel has a single
+ * editor (the builder): there the whole tree is one JSON, so a path is
+ * taken whole.
+ */
+async function editorOf(page: Page, key: string): Promise<{ editor: Locator; whole: boolean }> {
+  const editors = page.getByTestId("state-editor");
+  return (await editors.count()) === 1
+    ? { editor: editors.first(), whole: true }
+    : { editor: editors.and(page.locator(`[data-section="${key}"]`)), whole: false };
+}
+
+/** The editor that holds the page's views — for an edit meant to touch `viewModels`. */
+export const configurationEditor = async (page: Page): Promise<Locator> => (await editorOf(page, "views")).editor;
+
+/** Every editor's text, as one: what "the state JSON contains" reads. */
+export async function stateJson(page: Page): Promise<string> {
+  const editors = await page.getByTestId("state-editor").all();
+  return (await Promise.all(editors.map((editor) => editor.inputValue()))).join("\n");
+}
+
+/** Apply the draft of the editor's section and wait until it is live again (or not, for an edit that must be refused). */
+export async function applyEditor(page: Page, editor: Locator, accepted = true): Promise<void> {
+  const key = (await editor.getAttribute("data-section")) ?? "";
+  await page
+    .getByTestId("state-apply")
+    .and(page.locator(`[data-section="${key}"]`))
+    .click();
+  if (accepted) {
+    await expect(page.getByTestId("state-mode").and(page.locator(`[data-section="${key}"]`))).toHaveText("live");
+  }
+}
+
+/**
+ * Set one path in its editor's JSON (creating missing parents) and apply
  * it. `accepted: false` is for an edit the inspector must REFUSE: it stays a
  * draft, so there is no "live" to wait for.
  */
 export async function editStateJson(page: Page, path: string, value: unknown, accepted = true): Promise<void> {
-  const editor = page.getByTestId("state-editor");
+  const section = sectionOf(path);
+  const { editor, whole } = await editorOf(page, section.key);
+  const inside = whole ? path : section.path;
   const state = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
-  const segments = path.split(".");
-  let cursor: Record<string, unknown> = state;
-  for (const segment of segments.slice(0, -1)) {
-    cursor[segment] ??= {};
-    cursor = cursor[segment] as Record<string, unknown>;
+  if (inside === "") {
+    await editor.fill(JSON.stringify(value, null, 2));
+  } else {
+    const segments = inside.split(".");
+    let cursor: Record<string, unknown> = state;
+    for (const segment of segments.slice(0, -1)) {
+      cursor[segment] ??= {};
+      cursor = cursor[segment] as Record<string, unknown>;
+    }
+    const [last = inside] = segments.slice(-1);
+    cursor[last] = value;
+    await editor.fill(JSON.stringify(state, null, 2));
   }
-  const [last = path] = segments.slice(-1);
-  cursor[last] = value;
-  await editor.fill(JSON.stringify(state, null, 2));
-  await page.getByTestId("state-apply").click();
-  if (accepted) await expect(page.getByTestId("state-mode")).toHaveText("live");
+  await applyEditor(page, editor, accepted);
 }

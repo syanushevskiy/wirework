@@ -253,6 +253,8 @@ export function usePageEditing({
 
   return {
     plan,
+    /** What every op is made from — for a host whose builder places widgets for the same target (useBuilder's `context`). */
+    context: ctx,
     /** The name the shown layout renders under: the page's, or the nested one of a layout inside a container. */
     layoutPage: chained(page, at),
     shownViewModels: shown.viewModels,

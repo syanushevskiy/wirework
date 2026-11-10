@@ -23,6 +23,8 @@ export const buttonContract = defineContract({
   settings: z.object({
     label: z.string().default("Click me").describe("Button caption"),
     variant: z.enum(BUTTON_VARIANTS).default("primary").describe("How much the button stands out"),
+    // A destructive click asks first: `clicked` is emitted on OK only — a setting, since the event does not change.
+    confirm: z.string().optional().describe("A question asked before the click counts; the click is emitted on OK"),
   }),
   preview: { viewModel: { label: "Click me" } },
 });

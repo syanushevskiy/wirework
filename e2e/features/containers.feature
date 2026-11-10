@@ -8,9 +8,9 @@ Feature: Containers — a card that holds other widgets
 
   Scenario: The settings page keeps its controls in a card, and they work inside it
     Given I open the "settings" page
-    # The title, the card and the two echoes: the three controls inside the card are the card's cells, not the page's.
+    # The title, the card and the two echoes: the five controls inside the card are the card's cells, not the page's.
     Then the page has 4 cells
-    And the container "card-preferences" holds the cells "input-name, select-page-size, checkbox-auto-refresh"
+    And the container "card-preferences" holds the cells "input-name, select-page-size, checkbox-auto-refresh, number-refresh-seconds, date-report-day"
     When I type "Sergey" into the input
     Then the input is valid
     And the state JSON contains '"displayName": "Sergey"'
@@ -75,7 +75,7 @@ Feature: Containers — a card that holds other widgets
     And I edit the content of the cell "card-preferences"
     Then the breadcrumb reads "settings › card-preferences"
     And the page mode is "editing"
-    And the page has 3 cells
+    And the page has 5 cells
     And the cell "select-page-size" is placed at x 6 y 0 w 3 h 2
     When I widen the cell "select-page-size" by 1 column
     Then the cell "select-page-size" is placed at x 6 y 0 w 4 h 2

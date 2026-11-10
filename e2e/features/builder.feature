@@ -335,11 +335,12 @@ Feature: Widget builder
     Given I open the "builder" page
     When I open the widget palette
     Then the palette shows a preview of every registered widget
-    # Two table kinds: the table and the infinite table.
+    # Two table kinds — the table and the infinite table — and the fact sheet, which shows a record in the table's cell kinds.
     When I search the palette for "table"
-    Then the palette shows 2 widget previews
+    Then the palette shows 3 widget previews
     And the preview of "antd-table" reads "Nightly"
     And the preview of "antd-infinite-table" reads "Nightly"
+    And the preview of "antd-descriptions" reads "Nightly regression"
     When I search the palette for "nothing-like-this"
     Then the palette shows 0 widget previews
     And the palette reports no matches

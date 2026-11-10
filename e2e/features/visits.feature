@@ -13,7 +13,9 @@ Feature: Page visits
     Then the state JSON does not contain '"demo"'
     And the state JSON does not contain '"runs"'
     And the state JSON does not contain '"filters"'
-    And the state JSON does not contain '"app"'
+    # The roles the application grants (app.lists.roles) are configuration the builder starts with — no settings, no user.
+    And the state JSON does not contain '"settings"'
+    And the state JSON does not contain '"user"'
     And the state JSON does not contain '"route"'
     When I choose the "antd-counter" widget
     And I set the "input" port "value" to "form.count"

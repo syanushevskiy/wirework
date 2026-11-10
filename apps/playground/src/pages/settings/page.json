@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "settings",
+  "route": {
+    "path": "/demo/settings",
+    "title": "Settings",
+    "menu": true
+  }
+}

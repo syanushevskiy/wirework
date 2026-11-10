@@ -76,7 +76,7 @@ Feature: Demo application — routes and global state
 
   Scenario: An unknown run says so
     Given I open the address "/demo/runs/nope"
-    Then the cell "label-run-error" reads "There is no run nope"
+    Then the result says "There is no run nope"
 
   Scenario: An unknown address opens the overview
     Given I open the address "/no/such/page"

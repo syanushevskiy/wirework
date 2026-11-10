@@ -45,6 +45,7 @@ import {
 import { DEMO_ROLES, samplePeople, type DemoRole } from "@wirework/view-data-models-examples";
 import type { PageVisit, Playground } from "../boot";
 import { PAGE_ROUTES } from "../routes";
+import { builderStateSections, demoStateSections } from "../state-sections";
 import { useDemoBridge } from "./use-demo-bridge";
 
 /** The page the widget builder adds to. */
@@ -239,11 +240,12 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   );
 
   /**
-   * Why the builder's Add is not offered right now, if it is not. Adding
-   * always changes the SHARED page: not without the permission, not under
-   * an open edit session (it would be silently dropped), not in a user's
-   * own view (the overlay carries settings, view and layout only) and not
-   * for a role (its layout places the widgets the page has).
+   * Why the builder's Add is not offered right now, if it is not: not
+   * without the permission, not under an open edit session (it would be
+   * silently dropped), not in a user's own view (the overlay carries
+   * settings, view and layout only). For a ROLE it is offered: the widget's
+   * template is everyone's and its cell goes into the role's own view
+   * (doc/roles-design.md), so the role sees one widget more.
    */
   const addLock: AddLock | undefined = !canEditPages
     ? "permission"
@@ -251,9 +253,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
       ? "editing"
       : target === "user"
         ? "user-view"
-        : target !== "base"
-          ? "role-view"
-          : undefined;
+        : undefined;
 
   /**
    * The page changed under the user's hands — a widget ADDED, a page edit
@@ -331,6 +331,8 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     page,
     at: target === "base" ? at : undefined,
     naming: DEFAULT_BUILDER_NAMING,
+    // Editing for a role: the placed widget's cell lands in the role's own view, through the session's ops.
+    context: editing.context,
     cancelEditing,
     onAdded,
   });
@@ -356,6 +358,8 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     target,
     knownRoles,
     onSelectRole: selectRole,
+    // The roles the application grants are a LIST in the store (app.lists.roles, doc/roles-design.md): a builder adds one there.
+    onAddRole: (role) => store.set("app.lists.roles", [...(knownRoles ?? []), role]),
   });
 
   /**
@@ -387,7 +391,15 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   }, [page]);
   const exporting = usePageExport({ registry, layoutEngines, viewModels, page, route, editLock });
 
+  // The State panel's editors (state-sections.ts): a demo page's own data and views, the global settings and
+  // session; the builder's store whole.
+  const stateSections = useMemo(
+    () => (page === BUILDER_PAGE ? builderStateSections : demoStateSections(page, { registry, layoutEngines })),
+    [page, registry, layoutEngines],
+  );
+
   return {
+    stateSections,
     registry,
     contracts,
     layoutEngines,

@@ -1,0 +1,206 @@
+{
+  "widgets.run.back": {
+    "default": {
+      "label": "Back to runs",
+      "variant": "secondary",
+      "on": {
+        "clicked": [
+          {
+            "call": "nav/go",
+            "with": {
+              "to": "/demo/runs"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "widgets.run.facts": {
+    "default": {
+      "inputs": {
+        "record": "run.data",
+        "loading": "run.loading"
+      },
+      "title": "Run",
+      "columns": 2,
+      "items": [
+        {
+          "title": "Status",
+          "property": "status.state",
+          "cell": {
+            "kind": "tag",
+            "tones": {
+              "Success": "success",
+              "Failed": "danger",
+              "Running": "info",
+              "Queued": "default"
+            }
+          }
+        },
+        {
+          "title": "Reference",
+          "property": "reference",
+          "cell": {
+            "kind": "custom",
+            "name": "copy"
+          }
+        },
+        {
+          "title": "Message",
+          "property": "status.message"
+        },
+        {
+          "title": "Inbound",
+          "property": "inbound"
+        },
+        {
+          "title": "Started",
+          "property": "started"
+        }
+      ]
+    }
+  },
+  "widgets.run.history": {
+    "default": {
+      "inputs": {
+        "items": "run.data.history"
+      }
+    }
+  },
+  "widgets.run.missing": {
+    "default": {
+      "inputs": {
+        "title": "run.error"
+      },
+      "status": "not-found",
+      "title": "No such run",
+      "detail": "Check the address, or go back to the list.",
+      "action": "Open the runs list",
+      "on": {
+        "clicked": [
+          {
+            "call": "nav/go",
+            "with": {
+              "to": "/demo/runs"
+            }
+          }
+        ]
+      },
+      "when": [
+        {
+          "path": "run.error",
+          "is": "empty",
+          "not": true
+        }
+      ]
+    }
+  },
+  "widgets.run.name": {
+    "default": {
+      "inputs": {
+        "text": "run.data.name"
+      },
+      "text": "Loading the run…",
+      "tone": "accent"
+    }
+  },
+  "widgets.run.pipeline": {
+    "default": {
+      "inputs": {
+        "current": "run.pipeline.step",
+        "failed": "run.pipeline.failed"
+      },
+      "label": "Pipeline",
+      "items": [
+        {
+          "key": "queued",
+          "label": "Queued"
+        },
+        {
+          "key": "running",
+          "label": "Running"
+        },
+        {
+          "key": "finished",
+          "label": "Finished"
+        }
+      ]
+    }
+  },
+  "widgets.run.retry": {
+    "default": {
+      "label": "Retry",
+      "on": {
+        "clicked": [
+          {
+            "set": "run.retry.open",
+            "value": true
+          }
+        ]
+      },
+      "when": [
+        {
+          "path": "run.data",
+          "is": "runs/retryable"
+        }
+      ],
+      "appear": "drop"
+    }
+  },
+  "widgets.run.retryCancel": {
+    "default": {
+      "label": "Cancel",
+      "variant": "secondary",
+      "on": {
+        "clicked": [
+          {
+            "set": "run.retry.open",
+            "value": false
+          }
+        ]
+      }
+    }
+  },
+  "widgets.run.retryConfirm": {
+    "default": {
+      "label": "Run again",
+      "on": {
+        "clicked": [
+          {
+            "call": "runs/retry"
+          },
+          {
+            "set": "run.retry.open",
+            "value": false
+          }
+        ]
+      }
+    }
+  },
+  "widgets.run.retryReason": {
+    "default": {
+      "inputs": {
+        "value": "run.retry.reason"
+      },
+      "label": "Reason",
+      "placeholder": "why run it again",
+      "rows": 3
+    }
+  },
+  "widgets.run.route": {
+    "default": {
+      "inputs": {
+        "value": "route"
+      },
+      "label": "Route (from the URL)"
+    }
+  },
+  "widgets.run.status": {
+    "default": {
+      "inputs": {
+        "state": "run.data.status.state"
+      },
+      "prefix": "Status: "
+    }
+  }
+}

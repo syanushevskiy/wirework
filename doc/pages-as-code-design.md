@@ -380,3 +380,190 @@ produces.
   not in it — and downloaded as `overview.page.json`; the cards page with
   the widgets inside its cards three engines deep; a page built in the
   builder; no export without the permission).
+
+## Built (9 November 2026): the pages as folders, and the loader
+
+The product owner asked for the pages in the source as FOLDERS — "pages →
+roles → viewModel.json and so on" — and for the store to get a page's
+configuration when the page is reached, nothing of another page's. That is
+phase 1's loader, with one change to the file: it is a folder.
+
+- **The folder** is `apps/playground/src/pages/<page>/`, three files that
+  are the page file in three parts (`PAGE_FOLDER_FILES` in the schema,
+  `pageFolder` / `pageFromFolder` in the engine): `page.json` says WHICH
+  page — `kind`, `version`, `page`, `route`; `viewModel.json` everything
+  that is LAYOUT — `templates`, `on`, `roles` and, since the review below,
+  `containers`; `widgets.json` the templates of the other widgets its cells
+  point at, by model path. A reader opens the file they are after; a
+  change to one setting is a one-line diff in one of them. Export page
+  still downloads the one-file form, which a developer splits with
+  `pageFolder` — a "Download as folder" is the next step.
+- **The loader** is `src/pages/index.ts`: Vite's `import.meta.glob` over
+  `./*/*.json`, each folder joined by `pageFromFolder` (the folder's name
+  must be the page's), every page of `DEMO_PAGES` having a folder and every
+  folder being a demo page's — a problem fails the boot naming the file,
+  before any page shows. The routes (`routes.ts`) are the folders'
+  `route` entries in the menu's order plus the builder's own.
+- **The store holds one page at a time.** `viewModels` stays a root of the
+  application's long-lived store, but when a page opens the session puts
+  THAT page's view models there (`AppSession.enter` in boot.ts): the
+  folder's, merged into a tree of its own — or, when this session saw the
+  page before, the tree as it was when the page was left, so an inspector
+  edit or a saved page is still there on the next visit, as it was when
+  the whole tree lived in the store. The memory is per page and per
+  session, this demo's stand-in for the server a host would ask; a visit
+  to the builder ends the session and the memory with it. The State panel's
+  "This page's views" editor now shows the store as it is.
+- **The fixtures package** keeps what is not a page: `DEMO_PAGES` (the
+  menu's order), the page data every visit starts with, the user overlay,
+  the session's people and permissions, the fake servers' seed, the
+  builder's empty page and the failure-path tree. `demoViewModels` is
+  gone; the seven pages were cut into their folders by the same rule the
+  page file uses (every model a cell points at, through the containers'
+  layouts).
+- **Tested**: `pages-file.test.ts` (the split and the join, what a page
+  has not left out, the problem named after its file, a `page.json` naming
+  another page than its folder); `pages-as-code.feature` (a page's view
+  models come from its folder when it opens — the roles page's card and
+  widgets without the runs table, then the runs page's table and the
+  admin's entry without the card); and the whole suite, which renders
+  every demo page from the folders.
+
+## Reviewed (9 November 2026): where a container's layout goes in the folder
+
+The product owner opened the roles page's folder and found
+`viewModel.json` holding one root layout with one card in it, and the
+layout INSIDE the card — the input, the button, the echo, the note — in
+`widgets.json`, because a container's layout lives in its widget template
+(doc/containers-design.md: `content: { engine, cells }`). "This is not
+convenient. Combine in one, or somehow split so that all layout and views
+are in viewModel." The tiger team weighed five answers.
+
+### The question, and five answers
+
+**A. One file.** `page.json` holds the whole page file, as Export page
+produces it. Nothing to explain; the reader scrolls. Three files were
+asked for a week ago for the reader's sake, and the reader now has to know
+the rule that splits them — if the rule is not obvious, one file beats
+three.
+
+**B. The containers' templates go with the layout.** A widget whose
+definition `contains` a layout — a card, tabs, a collapse, a dialog — IS
+layout: its template holds `content` (or a `content` per tab or panel),
+with the cells inside. `viewModel.json` gets a `containers` map of those
+templates, by model path, next to `templates`; `widgets.json` keeps the
+other widgets'. The model does not change: the folder is a serialisation,
+the split a partition of the widget map by one predicate the registry
+already answers. The join is a union, a model in both files a problem.
+
+**C. The layouts cut out of the templates.** `viewModel.json` gets a
+`layouts` map by chain (`card-roles`, `tabs-1/tabs.0.content`) holding each
+container's inner layout; the container's template in `widgets.json` keeps
+its other settings with the layout removed; the join puts every layout
+back where `layoutsOf` says it was. Every layout in one flat list — but a
+second representation of the same tree, surgery on both ends, and a
+two-way invariant between two files that a hand edit breaks silently.
+
+**D. The layout inline in the cell.** The page template's card cell
+carries its inner layout itself. Changes the model: a cell is identity and
+binding, the LAYOUT belongs to the template so that a role or a user may
+pick another template of the same card and a user's own copy of a card's
+content lives in their overlay as a setting (doc/containers-design.md).
+Rejected on the model, not the file.
+
+**E. Leave it and document.** Rejected: the owner read the folder and
+could not find the page in it.
+
+### The team's decision: B — and the owner's: D, in the file
+
+The team's rule was one sentence: `viewModel.json` holds everything that
+is layout — the page's and its containers' — and `widgets.json` the
+widgets that show or edit a value. Shown the two shapes side by side, the
+product owner asked why the card's inside was not nested in the card's
+cell "like a file structure or HTML", heard what is lost (nothing at run
+time; in the FILE, a second shape for a card with two templates or a
+template placed twice) and decided: **nest, in the folder and in Export
+alike, and put the roles in a file of their own.**
+
+So D is the FILE's shape, not the model's. In a page file a cell of a
+widget whose definition `contains` a layout carries the widget's template
+map as `templates`, the layouts inside it with their own cells, nested in
+turn — a card inside a card nests inside it. The two cases the team worried
+about have one rule: a container's templates are written ONCE, in the first
+cell (document order: the page's templates, then the roles') that points at
+its model; a later cell of the same model only names it, as an HTML
+reference would; a model with two templates nests both, and the cell's
+`template` says which it shows. Merging a file into a tree moves every
+nested map back to its model path and the cells are plain again, so the
+store, the builder, the roles and the user's own views are exactly as
+before. `widgets` keeps the other widgets' template maps by model path.
+
+The roles page's `viewModel.json` now reads: the root row, its card, the
+card's title and its three rows inside, in one tree. The folder is four
+files, always: `page.json`, `viewModel.json` (templates and reactions),
+`roles.json` (what every role says, its templates nested the same way — `{}`
+where no role does, so the file is there to be found and filled; the roles
+page's picks the card's `admin` template for the admin, both templates
+nested in the card's cell in `viewModel.json`) and `widgets.json`. Export
+page downloads the same nested shape as one file.
+
+### The tiger team's positions
+
+- **Morgan (product):** opening the roles page's view model must show the
+  card and what is inside it — that is what "the page" means to the
+  people who build pages. Where a label's text lives is secondary. One
+  file would have done too; three files only if each has a reason she
+  can repeat.
+- **Alexei (architecture):** the model is right and stays — a container's
+  layout is its template's, so a role or a user can pick another template
+  of the card. The file rule must follow from the model, not fight it:
+  "a container's template is layout" is such a rule (B); C invents a
+  second shape of the same tree and an invariant between two files.
+- **Dmitri (readability):** B, because a junior can be told the rule in
+  one breath; C needs the reader to reassemble the card in their head
+  from two files. Keeps A as the honest fallback: if the next complaint is
+  about which file holds a widget's settings, go to one file and stop
+  splitting.
+- **Katya (team):** B is the smallest change — the registry already says
+  which widgets hold layouts (`contains`), the split is a partition, the
+  join a union. `page.json` stays tiny and separate: the route is what the
+  author of a new page writes first and what a reviewer checks first.
+- **Sasha (QA):** the invariant must be tested, not hoped: a model path in
+  exactly one of the two widget maps, the join refusing one in both, the
+  split-then-join round trip with a container. The non-technical QAs read
+  `viewModel.json` to find where a widget sits on the page; with B they
+  find the card's inside there.
+- **Ren (contrarian):** argues A seriously. The three files were a
+  sentence of the owner's and now cost a review; every split needs a
+  rule, and the next question is why a label's text — visible on the
+  page — is in `widgets.json` while a card's title is in `viewModel.json`.
+  Measured on the demo: the containers are a third to a half of every
+  page's widget map, so B moves most of the file anyway. Concedes B
+  because the owner wants the folder of parts, with the risk named: the
+  partition is by widget TYPE, which a reader must know; the key must say
+  what it holds (`containers`, not `layouts`), and a widget that gains
+  `contains` later moves files on the next save — a diff to expect, not a
+  bug.
+- **Vlad (fluency):** the split is one chain — the page's cells through
+  the containers, filtered by `contains`, mapped to model paths, the widget
+  map partitioned by that set; the join a spread with a duplicate check.
+  No new state.
+- **External reviewer:** the minimum would be A — it DELETES the folder
+  functions. Given the owner wants the parts, B is the minimum that keeps
+  them: one optional key in a schema, one predicate, one partition, one
+  union with one problem. C is five times the code for the same page.
+
+### What changed
+
+`pageFile` nests: the containers' template maps into their first cells
+(`mapCells`, a walk over every cell wherever its engine keeps it — a cell
+is the `CellBase` object the engines' `cells` return), the other widgets
+by model path as before. `mergePageFiles` un-nests by the same walk, the
+nested maps placed at their model paths with the same differs-between-pages
+check as the flat ones. The page file's schema documents the nesting; the
+folder has a `roles` part (`pageRolesSchema`, `roles.json` in every folder,
+`{}` where no role says anything), and `pageFolder` / `pageFromFolder` are a split and a
+join of keys again, no registry needed — the nesting happened in the file.
+The seven folders were re-cut. Tests: the box nested in its cell, a box
+inside a box, the same box twice written once, the round trip back to the
+tree, the folder with and without roles, the problem named after its file.

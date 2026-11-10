@@ -6,9 +6,13 @@
  * describes, loaded by `table-view/load` (@wirework/table-view) from the
  * URL the table declares. What is left is what only this application knows:
  *  - `run/load` (`createRunLoader`): ONE run — the id comes from the router,
- *    which the host put at route.params.runId.
+ *    which the host put at route.params.runId — with its PIPELINE position
+ *    at run.pipeline, derived here for the steps widget (widgets and
+ *    reactions never compute; actions do).
  *  - `overview/load` (`createOverviewLoader`): the overview's numbers.
  *  - `runs/open-selected`: open the page of the run the user selected.
+ *  - `runs/retry`: run the page's run again on the server, with the reason
+ *    typed at run.retry.reason, then load it again.
  * The two loaders are what those pages' own `load` reactions call
  * (`viewModels.on.<page>.load`) — nothing in the host starts them.
  * Results travel through the store, one visible step at a time:
@@ -17,12 +21,22 @@
 import { z } from "zod";
 import type { ActionDefinition, Store } from "@wirework/schema";
 import { errorText } from "@wirework/engine";
+import type { Run } from "@wirework/view-data-models-examples";
 import type { RunsServer } from "../api/runs-server";
 import type { Navigator } from "./nav-actions";
 
 export type Loader = (store: Store) => Promise<void>;
 
 const runId = z.string().min(1);
+
+/** Where a run stands in its pipeline — the steps widget's `current` key and `failed` flag, from the run's state. */
+export function pipelineOf(run: Run): { step: "queued" | "running" | "finished"; failed: boolean } {
+  const { state } = run.status;
+  return {
+    step: state === "Queued" ? "queued" : state === "Running" ? "running" : "finished",
+    failed: state === "Failed",
+  };
+}
 
 /**
  * Only the newest request of a STORE may write: a slow answer must never
@@ -51,8 +65,12 @@ export function createRunLoader(server: RunsServer): Loader {
     try {
       const run = await server.fetchRun(id);
       if (!isLatest()) return;
-      if (run === undefined) store.set("run.error", `There is no run ${id}`);
-      else store.set("run.data", run);
+      if (run === undefined) {
+        store.set("run.error", `There is no run ${id}`);
+      } else {
+        store.set("run.data", run);
+        store.set("run.pipeline", pipelineOf(run));
+      }
     } catch (error) {
       // A failed request is an answer too: the page says so instead of loading forever.
       if (isLatest()) store.set("run.error", errorText(error));
@@ -87,10 +105,23 @@ export function createOverviewLoader(server: RunsServer): Loader {
 export function createRunsActions(services: {
   loadRun: Loader;
   loadOverview: Loader;
+  /** Run a run again on the server, with the reason the user gave. */
+  retryRun: (id: string, reason: string) => Promise<void>;
   navigator: Navigator;
 }): ActionDefinition[] {
-  const { loadRun, loadOverview, navigator } = services;
+  const { loadRun, loadOverview, retryRun, navigator } = services;
   return [
+    {
+      name: "runs/retry",
+      description:
+        "Run the page's run (route.params.runId) again on the server with the reason at run.retry.reason, then load it again",
+      handler: async ({ store }) => {
+        const id = store.getAs("route.params.runId", runId);
+        if (id === undefined) return;
+        await retryRun(id, store.getAs("run.retry.reason", z.string()) ?? "");
+        await loadRun(store);
+      },
+    },
     {
       name: "overview/load",
       description: "Request the overview's numbers into overview.stats — for the page's load reaction",

@@ -1,0 +1,114 @@
+{
+  "widgets.settings.autoRefresh": {
+    "default": {
+      "inputs": {
+        "checked": "app.settings.autoRefresh"
+      },
+      "label": "Auto-refresh the runs list"
+    }
+  },
+  "widgets.settings.echoPermissions": {
+    "default": {
+      "inputs": {
+        "value": "app.permissions"
+      },
+      "label": "app.permissions (global)"
+    }
+  },
+  "widgets.settings.echoSettings": {
+    "default": {
+      "inputs": {
+        "value": "app.settings"
+      },
+      "label": "app.settings (global)"
+    }
+  },
+  "widgets.settings.nameInput": {
+    "default": {
+      "inputs": {
+        "value": "app.settings.displayName"
+      },
+      "label": "Your name",
+      "placeholder": "type a name",
+      "validation": "required"
+    }
+  },
+  "widgets.settings.pageSize": {
+    "default": {
+      "inputs": {
+        "value": "app.settings.pageSize"
+      },
+      "label": "Runs per page",
+      "options": [
+        {
+          "value": "5"
+        },
+        {
+          "value": "10"
+        },
+        {
+          "value": "20"
+        }
+      ],
+      "allowClear": false
+    }
+  },
+  "widgets.settings.refreshSeconds": {
+    "default": {
+      "inputs": {
+        "value": "app.settings.refreshSeconds"
+      },
+      "label": "Refresh every",
+      "suffix": "seconds",
+      "min": 1,
+      "max": 3600
+    }
+  },
+  "widgets.settings.reportDay": {
+    "default": {
+      "inputs": {
+        "value": "app.settings.reportDay"
+      },
+      "label": "Report day"
+    }
+  },
+  "widgets.settings.resetAll": {
+    "default": {
+      "label": "Reset every setting",
+      "variant": "danger",
+      "on": {
+        "clicked": [
+          {
+            "call": "settings/reset-all"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.settings.sessionsTable": {
+    "default": {
+      "inputs": {
+        "rows": "sessions.data",
+        "loading": "sessions.loading",
+        "columns": "sessions.columns"
+      },
+      "on": {
+        "load": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "url": "/api/v1/view/sessions",
+              "into": "sessions"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "widgets.settings.title": {
+    "default": {
+      "text": "Your settings — global state: every page sees them",
+      "tone": "accent"
+    }
+  }
+}

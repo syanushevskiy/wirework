@@ -1,0 +1,9 @@
+{
+  "admin": {
+    "cells": {
+      "card-roles": {
+        "view": "admin"
+      }
+    }
+  }
+}

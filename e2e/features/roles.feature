@@ -72,8 +72,9 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the cell "button-delete-run" is hidden
     When I click the table row "123456"
     Then the cell "button-delete-run" is shown
-    # Deleting is a server call the session must be allowed; the list is asked again and the row is gone.
+    # Deleting is a server call the session must be allowed; the button asks first; the list is asked again and the row is gone.
     When I click the button "Delete run"
+    And I confirm
     And the server has had time to answer
     Then the first table row is "123457"
     And the cell "button-delete-run" is hidden
@@ -90,6 +91,51 @@ Feature: Roles — one page, different for an admin and for everybody else
     Then the page uses the "admin" view, which is "role: admin"
     And the page has 5 cells
 
+  Scenario: The roles page is one card — everyone's template with the note, the admin's with a button and its echo as well
+    Given I open the "roles" page
+    And the server has had time to answer
+    Then the page has 1 cell
+    # A QA sees the card as everyone does: the note and how it works.
+    And the container "card-roles" holds the cells "input-note, label-how"
+    When I type "hello" into the input
+    Then the state JSON contains '"note": "hello"'
+    # The same page as admin: roles.json picks the card's "admin" template, which holds two widgets more.
+    When I sign in as "admin"
+    And the server has had time to answer
+    Then the container "card-roles" holds the cells "input-note, button-approve, echo-approval, label-how"
+    When I click the button "Approve — admin only"
+    Then the echo widget at "roles.approval" shows '"approved by the admin"'
+    # Back as QA the card is everyone's again — nothing else changed.
+    When I sign in as "qa"
+    And the server has had time to answer
+    Then the container "card-roles" holds the cells "input-note, label-how"
+    And the state JSON contains '"note": "hello"'
+
+  Scenario: In the builder, a widget for the admin alone can also be a condition on the roles — no template of its own
+    Given I open the "builder" page
+    And the store holds at "app.user.roles":
+      """
+      ["qa"]
+      """
+    When I choose the "antd-input" widget
+    And I set the setting "label" to "Your note"
+    And I add the widget
+    And I choose the "antd-button" widget
+    And I set the setting "label" to "Approve"
+    And I set the reaction for "clicked" to set "roles.approval"
+    # "Show when": the host's check by its phrase, the role as its value.
+    And I add a condition
+    And I set the condition to "app.user.roles" "has the role" "admin"
+    Then the condition reads 'when app.user.roles has the role "admin"'
+    When I add the widget
+    Then the page has 2 cells
+    And the cell "custom-2" is hidden
+    When the store holds at "app.user.roles":
+      """
+      ["qa", "admin"]
+      """
+    Then the cell "custom-2" is shown
+
   Scenario: A personal view saved as QA is still mine as admin; choosing none shows the admin's page
     Given I open the "settings" page
     And the server has had time to answer
@@ -100,6 +146,43 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the view list offers "admin" as "role: admin"
     When I delete the view
     Then the page uses the "admin" view, which is "role: admin"
+
+  Scenario: The builder grants two roles from the start, and a builder adds the roles the application has
+    Given I open the "builder" page
+    When I edit for the role "app-user"
+    Then the edit target is "role: app-user"
+    When I edit for the role "admin"
+    Then the edit target is "role: admin"
+    When I edit for everyone
+    And I add the role "reviewer"
+    And I edit for the role "reviewer"
+    Then the edit target is "role: reviewer"
+    And the state JSON contains '"reviewer"'
+    # A role name is kebab-case, like the actions' and the predicates' — and never twice.
+    When I add the role "App User"
+    Then the new role name is refused
+    When I add the role "admin"
+    Then the new role name is refused
+
+  Scenario: In the builder, a widget added while editing for a role is the role's alone — its template shared, its cell in the role's view
+    Given I open the "builder" page
+    When I choose the "antd-input" widget
+    And I set the setting "label" to "Your note"
+    And I add the widget
+    Then the page has 1 cell
+    When I edit for the role "admin"
+    And I choose the "antd-echo" widget
+    And I set the "input" port "value" to "demo.note"
+    And I add the widget
+    # The admin's page: the shared input and the echo, in a view of the admin's own made from the shared layout.
+    Then the page has 2 cells
+    And the page uses the "admin" view, which is "role: admin"
+    And I see a widget "antd-echo"
+    And the state JSON contains '"custom-2"'
+    # Everyone else: the page as it was.
+    When I edit for everyone
+    Then the page has 1 cell
+    And the page uses the "default" view, which is "prebuilt"
 
   Scenario: In the builder, editing for a role writes the role's configuration and shows the page as the role sees it
     Given I open the "builder" page
@@ -116,7 +199,6 @@ Feature: Roles — one page, different for an admin and for everybody else
     Then the page has 2 cells
     When I edit for the role "admin"
     Then the edit target is "role: admin"
-    And adding widgets waits for the edits to be for everyone
     When I save the view as "admin"
     Then the page uses the "admin" view, which is "role: admin"
     And the state JSON contains '"roles": {'

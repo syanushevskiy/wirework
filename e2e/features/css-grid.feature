@@ -12,20 +12,24 @@ Feature: CSS grid — a page laid out by template areas, filled by drag and drop
   Scenario: The run page is a css-grid skeleton
     Given I open the address "/demo/runs/123459"
     Then the page layout uses the "css-grid" engine
-    And the grid has 4 rows and 3 columns
+    And the grid has 6 rows and 3 columns
     And the grid columns are sized "1fr 1fr 12rem"
-    And the cell "label-run-name" fills the slots "1-1/1-2"
+    And the cell "label-run-name" fills the slots "1-1/1-1"
+    And the cell "status-run" fills the slots "1-2/1-2"
     And the cell "button-back" fills the slots "1-3/1-3"
-    And the cell "status-run" fills the slots "2-1/2-1"
-    And the cell "label-run-error" fills the slots "3-1/3-2"
-    And the cell "tag-run-retry" fills the slots "3-3/3-3"
-    And the cell "echo-route" fills the slots "4-1/4-3"
+    And the cell "steps-run" fills the slots "2-1/2-3"
+    And the cell "descriptions-run" fills the slots "3-1/3-2"
+    And the cell "timeline-run" fills the slots "3-3/3-3"
+    And the cell "result-run" fills the slots "4-1/4-2"
+    And the cell "button-retry" fills the slots "4-3/4-3"
+    And the cell "dialog-retry" fills the slots "5-1/5-3"
+    And the cell "echo-route" fills the slots "6-1/6-3"
     And the cells "label-run-name, button-back" sit side by side
     And the cell "label-run-name" is wider than the cell "button-back"
     And the cell "label-run-name" reads "Nightly regression"
     # A hidden widget leaves its slot empty: the picture does not move.
-    And the cell "label-run-error" is hidden
-    And the cell "label-run-error" fills the slots "3-1/3-2"
+    And the cell "result-run" is hidden
+    And the cell "result-run" fills the slots "4-1/4-2"
 
   Scenario: The cards page holds a third card on a CSS grid below the two — four engines on one page
     Given I open the "cards" page

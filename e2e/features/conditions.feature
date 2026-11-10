@@ -22,25 +22,25 @@ Feature: Conditions — a widget shown when a predicate holds
       """
     Then the cell "button-open-run" is hidden
 
-  Scenario: The run page shows its error line only when there is an error
+  Scenario: The run page shows its "no such run" result only when there is an error
     Given I open the address "/demo/runs/nope"
-    Then the cell "label-run-error" is shown
-    And the cell "label-run-error" reads "There is no run nope"
+    Then the cell "result-run" is shown
+    And the result says "There is no run nope"
     When I open the address "/demo/runs/123459"
     Then the cell "label-run-name" reads "Nightly regression"
-    And the cell "label-run-error" is hidden
+    And the cell "result-run" is hidden
 
   Scenario: A check the application registered decides like a standard one
     # The fake server's rule: a failed run with an even id would run again.
     Given I open the address "/demo/runs/123456"
     Then the status badge reads "Status: Failed"
-    And the cell "tag-run-retry" is shown
-    And the cell "tag-run-retry" reads "Retry possible"
+    And the cell "button-retry" is shown
+    And the cell "button-retry" reads "Retry"
     # An appearance the application registered ("drop"), picked by name like a standard one.
-    And the cell "tag-run-retry" appears with "drop"
+    And the cell "button-retry" appears with "drop"
     When I open the address "/demo/runs/123457"
     Then the status badge reads "Status: Success"
-    And the cell "tag-run-retry" is hidden
+    And the cell "button-retry" is hidden
 
   Scenario: In the builder a condition is typed in words, read back, and decides on the page
     Given I open the "builder" page

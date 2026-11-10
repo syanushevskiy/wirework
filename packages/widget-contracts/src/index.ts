@@ -51,36 +51,66 @@ export { rateContract } from "./rate";
 export { statisticContract } from "./statistic";
 export { dividerContract, DIVIDER_ORIENTATIONS } from "./divider";
 export type { DividerOrientation } from "./divider";
+// The dashboard set (doc/more-widgets-design.md): what a settings page and a filter row still lacked, and the
+// display that replaces hand-laid labels.
+export { numberContract } from "./number";
+export { dateContract, DATE_PICKERS, DATE_FORMAT } from "./date";
+export type { DatePicker } from "./date";
+export { dateRangeContract, dateRangeSchema, NO_DATES } from "./date-range";
+export type { DateRange } from "./date-range";
+export {
+  descriptionsContract,
+  descriptionItemSchema,
+  descriptionRecordSchema,
+  DESCRIPTIONS_SIZES,
+} from "./descriptions";
+export type { DescriptionItem, DescriptionRecord, DescriptionsSize } from "./descriptions";
+export { resultContract, RESULT_STATUSES } from "./result";
+export type { ResultStatus } from "./result";
+export { stepsContract, stepItemSchema, STEPS_DIRECTIONS } from "./steps";
+export type { StepItem, StepsDirection } from "./steps";
+export { timelineContract, timelineItemSchema, timelineItemsSchema, TIMELINE_MODES } from "./timeline";
+export type { TimelineItem, TimelineMode } from "./timeline";
 // Containers: a layout of other widgets inside (doc/containers-design.md).
 export { cardContract, CARD_SIZES } from "./card";
 export type { CardSize } from "./card";
 export { tabsContract, layoutItemSchema } from "./tabs";
 export type { LayoutItem } from "./tabs";
 export { collapseContract } from "./collapse";
+export { dialogContract, DIALOG_KINDS, DRAWER_PLACEMENTS } from "./dialog";
+export type { DialogKind, DrawerPlacement } from "./dialog";
 
 import { alertContract } from "./alert";
 import { buttonContract } from "./button";
 import { cardContract } from "./card";
 import { checkboxContract } from "./checkbox";
 import { collapseContract } from "./collapse";
+import { dateContract } from "./date";
+import { dateRangeContract } from "./date-range";
+import { descriptionsContract } from "./descriptions";
+import { dialogContract } from "./dialog";
 import { dividerContract } from "./divider";
 import { filterBarContract } from "./filter-bar";
 import { infiniteTableContract } from "./infinite-table";
 import { inputContract } from "./input";
 import { labelContract } from "./label";
 import { multiSelectContract } from "./multi-select";
+import { numberContract } from "./number";
 import { paginationContract } from "./pagination";
 import { progressContract } from "./progress";
 import { radioGroupContract } from "./radio-group";
 import { rateContract } from "./rate";
 import { refresherContract } from "./refresher";
+import { resultContract } from "./result";
 import { selectContract } from "./select";
 import { sliderContract } from "./slider";
 import { statisticContract } from "./statistic";
+import { stepsContract } from "./steps";
 import { switchContract } from "./switch";
 import { tableContract } from "./table";
 import { tabsContract } from "./tabs";
 import { tagContract } from "./tag";
+import { timelineContract } from "./timeline";
 
 /** Everything a host registers at once. */
 export const standardContracts = [
@@ -104,7 +134,15 @@ export const standardContracts = [
   rateContract,
   statisticContract,
   dividerContract,
+  numberContract,
+  dateContract,
+  dateRangeContract,
+  descriptionsContract,
+  resultContract,
+  stepsContract,
+  timelineContract,
   cardContract,
   tabsContract,
   collapseContract,
+  dialogContract,
 ];

@@ -42,3 +42,4 @@ export const Required: Story = conformance.Required;
 export const Email: Story = conformance.Email;
 export const CustomPattern: Story = conformance.CustomPattern;
 export const Validates: Story = conformance.Validates;
+export const MultiLine: Story = conformance.MultiLine;

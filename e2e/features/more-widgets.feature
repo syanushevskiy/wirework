@@ -3,7 +3,11 @@ Feature: More widgets
   antd implementation: a switch, a slider, a radio group, a rating, a
   statistic and a divider. The controls store what the user picks at their
   port with nothing wired (their `changed` writes back by default); the
-  statistic and the divider only show.
+  statistic and the divider only show. Then the dashboard set
+  (doc/more-widgets-design.md): a number, a date and a date range stored
+  as JSON (a number or null, a text, a pair of texts — never a Date), a
+  fact sheet, a result, a dialog, steps and a timeline, plus a long text
+  and a confirmation as settings on the input and the button.
 
   Scenario: Every new widget has a live preview in the palette
     Given I open the "builder" page
@@ -14,6 +18,45 @@ Feature: More widgets
     And the preview of "antd-rate" reads "Quality"
     And the preview of "antd-statistic" reads "Active runs"
     And the preview of "antd-divider" reads "Section"
+    And the preview of "antd-number" reads "Refresh every"
+    And the preview of "antd-date" reads "Report day"
+    And the preview of "antd-date-range" reads "Started between"
+    And the preview of "antd-descriptions" reads "Nightly regression"
+    And the preview of "antd-result" reads "Saved"
+    And the preview of "antd-dialog" reads "Dialog"
+    And the preview of "antd-steps" reads "Running"
+    And the preview of "antd-timeline" reads "Running on qa-1"
+
+  Scenario: The settings card stores a number and a day — as a number and as text
+    Given I open the "settings" page
+    And the server has had time to answer
+    Then the container "card-preferences" holds the cells "input-name, select-page-size, checkbox-auto-refresh, number-refresh-seconds, date-report-day"
+    When I enter the number 30 in "Refresh every"
+    Then the state JSON contains '"refreshSeconds": 30'
+    When I pick the date "2026-11-09" in "Report day"
+    Then the state JSON contains '"reportDay": "2026-11-09"'
+
+  Scenario: A date range above the runs table filters the list on the server
+    Given I open the "runs" page
+    And the server has had time to answer
+    Then the table has 5 rows
+    And the state JSON contains '"total": 23'
+    # Bound to the view's own filterBetween.started: the loader sends it, the server filters by it.
+    When I pick the dates "2026-11-01" to "2026-11-03" in "Started between"
+    And the server has had time to answer
+    Then the "Started between" dates are "2026-11-01" to "2026-11-03"
+    And the table has 3 rows
+    And the state JSON contains '"total": 3'
+    And the first table row is "123456"
+
+  Scenario: A long text is the input with rows
+    Given I open the "builder" page
+    When I choose the "antd-input" widget
+    And I set the "input" port "value" to "form.notes"
+    And I set the setting "rows" to "3"
+    And I add the widget
+    When I type "first line" into the input
+    Then the state JSON contains '"notes": "first line"'
 
   Scenario: A button has a variant: primary by default, or secondary, dashed, danger
     Given I open the "overview" page

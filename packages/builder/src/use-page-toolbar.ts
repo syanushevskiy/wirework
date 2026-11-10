@@ -8,9 +8,19 @@
  * `useBuilder` and `usePageEditing`; this hook only decides what the
  * toolbar shows.
  */
+import { useState } from "react";
+import { ROLE_NAME } from "@wirework/schema";
 import { chainSteps } from "@wirework/engine";
 import type { EditLock, EngineLock, OverlayLock } from "./locks";
 import { roleOf, type EditTarget } from "./page-edits";
+
+/** Why a role name typed in the toolbar cannot be added yet — or nothing, when it can (doc/roles-design.md). */
+export function roleNameProblem(name: string, known: readonly string[]): string | undefined {
+  if (name === "") return "type a role name";
+  if (!ROLE_NAME.test(name)) return "a role name is kebab-case — letters, digits and dashes, like app-user";
+  if (known.includes(name)) return `the role "${name}" is already there`;
+  return undefined;
+}
 
 /** One step of the breadcrumb from the page down to the layout shown: the page, then a container per step. */
 export interface LayoutCrumb {
@@ -50,6 +60,12 @@ export interface PageToolbarInput {
   knownRoles?: readonly string[] | undefined;
   /** Edit for a role (its name), or for everyone (undefined). */
   onSelectRole?: ((role: string | undefined) => void) | undefined;
+  /**
+   * Add a role the application grants: the host puts it where it keeps its
+   * roles (the demo: `app.lists.roles`). With it, the toolbar offers an
+   * "add a role" field beside the role choice.
+   */
+  onAddRole?: ((role: string) => void) | undefined;
 }
 
 export function usePageToolbar({
@@ -72,7 +88,17 @@ export function usePageToolbar({
   target,
   knownRoles,
   onSelectRole,
+  onAddRole,
 }: PageToolbarInput) {
+  /** The role name being typed into "add a role"; empty between additions. */
+  const [roleName, setRoleName] = useState("");
+  const known = knownRoles ?? [];
+  const roleProblem = roleNameProblem(roleName, known);
+  const addRole = () => {
+    if (onAddRole === undefined || roleProblem !== undefined) return;
+    onAddRole(roleName);
+    setRoleName("");
+  };
   /** The page, then one crumb per container down to the layout shown: `builder › card-1`. */
   const crumbs: LayoutCrumb[] = [
     { label: page, at: undefined },
@@ -110,10 +136,25 @@ export function usePageToolbar({
      * takes no choice.
      */
     roleChoice:
-      knownRoles !== undefined && knownRoles.length > 0 && onSelectRole !== undefined
-        ? { roles: knownRoles, chosen: roleOf(target) }
+      onSelectRole !== undefined && (known.length > 0 || onAddRole !== undefined)
+        ? { roles: known, chosen: roleOf(target) }
         : undefined,
     selectRole: onSelectRole,
+    /**
+     * "Add a role": the name typed, why it cannot be added yet (nothing
+     * while the field is empty — an empty field is no mistake), and the
+     * act. Absent when the host takes no new roles.
+     */
+    newRole:
+      onAddRole === undefined
+        ? undefined
+        : {
+            name: roleName,
+            problem: roleName === "" ? undefined : roleProblem,
+            canAdd: roleProblem === undefined,
+            change: setRoleName,
+            add: addRole,
+          },
   };
 }
 

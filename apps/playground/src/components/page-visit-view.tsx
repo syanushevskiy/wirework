@@ -33,6 +33,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     report,
     rejections,
     page,
+    stateSections,
     layoutPage,
     target,
     roles,
@@ -65,7 +66,8 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     /* Left: state tree (editable) + collapsed diagnostics. Right: the live app. */
     <div className="pg-columns">
       <div className="pg-side">
-        <StateInspector store={store} />
+        {/* A demo page's own data and views, then the global settings and session; the builder's store whole. */}
+        <StateInspector store={store} sections={stateSections} />
         <EventLog bus={bus} />
         <CollapsibleCard
           id="validation"

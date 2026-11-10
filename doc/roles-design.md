@@ -512,12 +512,40 @@ role }`; the toolbar's role choice (`edit-role`, "everyone" or one of the
   user's (`overlayTargetOf`, shared by the views hook) — a prebuilt view
   edited becomes the role's own copy named after the role; the page shown
   is resolved with the known roles up to the role and no user overlay; Add
-  is locked (`role-view`); the views list labels a role's templates `role:
+  PLACES THE WIDGET FOR THE ROLE (since 9 November 2026, below; it was
+  locked before); the views list labels a role's templates `role:
 <name>`, choosing one sets the role's view, Rename and Delete work on the
   role's own. The widget editor offers the cell's templates
   (`cell-template`, the hook's `templateChoice`) when editing for a role.
   An op edits exactly the layers the plan shows: a user who SEES a role's
   view and edits it gets their own copy, `my-own`.
+- **The roles a builder may edit for, from the start (9 November 2026).**
+  The product owner asked that the builder page know roles without a
+  seed, and that a builder can add the roles the application grants. The
+  builder page starts with `app-user` and `admin` in `app.lists.roles`
+  (`BUILDER_ROLES`), configuration like its empty page; the toolbar has an
+  "add a role" field beside the role choice (`onAddRole` on
+  `usePageToolbar`, the field's draft and its problem in the hook,
+  `roleNameProblem` exported: kebab-case as every role name, not already
+  there), and the host puts the name into `app.lists.roles`. In a real
+  host the list comes from the server with the session; the field is for
+  building before the server knows the role, and the validation's "is held
+  by nobody" keeps saying so until it does.
+- **Add, while editing for a role (9 November 2026).** The product owner
+  added an input for everyone, chose the admin and tried to add an echo:
+  Add was disabled — the design had locked it ("a role picks, it does not
+  add") and told the builder to add for everyone first. That is the wrong
+  way round for the person building: the widget they want IS the role's.
+  Now `useBuilder` takes the editing session's `context` (`usePageEditing`
+  returns it) and, when the target is an overlay's, places the cell through
+  `pageOp` — the role's own view, a copy of the shown layout named after
+  the role when it has none yet, exactly as a move or a removal for the
+  role does — while the widget's template goes under the builder's group as
+  every template does (templates are the model's, everyone's). Everyone
+  else's page is unchanged; the role sees one widget more. The `role-view`
+  lock is gone; the user's own view keeps its lock (a personal widget is
+  not asked for). `naming.ts` holds the builder's names so that the hook
+  may use the ops without a module cycle.
 - **The page file** carries `roles`: what every role says about the page
   (`pageFile` cuts it, `mergePageFiles` writes it back under the role — and
   drops a role's entry for the page the file no longer has), and the widgets
@@ -527,6 +555,23 @@ role }`; the toolbar's role choice (`edit-role`, "everyone" or one of the
 Verified by `roles.feature` (nine scenarios), the engine's fold, validation,
 tree and page-file tests, the React adapter's role tests, the builder's role
 tests for the editing session and the views, and the toolbar story.
+
+**The roles page (9 November 2026, doc/more-widgets-design.md "Built";
+rebuilt the same day on the role layer).** A page of the demo that shows
+a role in the layer's own shape: one card with TWO templates — `default`,
+an input everyone sees and a line saying how it works; `admin`, the same
+with a button and the echo of what it sets — and the admin's layer picking
+`admin` for the cell (`pages/roles/roles.json`: `admin.cells["card-roles"].view`).
+Signed in as QA the card is everyone's; as admin it holds two widgets
+more; "Sign in as" shows the change. The page was first built with the
+two admin widgets under a condition (`app.user.roles has the role admin`),
+the smaller form for one more widget; the product owner asked for the
+handling to be read in `roles.json`, which is this. The cost, named: the
+card's inside is written twice, so a change to the note field is made in
+both templates. The condition remains the builder's other way — add the
+widget, open "Show when", pick the path, "has the role" and the role's
+name — in its own scenario. Two scenarios in `roles.feature`: the page,
+and the builder's way.
 
 ## Later
 

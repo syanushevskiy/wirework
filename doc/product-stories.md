@@ -1,11 +1,11 @@
 # Product stories — Xsight Wirework
 
-One epic, thirty-three stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
+One epic, thirty-five stories: fourteen done between 15 and 29 September 2026, one on 23 October 2026 (WW-21), two
 on 24 October 2026 (WW-22, WW-23), two on 1 November 2026 (WW-24, WW-25), two on 2 November 2026 (WW-26, WW-27),
-one on 3 November 2026 (WW-28), one on 5 November 2026 (WW-30), one on 6 November 2026 (WW-31) and one on
-7 November 2026 (WW-32), eight to do (WW-15 to WW-20, WW-29, WW-33). Written
+one on 3 November 2026 (WW-28), one on 5 November 2026 (WW-30), one on 6 November 2026 (WW-31), one on
+7 November 2026 (WW-32) and one on 9 November 2026 (WW-34), nine to do (WW-15 to WW-20, WW-29, WW-33, WW-35). Written
 for managers and product owners: each story says who gets what and why. For the user-facing stories (WW-1 to WW-11,
-WW-16 to WW-20, WW-21 to WW-32) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
+WW-16 to WW-20, WW-21 to WW-32, WW-34, WW-35) the acceptance criteria are Given / When / Then scenarios in the same language as the project's
 automated test suite, so QA verifies a story by reading it; the enabler and quality stories (WW-12 to WW-15) keep plain
 checkable statements. The keys `WW-n` are
 placeholders for the numbers JIRA assigns. "Delivered" gives the dates and commits for traceability; "Verified by" names
@@ -19,7 +19,7 @@ Today every internal page (a list of test runs, a status overview, a settings sc
 Wirework lets a page be assembled from ready-made widgets — tables, filters, buttons, labels — wired to data and to each
 other without programming, in a visual builder, and lets every user tune a shared page for themselves. Three groups of
 users: page builders who do not code, the people who use the pages, and the teams that embed Wirework in their own
-application. A demo application with six pages shows it working end to end on simulated servers.
+application. A demo application with seven pages shows it working end to end on simulated servers.
 
 ### WW-1 · Xsight Wirework - The visual page builder: searchable widget catalog, generated settings form, widget editing
 
@@ -801,7 +801,11 @@ names and values, the three names Tailwind 4.3.4 lacks kept out, the merge, the 
 
 ### WW-29 · Xsight Wirework - Pages as code: a page built in the builder lands in the application's source
 
-**Type:** User feature · **Status:** To do (designed 4 November 2026, doc/pages-as-code-design.md)
+**Type:** User feature · **Status:** To do (designed 4 November 2026, doc/pages-as-code-design.md; phase 1's loader
+built 9 November 2026: every demo page is a folder `src/pages/<page>/` — `page.json`, `viewModel.json` with the layouts
+nested like HTML (a card's inside in the card's cell), `roles.json` what every role says (`{}` where none), `widgets.json` — read at
+boot, and the store holds one page's view models at a time, loaded when the page opens; Export page downloads the same
+nested shape; `pages-as-code.feature`, "A page's view models come from its folder")
 
 **Short description:** As an admin, I build a page in the builder — a new page with its own address and menu entry, or
 a change to an existing one — and when I save it, it is written as a page file in the application's source, so that it
@@ -902,6 +906,12 @@ asks for, never what a user is allowed to receive.
 - **Given** the builder with "edits → role: admin", **when** I move a cell, save a view or pick a widget's template and
   save, **then** the change is in the admin's configuration, the shared page is untouched, and the page shown while I
   edit is the page as an admin sees it.
+- **Given** the builder page, **then** it offers the roles `app-user` and `admin` from the start; **when** I type a
+  new role's name into "add a role" and press Enter, **then** it is on offer and I can edit for it; a name that is not
+  kebab-case, or a role already there, is refused with the reason (added 9 November 2026).
+- **Given** a page with a widget for everyone, **when** I edit for the role `admin` and add a widget, **then** the
+  admin's page shows both in a view of the admin's own, and everyone else's page still shows the one (added
+  9 November 2026).
 - **Given** a role's configuration that names a view or a widget template nobody has, **when** the application starts,
   **then** the validation names the role, the page and the missing name, and a role the application does not grant is a
   warning.
@@ -1006,3 +1016,78 @@ exactly right is generated or tested; prose carries only the model.
 
 **Verified by:** to be written — `catalog.test.ts` in the engine, `docs.test.ts` and the check command's test in the
 playground, and the trial's transcript.
+
+### WW-34 · Xsight Wirework - Eight more ready-made widgets: number, date, date range, fact sheet, result, dialog, steps and timeline
+
+**Type:** User feature · **Status:** Done (designed and built 9 November 2026, doc/more-widgets-design.md; the
+repeater design the team asked for between the phases is still to be held)
+
+**Short description:** As a page builder, I have the widgets a dashboard still lacks from the company's standard look:
+a number field, a date and a date-range picker, a fact sheet that shows one record as labelled fields in the table's
+own cell kinds, a result that says what happened and offers a way on, a dialog (a drawer or a modal) holding a layout
+of other widgets, a pipeline of steps and a timeline — plus a long-text field and a confirmation before a destructive
+button as two settings on widgets that exist. Each is a specification any implementation must match, each stores what
+the user picks without wiring, each shows on a demo page, not only in the palette.
+
+**Acceptance criteria:**
+
+- **Given** the builder, **when** I open the palette, **then** every new widget shows a live preview with sample data.
+- **Given** a number field, a date picker and a date-range picker bound to paths, **when** I enter a number, type a date
+  and type two dates, **then** each stores what I entered at its path as plain text (a date as `2026-11-09`, never as
+  a browser date object), with nothing wired by hand, and a date's display format never changes what is stored.
+- **Given** the runs page, **when** I pick "Started between" two dates, **then** the list shows only the runs started
+  between them, and the server was asked with that range.
+- **Given** the run page, **when** it opens, **then** one fact sheet shows the run's status as a coloured tag, its
+  reference with the company's copy button, its message and its inbound flag — the same cell kinds the runs table
+  uses —, the pipeline shows the current step, and the timeline the run's history; **when** the run does not exist,
+  **then** a result says so and offers "Back to runs".
+- **Given** the Delete run button, **when** I press it, **then** it asks "Delete this run?" and deletes only after I
+  confirm; **when** I cancel, **then** nothing happens.
+- **Given** Retry on a failed run, **when** I press it, **then** a dialog opens with a reason field of several lines
+  and a Retry button; **when** I confirm, **then** the run is retried and the dialog closes; **when** I press Escape,
+  **then** it closes with nothing done.
+- **Given** the builder and a dialog added to a page, **when** I edit its content, **then** the layout inside is
+  edited like a card's, and the dialog shows open and in place while the page is being edited.
+- **Given** another implementation of any of the eight, **when** its conformance stories run, **then** they say
+  whether it behaves as the specification requires.
+- **Given** the roles page, **when** I open it as a QA, **then** I see one card with a note field; **when** I sign
+  in as an admin, **then** the same card, in the template the admin's role picks for it (`roles.json`), also shows
+  an Approve button and the echo of what it sets; **given** the builder, **when** I add a button and set "Show
+  when" to "app.user.roles has the role admin", **then** the button is hidden until the roles hold admin — the
+  other way to give a role one more widget.
+
+**Verified by:** `run-page.feature` (a finished run as a fact sheet with its pipeline and history; a run nobody knows
+as a result with one way on; a failed run retried from a dialog with a reason, coming back queued; the dialog closing
+from its icon), `more-widgets.feature` (every preview, the settings card's number and day, the runs range filtering on
+the server, the long text), `roles.feature` (the roles page; Delete run confirming), the eight conformance sets
+(`numberConformance`, `dateConformance`, `dateRangeConformance`, `descriptionsConformance`, `resultConformance`,
+`dialogConformance`, `stepsConformance`, `timelineConformance`) and the input's `MultiLine` and the button's
+`Confirms` / `CancelsConfirm` stories, the table-view loader's `filterBetween` test, the engine's standard-contracts
+test.
+
+### WW-35 · Xsight Wirework - Filters I can see in the table, and a list that becomes cards on my phone
+
+**Type:** User feature · **Status:** To do (designed 9 November 2026, doc/table-filters-cards-design.md)
+
+**Short description:** As a dashboard user, I see what a list is filtered by without opening anything — a filter row
+under the headers, a search field with a search icon for a text column and a list of values for the others, always
+visible and in step with the header filters and the filter bar — and on a narrow screen every row of the list becomes
+a card of labelled fields that still selects, links and loads more, so the runs list works on a phone. As a page
+builder I turn both on with settings; nothing is wired anew.
+
+**Acceptance criteria:**
+
+- **Given** a table with the filter row on, **when** I look at it, **then** every filterable column shows its control
+  under its title — a search field with a search icon for a text filter, a list of values for the others — and
+  **when** I type in the search field and press Enter, **then** the rows are re-requested with that text, and the
+  same text shows in the column's header filter.
+- **Given** a filter row control, **when** I click inside it, **then** the column does not sort.
+- **Given** a table on a screen narrower than its card threshold, **when** it renders, **then** every row is a card
+  whose fields are the columns, in the same cell kinds (a status tag, a link, the Copy button); **when** I click a
+  card, **then** the row is selected; **when** I click a link in a card, **then** the page follows it.
+- **Given** the history list as cards, **when** I scroll to its end, **then** more rows load as cards.
+- **Given** the builder, **when** I set "cards" to always, **then** the table shows cards at any width; never keeps it
+  a table.
+
+**Verified by:** to be written — `table-filters.feature`, the phone scenarios, the two tables' conformance sets
+extended.

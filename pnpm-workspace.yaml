@@ -25,6 +25,8 @@ catalog:
   antd: ^6.6.4
   # antd's own icon set (its peer): the search icon of a text filter's column header
   "@ant-design/icons": ^6.3.4
+  # antd's date library (its peer): the date widgets convert the store's text at their edge and nowhere else
+  dayjs: ^1.11.23
   zustand: ^5.0.15
   react-router: ^8.4.0
   # pinned: playwright-bdd 8.x does not support Playwright >= 1.60 ESM loader

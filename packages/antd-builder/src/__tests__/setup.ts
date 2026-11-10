@@ -9,7 +9,18 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
-afterEach(cleanup);
+/**
+ * Unmount, then let the frame antd's dropdowns schedule (`useDelayState`
+ * in @rc-component/util: a `requestAnimationFrame`, ~16 ms in jsdom) fire
+ * while the window still exists. Without the wait the last test of a file
+ * leaves a frame pending; it runs after jsdom is torn down and React's
+ * state update throws "window is not defined" as an unhandled error, under
+ * load — a flake the whole suite then fails on.
+ */
+afterEach(async () => {
+  cleanup();
+  await new Promise((resolve) => setTimeout(resolve, 40));
+});
 
 const idle = (): undefined => undefined;
 class IdleResizeObserver {

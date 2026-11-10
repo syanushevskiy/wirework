@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "runs",
+  "route": {
+    "path": "/demo/runs",
+    "title": "Runs",
+    "menu": true
+  }
+}

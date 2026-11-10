@@ -46,6 +46,7 @@
     "@wirework/schema": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
     "antd": "catalog:",
+    "dayjs": "catalog:",
     "react": "catalog:",
     "storybook": "^10.6.0",
     "zod": "catalog:"
@@ -73,6 +74,7 @@
     "@wirework/store": "workspace:*",
     "@wirework/widget-contracts": "workspace:*",
     "antd": "catalog:",
+    "dayjs": "catalog:",
     "playwright": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

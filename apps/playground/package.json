@@ -28,6 +28,7 @@
     "@wirework/widget-contracts": "workspace:*",
     "@ant-design/icons": "catalog:",
     "antd": "catalog:",
+    "dayjs": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "catalog:",

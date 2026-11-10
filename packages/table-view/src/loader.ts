@@ -13,6 +13,8 @@
  *
  * and what the USER asked for, written by the widgets' reactions and read
  * here: <into>.page, <into>.pageSize, <into>.filterIn, <into>.filterLike,
+ * <into>.filterBetween (a date-range widget bound to
+ * `<into>.filterBetween.<column>` filters the table with no other wiring),
  * <into>.orderBy.
  *
  * Results travel through the store one visible step at a time. Whether the
@@ -29,7 +31,13 @@
  */
 import { z } from "zod";
 import type { Store } from "@wirework/schema";
-import { columnOrderSchema, filterValuesSchema, searchValuesSchema, tableRowsSchema } from "@wirework/widget-contracts";
+import {
+  columnOrderSchema,
+  dateRangeSchema,
+  filterValuesSchema,
+  searchValuesSchema,
+  tableRowsSchema,
+} from "@wirework/widget-contracts";
 import { tableViewResponseSchema, type TableViewTransport } from "./api";
 import {
   DEFAULT_PAGE_SIZE,
@@ -92,6 +100,8 @@ export type TableViewLoader = (store: Store, args: unknown) => Promise<void>;
 const positiveInt = z.number().int().min(1);
 const chosenSchema = filterValuesSchema;
 const searchedSchema = searchValuesSchema;
+/** What the date-range widgets wrote: a [from, to] pair of texts per column. */
+const rangedSchema = z.record(z.string(), dateRangeSchema);
 const orderSchema = columnOrderSchema;
 const rowsSchema = tableRowsSchema;
 
@@ -183,6 +193,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         limit: pageSize,
         filterIn: store.getAs(at("filterIn"), chosenSchema) ?? {},
         filterLike: store.getAs(at("filterLike"), searchedSchema),
+        filterBetween: store.getAs(at("filterBetween"), rangedSchema),
         orderBy: store.getAs(at("orderBy"), orderSchema),
       };
       let answer = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, describe), signal));

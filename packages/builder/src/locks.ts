@@ -5,8 +5,8 @@
  * no user-facing text lives in this package.
  */
 
-/** Why the builder's Add is locked: the user may not change pages, a page edit is open, a user's own view is shown, or a role is edited for (doc/roles-design.md). */
-export type AddLock = "permission" | "editing" | "user-view" | "role-view";
+/** Why the builder's Add is locked: the user may not change pages, a page edit is open, or a user's own view is shown. (For a ROLE, Add places the widget in the role's own view — doc/roles-design.md.) */
+export type AddLock = "permission" | "editing" | "user-view";
 
 /** Why the page cannot be edited: the user may not, or whether they may is not known yet. */
 export type EditLock = "permission" | "loading";

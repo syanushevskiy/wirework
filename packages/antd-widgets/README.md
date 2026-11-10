@@ -1,8 +1,9 @@
 # @wirework/antd-widgets
 
 The standard Wirework widget kinds implemented on Ant Design. Peers:
-`react`, `antd`, `zod`, `@wirework/react`, `@wirework/schema`,
-`@wirework/widget-contracts`.
+`react`, `antd`, `dayjs` (antd's date library: the date widgets convert
+the store's text at their edge and nowhere else), `zod`, `@wirework/react`,
+`@wirework/schema`, `@wirework/widget-contracts`.
 
 ```ts
 import "@wirework/antd-widgets/styles.css";
@@ -12,21 +13,29 @@ import "@wirework/antd-widgets/styles.css";
 
 - `antdWidgets` — every production widget, to register at once; or
   `createAntdWidgets({ tableCells })` (`AntdWidgetsOptions`) to add your own
-  table cell renderers by name.
+  cell renderers by name — the tables' and the fact sheet's.
 - One export per widget: `antdLabel`, `antdTag`, `antdAlert`,
-  `antdProgress`, `antdStatistic`, `antdDivider`, `antdButton`,
-  `antdCheckbox`, `antdSwitch`, `antdInput`, `antdSelect`,
-  `antdMultiSelect`, `antdRadioGroup`, `antdSlider`, `antdRate`,
+  `antdProgress`, `antdStatistic`, `antdDivider`, `antdButton` (with
+  `confirm`, an antd Popconfirm asks before the click counts),
+  `antdCheckbox`, `antdSwitch`, `antdInput` (with `rows`, a TextArea),
+  `antdNumber`, `antdDate`, `antdDateRange` (dayjs at the edge, text in
+  the store), `antdSelect`, `antdMultiSelect`, `antdRadioGroup`,
+  `antdSlider`, `antdRate`, `antdSteps`, `antdResult`, `antdTimeline`,
   `antdPagination`, `antdRefresher`, `antdTable`, `antdInfiniteTable`,
-  `antdFilterBar`, the containers `antdCard`, `antdTabs` and
-  `antdCollapse` (a layout of other widgets inside, rendered by the
-  adapter's `NestedLayout`; in a story, `inside(...widgets)` from
-  `./stories` lends them a list engine and the widgets they may hold),
-  plus `antdCounter` and `antdEcho` (this package's own
-  kinds); `createAntdTable({ cells })` and
-  `createAntdInfiniteTable({ cells })` (`AntdTableOptions`) are the two
-  tables with your renderers (`TableCellProps`, `TableCellRenderer`,
-  `TableCellRenderers`). Both tables offer each column's filter in its
+  `antdDescriptions`, `antdFilterBar`, the containers `antdCard`,
+  `antdTabs`, `antdCollapse` and `antdDialog` (a layout of other widgets
+  inside, rendered by the adapter's `NestedLayout`; the dialog an antd
+  Modal or Drawer open while its `open` port is true, shown in place with
+  `inline` — what the palette preview and the stories use; in a story,
+  `inside(...widgets)` from `./stories` lends them a list engine and the
+  widgets they may hold), plus `antdCounter` and `antdEcho` (this
+  package's own kinds); `createAntdTable({ cells })`,
+  `createAntdInfiniteTable({ cells })` (`AntdTableOptions`) and
+  `createAntdDescriptions({ cells })` (`AntdDescriptionsOptions`) are the
+  two tables and the fact sheet with your renderers (`TableCellProps`,
+  `TableCellRenderer`, `TableCellRenderers`) — the fact sheet shows the
+  table's cell kinds over one record, so the same "copy" button serves
+  both. Both tables offer each column's filter in its
   header — antd's list of values, or a search icon for free text — and
   sorting on a header click, when the `headerFilters` setting says so (off
   for the table, on for the infinite table). The infinite table scrolls
@@ -53,6 +62,9 @@ standard contracts reuses: `WidgetStory` (the harness: a seeded store, a bus,
 the widget's own reactions, a readout), `playground` (a story with a control
 for every setting and port), `storyArgs` / `storyArgTypes`, and a
 conformance set per contract (`labelConformance`, `buttonConformance`, …,
-`filterBarConformance`) — stories with `play` functions that say what
-"implements the contract" means. Every story of this package runs as a
-browser test under vitest.
+`filterBarConformance`, `numberConformance`, `dateConformance`,
+`dateRangeConformance`, `descriptionsConformance`, `resultConformance`,
+`dialogConformance`, `stepsConformance`, `timelineConformance`) — stories
+with `play` functions that say what "implements the contract" means; a
+date is TYPED in them, never clicked in a calendar. Every story of this
+package runs as a browser test under vitest.

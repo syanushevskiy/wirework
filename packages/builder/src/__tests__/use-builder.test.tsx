@@ -9,14 +9,17 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ViewModels } from "@wirework/schema";
 import { createStore } from "@wirework/store";
+import type { EditContext } from "../page-edits";
 import { DEFAULT_BUILDER_NAMING, useBuilder } from "../use-builder";
 import { commitTrees, type Commit, type EditableTrees } from "../use-commit";
-import { box, counter, enginesWith, gridEngine, listEngine, registryWith } from "./fixtures";
+import { box, cell, counter, enginesWith, gridEngine, listEngine, registryWith } from "./fixtures";
 
 const emptyPage = (): ViewModels => ({ pages: { builder: { default: { engine: "list", cells: [] } } }, widgets: {} });
+const registry = registryWith(counter, box);
+const layoutEngines = enginesWith(listEngine, gridEngine);
 
-function setup(viewModels: ViewModels, canEdit = true, at?: string) {
-  const store = createStore({ viewModels });
+function setup(viewModels: ViewModels, canEdit = true, at?: string, context?: EditContext) {
+  const store = createStore({ viewModels, userViewModels: {} });
   const saved: EditableTrees[] = [];
   const commit: Commit = (next) => commitTrees(store, (trees) => void saved.push(trees), next);
   const cancelEditing = vi.fn();
@@ -27,13 +30,14 @@ function setup(viewModels: ViewModels, canEdit = true, at?: string) {
         store,
         commit,
         canEdit,
-        registry: registryWith(counter, box),
-        layoutEngines: enginesWith(listEngine, gridEngine),
+        registry,
+        layoutEngines,
         page: "builder",
         at,
         naming: DEFAULT_BUILDER_NAMING,
         cancelEditing,
         onAdded,
+        context,
       }),
     { initialProps: { canEdit } },
   );
@@ -94,6 +98,43 @@ describe("useBuilder", () => {
     act(() => result.current.addWidget("counter", bindings, {}));
     expect(store.get("viewModels")).toEqual({ pages: {}, widgets: {} });
     expect(onAdded).not.toHaveBeenCalled();
+  });
+});
+
+describe("useBuilder — for a role (doc/roles-design.md)", () => {
+  it("places the widget in the role's own view — a copy of the shared layout with the new cell — and its template for everyone", () => {
+    const shared: ViewModels = {
+      pages: { builder: { default: { engine: "list", cells: [cell({ id: "custom-1" })] } } },
+      widgets: { custom: { "custom-1": { default: { inputs: { value: "demo.n" } } } } },
+    };
+    const forAdmin: EditContext = {
+      layoutEngines,
+      registry,
+      page: "builder",
+      at: undefined,
+      target: { role: "admin" },
+      roles: ["admin"],
+      naming: DEFAULT_BUILDER_NAMING,
+      view: "default",
+    };
+    const { result, page, store, onAdded } = setup(shared, true, undefined, forAdmin);
+    act(() => result.current.addWidget("counter", bindings, { label: "Admins too" }));
+    // The shared page is as it was; the admin's view holds both cells; the template is under the builder's group.
+    expect(page()).toEqual(shared.pages["builder"]?.["default"]);
+    expect(store.get("viewModels.roles.admin.pages.builder")).toEqual({
+      view: "admin",
+      templates: {
+        admin: {
+          engine: "list",
+          cells: [
+            cell({ id: "custom-1" }),
+            { id: "custom-2", widget: "counter", model: "widgets.custom.custom-2", template: "default" },
+          ],
+        },
+      },
+    });
+    expect(store.get("viewModels.widgets.custom.custom-2")).toEqual({ default: { ...bindings, label: "Admins too" } });
+    expect(onAdded).toHaveBeenCalledWith({ id: "custom-2", widget: "counter", layouts: [] });
   });
 });
 

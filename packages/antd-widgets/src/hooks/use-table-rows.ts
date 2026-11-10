@@ -45,9 +45,11 @@ function keyOf(row: TableRow, rowKey: string, index: number): string {
  * click on an address of the application. Anything else on a link (a
  * modifier, the middle button, another origin) is left to the browser.
  */
-type Clicked = { on: "row" } | { on: "control" } | { on: "link"; href: string; property: string; follow: boolean };
+export type Clicked =
+  { on: "row" } | { on: "control" } | { on: "link"; href: string; property: string; follow: boolean };
 
-function clicked(event: MouseEvent<HTMLElement>): Clicked {
+/** Shared with the descriptions widget, whose fields show the same cells: one decision of what a click landed on. */
+export function clicked(event: MouseEvent<HTMLElement>): Clicked {
   const control = (event.target as Element).closest(INTERACTIVE);
   if (control === null || !event.currentTarget.contains(control)) return { on: "row" };
   if (!control.matches("a[href]")) return { on: "control" };

@@ -37,6 +37,21 @@ export const pageRouteSchema = z.object({
 });
 export type PageRoute = z.infer<typeof pageRouteSchema>;
 
+/** What every role says about the page, by role (doc/roles-design.md). */
+export const pageRolesSchema = z.record(z.string().regex(ROLE_NAME), pageUserViewModelSchema);
+export type PageRoles = z.infer<typeof pageRolesSchema>;
+
+/**
+ * In a file the layouts NEST, as HTML does (doc/pages-as-code-design.md,
+ * "Reviewed"): the cell of a widget whose definition `contains` a layout —
+ * a card, tabs, a dialog — carries that widget's template map as
+ * `templates`, the layouts inside it with their own cells, nested in turn.
+ * A container's templates are written ONCE, in the first cell (document
+ * order: the page's templates, then the roles') that points at its model;
+ * a later cell of the same model only names it. `widgets` holds the other
+ * widgets' template maps by model path. Merging a file into a tree moves
+ * every nested map back to its model path and the cells are plain again.
+ */
 export const pageFileSchema = z.object({
   kind: z.literal(PAGE_FILE_KIND),
   version: z.literal(PAGE_FILE_VERSION),
@@ -45,6 +60,39 @@ export const pageFileSchema = z.object({
   templates: z.record(z.string(), pageViewModelSchema),
   on: pageBindingsSchema.optional(),
   widgets: z.record(z.string(), z.record(z.string(), z.unknown())),
-  roles: z.record(z.string().regex(ROLE_NAME), pageUserViewModelSchema).optional(),
+  roles: pageRolesSchema.optional(),
 });
 export type PageFile = z.infer<typeof pageFileSchema>;
+
+/**
+ * The page as a FOLDER in an application's source — `pages/<page>/` — the
+ * same page file in parts, one file each, so a reader opens what they are
+ * after: `page.json` says WHICH page (its kind, version, name and route),
+ * `viewModel.json` what it LOOKS like and does (its templates with the
+ * containers' layouts nested inside, and its reactions), `roles.json` what
+ * every role says about it (`{}` where no role does), `widgets.json` the
+ * templates of the widgets that show or edit a value. Together they are one
+ * `PageFile`.
+ */
+export const PAGE_FOLDER_FILES = {
+  page: "page.json",
+  viewModel: "viewModel.json",
+  roles: "roles.json",
+  widgets: "widgets.json",
+} as const;
+export type PageFolderPart = keyof typeof PAGE_FOLDER_FILES;
+
+export const pageInfoFileSchema = pageFileSchema.pick({ kind: true, version: true, page: true, route: true });
+export type PageInfoFile = z.infer<typeof pageInfoFileSchema>;
+export const pageViewModelFileSchema = pageFileSchema.pick({ templates: true, on: true });
+export type PageViewModelFile = z.infer<typeof pageViewModelFileSchema>;
+export const pageWidgetsFileSchema = pageFileSchema.shape.widgets;
+export type PageWidgetsFile = z.infer<typeof pageWidgetsFileSchema>;
+
+export interface PageFolder {
+  page: PageInfoFile;
+  viewModel: PageViewModelFile;
+  /** What every role says about the page — `{}` where no role does. */
+  roles: PageRoles;
+  widgets: PageWidgetsFile;
+}

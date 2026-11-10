@@ -5,7 +5,16 @@
  */
 import { describe, expect, it } from "vitest";
 import { NO_EVENTS, pageViewModelSchema, widgetBindingsSchema, type AnyWidgetDefinition } from "@wirework/schema";
-import { exportPageFile, mergePageFiles, pageFile, pageFileName, parsePageFile, validateViewModels } from "../index";
+import {
+  exportPageFile,
+  mergePageFiles,
+  pageFile,
+  pageFileName,
+  pageFolder,
+  pageFromFolder,
+  parsePageFile,
+  validateViewModels,
+} from "../index";
 import { cell, counter, enginesWith, listEngine, registryWith } from "./fixtures";
 
 /** A container: `content` holds a layout. */
@@ -45,18 +54,70 @@ const viewModels = {
 const input = { viewModels, registry, layoutEngines };
 const route = { path: "/demo", title: "Demo", menu: true };
 
+/** The box's cell as the FILE writes it: its template map nested, the counter inside plain. */
+const boxCell = {
+  ...cell({ id: "box-1", widget: "box", model: "widgets.demo.box" }),
+  templates: { default: { content: inner } },
+};
+
 describe("pageFile", () => {
-  it("cuts the page's templates, its reactions, its route and the widgets its cells reference — through containers, each once, sorted", () => {
+  it("cuts the page's templates with the box's layout NESTED in its cell, its reactions, its route and the other widgets each once, sorted", () => {
     expect(pageFile(input, "demo", route)).toEqual({
       kind: "wirework-page",
       version: 1,
       page: "demo",
       route,
-      templates: viewModels.pages.demo,
+      templates: { default: layout([boxCell]), compact: viewModels.pages.demo.compact },
       on: viewModels.on.demo,
-      widgets: { "widgets.demo.box": { default: { content: inner } }, "widgets.demo.counter": counterTemplates },
+      widgets: { "widgets.demo.counter": counterTemplates },
     });
-    expect(Object.keys(pageFile(input, "demo")?.widgets ?? {})).toEqual(["widgets.demo.box", "widgets.demo.counter"]);
+  });
+
+  it("nests a container's templates once — in the first cell that points at it — and a container inside a container in turn", () => {
+    const outerInner = layout([cell({ id: "inner-box", widget: "box", model: "widgets.demo.box" })]);
+    const twice = {
+      ...viewModels,
+      pages: {
+        demo: {
+          default: layout([
+            cell({ id: "outer", widget: "box", model: "widgets.demo.outer" }),
+            cell({ id: "again", widget: "box", model: "widgets.demo.box" }),
+          ]),
+        },
+      },
+      widgets: {
+        ...viewModels.widgets,
+        demo: { ...viewModels.widgets.demo, outer: { default: { content: outerInner } } },
+      },
+    };
+    const file = pageFile({ ...input, viewModels: twice }, "demo");
+    expect(file?.templates).toEqual({
+      default: layout([
+        {
+          ...cell({ id: "outer", widget: "box", model: "widgets.demo.outer" }),
+          templates: {
+            default: {
+              content: layout([
+                {
+                  ...cell({ id: "inner-box", widget: "box", model: "widgets.demo.box" }),
+                  templates: { default: { content: inner } },
+                },
+              ]),
+            },
+          },
+        },
+        // The same box again: named, not written twice.
+        cell({ id: "again", widget: "box", model: "widgets.demo.box" }),
+      ]),
+    });
+    expect(Object.keys(file?.widgets ?? {})).toEqual(["widgets.demo.counter"]);
+    if (!file) throw new Error("no file");
+    // Back in a tree, every nested map is at its model path again (the other page's counter was never in this file).
+    expect(mergePageFiles([file]).viewModels).toEqual({
+      pages: twice.pages,
+      on: twice.on,
+      widgets: { demo: twice.widgets.demo },
+    });
   });
 
   it("leaves out what the page has not — a route, reactions — and is nothing for a page the tree lacks", () => {
@@ -86,11 +147,7 @@ describe("pageFile", () => {
     };
     const file = pageFile({ ...input, viewModels: withRoles }, "demo");
     expect(file?.roles).toEqual({ admin });
-    expect(Object.keys(file?.widgets ?? {})).toEqual([
-      "widgets.demo.box",
-      "widgets.demo.counter",
-      "widgets.demo.owner",
-    ]);
+    expect(Object.keys(file?.widgets ?? {})).toEqual(["widgets.demo.counter", "widgets.demo.owner"]);
     if (!file) throw new Error("no file");
     // Merged back, the role's entry for the page lands under the role, beside what the role says about other pages.
     const merged = mergePageFiles([file], {
@@ -125,6 +182,53 @@ describe("the file as text", () => {
         '{"kind":"wirework-page","version":1,"page":"x","templates":{},"widgets":{},"on":{"opened":[{"call":"x"}]}}',
       ),
     ).toMatchObject({ problem: expect.stringContaining("opened") });
+  });
+});
+
+describe("the file as a folder", () => {
+  const demo = pageFile(input, "demo", route);
+  const other = pageFile(input, "other");
+  if (!demo || !other) throw new Error("no files");
+
+  it("splits the page into what it is, what it looks like and does (the box nested), the roles where there are any, and the other widgets — and joins them back to the same file", () => {
+    const folder = pageFolder(demo);
+    expect(folder).toEqual({
+      page: { kind: "wirework-page", version: 1, page: "demo", route },
+      viewModel: { templates: demo.templates, on: viewModels.on.demo },
+      // No role says anything about the page: the file is there, empty.
+      roles: {},
+      widgets: { "widgets.demo.counter": counterTemplates },
+    });
+    expect(pageFromFolder(folder, "demo")).toEqual({ file: demo });
+    // What the page has not is left out of its part, not written as undefined.
+    const bare = pageFolder(other);
+    expect("route" in bare.page).toBe(false);
+    expect(Object.keys(bare.viewModel)).toEqual(["templates"]);
+    expect(pageFromFolder(bare)).toEqual({ file: other });
+    // A page the roles say something about gets a roles part of its own.
+    const admin = { view: "admin", templates: { admin: layout([cell({ id: "c" })]) } };
+    const withRoles = { ...demo, roles: { admin } };
+    expect(pageFolder(withRoles).roles).toEqual({ admin });
+    expect(pageFromFolder(pageFolder(withRoles))).toEqual({ file: withRoles });
+  });
+
+  it("names the file that is wrong, and a page.json that names another page than its folder", () => {
+    const folder = pageFolder(demo);
+    expect(pageFromFolder({ ...folder, page: { kind: "recipe" } })).toMatchObject({
+      problem: expect.stringMatching(/^page\.json: /),
+    });
+    expect(pageFromFolder({ ...folder, viewModel: { templates: 5 } })).toMatchObject({
+      problem: expect.stringMatching(/^viewModel\.json: /),
+    });
+    expect(pageFromFolder({ ...folder, roles: { "Not A Role": {} } })).toMatchObject({
+      problem: expect.stringMatching(/^roles\.json: /),
+    });
+    expect(pageFromFolder({ ...folder, widgets: [] })).toMatchObject({
+      problem: expect.stringMatching(/^widgets\.json: /),
+    });
+    expect(pageFromFolder(folder, "inventory")).toEqual({
+      problem: 'page.json: names the page "demo" in the folder "inventory"',
+    });
   });
 });
 

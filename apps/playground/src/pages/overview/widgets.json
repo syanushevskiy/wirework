@@ -1,0 +1,76 @@
+{
+  "widgets.overview.counter": {
+    "default": {
+      "inputs": {
+        "value": "demo.counter"
+      },
+      "step": 1,
+      "label": "Increment"
+    }
+  },
+  "widgets.overview.echo": {
+    "default": {
+      "inputs": {
+        "value": "demo.counter"
+      },
+      "label": "Counter value"
+    }
+  },
+  "widgets.overview.echoAll": {
+    "default": {
+      "inputs": {
+        "value": "demo"
+      },
+      "label": "Demo state"
+    }
+  },
+  "widgets.overview.resetButton": {
+    "default": {
+      "label": "Reset counter",
+      "variant": "danger",
+      "on": {
+        "clicked": [
+          {
+            "call": "reset-counter"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.overview.role": {
+    "default": {
+      "inputs": {
+        "text": "app.user.title"
+      },
+      "text": "title",
+      "tone": "info"
+    }
+  },
+  "widgets.overview.title": {
+    "default": {
+      "text": "Wirework playground",
+      "tone": "accent"
+    },
+    "loud": {
+      "text": "WIREWORK PLAYGROUND!!!",
+      "tone": "danger"
+    }
+  },
+  "widgets.overview.user": {
+    "default": {
+      "inputs": {
+        "text": "app.user.name"
+      },
+      "text": "Signing in…",
+      "tone": "muted"
+    }
+  },
+  "widgets.overview.welcome": {
+    "default": {
+      "inputs": {
+        "text": "app.settings.displayName"
+      },
+      "text": "Tell us your name on the Settings page"
+    }
+  }
+}

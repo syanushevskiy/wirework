@@ -10,12 +10,9 @@ Feature: A table the server describes (view table API)
 
   Scenario: The columns come from the server, as the page changes them
     Given I open the "runs" page
+    # "Message" and "Started" are hidden by the SERVER, "Inbound" by the page: the columns above are what is left.
     Then the table has the columns "#, Name, Reference, Status"
-    # "Message" is hidden by the SERVER, "Inbound" by the page.
     And the state JSON contains '"url": "/api/v1/view/runs"'
-    And the state JSON contains '"title": "Reference"'
-    And the state JSON does not contain '"title": "Inbound"'
-    And the state JSON does not contain '"title": "Message"'
 
   Scenario: The filters come from the server's filter values, as the page changes them
     Given I open the "runs" page
@@ -131,8 +128,8 @@ Feature: A table the server describes (view table API)
     And I click the action parameter "metadata" for "load"
     And I add the widget
     Then the table has 5 rows
-    # Nothing describes the table: one column per field of the first row, the server's hidden one too.
-    And the table has the columns "id, name, reference, inbound, state, message"
+    # Nothing describes the table: one column per field of the first row, the server's hidden ones too.
+    And the table has the columns "id, name, reference, inbound, started, state, message"
     And the state JSON contains '"metadata": false'
     And the state JSON does not contain '"title": "Reference"'
 

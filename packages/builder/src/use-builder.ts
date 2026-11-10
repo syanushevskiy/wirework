@@ -19,9 +19,8 @@ import { useCallback } from "react";
 import {
   getPath,
   setPath,
-  type AnyLayoutEngine,
-  type AnyWidgetDefinition,
   type Store,
+  type UserViewModels,
   type ViewModels,
   type WidgetBindings,
 } from "@wirework/schema";
@@ -35,47 +34,13 @@ import {
 } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import type { EngineLock } from "./locks";
+import { modelNamespaceOf, withEmptyLayouts, type BuilderNaming } from "./naming";
+import { overlayTargetOf, pageOp, type EditContext } from "./page-edits";
 import type { Commit } from "./use-commit";
 import { templateOf, type WidgetSettings } from "./form-drafts";
 
-/** What a builder calls the things it creates. A host may name them differently. */
-export interface BuilderNaming {
-  /** The page template the builder edits (`pages.<page>.<pageView>`). */
-  pageView: string;
-  /** The template name a placed widget gets (`widgets.<modelGroup>.<cellId>.<widgetTemplate>`). */
-  widgetTemplate: string;
-  /** The group under `viewModels.widgets` that holds placed widgets' templates. */
-  modelGroup: string;
-  /** The next free cell id, given every id and template name the page already uses. */
-  cellId: (taken: readonly string[]) => string;
-}
-
-/**
- * Ids of the form `<prefix>-1`, `<prefix>-2`, … — derived from what is
- * TAKEN rather than from a counter, because a host may have applied a tree
- * that already holds some.
- */
-export function numberedIds(prefix: string): (taken: readonly string[]) => string {
-  const head = `${prefix}-`;
-  return (taken) => {
-    const used = taken.flatMap((name) => {
-      const rest = name.startsWith(head) ? name.slice(head.length) : "";
-      return /^\d+$/.test(rest) ? [Number(rest)] : [];
-    });
-    return `${head}${Math.max(0, ...used) + 1}`;
-  };
-}
-
-/** The names a builder uses unless the host says otherwise. */
-export const DEFAULT_BUILDER_NAMING: BuilderNaming = {
-  pageView: "default",
-  widgetTemplate: "default",
-  modelGroup: "custom",
-  cellId: numberedIds("custom"),
-};
-
-/** Where a builder's widget templates live — the prefix that marks a model as builder-owned. */
-export const modelNamespaceOf = (naming: BuilderNaming): string => `widgets.${naming.modelGroup}`;
+// The names live in naming.ts (the edit ops use them too); the hook keeps exporting them for its callers.
+export { DEFAULT_BUILDER_NAMING, modelNamespaceOf, numberedIds, withEmptyLayouts, type BuilderNaming } from "./naming";
 
 const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
 
@@ -104,37 +69,6 @@ export function builderPage(
 ): TemplateResolution {
   const path = builderLayoutPath(layoutEngines, viewModels, page, naming, at);
   return resolveTemplate(layoutEngines, path === undefined ? undefined : getPath(viewModels, path));
-}
-
-/**
- * A placed CONTAINER starts with its layouts EMPTY, on the engine of the
- * layout it is placed in: a card's `content`, the `content` of every item
- * of a tabs widget's `tabs` (the form's entries, else the setting's
- * defaults) — and an item an EDIT added gets one the same way. The form
- * never asks for a layout; this is where it comes from.
- */
-export function withEmptyLayouts(
-  definition: AnyWidgetDefinition | undefined,
-  template: Record<string, unknown>,
-  engine: AnyLayoutEngine,
-): Record<string, unknown> {
-  const contains = definition?.contains ?? [];
-  if (!definition || contains.length === 0) return template;
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = definition.viewModel.parse(template) as Record<string, unknown>;
-  } catch {
-    return template;
-  }
-  const started = (held: unknown): unknown =>
-    Array.isArray(held)
-      ? held.map((item: unknown) =>
-          item !== null && typeof item === "object" && !("content" in item)
-            ? { ...item, content: engine.empty() }
-            : item,
-        )
-      : (held ?? engine.empty());
-  return { ...template, ...Object.fromEntries(contains.map((name) => [name, started(parsed[name])])) };
 }
 
 /** What `addWidget` placed — for the host to react to (the page loads again; a container opens). */
@@ -167,6 +101,14 @@ export interface BuilderInput {
   cancelEditing: () => void;
   /** The page changed, so it must load again by the new configuration; and what was placed. */
   onAdded: (placed: PlacedWidget) => void;
+  /**
+   * Where the edits go (doc/roles-design.md): with a ROLE as the target, a
+   * placed widget's cell lands in the role's own view — a copy of the shown
+   * layout when the role has none yet — through the same op every edit for
+   * a role uses; its template is everyone's, as every template is. Absent,
+   * or with the shared page as the target, the cell goes to the shared page.
+   */
+  context?: EditContext | undefined;
 }
 
 export function useBuilder({
@@ -180,6 +122,7 @@ export function useBuilder({
   naming,
   cancelEditing,
   onAdded,
+  context,
 }: BuilderInput) {
   // Rendered facts follow the store.
   const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? NO_VIEW_MODELS;
@@ -231,28 +174,39 @@ export function useBuilder({
       const definition = registry.get(widgetType);
       const template = withEmptyLayouts(definition, templateOf(bindings, settings), target.engine);
       const layouts = definition ? layoutsOf(definition, template).map((held) => held.path) : [];
-      const withCell = setPath(
-        prev,
-        path,
-        target.engine.appendCell(
-          target.template,
-          { id, widget: widgetType, model: `${modelNamespaceOf(naming)}.${id}`, template: naming.widgetTemplate },
-          layouts.length > 0 ? "tall" : "default",
-        ),
-      );
-      const placed = (withCell.widgets[naming.modelGroup] as Record<string, unknown> | undefined) ?? {};
-      commit({
-        viewModels: {
-          ...withCell,
-          widgets: {
-            ...withCell.widgets,
-            [naming.modelGroup]: { ...placed, [id]: { [naming.widgetTemplate]: template } },
+      const cell = {
+        id,
+        widget: widgetType,
+        model: `${modelNamespaceOf(naming)}.${id}`,
+        template: naming.widgetTemplate,
+      };
+      const size = layouts.length > 0 ? ("tall" as const) : ("default" as const);
+      /** The widget's template under the builder's group: everyone's, whoever the cell is placed for. */
+      const withTemplate = (viewModels: ViewModels): ViewModels => ({
+        ...viewModels,
+        widgets: {
+          ...viewModels.widgets,
+          [naming.modelGroup]: {
+            ...(viewModels.widgets[naming.modelGroup] as Record<string, unknown> | undefined),
+            [id]: { [naming.widgetTemplate]: template },
           },
         },
       });
+      const overlay = context === undefined ? undefined : overlayTargetOf(context.target);
+      if (context !== undefined && overlay !== undefined) {
+        // For a role (or a user's own view): the cell into the target's own view, the template shared.
+        const place = pageOp(context, (engine, shown) => engine.appendCell(shown, cell, size));
+        commit(
+          place({ viewModels: withTemplate(prev), userViewModels: store.get<UserViewModels>("userViewModels") ?? {} }),
+        );
+      } else {
+        commit({
+          viewModels: withTemplate(setPath(prev, path, target.engine.appendCell(target.template, cell, size))),
+        });
+      }
       onAdded({ id, widget: widgetType, layouts });
     },
-    [canEdit, store, commit, registry, layoutEngines, page, at, naming, onAdded],
+    [canEdit, store, commit, registry, layoutEngines, page, at, naming, onAdded, context],
   );
 
   return { hasCells, engineLock, setEngine, addWidget };

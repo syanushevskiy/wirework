@@ -1,0 +1,225 @@
+{
+  "templates": {
+    "default": {
+      "engine": "flexlayout",
+      "cells": [
+        {
+          "id": "card-counter",
+          "widget": "antd-card",
+          "model": "widgets.cards.counter",
+          "template": "default",
+          "templates": {
+            "default": {
+              "title": "Counter on a grid",
+              "content": {
+                "engine": "react-grid-layout",
+                "cells": [
+                  {
+                    "id": "statistic-clicks",
+                    "widget": "antd-statistic",
+                    "model": "widgets.cards.clicks",
+                    "template": "default",
+                    "x": 0,
+                    "y": 0,
+                    "w": 6,
+                    "h": 2
+                  },
+                  {
+                    "id": "counter-clicks",
+                    "widget": "antd-counter",
+                    "model": "widgets.cards.clicker",
+                    "template": "default",
+                    "x": 6,
+                    "y": 0,
+                    "w": 6,
+                    "h": 2
+                  },
+                  {
+                    "id": "button-reset-clicks",
+                    "widget": "antd-button",
+                    "model": "widgets.cards.reset",
+                    "template": "default",
+                    "x": 0,
+                    "y": 2,
+                    "w": 6,
+                    "h": 1
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "card-profile",
+          "widget": "antd-card",
+          "model": "widgets.cards.profile",
+          "template": "default",
+          "templates": {
+            "default": {
+              "title": "Profile in flex rows",
+              "content": {
+                "engine": "flex-rows",
+                "rows": [
+                  {
+                    "classes": "gap-2",
+                    "cells": [
+                      {
+                        "id": "button-name-alice",
+                        "widget": "antd-button",
+                        "model": "widgets.cards.nameAlice",
+                        "template": "default",
+                        "classes": "basis-32 grow"
+                      },
+                      {
+                        "id": "button-name-bob",
+                        "widget": "antd-button",
+                        "model": "widgets.cards.nameBob",
+                        "template": "default",
+                        "classes": "flex-none basis-24"
+                      },
+                      {
+                        "id": "button-name-clear",
+                        "widget": "antd-button",
+                        "model": "widgets.cards.nameClear",
+                        "template": "default",
+                        "classes": "flex-none basis-20"
+                      }
+                    ]
+                  },
+                  {
+                    "classes": "items-end gap-2",
+                    "cells": [
+                      {
+                        "id": "input-profile-name",
+                        "widget": "antd-input",
+                        "model": "widgets.cards.name",
+                        "template": "default",
+                        "classes": "flex-1"
+                      },
+                      {
+                        "id": "switch-profile-refresh",
+                        "widget": "antd-switch",
+                        "model": "widgets.cards.autoRefresh",
+                        "template": "default",
+                        "classes": "shrink-0"
+                      }
+                    ]
+                  },
+                  {
+                    "cells": [
+                      {
+                        "id": "label-greeting",
+                        "widget": "antd-label",
+                        "model": "widgets.cards.greeting",
+                        "template": "default",
+                        "classes": "w-full"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "card-session",
+          "widget": "antd-card",
+          "model": "widgets.cards.session",
+          "template": "default",
+          "templates": {
+            "default": {
+              "title": "Session on a CSS grid",
+              "content": {
+                "engine": "css-grid",
+                "columns": ["1fr", "1fr", "10rem"],
+                "areas": [
+                  "label-session-name label-session-name tag-session-title",
+                  "echo-session-roles echo-session-roles echo-session-roles"
+                ],
+                "cells": [
+                  {
+                    "id": "label-session-name",
+                    "widget": "antd-label",
+                    "model": "widgets.cards.sessionName",
+                    "template": "default"
+                  },
+                  {
+                    "id": "tag-session-title",
+                    "widget": "antd-tag",
+                    "model": "widgets.cards.sessionTitle",
+                    "template": "default"
+                  },
+                  {
+                    "id": "echo-session-roles",
+                    "widget": "antd-echo",
+                    "model": "widgets.cards.sessionRoles",
+                    "template": "default"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "model": {
+        "global": {},
+        "layout": {
+          "type": "row",
+          "children": [
+            {
+              "type": "row",
+              "weight": 100,
+              "children": [
+                {
+                  "type": "row",
+                  "weight": 60,
+                  "children": [
+                    {
+                      "type": "tabset",
+                      "id": "counter",
+                      "weight": 40,
+                      "children": [
+                        {
+                          "type": "tab",
+                          "id": "card-counter",
+                          "name": "Counter",
+                          "component": "cell"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tabset",
+                      "id": "profile",
+                      "weight": 60,
+                      "children": [
+                        {
+                          "type": "tab",
+                          "id": "card-profile",
+                          "name": "Profile",
+                          "component": "cell"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "tabset",
+                  "id": "session",
+                  "weight": 40,
+                  "children": [
+                    {
+                      "type": "tab",
+                      "id": "card-session",
+                      "name": "Session",
+                      "component": "cell"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

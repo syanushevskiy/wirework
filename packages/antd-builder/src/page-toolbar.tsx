@@ -6,7 +6,7 @@
  * edits go. Every lock the hook reports as a code is said here in words —
  * the defaults below, or the host's own.
  */
-import { Breadcrumb, Button, Checkbox, Flex, Select, Space, Tag, Typography } from "antd";
+import { Breadcrumb, Button, Checkbox, Flex, Input, Select, Space, Tag, Typography } from "antd";
 import type { EditLock, EditTarget, OverlayLock, PageToolbarState } from "@wirework/builder";
 
 export interface PageToolbarTexts {
@@ -16,6 +16,8 @@ export interface PageToolbarTexts {
   overlayLocks: Record<OverlayLock, string>;
   /** Where edits go, by target; `{role}` in the role's text is filled in. */
   targets: { base: string; user: string; role: string };
+  /** The "add a role" field's placeholder. */
+  addRole: string;
   /** The role choice's entry for no role: edits for everyone. */
   everyone: string;
 }
@@ -27,6 +29,7 @@ export const DEFAULT_PAGE_TOOLBAR_TEXTS: PageToolbarTexts = {
   },
   overlayLocks: { "no-widgets": "Add a widget first — there is nothing to personalise yet" },
   targets: { base: "everyone", user: "me", role: "role: {role}" },
+  addRole: "add a role…",
   everyone: "everyone",
 };
 
@@ -165,6 +168,23 @@ export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
             ]}
           />
         </>
+      ) : null}
+      {/* "Add a role" the application grants (doc/roles-design.md): a kebab-case name, Enter adds it to the choice. */}
+      {toolbar.newRole ? (
+        <Input
+          data-testid="add-role"
+          className="ww-builder-field-narrow"
+          size="small"
+          placeholder={words.addRole}
+          aria-label={words.addRole}
+          aria-invalid={toolbar.newRole.problem !== undefined}
+          {...(toolbar.newRole.problem === undefined
+            ? {}
+            : { title: toolbar.newRole.problem, status: "error" as const })}
+          value={toolbar.newRole.name}
+          onChange={(event) => toolbar.newRole?.change(event.target.value)}
+          onPressEnter={() => toolbar.newRole?.add()}
+        />
       ) : null}
       <Tag data-testid="edit-target" className="ww-builder-toolbar-target">
         edits → {targetText(target, words)}

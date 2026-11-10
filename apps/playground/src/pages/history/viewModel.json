@@ -1,0 +1,39 @@
+{
+  "templates": {
+    "default": {
+      "engine": "react-grid-layout",
+      "cells": [
+        {
+          "id": "label-history",
+          "widget": "antd-label",
+          "model": "widgets.history.title",
+          "template": "default",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "id": "table-history",
+          "widget": "antd-infinite-table",
+          "model": "widgets.history.table",
+          "template": "default",
+          "x": 0,
+          "y": 1,
+          "w": 12,
+          "h": 10
+        },
+        {
+          "id": "label-history-error",
+          "widget": "antd-label",
+          "model": "widgets.history.error",
+          "template": "default",
+          "x": 0,
+          "y": 11,
+          "w": 12,
+          "h": 1
+        }
+      ]
+    }
+  }
+}

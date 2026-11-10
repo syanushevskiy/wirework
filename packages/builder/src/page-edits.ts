@@ -71,7 +71,7 @@ import {
   type WidgetRegistry,
 } from "@wirework/engine";
 import { freeTemplateName } from "./page-views";
-import { modelNamespaceOf, withEmptyLayouts, type BuilderNaming } from "./use-builder";
+import { modelNamespaceOf, withEmptyLayouts, type BuilderNaming } from "./naming";
 import type { EditableTrees } from "./use-commit";
 import type { EditableCell } from "./use-widget-editor";
 import { templateOf, type WidgetSettings } from "./form-drafts";

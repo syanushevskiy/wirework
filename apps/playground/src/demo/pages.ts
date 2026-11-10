@@ -2,8 +2,10 @@
  * The DEMO application's pages and the state its session starts from —
  * fixtures of this demo, not of the host (boot.ts). Each page says what a
  * visit's own store starts with and what only this application knows
- * about its opening; the session state is the configuration plus the
- * user's settings, the rest arrives with the session request.
+ * about its opening; the session state is the user's own views plus their
+ * settings, the rest arrives with the session request. A page's VIEW
+ * MODELS are not here: they are its folder's (src/pages), and the store
+ * gets them when the page opens.
  */
 import { z } from "zod";
 import type { Store } from "@wirework/schema";
@@ -12,7 +14,6 @@ import {
   demoAppState,
   demoPageData,
   demoUserViewModels,
-  demoViewModels,
   type DemoPage,
 } from "@wirework/view-data-models-examples";
 import type { RunsServer } from "../api/runs-server";
@@ -21,9 +22,8 @@ import type { PlaygroundPage } from "../boot";
 /** The user's page-size setting is a select's value: text. */
 const pageSizeSetting = z.coerce.number().int().min(1);
 
-/** The application's long-lived state: the configuration and the settings; the user, the permissions and the lists arrive with the session request. */
+/** The application's long-lived state: the user's own views and their settings; the user, the permissions and the lists arrive with the session request. */
 export const demoSessionState = (): Record<string, unknown> => ({
-  viewModels: demoViewModels,
   userViewModels: demoUserViewModels,
   ...demoAppState,
 });
@@ -63,15 +63,26 @@ export function demoPages(runsServer: RunsServer): Record<DemoPage, PlaygroundPa
     settings: demoPage("settings"),
     // Two cards as FlexLayout tabsets, a layout engine of its own inside each: a grid, flex rows (doc/flex-rows-design.md).
     cards: demoPage("cards"),
+    // One card showing how roles work: an input for everyone, a button and its echo for the admin by a condition (doc/roles-design.md).
+    roles: demoPage("roles"),
   };
 }
 
+/** The roles the builder page grants from the start (doc/roles-design.md): a builder adds more in the toolbar. */
+export const BUILDER_ROLES = ["app-user", "admin"] as const;
+
 /**
  * The builder: configuration of an empty page and NO data — the store fills
- * up only with what the added widgets write. Building is work on the SHARED
- * page, so the overlay starts off; the visitor turns it on to personalise.
+ * up only with what the added widgets write — plus the roles the
+ * application grants (`app.lists.roles`), configuration too, so the
+ * toolbar offers them from the start. Building is work on the SHARED page,
+ * so the overlay starts off; the visitor turns it on to personalise.
  */
 export const builderPage: PlaygroundPage = {
-  initialState: () => ({ viewModels: builderViewModels, userViewModels: {} }),
+  initialState: () => ({
+    viewModels: builderViewModels,
+    userViewModels: {},
+    app: { lists: { roles: [...BUILDER_ROLES] } },
+  }),
   userOverlayOnOpen: false,
 };

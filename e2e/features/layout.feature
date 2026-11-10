@@ -21,8 +21,8 @@ Feature: Layout engines
   Scenario: The runs page renders on the grid engine
     Given I open the "runs" page
     Then the page layout uses the "react-grid-layout" engine
-    # Nine widgets for everyone and the Wirework admin's Delete button, a blank for everybody else (roles.feature).
-    And the page has 10 cells
+    # Ten widgets for everyone and the Wirework admin's Delete button, a blank for everybody else (roles.feature).
+    And the page has 11 cells
     And I see a widget "antd-table"
     And I see a widget "antd-pagination"
     And I see a widget "antd-refresher"

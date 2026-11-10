@@ -12,7 +12,7 @@ import { flexRowsEngine } from "@wirework/engine-flex-rows";
 import { flexLayoutEngine } from "@wirework/engine-flexlayout";
 import { gridstackEngine } from "@wirework/engine-gridstack";
 import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
-import type { Store } from "@wirework/schema";
+import type { Store, ViewModels } from "@wirework/schema";
 import { createTableViewActions } from "@wirework/table-view";
 import { z } from "zod";
 import { demoAppState, sampleRuns, type DemoPage, type DemoRole, type Run } from "@wirework/view-data-models-examples";
@@ -29,6 +29,7 @@ import { suiteOptionsFor } from "../api/suites-catalog";
 import { RUNS_ALL_VIEW_URL, RUNS_VIEW_URL, SESSIONS_VIEW_URL, createFakeTransport, forbidden } from "../api/transport";
 import type { PlaygroundPage, Registries } from "../boot";
 import { statusBadgeContract } from "../contracts/status-badge";
+import { pageViewModels } from "../pages";
 import { CopyCell } from "../widgets/copy-cell";
 import { RunStatusCell } from "../widgets/run-status-cell";
 import { statusBadge } from "../widgets/status-badge";
@@ -45,8 +46,10 @@ function isRetryable(run: unknown): boolean {
 export interface Demo {
   /** Every broken definition and how the registry answered — the proof the playground shows. */
   rejections: string[];
-  /** The application's long-lived state a session starts from. */
+  /** The application's long-lived state a session starts from — without any page's view models. */
   sessionState: Record<string, unknown>;
+  /** One page's view models as its folder says (src/pages): what the store gets when the page opens, that page alone. */
+  pageViewModels(page: DemoPage): ViewModels;
   /** A session starts: the fake servers start over and the session request goes out. */
   startSession(shared: Store): void;
   /** "Sign in as" another of the demo's people (doc/roles-design.md): the session request goes out again; resolves when it answered. */
@@ -63,7 +66,7 @@ export function installDemo(
   for (const contract of standardContracts) contracts.register(contract);
   contracts.register(statusBadgeContract);
 
-  // The table offers this app's own cell renderers by name (`cell: { kind: "custom", name: "copy" }`).
+  // The table — and the fact sheet — offer this app's own cell renderers by name (`cell: { kind: "custom", name: "copy" }`).
   for (const widget of createAntdWidgets({ tableCells: { copy: CopyCell, "run-status": RunStatusCell } })) {
     registry.register(widget);
   }
@@ -122,10 +125,13 @@ export function installDemo(
     },
   });
   // What the pages' own `load` reactions call (viewModels.on.<page>): the
-  // overview's numbers, one run — plus opening the selected run.
+  // overview's numbers, one run — plus opening the selected run, and
+  // retrying the run on the server (the run page's dialog).
+  const loadRun = createRunLoader(runsServer);
   for (const action of createRunsActions({
-    loadRun: createRunLoader(runsServer),
+    loadRun,
     loadOverview: createOverviewLoader(runsServer),
+    retryRun: (id, reason) => runsServer.retryRun(id, reason),
     navigator,
   })) {
     actions.register(action);
@@ -187,6 +193,7 @@ export function installDemo(
   return {
     rejections,
     sessionState: demoSessionState(),
+    pageViewModels,
     startSession: (shared) => {
       runsServer.reset();
       void loadSession(shared);

@@ -85,6 +85,8 @@ export interface TableViewQuery {
   filterIn: Record<string, string[]>;
   /** Typed in the column headers: { <column id>: "text" }; empty texts are not sent. */
   filterLike?: Record<string, string> | undefined;
+  /** Picked in a date-range widget: { <column id>: [from, to] }; a range with both ends empty is not sent. */
+  filterBetween?: Record<string, [string, string]> | undefined;
   orderBy?: Record<string, SortDirection> | undefined;
 }
 
@@ -184,9 +186,12 @@ export function filtersOf(metadata: TableMetadata, view: Pick<TableView, "column
 export function requestOf(view: TableView, query: TableViewQuery, withMetadata: boolean): TableViewRequest {
   const base = view.request ?? {};
   const searched = Object.fromEntries(Object.entries(query.filterLike ?? {}).filter(([, text]) => text !== ""));
+  const ranged = Object.fromEntries(
+    Object.entries(query.filterBetween ?? {}).filter(([, [from, to]]) => from !== "" || to !== ""),
+  );
   return {
     dataFilter: {
-      filterBetween: base.filterBetween ?? {},
+      filterBetween: { ...base.filterBetween, ...ranged },
       filterEqual: base.filterEqual ?? {},
       filterIn: { ...base.filterIn, ...query.filterIn },
       filterLike: { ...base.filterLike, ...searched },

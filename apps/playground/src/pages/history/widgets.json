@@ -1,0 +1,111 @@
+{
+  "widgets.history.error": {
+    "default": {
+      "inputs": {
+        "text": "history.error"
+      },
+      "text": "",
+      "tone": "danger"
+    }
+  },
+  "widgets.history.table": {
+    "default": {
+      "inputs": {
+        "rows": "history.data",
+        "loading": "history.loading",
+        "columns": "history.columns",
+        "total": "history.total",
+        "filterIn": "history.filterIn",
+        "filterLike": "history.filterLike",
+        "orderBy": "history.orderBy"
+      },
+      "on": {
+        "load": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "url": "/api/v1/view/runs",
+              "into": "history",
+              "metadata": true,
+              "pageSize": 10,
+              "columns": {
+                "id": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "name": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "state": {
+                  "cell": {
+                    "kind": "tag",
+                    "tones": {
+                      "Success": "success",
+                      "Failed": "danger",
+                      "Running": "info",
+                      "Queued": "default"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "more": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "history",
+              "more": true
+            }
+          }
+        ],
+        "filter-changed": [
+          {
+            "set": "history.filterIn",
+            "from": "filterIn"
+          },
+          {
+            "set": "history.filterLike",
+            "from": "filterLike"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "history"
+            }
+          }
+        ],
+        "sort-changed": [
+          {
+            "set": "history.orderBy",
+            "from": "orderBy"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "history"
+            }
+          }
+        ],
+        "link-clicked": [
+          {
+            "call": "nav/follow"
+          }
+        ]
+      },
+      "height": 320
+    }
+  },
+  "widgets.history.title": {
+    "default": {
+      "text": "Run history — scroll for more; filter and sort in the column headers",
+      "tone": "accent"
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "templates": {
+    "default": {
+      "engine": "react-grid-layout",
+      "cells": [
+        {
+          "id": "label-settings",
+          "widget": "antd-label",
+          "model": "widgets.settings.title",
+          "template": "default",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "id": "card-preferences",
+          "widget": "antd-card",
+          "model": "widgets.settings.preferences",
+          "template": "default",
+          "x": 0,
+          "y": 1,
+          "w": 12,
+          "h": 5,
+          "templates": {
+            "default": {
+              "title": "Preferences",
+              "content": {
+                "engine": "react-grid-layout",
+                "cells": [
+                  {
+                    "id": "input-name",
+                    "widget": "antd-input",
+                    "model": "widgets.settings.nameInput",
+                    "template": "default",
+                    "x": 0,
+                    "y": 0,
+                    "w": 6,
+                    "h": 2
+                  },
+                  {
+                    "id": "select-page-size",
+                    "widget": "antd-select",
+                    "model": "widgets.settings.pageSize",
+                    "template": "default",
+                    "x": 6,
+                    "y": 0,
+                    "w": 3,
+                    "h": 2
+                  },
+                  {
+                    "id": "checkbox-auto-refresh",
+                    "widget": "antd-checkbox",
+                    "model": "widgets.settings.autoRefresh",
+                    "template": "default",
+                    "x": 9,
+                    "y": 0,
+                    "w": 3,
+                    "h": 2
+                  },
+                  {
+                    "id": "number-refresh-seconds",
+                    "widget": "antd-number",
+                    "model": "widgets.settings.refreshSeconds",
+                    "template": "default",
+                    "x": 0,
+                    "y": 2,
+                    "w": 6,
+                    "h": 2
+                  },
+                  {
+                    "id": "date-report-day",
+                    "widget": "antd-date",
+                    "model": "widgets.settings.reportDay",
+                    "template": "default",
+                    "x": 6,
+                    "y": 2,
+                    "w": 6,
+                    "h": 2
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "echo-settings",
+          "widget": "antd-echo",
+          "model": "widgets.settings.echoSettings",
+          "template": "default",
+          "x": 0,
+          "y": 6,
+          "w": 6,
+          "h": 2
+        },
+        {
+          "id": "echo-permissions",
+          "widget": "antd-echo",
+          "model": "widgets.settings.echoPermissions",
+          "template": "default",
+          "x": 6,
+          "y": 6,
+          "w": 6,
+          "h": 2
+        }
+      ]
+    }
+  }
+}

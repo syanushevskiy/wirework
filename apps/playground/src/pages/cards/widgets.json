@@ -1,0 +1,125 @@
+{
+  "widgets.cards.autoRefresh": {
+    "default": {
+      "inputs": {
+        "checked": "app.settings.autoRefresh"
+      },
+      "label": "Auto-refresh"
+    }
+  },
+  "widgets.cards.clicker": {
+    "default": {
+      "inputs": {
+        "value": "demo.counter"
+      },
+      "step": 1,
+      "label": "Click"
+    }
+  },
+  "widgets.cards.clicks": {
+    "default": {
+      "inputs": {
+        "value": "demo.counter"
+      },
+      "title": "Clicks"
+    }
+  },
+  "widgets.cards.greeting": {
+    "default": {
+      "inputs": {
+        "text": "app.settings.displayName"
+      },
+      "text": "Type a name to be greeted",
+      "tone": "muted"
+    }
+  },
+  "widgets.cards.name": {
+    "default": {
+      "inputs": {
+        "value": "app.settings.displayName"
+      },
+      "label": "Your name",
+      "placeholder": "type a name"
+    }
+  },
+  "widgets.cards.nameAlice": {
+    "default": {
+      "label": "Alice",
+      "on": {
+        "clicked": [
+          {
+            "set": "app.settings.displayName",
+            "value": "Alice"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.cards.nameBob": {
+    "default": {
+      "label": "Bob",
+      "variant": "secondary",
+      "on": {
+        "clicked": [
+          {
+            "set": "app.settings.displayName",
+            "value": "Bob"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.cards.nameClear": {
+    "default": {
+      "label": "Clear",
+      "variant": "dashed",
+      "on": {
+        "clicked": [
+          {
+            "set": "app.settings.displayName",
+            "value": ""
+          }
+        ]
+      }
+    }
+  },
+  "widgets.cards.reset": {
+    "default": {
+      "label": "Reset",
+      "variant": "secondary",
+      "on": {
+        "clicked": [
+          {
+            "call": "reset-counter"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.cards.sessionName": {
+    "default": {
+      "inputs": {
+        "text": "app.user.name"
+      },
+      "text": "Signing in…",
+      "tone": "accent"
+    }
+  },
+  "widgets.cards.sessionRoles": {
+    "default": {
+      "inputs": {
+        "value": "app.user.roles"
+      },
+      "label": "Roles (from the session)"
+    }
+  },
+  "widgets.cards.sessionTitle": {
+    "default": {
+      "inputs": {
+        "text": "app.user.title"
+      },
+      "text": "title",
+      "tone": "info"
+    }
+  }
+}

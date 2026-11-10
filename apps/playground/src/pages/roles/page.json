@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "roles",
+  "route": {
+    "path": "/demo/roles",
+    "title": "Roles",
+    "menu": true
+  }
+}

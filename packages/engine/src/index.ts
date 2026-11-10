@@ -42,7 +42,15 @@ export {
   updateUserLayoutAt,
 } from "./nesting";
 export type { ChainStep, HeldLayout, LocatedLayout } from "./nesting";
-export { exportPageFile, mergePageFiles, pageFile, pageFileName, parsePageFile } from "./pages-file";
+export {
+  exportPageFile,
+  mergePageFiles,
+  pageFile,
+  pageFileName,
+  pageFolder,
+  pageFromFolder,
+  parsePageFile,
+} from "./pages-file";
 export type { MergedPages, PageFileInput } from "./pages-file";
 export { validateViewModels } from "./validate";
 export type { ValidateInput, ValidationProblem, ValidationReport } from "./validate";

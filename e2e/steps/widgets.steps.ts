@@ -1,7 +1,7 @@
 /** The widgets on the live page, by what each contract exposes. */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { dropdown, option } from "../support/antd";
+import { confirmButton, dropdown, option } from "../support/antd";
 import { cell, live } from "../support/page";
 
 const { When, Then } = createBdd();
@@ -145,6 +145,87 @@ Then("the statistic reads {string} and {string}", async ({ page }, title: string
 
 Then("the divider reads {string}", async ({ page }, text: string) => {
   await expect(live(page).getByRole("separator")).toHaveText(text);
+});
+
+/* ----------------------- the dashboard set (WW-34) ----------------------- */
+
+When("I enter the number {int} in {string}", async ({ page }, value: number, label: string) => {
+  await live(page).getByRole("spinbutton", { name: label }).fill(String(value));
+});
+
+/** A date is TYPED in the shown format and picked with Enter — never clicked in a calendar, which moves with the month. */
+When("I pick the date {string} in {string}", async ({ page }, date: string, label: string) => {
+  const field = live(page).getByRole("textbox", { name: label });
+  await field.fill(date);
+  await field.press("Enter");
+});
+
+/** The range's two fields, typed in turn: antd moves to the second once the first is picked. */
+When("I pick the dates {string} to {string} in {string}", async ({ page }, from: string, to: string, label: string) => {
+  const fields = live(page).getByRole("group", { name: label }).getByRole("textbox");
+  await fields.nth(0).fill(from);
+  await fields.nth(0).press("Enter");
+  await fields.nth(1).fill(to);
+  await fields.nth(1).press("Enter");
+});
+
+Then("the {string} dates are {string} to {string}", async ({ page }, label: string, from: string, to: string) => {
+  const range = live(page).getByRole("group", { name: label });
+  await expect(range).toHaveAttribute("data-from", from);
+  await expect(range).toHaveAttribute("data-to", to);
+});
+
+/** One field of a fact sheet, by the item's title; a custom cell's text includes its control ("REF…Copy"). */
+Then("the field {string} of the descriptions reads {string}", async ({ page }, item: string, text: string) => {
+  await expect(live(page).locator(`[data-testid="description-field"][data-item="${item}"]`)).toHaveText(text);
+});
+
+Then("the result says {string}", async ({ page }, text: string) => {
+  await expect(live(page).getByTestId("antd-result")).toContainText(text);
+});
+
+Then("the current step is {string}", async ({ page }, key: string) => {
+  await expect(live(page).getByTestId("antd-steps")).toHaveAttribute("data-current", key);
+});
+
+Then("the pipeline has failed", async ({ page }) => {
+  await expect(live(page).getByTestId("antd-steps")).toHaveAttribute("data-status", "error");
+});
+
+Then("the timeline has {int} entr(y)(ies)", async ({ page }, count: number) => {
+  await expect(live(page).getByTestId("antd-timeline")).toHaveAttribute("data-count", String(count));
+});
+
+/** A dialog opens OVER the page (a portal outside it): found by its role, told apart by its title. */
+const dialog = (page: Page, title: string) => page.getByRole("dialog").filter({ hasText: title });
+
+Then("the dialog {string} is open", async ({ page }, title: string) => {
+  await expect(dialog(page, title)).toBeVisible();
+});
+
+Then("the dialog {string} is closed", async ({ page }, title: string) => {
+  await expect(dialog(page, title)).toBeHidden();
+});
+
+When("I click the button {string} in the dialog", async ({ page }, label: string) => {
+  await page.getByRole("dialog").getByRole("button", { name: label, exact: true }).click();
+});
+
+When("I type {string} into the field {string} in the dialog", async ({ page }, text: string, label: string) => {
+  await page.getByRole("dialog").getByRole("textbox", { name: label }).fill(text);
+});
+
+When("I close the dialog", async ({ page }) => {
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+});
+
+/** A button with a question before its click (`confirm`): antd's Popconfirm, OK or Cancel. */
+When("I confirm", async ({ page }) => {
+  await confirmButton(page, "OK").click();
+});
+
+When("I cancel", async ({ page }) => {
+  await confirmButton(page, "Cancel").click();
 });
 
 /* ------------------------------- input ------------------------------- */

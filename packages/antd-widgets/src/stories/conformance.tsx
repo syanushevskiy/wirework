@@ -55,9 +55,40 @@ export function labelConformance(
   };
 }
 
-/** `button` contract: a role=button with the caption; a click emits and reactions run. */
-export function buttonConformance(definition: AnyWidgetDefinition): Record<"Default" | "SetsAFlag", Story> {
+/** `button` contract: a role=button with the caption; a click emits and reactions run; with `confirm` only after OK. */
+export function buttonConformance(
+  definition: AnyWidgetDefinition,
+): Record<"Default" | "SetsAFlag" | "Confirms" | "CancelsConfirm", Story> {
+  const confirming = (key: string) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      viewModel={{
+        label: "Delete",
+        confirm: "Delete this run?",
+        on: { clicked: [{ set: "ui.deleted", value: true }] },
+      }}
+    />
+  );
   return {
+    Confirms: {
+      render: () => confirming("confirms"),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
+        // The question opens beside the button, outside the story's canvas, with a fade: visible when it ends.
+        await waitFor(() => expect(page().getByText("Delete this run?")).toBeVisible());
+        await userEvent.click(page().getByRole("button", { name: "OK" }));
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"deleted": true');
+      },
+    },
+    CancelsConfirm: {
+      render: () => confirming("cancels"),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
+        await userEvent.click(await page().findByRole("button", { name: "Cancel" }));
+        await expect(canvas.getByTestId("story-store")).not.toHaveTextContent("deleted");
+      },
+    },
     Default: {
       play: async ({ canvas, args }) => {
         await expect(canvas.getByRole("button", { name: arg(args, "label") })).toBeVisible();
@@ -79,11 +110,21 @@ export function buttonConformance(definition: AnyWidgetDefinition): Record<"Defa
   };
 }
 
-/** `input` contract: a textbox, aria-invalid + alert on failure, premade and custom rules, text stored by reaction. */
+/** `input` contract: a textbox, aria-invalid + alert on failure, premade and custom rules, text stored by reaction; `rows` makes it multi-line. */
 export function inputConformance(
   _definition: AnyWidgetDefinition,
-): Record<"Plain" | "Required" | "Email" | "CustomPattern" | "Validates", Story> {
+): Record<"Plain" | "Required" | "Email" | "CustomPattern" | "Validates" | "MultiLine", Story> {
   return {
+    MultiLine: {
+      args: { label: "Notes", rows: 3 },
+      play: async ({ canvas, userEvent }) => {
+        const field = canvas.getByRole("textbox", { name: "Notes" });
+        await expect(field.tagName).toBe("TEXTAREA");
+        await userEvent.type(field, "first{enter}second");
+        // Two lines stored as one text with a line break (the readout shows JSON's escape).
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"text": "first\\nsecond"');
+      },
+    },
     Plain: {
       play: async ({ canvas, userEvent }) => {
         const field = canvas.getByRole("textbox");
@@ -967,6 +1008,393 @@ export function dividerConformance(definition: AnyWidgetDefinition): Record<"Tit
       render: () => <WidgetStory key="plain" definition={definition} viewModel={{ dashed: true }} />,
       play: async ({ canvas }) => {
         await expect(canvas.getByRole("separator")).toBeEmptyDOMElement();
+      },
+    },
+  };
+}
+
+/** `number` contract: role=spinbutton named by the label, the number from the store, a typed number stored, an emptied field stored as null. */
+export function numberConformance(definition: AnyWidgetDefinition): Record<"Value" | "Types" | "Empties", Story> {
+  const story = (key: string, seconds: number | null) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ demo: { seconds } }}
+      viewModel={{ inputs: { value: "demo.seconds" }, label: "Refresh every", suffix: "s", min: 1 }}
+    />
+  );
+  return {
+    Value: {
+      render: () => story("value", 30),
+      play: async ({ canvas }) => {
+        const field = canvas.getByRole("spinbutton", { name: "Refresh every" });
+        await expect(field).toHaveValue("30");
+        await expect(field).toHaveAttribute("aria-valuemin", "1");
+      },
+    },
+    Types: {
+      render: () => story("types", null),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.type(canvas.getByRole("spinbutton", { name: "Refresh every" }), "45");
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"seconds": 45');
+      },
+    },
+    Empties: {
+      render: () => story("empties", 30),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.clear(canvas.getByRole("spinbutton", { name: "Refresh every" }));
+        // Emptied is null, never 0: the form's "nothing" and its zero are different answers.
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"seconds": null');
+      },
+    },
+  };
+}
+
+/** `date` contract: a textbox named by the label showing the stored day, a typed day stored as YYYY-MM-DD, a time stored as ISO. */
+export function dateConformance(definition: AnyWidgetDefinition): Record<"Value" | "Types" | "WithTime", Story> {
+  return {
+    Value: {
+      render: () => (
+        <WidgetStory
+          key="value"
+          definition={definition}
+          seed={{ demo: { day: "2026-11-09" } }}
+          viewModel={{ inputs: { value: "demo.day" }, label: "Report day" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("textbox", { name: "Report day" })).toHaveValue("2026-11-09");
+      },
+    },
+    Types: {
+      render: () => (
+        <WidgetStory
+          key="types"
+          definition={definition}
+          seed={{ demo: { day: "" } }}
+          viewModel={{ inputs: { value: "demo.day" }, label: "Report day" }}
+        />
+      ),
+      play: async ({ canvas, userEvent }) => {
+        // Typed, never clicked in a calendar: a calendar cell moves with the month.
+        await userEvent.type(canvas.getByRole("textbox", { name: "Report day" }), "2026-11-10{enter}");
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"day": "2026-11-10"');
+      },
+    },
+    WithTime: {
+      render: () => (
+        <WidgetStory
+          key="with-time"
+          definition={definition}
+          seed={{ demo: { at: "" } }}
+          viewModel={{ inputs: { value: "demo.at" }, label: "Starts at", withTime: true }}
+        />
+      ),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.type(canvas.getByRole("textbox", { name: "Starts at" }), "2026-11-10 08:15{enter}");
+        // ISO with the local offset: the day and the time as typed, whatever the zone.
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"at": "2026-11-10T08:15:00');
+      },
+    },
+  };
+}
+
+/** `date-range` contract: a group named by the label holding two textboxes with the stored pair, two typed days stored as the pair. */
+export function dateRangeConformance(definition: AnyWidgetDefinition): Record<"Value" | "Types", Story> {
+  const story = (key: string, window: [string, string]) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ demo: { window } }}
+      viewModel={{ inputs: { value: "demo.window" }, label: "Started between" }}
+    />
+  );
+  return {
+    Value: {
+      render: () => story("value", ["2026-11-01", "2026-11-09"]),
+      play: async ({ canvas }) => {
+        const [from, to] = within(canvas.getByRole("group", { name: "Started between" })).getAllByRole("textbox");
+        await expect(from).toHaveValue("2026-11-01");
+        await expect(to).toHaveValue("2026-11-09");
+      },
+    },
+    Types: {
+      render: () => story("types", ["", ""]),
+      play: async ({ canvas, userEvent }) => {
+        const [from, to] = within(canvas.getByRole("group", { name: "Started between" })).getAllByRole("textbox");
+        if (from === undefined || to === undefined) throw new Error("the range has fewer than two fields");
+        await userEvent.type(from, "2026-11-02{enter}");
+        await userEvent.type(to, "2026-11-08{enter}");
+        const store = canvas.getByTestId("story-store");
+        await expect(store).toHaveTextContent('"2026-11-02"');
+        await expect(store).toHaveTextContent('"2026-11-08"');
+      },
+    },
+  };
+}
+
+const RECORD = { id: "7", name: "Nightly regression", state: "Success", reference: "REF59456738" };
+
+/** `descriptions` contract: one labelled field per item in the table's cell kinds, a link cell's plain click emitted, empty fields on an empty path. */
+export function descriptionsConformance(
+  definition: AnyWidgetDefinition,
+): Record<"Fields" | "LinkClicked" | "BoundToEmptyPath", Story> {
+  const items = [
+    { title: "Name", property: "name", cell: { kind: "link", to: "/demo/runs/{id}" } },
+    { title: "Status", property: "state", cell: { kind: "tag", tones: { Success: "success", Failed: "danger" } } },
+    { title: "Reference", property: "reference" },
+  ];
+  return {
+    Fields: {
+      render: () => (
+        <WidgetStory
+          key="fields"
+          definition={definition}
+          seed={{ demo: { run: RECORD } }}
+          viewModel={{ inputs: { record: "demo.run" }, title: "Run", items }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Run")).toBeVisible();
+        await expect(canvas.getByText("Status")).toBeVisible();
+        await expect(canvas.getByText("Success")).toHaveAttribute("data-tone", "success");
+        await expect(canvas.getByText("REF59456738")).toBeVisible();
+        await expect(canvas.getByRole("link", { name: "Nightly regression" })).toHaveAttribute("href", "/demo/runs/7");
+      },
+    },
+    LinkClicked: {
+      render: () => (
+        <WidgetStory
+          key="link"
+          definition={definition}
+          seed={{ demo: { run: RECORD } }}
+          viewModel={{
+            inputs: { record: "demo.run" },
+            on: { "link-clicked": [{ set: "demo.href", from: "href" }] },
+            items,
+          }}
+        />
+      ),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.click(canvas.getByRole("link", { name: "Nightly regression" }));
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"href": "/demo/runs/7"');
+      },
+    },
+    BoundToEmptyPath: {
+      render: () => (
+        <WidgetStory key="empty" definition={definition} viewModel={{ inputs: { record: "demo.missing" }, items }} />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Reference")).toBeVisible();
+        await expect(canvas.queryByText("REF59456738")).toBeNull();
+      },
+    },
+  };
+}
+
+/** `result` contract: role=status with the status, title and detail; role=alert for a failing outcome; a bound title; the action emits. */
+export function resultConformance(
+  definition: AnyWidgetDefinition,
+): Record<"Static" | "Alerting" | "FromStore" | "Action", Story> {
+  return {
+    Static: {
+      render: () => (
+        <WidgetStory
+          key="static"
+          definition={definition}
+          viewModel={{ status: "success", title: "Saved", detail: "Every change is stored." }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        const result = canvas.getByRole("status");
+        await expect(result).toHaveAttribute("data-status", "success");
+        await expect(result).toHaveTextContent("Saved");
+        await expect(result).toHaveTextContent("Every change is stored.");
+      },
+    },
+    Alerting: {
+      render: () => (
+        <WidgetStory
+          key="alerting"
+          definition={definition}
+          viewModel={{ status: "failed", title: "The server failed" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("alert")).toHaveTextContent("The server failed");
+      },
+    },
+    FromStore: {
+      render: () => (
+        <WidgetStory
+          key="from-store"
+          definition={definition}
+          seed={{ demo: { error: "There is no run nope" } }}
+          viewModel={{ status: "not-found", title: "Not found", inputs: { title: "demo.error" } }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByRole("status")).toHaveTextContent("There is no run nope");
+        await expect(canvas.queryByText("Not found")).toBeNull();
+      },
+    },
+    Action: {
+      render: () => (
+        <WidgetStory
+          key="action"
+          definition={definition}
+          viewModel={{
+            status: "error",
+            title: "Failed",
+            action: "Retry",
+            on: { clicked: [{ set: "ui.retried", value: true }] },
+          }}
+        />
+      ),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.click(canvas.getByRole("button", { name: "Retry" }));
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"retried": true');
+      },
+    },
+  };
+}
+
+/** `dialog` contract: role=dialog named by the title with the layout inside while `open` is true, nothing while false, closing stored by the default reaction. */
+export function dialogConformance(
+  definition: AnyWidgetDefinition,
+  { registry, layoutEngines, label }: ContainerInside,
+): Record<"Open" | "Closed" | "Closes", Story> {
+  // Shown in place: a story is no page to open a dialog over.
+  const story = (key: string, open: boolean) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ ui: { open } }}
+      inside={{ registry, layoutEngines, viewModels: labelTemplates("inner") }}
+      viewModel={{
+        inputs: { open: "ui.open" },
+        title: "Retry run",
+        inline: true,
+        content: { engine: "list", cells: [labelCell("inner", label)] },
+      }}
+    />
+  );
+  return {
+    Open: {
+      render: () => story("open", true),
+      play: async ({ canvas }) => {
+        // antd opens a dialog with a zoom: visible when the animation ends.
+        await waitFor(() => expect(canvas.getByRole("dialog")).toBeVisible());
+        await expect(canvas.getByRole("dialog")).toHaveTextContent("Retry run");
+        await expect(canvas.getByText("Inside: inner")).toBeVisible();
+      },
+    },
+    Closed: {
+      render: () => story("closed", false),
+      play: async ({ canvas }) => {
+        await expect(canvas.queryByRole("dialog")).toBeNull();
+        await expect(canvas.queryByText("Inside: inner")).toBeNull();
+      },
+    },
+    Closes: {
+      render: () => story("closes", true),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.click(canvas.getByRole("button", { name: "Close" }));
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"open": false');
+      },
+    },
+  };
+}
+
+const PIPELINE = [
+  { key: "queued", label: "Queued" },
+  { key: "running", label: "Running" },
+  { key: "finished", label: "Finished" },
+];
+
+/** `steps` contract: a list named by the label with the current step by key or position (`data-current`), a failed step, a clicked step emitted. */
+export function stepsConformance(definition: AnyWidgetDefinition): Record<"Current" | "Failed" | "Clicks", Story> {
+  const story = (key: string, stage: string | number, extra: Record<string, unknown> = {}) => (
+    <WidgetStory
+      key={key}
+      definition={definition}
+      seed={{ run: { stage, failed: true } }}
+      viewModel={{ inputs: { current: "run.stage" }, label: "Pipeline", items: PIPELINE, ...extra }}
+    />
+  );
+  const list = (canvas: ReturnType<typeof within>) => canvas.getByRole("list", { name: "Pipeline" });
+  return {
+    Current: {
+      render: () => story("current", "running"),
+      play: async ({ canvas }) => {
+        await expect(list(canvas)).toHaveAttribute("data-current", "running");
+        await expect(list(canvas)).toHaveAttribute("data-status", "process");
+        await expect(canvas.getByText("Finished")).toBeVisible();
+      },
+    },
+    Failed: {
+      render: () => (
+        <WidgetStory
+          key="failed"
+          definition={definition}
+          seed={{ run: { stage: 2, failed: true } }}
+          viewModel={{ inputs: { current: "run.stage", failed: "run.failed" }, label: "Pipeline", items: PIPELINE }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(list(canvas)).toHaveAttribute("data-current", "finished");
+        await expect(list(canvas)).toHaveAttribute("data-status", "error");
+      },
+    },
+    Clicks: {
+      render: () => story("clicks", "queued", { clickable: true }),
+      play: async ({ canvas, userEvent }) => {
+        await userEvent.click(canvas.getByText("Finished"));
+        await expect(canvas.getByTestId("story-store")).toHaveTextContent('"stage": "finished"');
+        await expect(list(canvas)).toHaveAttribute("data-current", "finished");
+      },
+    },
+  };
+}
+
+const HISTORY = [
+  { time: "09:00", text: "Queued" },
+  { time: "09:01", title: "qa-1", text: "Running", tone: "info" },
+  { time: "09:07", text: "Finished", tone: "success" },
+];
+
+/** `timeline` contract: one entry per item with its time, heading, text and tone (`data-tone`); `pending` an open last entry. */
+export function timelineConformance(definition: AnyWidgetDefinition): Record<"Entries" | "Pending", Story> {
+  return {
+    Entries: {
+      render: () => (
+        <WidgetStory
+          key="entries"
+          definition={definition}
+          seed={{ run: { history: HISTORY } }}
+          viewModel={{ inputs: { items: "run.history" } }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("09:01")).toBeVisible();
+        await expect(canvas.getByText("qa-1")).toBeVisible();
+        await expect(canvas.getByText("Running").closest("[data-tone]")).toHaveAttribute("data-tone", "info");
+        await expect(canvas.getByText("Finished").closest("[data-tone]")).toHaveAttribute("data-tone", "success");
+        await expect(canvas.getByText("Queued").closest("[data-tone]")).toHaveAttribute("data-tone", "default");
+      },
+    },
+    Pending: {
+      render: () => (
+        <WidgetStory
+          key="pending"
+          definition={definition}
+          seed={{ run: { history: HISTORY.slice(0, 2) } }}
+          viewModel={{ inputs: { items: "run.history" }, pending: "Still running…" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        await expect(canvas.getByText("Still running…")).toBeVisible();
+        await expect(canvas.queryByText("Finished")).toBeNull();
       },
     },
   };
