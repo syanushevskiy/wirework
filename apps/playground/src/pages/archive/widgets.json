@@ -135,8 +135,7 @@
       },
       "height": 320,
       "windowed": true,
-      "columnMenu": false,
-      "cellSelection": false
+      "columnMenu": true
     }
   },
   "widgets.archive.title": {
