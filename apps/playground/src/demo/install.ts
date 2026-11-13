@@ -116,7 +116,7 @@ export function installDemo(
   // Server-side data for the demo: a fake server with real latency.
   const runsServer = createRunsServer({ seed: sampleRuns, total: 23, latencyMs: 600 });
   // The archive: the same kind of list, long — two thousand runs nobody holds whole (the windowed list's demo).
-  const archiveServer = createRunsServer({ seed: sampleRuns, total: ARCHIVE_TOTAL, latencyMs: 300 });
+  const archiveServer = createRunsServer({ seed: sampleRuns, total: ARCHIVE_TOTAL, latencyMs: 300, details: true });
   const sessionApi = createSessionApi({ latencyMs: 300 });
   const loadSession = createSessionLoader(sessionApi);
   // The Wirework admin's button (doc/roles-design.md): a role-only ACTION is a server call the session must be

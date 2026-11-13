@@ -520,7 +520,7 @@ Then("the table fills its box without a sideways scroll", async ({ page }) => {
 
 /** The row of tools above the table; its standard items are buttons named by what they do. */
 const toolbar = (page: Page) => tableWidget(page).getByRole("toolbar", { name: "Table tools" });
-const resetFilters = (page: Page) => toolbar(page).getByRole("button", { name: "Reset filters" });
+const resetFilters = (page: Page) => toolbar(page).getByRole("button", { name: "Reset Filters" });
 
 /** The tools in order, by the names they are registered under: "reset-filters, refresh" ("" = none). */
 Then("the table toolbar offers {string}", async ({ page }, names: string) => {

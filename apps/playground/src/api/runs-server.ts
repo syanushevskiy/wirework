@@ -134,10 +134,63 @@ function historyOf(run: Run, retries: readonly string[]): RunEvent[] {
 /** A run as the view table API serves it: one flat record, keyed by the column ids — the owner on the admin's view only. */
 type ViewRow = Record<"id" | "name" | "reference" | "inbound" | "started" | "state" | "message", string> & {
   owner?: string;
+  runner?: string;
+  branch?: string;
+  duration?: string;
 };
 
 /** Who a run belongs to: the server's knowledge, by the id's parity so a scenario can assert it. */
 const ownerOf = (run: Run): string => (Number(run.id) % 2 === 0 ? "alice" : "bob");
+
+const RUNNERS = ["qa-1", "qa-2", "qa-3", "qa-4"];
+const BRANCHES = ["main", "release", "hotfix"];
+
+/**
+ * What a long list's view tells on top (the archive): the machine a run ran
+ * on, its branch and how long it took — all by the id, so a scenario can
+ * assert them: `123456` ran on qa-1 from main for 9 min.
+ */
+const detailsOf = (run: Run): Pick<ViewRow, "runner" | "branch" | "duration"> => {
+  const id = Number(run.id) || 0;
+  return {
+    runner: RUNNERS[id % RUNNERS.length] ?? "qa-1",
+    branch: BRANCHES[id % BRANCHES.length] ?? "main",
+    duration: `${3 + (id % 17)} min`,
+  };
+};
+
+const DETAIL_COLUMNS: NonNullable<TableViewResponse["metadata"]>["columnDefinitions"] = [
+  {
+    id: "runner",
+    headerName: "Runner",
+    type: "varchar(l)",
+    description: null,
+    filterValues: RUNNERS,
+    isFilterable: true,
+    isHidden: false,
+    isSortable: true,
+  },
+  {
+    id: "branch",
+    headerName: "Branch",
+    type: "varchar(l)",
+    description: null,
+    filterValues: BRANCHES,
+    isFilterable: true,
+    isHidden: false,
+    isSortable: true,
+  },
+  {
+    id: "duration",
+    headerName: "Duration",
+    type: "varchar(l)",
+    description: null,
+    filterValues: null,
+    isFilterable: false,
+    isHidden: false,
+    isSortable: true,
+  },
+];
 
 const toViewRow = (run: Run, withOwner: boolean): ViewRow => ({
   id: run.id,
@@ -266,7 +319,14 @@ function select(
   );
 }
 
-export function createRunsServer(options: { seed: readonly Run[]; total: number; latencyMs: number }): RunsServer {
+export function createRunsServer(options: {
+  seed: readonly Run[];
+  total: number;
+  latencyMs: number;
+  /** Three more columns on every view — Runner, Branch, Duration (the archive's list). */
+  details?: boolean;
+}): RunsServer {
+  const details = options.details === true;
   let rows = buildRows(options.seed, options.total);
   /** Why each run was queued again, in order — told in its history. */
   let retries = new Map<string, string[]>();
@@ -274,11 +334,18 @@ export function createRunsServer(options: { seed: readonly Run[]; total: number;
   let epoch = 0;
 
   const answerView = (request: TableViewRequest, withOwner: boolean): TableViewResponse => {
-    const all = rows.map((run) => toViewRow(run, withOwner));
+    const all = rows.map((run) => ({ ...toViewRow(run, withOwner), ...(details ? detailsOf(run) : {}) }));
     const selected = select(all, request.dataFilter);
     const { limit, offset } = request.dataFilter;
+    const described = describeRuns(all, withOwner);
     return {
-      ...(request.metadata ? { metadata: describeRuns(all, withOwner) } : {}),
+      ...(request.metadata
+        ? {
+            metadata: details
+              ? { ...described, columnDefinitions: [...described.columnDefinitions, ...DETAIL_COLUMNS] }
+              : described,
+          }
+        : {}),
       ...(request.totalRecords ? { totalRecords: selected.length } : {}),
       data: selected.slice(offset, offset + limit),
     };

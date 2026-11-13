@@ -20,10 +20,12 @@ export function ResetFiltersItem({ filtered, resetFilters }: TableToolbarItemPro
       icon={<ClearOutlined />}
       disabled={!filtered}
       onClick={resetFilters}
-      aria-label="Reset filters"
-      title="Reset filters"
+      // The icon has a name of its own ("clear"); the button's is its text alone.
+      aria-label="Reset Filters"
       data-testid="table-reset-filters"
-    />
+    >
+      Reset Filters
+    </Button>
   );
 }
 

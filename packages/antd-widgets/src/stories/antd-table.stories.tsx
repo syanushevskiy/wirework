@@ -676,7 +676,7 @@ export const Toolbar: Story = {
   play: async ({ canvas, userEvent }) => {
     const tools = within(canvas.getByRole("toolbar", { name: "Table tools" }));
     const store = canvas.getByTestId("story-store");
-    const reset = tools.getByRole("button", { name: "Reset filters" });
+    const reset = tools.getByRole("button", { name: "Reset Filters" });
     await expect(reset).toBeEnabled();
     await userEvent.click(reset);
     await expect(store).toHaveTextContent('"filterIn": {}');
@@ -751,7 +751,7 @@ export const CustomToolbarItems: Story = {
     await userEvent.click(tools.getByRole("button", { name: "Fetch again" }));
     await expect(canvas.getByTestId("story-store")).toHaveTextContent('"asked": "again"');
     await expect(tools.getByText("filtered")).toBeVisible();
-    await userEvent.click(tools.getByRole("button", { name: "Reset filters" }));
+    await userEvent.click(tools.getByRole("button", { name: "Reset Filters" }));
     await expect(await tools.findByText("everything")).toBeVisible();
   },
 };
