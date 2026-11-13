@@ -1,7 +1,8 @@
 /** The table the server describes, and its companions: the pagination and the filter bar — and the infinite table with its header filters. */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { closeDropdown, headerFilterDropdown, headerFilterTrigger, headerFilterValue, option } from "../support/antd";
+import { closeDropdown, headerFilterDropdown, headerFilterTrigger, option } from "../support/antd";
+import { settledBox } from "../support/grid";
 import { live } from "../support/page";
 import { tableCell, tableRow } from "../support/table";
 
@@ -38,6 +39,17 @@ When("I scroll the infinite table to its top", async ({ page }) => {
     .evaluate((box) => {
       box.scrollTop = 0;
     });
+});
+
+/** Scrolls so that the list's row <n> (from 1, in the WHOLE list) is the first in view — by the height of a rendered row. */
+When("I scroll the infinite table to row {int}", async ({ page }, row: number) => {
+  await infiniteTable(page)
+    .getByTestId("infinite-table-scroll")
+    .evaluate((box, first) => {
+      const rendered = box.querySelector<HTMLElement>('[data-testid="table-row"]');
+      if (rendered === null) throw new Error("the list renders no row to measure");
+      box.scrollTop = first * rendered.offsetHeight;
+    }, row - 1);
 });
 
 /** The keyboard scrolls the box too: End, Home, PageDown, PageUp — the box is focusable. */
@@ -77,23 +89,36 @@ When("I open the header filter of the {string} column", async ({ page }, title: 
   await expect(headerFilterDropdown(page)).toBeVisible();
 });
 
+/** The open list of values of a column's header: a Select of several values over Reset and Done. */
+const headerValues = (page: Page) => page.getByTestId("header-values").locator("visible=true").last();
+
 /** The values on offer, in order: "Queued, Running, Success, Failed". */
 Then("the header filter offers {string}", async ({ page }, values: string) => {
-  await expect(headerFilterDropdown(page).getByRole("menuitem")).toHaveText(values.split(", "));
+  await expect(headerValues(page)).toHaveAttribute("data-options", values);
 });
 
+/** A pick filters AT ONCE (picking a chosen value again unpicks it); the list of options is closed afterwards. */
 When("I tick {string} in the header filter", async ({ page }, value: string) => {
-  await headerFilterValue(page, value).click();
+  await headerValues(page).getByRole("combobox").click();
+  await option(page, value).click();
+  await closeDropdown(page);
 });
 
+/** What the open header filter holds: "Failed, Queued" ("" = nothing). */
+Then("the header filter holds {string}", async ({ page }, values: string) => {
+  await expect(headerValues(page)).toHaveAttribute("data-values", values.split(", ").join(","));
+});
+
+/** Done only closes the box: every pick was applied when it was made. */
 When("I apply the header filter", async ({ page }) => {
-  await headerFilterDropdown(page).getByRole("button", { name: "OK" }).click();
+  await headerValues(page).getByRole("button", { name: "Done" }).click();
+  await expect(page.getByTestId("header-values").locator("visible=true")).toHaveCount(0);
 });
 
-/** antd's Reset only unticks the list; OK applies it. */
+/** Reset filters by nothing, at once; the box stays open until Done. */
 When("I reset the header filter", async ({ page }) => {
-  await headerFilterDropdown(page).getByRole("button", { name: "Reset" }).click();
-  await headerFilterDropdown(page).getByRole("button", { name: "OK" }).click();
+  await headerValues(page).getByRole("button", { name: "Reset" }).click();
+  await headerValues(page).getByRole("button", { name: "Done" }).click();
 });
 
 /** The search icon of a text column opens a box; Enter searches. */
@@ -107,6 +132,38 @@ When("I search the {string} column for {string}", async ({ page }, title: string
 When("I clear the search of the {string} column", async ({ page }, title: string) => {
   await headerFilterTrigger(columnHeader(page, title)).click();
   await headerFilterDropdown(page).getByRole("button", { name: "Reset" }).click();
+});
+
+/** The period a date column's header opens: a start and an end date. */
+const headerPeriod = (page: Page, title: string) => page.getByRole("group", { name: `Period of ${title}` });
+
+Then("the {string} column is filtered by a period", async ({ page }, title: string) => {
+  await headerFilterTrigger(columnHeader(page, title)).click();
+  await expect(headerPeriod(page, title).getByRole("textbox")).toHaveCount(2);
+  await page.keyboard.press("Escape");
+});
+
+/** The dates are TYPED, each confirmed with Enter — never clicked in a calendar; "" leaves an end open. */
+When(
+  "I filter the {string} column from {string} to {string}",
+  async ({ page }, title: string, from: string, to: string) => {
+    await headerFilterTrigger(columnHeader(page, title)).click();
+    const period = headerPeriod(page, title);
+    const fields = period.getByRole("textbox");
+    for (const [index, date] of [from, to].entries()) {
+      if (date === "") continue;
+      await fields.nth(index).fill(date);
+      await fields.nth(index).press("Enter");
+    }
+    await expect(period).toHaveAttribute("data-from", from);
+    await expect(period).toHaveAttribute("data-to", to);
+    await period.getByRole("button", { name: "Filter" }).click();
+  },
+);
+
+When("I clear the period of the {string} column", async ({ page }, title: string) => {
+  await headerFilterTrigger(columnHeader(page, title)).click();
+  await headerPeriod(page, title).getByRole("button", { name: "Reset" }).click();
 });
 
 /** A click on the header's title sorts: ascending, then descending, then not at all. */
@@ -176,6 +233,164 @@ Then("the clipboard holds {string}", async ({ page }, text: string) => {
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(text);
 });
 
+/* ---- cell selection (doc/row-window-design.md "Cells are selected and copied"): a rectangle of cells, its menu ---- */
+
+/** The table whose cells are selected: it says what is selected as "rowStart-columnStart/rowEnd-columnEnd", from 1. */
+const selectingTable = (page: Page) => live(page).locator('[data-cell-selection="true"]').first();
+
+/** A cell's padding corner — never the link or the button it may hold, which keep their press. */
+const CORNER = { x: 3, y: 3 };
+
+async function cornerOf(page: Page, key: string, property: string): Promise<{ x: number; y: number }> {
+  const cell = tableCell(page, key, property);
+  await cell.scrollIntoViewIfNeeded();
+  const box = await settledBox(cell);
+  return { x: box.x + CORNER.x, y: box.y + CORNER.y };
+}
+
+When("I select the cell {string} of the table row {string}", async ({ page }, property: string, key: string) => {
+  await tableCell(page, key, property).click({ position: CORNER });
+});
+
+/** A real drag: pressed on the first cell, moved over the last, let go. */
+When(
+  "I select the cells from {string} of the table row {string} to {string} of the table row {string}",
+  async ({ page }, property: string, key: string, toProperty: string, toKey: string) => {
+    const from = await cornerOf(page, key, property);
+    const to = await cornerOf(page, toKey, toProperty);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+  },
+);
+
+/** Shift+click: the selection reaches from the cell it started at. */
+When(
+  "I extend the selection to {string} of the table row {string}",
+  async ({ page }, property: string, key: string) => {
+    await tableCell(page, key, property).click({ position: CORNER, modifiers: ["Shift"] });
+  },
+);
+
+/** The small square at the selection's bottom-right corner, dragged to another cell. */
+When(
+  "I drag the corner of the selection to {string} of the table row {string}",
+  async ({ page }, property: string, key: string) => {
+    const box = await settledBox(selectingTable(page).locator('td[data-handle="true"]'));
+    const to = await cornerOf(page, key, property);
+    await page.mouse.move(box.x + box.width - 3, box.y + box.height - 3);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+  },
+);
+
+Then("the table has the cells {string} selected", async ({ page }, cells: string) => {
+  await expect(selectingTable(page)).toHaveAttribute("data-selected", cells);
+});
+
+Then("the table has no cells selected", async ({ page }) => {
+  await expect(selectingTable(page)).toBeVisible();
+  await expect(selectingTable(page)).not.toHaveAttribute("data-selected");
+});
+
+Then(
+  "the cell {string} of the table row {string} carries the selection's corner",
+  async ({ page }, property: string, key: string) => {
+    await expect(tableCell(page, key, property)).toHaveAttribute("data-handle", "true");
+  },
+);
+
+When("I open the cell menu on {string} of the table row {string}", async ({ page }, property: string, key: string) => {
+  await tableCell(page, key, property).click({ button: "right", position: CORNER });
+});
+
+Then("the cell menu offers {string}", async ({ page }, labels: string) => {
+  await expect(page.getByRole("menuitem")).toHaveText(labels.split(", "));
+});
+
+/**
+ * What THIS page writes to the clipboard is kept on the page as well: the clipboard itself is the machine's, one for
+ * every worker of the run, so a scenario reading it back could read what another scenario copied meanwhile.
+ */
+async function keepWhatIsCopied(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const kept = window as unknown as { wwCopied?: string; wwCopyKept?: boolean };
+    if (kept.wwCopyKept === true) return;
+    kept.wwCopyKept = true;
+    const write = navigator.clipboard.writeText.bind(navigator.clipboard);
+    navigator.clipboard.writeText = (text: string) => {
+      kept.wwCopied = text;
+      return write(text);
+    };
+  });
+}
+
+const copiedOn = (page: Page) =>
+  page.evaluate(() => (window as unknown as { wwCopied?: string }).wwCopied ?? "(nothing was copied)");
+
+When("I choose {string} in the cell menu", async ({ page }, label: string) => {
+  await keepWhatIsCopied(page);
+  await page.getByRole("menuitem", { name: label, exact: true }).click();
+});
+
+When("I copy the selected cells with the keyboard", async ({ page }) => {
+  await keepWhatIsCopied(page);
+  await page.keyboard.press("ControlOrMeta+c");
+});
+
+Then("the table copied {string}", async ({ page }, text: string) => {
+  await expect.poll(() => copiedOn(page)).toBe(text);
+});
+
+When("I let the selection go with Escape", async ({ page }) => {
+  await page.keyboard.press("Escape");
+});
+
+/**
+ * What was copied, a line per row, the cells separated by " | " here (a tab on the clipboard); `{origin}` stands
+ * for the page's own origin, which a link cell's address begins with.
+ */
+Then("the table copied the cells:", async ({ page }, cells: string) => {
+  const expected = cells
+    .split("\n")
+    .map((line) => line.trim().split(" | ").join("\t"))
+    .join("\n")
+    .replaceAll("{origin}", new URL(page.url()).origin);
+  await expect.poll(() => copiedOn(page)).toBe(expected);
+});
+
+/** The file the last export saved, per page. */
+const exported = new WeakMap<Page, { name: string; lines: string[] }>();
+
+When("I choose {string} in the cell menu and keep the file", async ({ page }, label: string) => {
+  const waiting = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: label, exact: true }).click();
+  const download = await waiting;
+  const chunks: Buffer[] = [];
+  // Boundary cast: a Readable yields `any`; a download's stream yields bytes.
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk as Buffer);
+  // The file begins with the mark a spreadsheet reads UTF-8 by: not a part of the first title.
+  const whole = Buffer.concat(chunks).toString("utf8");
+  const text = whole.charCodeAt(0) === 0xfeff ? whole.slice(1) : whole;
+  exported.set(page, { name: download.suggestedFilename(), lines: text.split("\r\n") });
+});
+
+Then(
+  "the exported file is {string} with {int} lines, the first {string}",
+  async ({ page }, name: string, count: number, first: string) => {
+    const file = exported.get(page);
+    expect(file?.name).toBe(name);
+    expect(file?.lines).toHaveLength(count);
+    expect(file?.lines[0]).toBe(first);
+  },
+);
+
+Then("line {int} of the exported file is {string}", async ({ page }, line: number, text: string) => {
+  expect(exported.get(page)?.lines[line - 1]).toBe(text.replaceAll("{origin}", new URL(page.url()).origin));
+});
+
 Then(
   "the table row {string} shows {string} for {string} as plain text, no renderer having that name",
   async ({ page }, key: string, text: string, property: string) => {
@@ -209,6 +424,128 @@ Then("the table has the columns {string}", async ({ page }, titles: string) => {
       ),
     )
     .toEqual(titles.split(", "));
+});
+
+/* ----------------------------- column menu ---------------------------- */
+
+/** The list of columns the menu opens — a popover outside the page, found by its own name. */
+const columnList = (page: Page) => page.getByTestId("table-column-list");
+/** One column's line in it, by the column's title. */
+const columnItem = (page: Page, title: string) =>
+  columnList(page)
+    .getByTestId("table-column-item")
+    .filter({ has: page.getByRole("checkbox", { name: title, exact: true }) });
+const columnReset = (page: Page) => page.getByTestId("table-column-reset");
+
+When("I open the column menu of the table", async ({ page }) => {
+  await tableWidget(page).getByRole("button", { name: "Column settings" }).click();
+  await expect(columnList(page)).toBeVisible();
+});
+
+Then("the table has no column menu", async ({ page }) => {
+  await expect(tableWidget(page).getByRole("button", { name: "Column settings" })).toHaveCount(0);
+});
+
+Then("the column menu lists {string}", async ({ page }, titles: string) => {
+  await expect(columnList(page).getByTestId("table-column-item")).toHaveText(titles.split(", "));
+});
+
+When("I hide the column {string}", async ({ page }, title: string) => {
+  await columnItem(page, title).getByRole("checkbox").uncheck();
+  await expect(columnItem(page, title)).toHaveAttribute("data-shown", "false");
+});
+
+When("I show the column {string}", async ({ page }, title: string) => {
+  await columnItem(page, title).getByRole("checkbox").check();
+  await expect(columnItem(page, title)).toHaveAttribute("data-shown", "true");
+});
+
+/** A real drag: the line is grabbed and let go over the upper or lower part of another — before or after it. */
+When(
+  /^I drag the column "([^"]*)" (above|below) the column "([^"]*)"$/,
+  async ({ page }, title: string, side: "above" | "below", target: string) => {
+    // The whole list in view: the pointer cannot reach a line above the window's edge.
+    await columnList(page).scrollIntoViewIfNeeded();
+    await columnItem(page, target).scrollIntoViewIfNeeded();
+    const from = await settledBox(columnItem(page, title));
+    const to = await settledBox(columnItem(page, target));
+    const x = to.x + to.width / 2;
+    const y = to.y + to.height * (side === "above" ? 0.25 : 0.75);
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    // Past the browser's drag threshold first, then to the place: a drag starts only once the pointer has moved.
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 + 6, { steps: 3 });
+    await page.mouse.move(x, y, { steps: 12 });
+    await page.mouse.up();
+  },
+);
+
+When("I reset the columns of the table", async ({ page }) => {
+  await columnReset(page).click();
+  await expect(columnReset(page)).toBeDisabled();
+});
+
+Then("the columns of the table cannot be reset", async ({ page }) => {
+  await expect(columnReset(page)).toBeDisabled();
+});
+
+Then("the columns of the table can be reset", async ({ page }) => {
+  await expect(columnReset(page)).toBeEnabled();
+});
+
+/* ---------------------------- sideways scroll --------------------------- */
+
+/** Whether anything inside the table scrolls sideways: a box that shows less than it holds — whichever box the library made. */
+const scrollsSideways = (page: Page) =>
+  tableWidget(page).evaluate((root) =>
+    [...root.querySelectorAll("*")].some(
+      (box) => ["auto", "scroll"].includes(getComputedStyle(box).overflowX) && box.scrollWidth > box.clientWidth + 1,
+    ),
+  );
+
+/** The least width the table's columns need, as the widget says it (the sum of their widths). */
+Then("the table needs {int} pixels for its columns", async ({ page }, width: number) => {
+  await expect(tableWidget(page)).toHaveAttribute("data-min-width", String(width));
+});
+
+Then("the table scrolls sideways", async ({ page }) => {
+  await expect.poll(() => scrollsSideways(page)).toBe(true);
+});
+
+Then("the table fills its box without a sideways scroll", async ({ page }) => {
+  await expect.poll(() => scrollsSideways(page)).toBe(false);
+});
+
+/* ------------------------------- toolbar ------------------------------ */
+
+/** The row of tools above the table; its standard items are buttons named by what they do. */
+const toolbar = (page: Page) => tableWidget(page).getByRole("toolbar", { name: "Table tools" });
+const resetFilters = (page: Page) => toolbar(page).getByRole("button", { name: "Reset filters" });
+
+/** The tools in order, by the names they are registered under: "reset-filters, refresh" ("" = none). */
+Then("the table toolbar offers {string}", async ({ page }, names: string) => {
+  const items = toolbar(page).getByTestId("table-toolbar-item");
+  await expect(items).toHaveCount(names === "" ? 0 : names.split(", ").length);
+  for (const [index, name] of (names === "" ? [] : names.split(", ")).entries()) {
+    await expect(items.nth(index)).toHaveAttribute("data-name", name);
+  }
+});
+
+When("I reset the filters of the table", async ({ page }) => {
+  await resetFilters(page).click();
+  await expect(resetFilters(page)).toBeDisabled();
+});
+
+Then("the filters of the table can be reset", async ({ page }) => {
+  await expect(resetFilters(page)).toBeEnabled();
+});
+
+Then("the filters of the table cannot be reset", async ({ page }) => {
+  await expect(resetFilters(page)).toBeDisabled();
+});
+
+When("I reload the table", async ({ page }) => {
+  await toolbar(page).getByRole("button", { name: "Reload" }).click();
 });
 
 /* ----------------------------- filter row ----------------------------- */

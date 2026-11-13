@@ -12,7 +12,9 @@ import {
   createTableViewActions,
   createTableViewLoader,
   filtersOf,
+  joinedSlice,
   requestOf,
+  slicePlan,
   tableMetadataSchema,
   tableViewResponseSchema,
   type TableViewRequest,
@@ -67,6 +69,29 @@ describe("columnsOf", () => {
       enableSorting: false,
     });
     expect(columnsOf(off, {})).toEqual([{ title: "a", property: "a" }]);
+  });
+
+  it("filters a date column by a period by default — unless the server or the page says no, or the page gives values", () => {
+    const dated = (extra: Record<string, unknown> = {}, table: Record<string, unknown> = {}) =>
+      tableMetadataSchema.parse({
+        columnDefinitions: [{ id: "at", type: "timestamp(p) with time zone", ...extra }],
+        ...table,
+      });
+    const filterOf = (metadata: ReturnType<typeof dated>, view: Parameters<typeof columnsOf>[1] = {}) =>
+      columnsOf(metadata, view)[0]?.filter;
+    expect(filterOf(dated())).toEqual({ kind: "dates" });
+    expect(filterOf(dated({ type: "DATE" }))).toEqual({ kind: "dates" });
+    // The server's own values do not turn a date into a list.
+    expect(filterOf(dated({ filterValues: ["2026-11-01"], isFilterable: true }))).toEqual({ kind: "dates" });
+    expect(filterOf(dated({ isFilterable: false }))).toBeUndefined();
+    expect(filterOf(dated({}, { enableFilter: false }))).toBeUndefined();
+    expect(filterOf(dated(), { filters: { at: false } })).toBeUndefined();
+    expect(filterOf(dated(), { filters: { at: { values: ["today"] } } })).toEqual({
+      kind: "values",
+      options: [{ value: "today" }],
+    });
+    // Not a date: nothing by default.
+    expect(filterOf(dated({ type: "varchar(l)" }))).toBeUndefined();
   });
 
   it("leaves out what the server hides, unless the page shows it", () => {
@@ -253,10 +278,19 @@ describe("the loader", () => {
         value,
       })),
     });
+    // A DATE column (its type a timestamp) is filtered by a period, by default: the server need not say so.
+    expect(columns?.find((column) => column.property === "created_at")).toEqual({
+      title: "Created At",
+      property: "created_at",
+      filter: { kind: "dates" },
+    });
     // The server says nothing about the rest: no filter in the table for them.
-    expect(columns?.slice(2).every((column) => column.filter === undefined && column.sortable === undefined)).toBe(
-      true,
-    );
+    expect(
+      columns
+        ?.slice(2)
+        .filter((column) => column.property !== "created_at")
+        .every((column) => column.filter === undefined && column.sortable === undefined),
+    ).toBe(true);
     expect(store.get<{ job_id: number }[]>("runs.data")?.map((row) => row.job_id)).toEqual([900341, 900340, 900298]);
     // This answer does not count the rows: no total, so nothing claims to know how many there are.
     expect(store.get("runs.total")).toBeUndefined();
@@ -462,6 +496,72 @@ describe("the loader", () => {
     await load(store, { into: "t", more: true });
     expect(store.get("t.offset")).toBe(0);
     expect(store.get<unknown[]>("t.data")).toHaveLength(40);
+  });
+
+  it("with window: a batch after or before the rows held joins them, at most three batches kept; a slice around a row replaces them", async () => {
+    const all = Array.from({ length: 200 }, (_, index) => ({ id: String(index + 1) }));
+    const requests: TableViewRequest[] = [];
+    const transport: TableViewTransport = async (_url, request) => {
+      requests.push(request);
+      const { offset, limit } = request.dataFilter;
+      return { totalRecords: all.length, data: all.slice(offset, offset + limit) };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    const held = () => {
+      const rows = store.get<{ id: string }[]>("t.data") ?? [];
+      return `${rows[0]?.id}-${rows.at(-1)?.id} from ${store.get("t.offset")}`;
+    };
+    const ask = async (offset: number, edge: string) => {
+      store.set("t.wanted", { offset, edge });
+      await load(store, { into: "t", window: true });
+    };
+    await load(store, { url: "/x", into: "t", pageSize: 20 });
+    // AHEAD OF TIME: the batch after the rows held is appended — the rows in view stay, and nothing says "loading"
+    // over them while it is on its way.
+    const loading: unknown[] = [];
+    const unsubscribe = store.subscribe("t.loading", () => loading.push(store.get("t.loading")));
+    await ask(20, "after");
+    unsubscribe();
+    expect(loading).not.toContain(true);
+    expect(requests.at(-1)?.dataFilter).toMatchObject({ offset: 20, limit: 20 });
+    expect(held()).toBe("1-40 from 0");
+    await ask(40, "after");
+    expect(held()).toBe("1-60 from 0");
+    // A fourth batch: the first one, farthest from it, is dropped.
+    await ask(60, "after");
+    expect(held()).toBe("21-80 from 20");
+    // Back towards the start: the batch before is put in front, the last one dropped.
+    await ask(20, "before");
+    expect(requests.at(-1)?.dataFilter).toMatchObject({ offset: 0, limit: 20 });
+    expect(held()).toBe("1-60 from 0");
+    expect(store.get("t.page")).toBe(1);
+    // A batch asked for at an edge the slice no longer has (a filter came between) is a slice of its own.
+    await ask(100, "after");
+    expect(held()).toBe("101-120 from 100");
+    // A jump: the slice AROUND the row wanted replaces the rows held, the row in its middle.
+    await ask(150, "around");
+    expect(held()).toBe("141-160 from 140");
+    // Around the last rows: the last full slice.
+    await ask(195, "around");
+    expect(held()).toBe("181-200 from 180");
+    // Nothing after the last row: the rows stay the very same.
+    const before = store.get("t.data");
+    await ask(200, "after");
+    expect(store.get("t.data")).toBe(before);
+  });
+
+  it("slicePlan and joinedSlice: what is asked for, and what becomes of the answer", () => {
+    expect(slicePlan(40, 0, 20, 20)).toEqual({ from: 40, limit: 20, join: "replace" });
+    expect(slicePlan({ offset: 20, edge: "after" }, 0, 20, 20)).toEqual({ from: 20, limit: 20, join: "append" });
+    // The batch before the tenth row is ten rows, not twenty.
+    expect(slicePlan({ offset: 10, edge: "before" }, 10, 20, 20)).toEqual({ from: 0, limit: 10, join: "prepend" });
+    expect(slicePlan({ offset: 5, edge: "around" }, 100, 20, 20)).toEqual({ from: 0, limit: 20, join: "replace" });
+    const row = (id: number) => ({ id });
+    // A batch shorter than asked for would leave a gap before the rows held: it stands alone.
+    expect(joinedSlice({ rows: [row(20)], offset: 20 }, [row(5)], { from: 0, limit: 20, join: "prepend" }, 60)).toEqual(
+      { rows: [row(5)], offset: 0 },
+    );
   });
 });
 

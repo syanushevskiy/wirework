@@ -29,6 +29,7 @@
         "position": "archive.position",
         "filterIn": "archive.filterIn",
         "filterLike": "archive.filterLike",
+        "filterBetween": "archive.filterBetween",
         "orderBy": "archive.orderBy"
       },
       "on": {
@@ -41,6 +42,9 @@
               "metadata": true,
               "pageSize": 200,
               "columns": {
+                "started": {
+                  "hidden": false
+                },
                 "state": {
                   "cell": {
                     "kind": "tag",
@@ -58,8 +62,7 @@
         ],
         "window": [
           {
-            "set": "archive.wanted",
-            "from": "offset"
+            "set": "archive.wanted"
           },
           {
             "call": "table-view/load",
@@ -87,6 +90,10 @@
           {
             "set": "archive.filterLike",
             "from": "filterLike"
+          },
+          {
+            "set": "archive.filterBetween",
+            "from": "filterBetween"
           },
           {
             "set": "archive.wanted",
@@ -127,7 +134,9 @@
         ]
       },
       "height": 320,
-      "windowed": true
+      "windowed": true,
+      "columnMenu": false,
+      "cellSelection": false
     }
   },
   "widgets.archive.title": {

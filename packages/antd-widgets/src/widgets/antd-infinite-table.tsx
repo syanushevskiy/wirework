@@ -3,7 +3,7 @@
  * contract: the `table` as a scrolling list that asks for MORE rows when
  * its end comes into view, renders only a WINDOW of the rows it holds (a
  * virtual list), and has the filters and the sorting in the column headers
- * — a list of values to tick, or a SEARCH icon opening a box for free text
+ * — a list of values to pick several of, or a SEARCH icon opening a box for free text
  * — instead of a filter bar and a pagination beside it. WINDOWED (the
  * setting) it holds only a slice of the list, `data-offset` rows into it,
  * and asks for the slice around the rows in view; with its `position` port
@@ -19,13 +19,18 @@ import type { ContractProps } from "@wirework/schema";
 import { implementContract } from "@wirework/react";
 import { infiniteTableContract } from "@wirework/widget-contracts";
 import { useInfiniteTable } from "../hooks/use-infinite-table";
+import { NO_CELLS } from "../hooks/use-table";
 import type { AntdTableOptions } from "./antd-table";
+import { CellMenu } from "./cell-menu";
+import { TableToolbar, toolbarItems } from "./table-toolbar";
 import { RowSpaceProvider } from "./row-spacers";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
 export type InfiniteTableEvents = (typeof infiniteTableContract)["events"];
 
-export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
+export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTableOptions = {}) {
+  const items = toolbarItems(ownItems);
+
   function AntdInfiniteTable({ viewModel, store, emit }: ContractProps<typeof infiniteTableContract>) {
     const view = useInfiniteTable(
       store,
@@ -39,7 +44,9 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         position: viewModel.inputs.position,
         filterIn: viewModel.inputs.filterIn,
         filterLike: viewModel.inputs.filterLike,
+        filterBetween: viewModel.inputs.filterBetween,
         orderBy: viewModel.inputs.orderBy,
+        columnState: viewModel.inputs.columnState,
       },
       infiniteTableContract.io.inputs,
       {
@@ -47,10 +54,16 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         rowKey: viewModel.rowKey,
         headerFilters: viewModel.headerFilters,
         filterRow: viewModel.filterRow,
+        columnMenu: viewModel.columnMenu,
+        columnStateKey: viewModel.columnStateKey,
+        toolbar: viewModel.toolbar,
+        cellSelection: viewModel.cellSelection,
+        exportName: viewModel.exportName,
         height: viewModel.height,
         windowed: viewModel.windowed,
       },
       cells,
+      items,
     );
 
     return (
@@ -60,12 +73,18 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
         data-path={viewModel.inputs.rows}
         data-loading={view.loading}
         data-filter-row={viewModel.filterRow}
+        data-min-width={view.scroll.x}
         data-held={view.held}
         data-offset={view.offset}
         data-windowed={viewModel.windowed}
         data-total={view.total}
         data-window={view.window}
+        data-cell-selection={viewModel.cellSelection}
+        data-selected={view.cells.selected}
+        {...view.cells.root}
       >
+        <CellMenu view={view.cells} />
+        <TableToolbar items={view.toolbar} columnMenu={view.columnMenu} />
         {/*
           The box the rows scroll in: as tall as the setting says, at most. It is the element that HOLDS the focus for
           keyboard scrolling (Page Down, End, Home), named by the line under the rows: a row is focusable too, but a
@@ -92,6 +111,7 @@ export function createAntdInfiniteTable({ cells }: AntdTableOptions = {}) {
               onRow={view.rowProps}
               onChange={view.change}
               sticky={view.sticky}
+              scroll={view.scroll}
               components={view.components}
             />
           </RowSpaceProvider>

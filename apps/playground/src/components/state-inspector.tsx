@@ -10,7 +10,7 @@ import { useStateInspector } from "../hooks/use-state-inspector";
 import type { StateSection } from "../state-sections";
 
 function StateSectionEditor({ store, section }: { store: Store; section: StateSection }) {
-  const { text, dirty, error, edit, apply, reset } = useStateInspector(store, section);
+  const { text, dirty, behind, error, edit, apply, reset } = useStateInspector(store, section);
 
   return (
     <Flex vertical gap="small" data-testid="state-section" data-section={section.key}>
@@ -26,6 +26,8 @@ function StateSectionEditor({ store, section }: { store: Store; section: StateSe
       <Input.TextArea
         data-testid="state-editor"
         data-section={section.key}
+        // The store changed since this text was printed (it is printed at most a few times a second).
+        data-behind={behind ? "true" : undefined}
         aria-label={`${section.title} as JSON`}
         className="pg-state-editor"
         rows={section.rows}

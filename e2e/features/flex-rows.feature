@@ -3,8 +3,10 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
   cell take Tailwind's flex class names — flex-1, basis-1/3, justify-between,
   items-center, gap-4, self-end, order-2 — which the engine itself turns into
   style; Tailwind is not needed. In edit mode every row and every cell has a
-  field for its classes, and every cell four arrows that move it within its
-  row or into the row above or below. The demo's cards page is a FlexLayout
+  field for its classes, and every cell is DRAGGED by its handle: let go on
+  another cell's middle the two swap places, on its left or right edge the
+  dragged one goes beside it, on the strip between two rows it takes a row
+  of its own. The demo's cards page is a FlexLayout
   of two cards, one holding react-grid-layout and one holding flex rows:
   three engines on one page. (doc/flex-rows-design.md)
 
@@ -94,15 +96,28 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     And I set the setting "text" to "Second"
     And I add the widget
     Then the engine is locked as "flex-rows"
-    # Every added cell starts a row of its own; the arrows put them together.
+    # Every added cell starts a row of its own; a drag puts them together — there are no arrows.
     And the page has 2 rows
     And the cell "custom-2" sits below the cell "custom-1"
     When I edit the page
-    And I move the cell "custom-2" up
+    Then the cell "custom-1" has no arrows to move it by
+    # Let go on a cell's right edge, the dragged one goes after it, into its row.
+    When I drop the cell "custom-2" after the cell "custom-1"
     Then the page has 1 row
     And the cells "custom-1, custom-2" sit side by side
-    When I move the cell "custom-2" left
+    # Let go on a cell's middle, the two swap places.
+    When I swap the cell "custom-2" with the cell "custom-1"
     Then row 1 holds the cells "custom-2, custom-1"
+    # Let go on the strip between rows, it takes a row of its own; on a cell's left edge it is back before it.
+    When I drop the cell "custom-1" into a new row above row 1
+    Then the page has 2 rows
+    And row 1 holds the cells "custom-1"
+    And the cell "custom-2" sits below the cell "custom-1"
+    When I drop the cell "custom-1" into a new row below row 2
+    Then row 2 holds the cells "custom-1"
+    When I drop the cell "custom-2" before the cell "custom-1"
+    Then the page has 1 row
+    And row 1 holds the cells "custom-2, custom-1"
     When I set the flex classes of row 1 to "justify-between"
     And I set the flex classes of the cell "custom-1" to "flex-none self-center"
     Then the cell "custom-1" has the flex classes "flex-none self-center"

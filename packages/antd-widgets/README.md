@@ -36,12 +36,36 @@ import "@wirework/antd-widgets/styles.css";
   `TableCellRenderer`, `TableCellRenderers`) — the fact sheet shows the
   table's cell kinds over one record, so the same "copy" button serves
   both. Both tables offer each column's filter in its
-  header — antd's list of values, or a search icon for free text — and
+  header — a Select of several values (searched by label, cleared with its
+  button, the chosen ones as tags that wrap; every pick filters at once,
+  Reset clears and Done closes), or a search icon for free text — and
   sorting on a header click, when the `headerFilters` setting says so (off
   for the table, on for the infinite table) — and, with `filterRow` on, each
   column's filter UNDER its title, always in view: a search field for free
   text, a list of values otherwise (`data-testid="table-filter"`, named
-  "Filter <title>"), the same choice the header dropdowns write. The infinite table scrolls
+  "Filter <title>"), the same choice the header dropdowns write. With
+  `columnMenu` on, a settings button above either table ("Column settings")
+  opens the COLUMN MENU — a checkbox per column to show or hide it, a drag
+  to reorder, Reset to bring the columns back as configured —; the state
+  lives at the `columnState` port when a page binds it, and otherwise in the
+  browser's local storage under `columnStateKey` (or `wirework:columns:<rows
+path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
+  above either table, beside that button — `[{ "name": "reset-filters" },
+{ "name": "refresh" }]` are the standard two (`STANDARD_TOOLBAR`:
+  `ResetFiltersItem` emits `filter-changed` with nothing chosen,
+  `RefreshItem` the table's `refresh`, for a reaction to ask for the rows
+  again) —, and a host registers its own by name as it does cells:
+  `createAntdTable({ toolbar })` / `createAntdWidgets({ tableToolbar })`
+  with components taking `TableToolbarItemProps` (`params`, `loading`,
+  `filtered`, `refresh()`, `resetFilters()`); one registered under a
+  standard name — your own refresher as `refresh` — replaces it. Both
+  tables SELECT CELLS like a spreadsheet (`cellSelection`, on by default):
+  a click selects a cell, a drag, a drag of the small square at its corner
+  or a Shift+click a rectangle (`data-selected="1-2/2-5"` on the widget);
+  a right click opens a menu — Copy and Copy with headers (the rectangle
+  as tab-separated lines; a tag as its text, a link cell as its whole
+  address; Ctrl/Cmd+C copies too; `cells-copied`), Export as CSV (every
+  row held, the columns shown, `<exportName>.csv`; `rows-exported`). The infinite table scrolls
   inside its own box, asks for more rows at its end, and renders only a
   WINDOW of the rows it holds — twice the box's height, the rest blank space
   of the right height (doc/row-window-design.md) — so it is a virtual list;

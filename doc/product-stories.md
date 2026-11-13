@@ -763,8 +763,8 @@ check of `contains`, boot validation into layouts and the depth refusal); the bu
 Tailwind's own words how a row distributes its widgets and how a widget grows, shrinks, sizes, aligns and spaces
 itself — `flex-1`, `basis-1/3 shrink-0`, `w-2/3`, `justify-between items-center gap-4`, `grid grid-cols-3`, `self-end`,
 `order-last`, `p-4`, `-mt-2`, `w-[320px]`: all of Tailwind's layout, flexbox and grid, spacing and sizing classes — so
-that I get the power of CSS layout without a developer and without learning a grammar of this product's own. I move a widget between rows with
-arrows, type its classes in a field that suggests the names, and see the page change at once; a name the product does
+that I get the power of CSS layout without a developer and without learning a grammar of this product's own. I move a widget by dragging it —
+onto another to swap places, beside it, or between rows —, type its classes in a field that suggests the names, and see the page change at once; a name the product does
 not know is flagged and does nothing. A demo page shows two cards side by side as the panes of a docking layout
 (FlexLayout), one holding a grid inside, the other flex rows, both with live widgets: three layout engines on one page.
 
@@ -782,14 +782,16 @@ not know is flagged and does nothing. A demo page shows two cards side by side a
 - **Given** a page on flex rows with my overlay on, **when** I change a cell's classes to "basis-1/2 self-end" and
   save, **then** the change is in my own view and survives the save, and with the overlay off the shared page shows
   the cell without them.
-- **Given** the builder on flex rows with two widgets added, **then** each has a row of its own; **when** I press the
-  second one's ↑, **then** both share one row side by side; **when** I press its ←, **then** it comes first; **when** I
+- **Given** the builder on flex rows with two widgets added, **then** each has a row of its own; **when** I drag the
+  second one onto the first one's right edge, **then** both share one row side by side; **when** I drop it on the
+  first one's middle, **then** the two swap places; **when** I drop a widget on the strip between rows, **then** it
+  takes a row of its own (amended 12 November 2026: drag and drop in place of the four arrows); **when** I
   give the row "justify-between" and the first cell "flex-none self-center" and save, **then** the saved page holds
   both and the cells show no edit chrome.
 - **Given** a cell whose classes name something the product does not know ("bg-red-500"), **then** the field is marked
   invalid and the page warns which class, and the warning goes when the class is corrected.
 - **Given** a card on flex rows, **when** I open its content through "Edit content", **then** it is edited as the page
-  — rows, arrows and classes — and the breadcrumb leads back.
+  — rows, drags and classes — and the breadcrumb leads back.
 
 **Delivered:** 3 November 2026.
 
@@ -953,8 +955,13 @@ strings; the saved page is the picture itself, which a colleague reads. The run 
   row of its own across the grid; **when** I drag the second one past the right edge onto row 1, **then** the grid has
   a second column, the two stand side by side and row 2 is empty; **when** I remove row 2, **then** the grid has one
   row; **when** I pull the second widget's corner one slot down, **then** it spans two rows.
-- **Given** a widget dragged onto a slot another widget holds, **then** the slot shows red with the reason, the drop
-  is refused and the picture is as it was.
+- **Given** a widget dragged onto a slot another widget holds, **then** the two swap places — nothing is refused
+  (amended 12 November 2026; before, the drop was refused in red).
+- **Given** a row of three slots with one widget over two of them and another in the third, **when** I pull the first
+  widget's right edge over the third slot, **then** it fills the row and the other widget has no slot: it waits in a
+  tray under the grid with a warning that it must be placed, and **when** I drag it from there onto a slot, **then**
+  it is in the grid again and the warning goes; a neighbour that still has a rectangle left only shrinks (added
+  12 November 2026).
 - **Given** a slot's select, **then** it offers only the page's widgets and "empty"; **when** I pick the same widget
   in two neighbouring slots, **then** it spans them; **when** I pick it in three slots that make an L, **then** the
   slots are marked and the page warns that the area is not a rectangle, and the warning goes when the picture is
@@ -969,14 +976,15 @@ strings; the saved page is the picture itself, which a colleague reads. The run 
 - **Given** a page on css-grid with my overlay on, **when** I change the picture and save, **then** the change is in
   my own view, and with the overlay off the shared page shows the original; editing for a role, the role's.
 
-**Verified by:** `css-grid.feature` (7 scenarios: the run page as a skeleton with a hidden widget keeping its slot,
+**Verified by:** `css-grid.feature` (8 scenarios: the run page as a skeleton with a hidden widget keeping its slot,
 the cards page's third card on a CSS grid below the two with the signed-in person changing on "Sign in as",
 two widgets added each taking a row and a drop past the edge growing the grid then a resize spanning two rows, a
-drop refused where another widget holds the slot, the slot table filling the same picture with the L marked and
+drop onto another widget swapping the two, a widget widened over its neighbour and the neighbour dragged back from
+the tray, the slot table filling the same picture with the L marked and
 warned then cleared, the typed sizes in rem and fr and a keyword saved, a card's content on css-grid edited as the
 page); the engine's unit tests in `packages/engine-css-grid` (the promises of the contract, append and remove, the
-two change kinds, every validation sentence, the rectangle rule on an L, a T, two islands and a hole, a drop placed
-and refused, the grid grown and shrunk, the track sizes); the run page's scenarios in `conditions.feature` and
+two change kinds, every validation sentence, the rectangle rule on an L, a T, two islands and a hole, a drop placed,
+swapped and fitted, a resize that shrinks a neighbour or takes it off the grid, the grid grown and shrunk, the track sizes); the run page's scenarios in `conditions.feature` and
 `app.feature` unchanged.
 
 ### WW-33 · Xsight Wirework - Documentation for page authors: an AI agent builds a page from a one-sentence ask

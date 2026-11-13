@@ -95,7 +95,7 @@ Feature: Containers — a card that holds other widgets
     And the page mode is "editing"
     And the page has 3 rows
     # The greeting joins the row of the name field; the user's copy of the card's layout holds it.
-    When I move the cell "label-greeting" up
+    When I drop the cell "label-greeting" after the cell "switch-profile-refresh"
     Then the page has 2 rows
     And row 2 holds the cells "input-profile-name, switch-profile-refresh, label-greeting"
     When I set the flex classes of the cell "label-greeting" to "w-full order-first"

@@ -52,7 +52,7 @@ export const namedIds = (tokens: readonly (readonly string[])[]): string[] => [
   ...new Set(tokens.flat().filter((token) => token !== EMPTY)),
 ];
 
-/** The slot another cell holds inside the rectangle, if any — the reason a drop is refused. */
+/** The slot another cell holds inside the rectangle, if any — why a dropped cell cannot keep its size there. */
 export const holderIn = (
   tokens: readonly (readonly string[])[],
   id: string,
@@ -79,6 +79,93 @@ export function placed(tokens: readonly (readonly string[])[], id: string, span:
       return token === id ? EMPTY : token;
     }),
   );
+}
+
+/** The cells with no slot in the picture — edit mode's tray, and what the page warns about. */
+export const unplaced = (tokens: readonly (readonly string[])[], cellIds: readonly string[]): string[] =>
+  cellIds.filter((id) => spanOf(tokens, id) === undefined);
+
+/** The picture with `id` named nowhere: a widget taken off the grid. */
+export const cleared = (tokens: readonly (readonly string[])[], id: string): string[][] =>
+  tokens.map((row) => row.map((token) => (token === id ? EMPTY : token)));
+
+/**
+ * Two cells' rectangles exchanged — a drop onto another widget. A cell
+ * named nowhere takes the other's rectangle and leaves it with none.
+ */
+export const swapped = (tokens: readonly (readonly string[])[], a: string, b: string): string[][] =>
+  tokens.map((row) => row.map((token) => (token === a ? b : token === b ? a : token)));
+
+/**
+ * `id` in exactly the rectangle, whoever held it — a resize. Every other
+ * cell it covers keeps the slots it has left while they still make a
+ * rectangle (a neighbour shrinks), and has none otherwise: it is off the
+ * grid, for the tray to hold until it is dropped somewhere.
+ */
+export function claimed(tokens: readonly (readonly string[])[], id: string, span: Span): string[][] {
+  const covered = new Set(
+    slotsIn(span)
+      .map(([r, c]) => tokens[r]?.[c] ?? EMPTY)
+      .filter((token) => token !== EMPTY && token !== id),
+  );
+  const taken = placed(tokens, id, span);
+  const broken = [...covered].filter((other) => !isRectangle(taken, other));
+  return taken.map((row) => row.map((token) => (broken.includes(token) ? EMPTY : token)));
+}
+
+/** Where a rectangle of `size` starting at `start` may begin: inside the grid, unless the pointer is past its edge (a "+" slot grows it). */
+const fitted = (start: number, size: number, limit: number, pointer: number): number =>
+  pointer >= limit ? Math.max(0, start) : Math.max(0, Math.min(start, limit - size));
+
+/**
+ * The picture after `id` is DROPPED with the pointer over a slot — a move.
+ * Onto a slot another cell holds, the two swap places. Onto an empty slot
+ * (or its own) the cell keeps its size where it was grabbed (`grab` is the
+ * grabbed slot's offset inside it) when those slots are free, else with its
+ * corner at the slot, else it takes the one slot: a drop is never refused.
+ */
+export function dropped(
+  tokens: readonly (readonly string[])[],
+  id: string,
+  slot: { row: number; column: number },
+  grab: { dr: number; dc: number } = { dr: 0, dc: 0 },
+): string[][] {
+  const held = tokens[slot.row]?.[slot.column] ?? EMPTY;
+  if (held !== EMPTY && held !== id) return swapped(tokens, id, held);
+  const span = spanOf(tokens, id);
+  const rows = span === undefined ? 1 : span.r2 - span.r1 + 1;
+  const columns = span === undefined ? 1 : span.c2 - span.c1 + 1;
+  const height = tokens.length;
+  const width = columnCount(tokens);
+  const sized = (r: number, c: number): Span => {
+    const r1 = fitted(r, rows, height, slot.row);
+    const c1 = fitted(c, columns, width, slot.column);
+    return { r1, c1, r2: r1 + rows - 1, c2: c1 + columns - 1 };
+  };
+  const target = [sized(slot.row - grab.dr, slot.column - grab.dc), sized(slot.row, slot.column)].find(
+    (candidate) => holderIn(tokens, id, candidate) === undefined,
+  );
+  return placed(tokens, id, target ?? { r1: slot.row, c1: slot.column, r2: slot.row, c2: slot.column });
+}
+
+/** The edges and the corner a cell is resized by. */
+export const RESIZE_EDGES = ["n", "e", "s", "w", "se"] as const;
+export type ResizeEdge = (typeof RESIZE_EDGES)[number];
+
+/** The cell's rectangle with one edge (or its bottom-right corner) pulled to a slot; never less than one slot. */
+export function resizedSpan(span: Span, edge: ResizeEdge, slot: { row: number; column: number }): Span {
+  switch (edge) {
+    case "n":
+      return { ...span, r1: Math.min(span.r2, slot.row) };
+    case "s":
+      return { ...span, r2: Math.max(span.r1, slot.row) };
+    case "w":
+      return { ...span, c1: Math.min(span.c2, slot.column) };
+    case "e":
+      return { ...span, c2: Math.max(span.c1, slot.column) };
+    case "se":
+      return { ...span, r2: Math.max(span.r1, slot.row), c2: Math.max(span.c1, slot.column) };
+  }
 }
 
 /** One slot filled with `id` (or emptied with undefined); the slot table's pick. */

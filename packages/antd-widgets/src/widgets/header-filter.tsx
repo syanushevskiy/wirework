@@ -1,13 +1,15 @@
 /**
  * A column's header with its filter UNDER the title — one cell of the
  * FILTER ROW both tables offer (`filterRow`; use-table-headers.ts): a search
- * field with the search icon for a text filter, a list of values to pick
- * otherwise, always in view. Render-only: logic in useHeaderFilter.
+ * field with the search icon for a text filter, a start and an end date for
+ * a date column, a list of values to pick otherwise, always in view.
+ * Render-only: logic in useHeaderFilter.
  */
 import { SearchOutlined } from "@ant-design/icons";
-import { Input, Select } from "antd";
-import type { ColumnFilter } from "@wirework/widget-contracts";
+import { DatePicker, Input, Select } from "antd";
+import type { ColumnFilter, DateRange } from "@wirework/widget-contracts";
 import { useHeaderFilter } from "../hooks/use-header-filter";
+import type { ColumnChoice } from "../hooks/use-table-headers";
 
 export interface HeaderFilterProps {
   title: string;
@@ -17,12 +19,14 @@ export interface HeaderFilterProps {
   values: string[];
   /** What is searched for in a text column. */
   text: string;
-  /** The column's new choice: the values, or the text. */
-  change: (next: string[] | string) => void;
+  /** The period chosen of a date column: [from, to], either "" for open. */
+  period: DateRange;
+  /** The column's new choice. */
+  change: (next: ColumnChoice) => void;
 }
 
-export function HeaderFilter({ title, property, filter, values, text, change }: HeaderFilterProps) {
-  const view = useHeaderFilter(filter, values, text, change);
+export function HeaderFilter({ title, property, filter, values, text, period, change }: HeaderFilterProps) {
+  const view = useHeaderFilter(filter, values, text, period, change);
   return (
     <div className="ww-table__header">
       <span data-testid="table-column-title">{title}</span>
@@ -47,8 +51,25 @@ export function HeaderFilter({ title, property, filter, values, text, change }: 
             popupMatchSelectWidth={false}
             value={values}
             options={view.options}
-            onChange={change}
+            onChange={view.pickValues}
           />
+        ) : filter.kind === "dates" ? (
+          <div className="ww-table__period" role="group" aria-label={`Filter ${title}`}>
+            <DatePicker
+              size="small"
+              aria-label={`${title} from`}
+              placeholder="From"
+              value={view.start}
+              onChange={view.pickStart}
+            />
+            <DatePicker
+              size="small"
+              aria-label={`${title} to`}
+              placeholder="To"
+              value={view.end}
+              onChange={view.pickEnd}
+            />
+          </div>
         ) : (
           <Input
             size="small"

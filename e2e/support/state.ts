@@ -63,6 +63,8 @@ export async function editStateJson(page: Page, path: string, value: unknown, ac
   const section = sectionOf(path);
   const { editor, whole } = await editorOf(page, section.key);
   const inside = whole ? path : section.path;
+  // The inspector prints a busy store a few times a second: edit what the store holds, not a text it is behind.
+  await expect(editor).not.toHaveAttribute("data-behind", "true");
   const state = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
   if (inside === "") {
     await editor.fill(JSON.stringify(value, null, 2));

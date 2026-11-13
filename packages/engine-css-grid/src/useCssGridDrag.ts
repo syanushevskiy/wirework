@@ -1,128 +1,166 @@
 /**
- * The DRAG of edit mode (doc/css-grid-design.md, "Drag and drop"): a cell
- * moved by its handle or resized by its corner over the grid's own ghost
- * slots. The ghosts are measured once when a drag starts — the browser laid
+ * The DRAG of edit mode (doc/css-grid-design.md, "Drag and drop, amended"):
+ * a cell MOVED by its handle bar — onto a free slot it goes there, onto
+ * another widget the two swap places, onto the tray it leaves the grid — or
+ * RESIZED by an edge or its corner, taking the slots it is pulled over from
+ * whoever held them (a neighbour shrinks; one left with nothing goes to the
+ * tray). The ghosts are measured once when a drag starts — the browser laid
  * them out on the real tracks — and every move is a hit test on those
  * rectangles; the trailing "+" slots are ghosts too, so a drop past the
  * edge grows the picture. The drag computes a PICTURE and reports it (never
- * a pixel); a drop on slots another cell holds is refused with the reason.
+ * a pixel), and shows it before the drop: nothing is ever refused.
  */
-import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
-import { holderIn, placed, spanOf } from "./areas";
-import type { Span } from "./schema";
+import { useCallback, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { claimed, cleared, dropped, resizedSpan, spanOf, unplaced, type ResizeEdge } from "./areas";
+import { EMPTY, type Span } from "./schema";
 
-export type DragMode = "move" | "resize";
+/** What a drag does: move the cell, or pull one of its edges. */
+export type Grip = "move" | ResizeEdge;
 
-interface Measured {
-  row: number;
-  column: number;
+interface Box {
   left: number;
   top: number;
   right: number;
   bottom: number;
 }
 
-interface Dragging {
+interface Measured {
+  /** Every column's and every row's extent on screen, by index. */
+  columns: Box[];
+  rows: Box[];
+  grid: Box;
+  tray: Box | undefined;
+}
+
+/** What letting go now would do — shown while the drag lasts. */
+export interface Drop {
   id: string;
-  mode: DragMode;
-  span: Span;
-  /** The grabbed slot's offset from the span's top-left (a move keeps it under the pointer). */
-  dr: number;
-  dc: number;
-  slots: Measured[];
+  next: string[][];
+  /** The slots the cell would fill; none when it is headed for the tray. */
+  span: Span | undefined;
+  /** The widget it would swap places with. */
+  swap: string | undefined;
+  /** The widgets that would be left with no slot. */
+  out: string[];
+  tray: boolean;
 }
 
-export interface Refusal {
-  span: Span;
-  holder: { row: number; column: number; id: string };
+/** The pointer may miss the grid by this much and still mean its nearest slot (the gap, the outline). */
+const REACH = 12;
+
+const boxOf = (element: Element): Box => {
+  const { left, top, right, bottom } = element.getBoundingClientRect();
+  return { left, top, right, bottom };
+};
+
+const inside = (box: Box, x: number, y: number, reach = 0): boolean =>
+  x >= box.left - reach && x < box.right + reach && y >= box.top - reach && y < box.bottom + reach;
+
+function measure(root: HTMLElement | null, tray: HTMLElement | null): Measured {
+  const columns: Box[] = [];
+  const rows: Box[] = [];
+  for (const ghost of root?.querySelectorAll<HTMLElement>('[data-testid="css-grid-ghost"]') ?? []) {
+    const box = boxOf(ghost);
+    columns[Number(ghost.dataset["column"])] ??= box;
+    rows[Number(ghost.dataset["row"])] ??= box;
+  }
+  return {
+    columns,
+    rows,
+    grid: root === null ? { left: 0, top: 0, right: 0, bottom: 0 } : boxOf(root),
+    tray: tray === null ? undefined : boxOf(tray),
+  };
 }
 
-const slotAt = (slots: readonly Measured[], x: number, y: number): Measured | undefined =>
-  slots.find((slot) => x >= slot.left && x < slot.right && y >= slot.top && y < slot.bottom);
-
-const measure = (root: HTMLElement | null): Measured[] =>
-  Array.from(root?.querySelectorAll<HTMLElement>('[data-testid="css-grid-ghost"]') ?? []).map((ghost) => {
-    const rect = ghost.getBoundingClientRect();
-    return {
-      row: Number(ghost.dataset["row"]),
-      column: Number(ghost.dataset["column"]),
-      left: rect.left,
-      top: rect.top,
-      right: rect.right,
-      bottom: rect.bottom,
-    };
+/** The track the coordinate is in, or the nearest one: a pointer in a gap or past the edge still means a slot. */
+function nearest(tracks: readonly Box[], at: number, low: "left" | "top", high: "right" | "bottom"): number {
+  let best = 0;
+  let distance = Infinity;
+  tracks.forEach((track, index) => {
+    const away = at < track[low] ? track[low] - at : at >= track[high] ? at - track[high] : 0;
+    if (away < distance) {
+      best = index;
+      distance = away;
+    }
   });
+  return best;
+}
 
-/** Where the dragged rectangle would land with the pointer over `slot`. */
-const targetOf = ({ mode, span, dr, dc }: Dragging, slot: Measured): Span =>
-  mode === "move"
-    ? {
-        r1: Math.max(0, slot.row - dr),
-        c1: Math.max(0, slot.column - dc),
-        r2: Math.max(0, slot.row - dr) + (span.r2 - span.r1),
-        c2: Math.max(0, slot.column - dc) + (span.c2 - span.c1),
-      }
-    : { r1: span.r1, c1: span.c1, r2: Math.max(span.r1, slot.row), c2: Math.max(span.c1, slot.column) };
+const slotAt = (measured: Measured, x: number, y: number): { row: number; column: number } => ({
+  row: nearest(measured.rows, y, "top", "bottom"),
+  column: nearest(measured.columns, x, "left", "right"),
+});
+
+const sameSpan = (a: Span | undefined, b: Span | undefined): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 export function useCssGridDrag(
   root: RefObject<HTMLElement | null>,
+  tray: RefObject<HTMLElement | null>,
   tokens: readonly (readonly string[])[],
+  cellIds: readonly string[],
   onPicture: (tokens: string[][]) => void,
 ) {
-  const dragging = useRef<Dragging | undefined>(undefined);
-  const [hover, setHover] = useState<{ span: Span; blocked: boolean } | undefined>(undefined);
-  const [refusal, setRefusal] = useState<Refusal | undefined>(undefined);
+  const [drop, setDrop] = useState<Drop | undefined>(undefined);
+  const [dragging, setDragging] = useState<string | undefined>(undefined);
 
   const start = useCallback(
-    (mode: DragMode, id: string, event: ReactPointerEvent<HTMLElement>) => {
+    (grip: Grip, id: string, event: ReactPointerEvent<HTMLElement>) => {
       const span = spanOf(tokens, id);
-      if (span === undefined || event.button !== 0) return;
+      if (event.button !== 0 || (grip !== "move" && span === undefined)) return;
       event.preventDefault();
-      const slots = measure(root.current);
-      const grabbed = slotAt(slots, event.clientX, event.clientY);
-      const drag: Dragging = {
-        id,
-        mode,
-        span,
-        dr: grabbed === undefined ? 0 : Math.max(0, grabbed.row - span.r1),
-        dc: grabbed === undefined ? 0 : Math.max(0, grabbed.column - span.c1),
-        slots,
+      const measured = measure(root.current, tray.current);
+      if (measured.rows.length === 0 || measured.columns.length === 0) return;
+      const grabbed = slotAt(measured, event.clientX, event.clientY);
+      const grab =
+        span === undefined
+          ? { dr: 0, dc: 0 }
+          : {
+              dr: Math.min(Math.max(0, grabbed.row - span.r1), span.r2 - span.r1),
+              dc: Math.min(Math.max(0, grabbed.column - span.c1), span.c2 - span.c1),
+            };
+      const before = unplaced(tokens, cellIds);
+
+      const over = (x: number, y: number): Drop | undefined => {
+        const onTray = grip === "move" && measured.tray !== undefined && inside(measured.tray, x, y);
+        if (grip === "move" && !onTray && !inside(measured.grid, x, y, REACH)) return undefined;
+        const slot = slotAt(measured, x, y);
+        const next = onTray
+          ? cleared(tokens, id)
+          : grip === "move" || span === undefined
+            ? dropped(tokens, id, slot, grab)
+            : claimed(tokens, id, resizedSpan(span, grip, slot));
+        const held = tokens[slot.row]?.[slot.column] ?? EMPTY;
+        return {
+          id,
+          next,
+          span: spanOf(next, id),
+          swap: grip === "move" && !onTray && held !== EMPTY && held !== id ? held : undefined,
+          out: unplaced(next, cellIds).filter((other) => other !== id && !before.includes(other)),
+          tray: onTray,
+        };
       };
-      dragging.current = drag;
-      setRefusal(undefined);
-      const over = (x: number, y: number): Span | undefined => {
-        const slot = slotAt(drag.slots, x, y);
-        return slot === undefined ? undefined : targetOf(drag, slot);
-      };
+
       const move = (e: PointerEvent) => {
         const target = over(e.clientX, e.clientY);
-        setHover(
-          target === undefined ? undefined : { span: target, blocked: holderIn(tokens, id, target) !== undefined },
-        );
+        // The cell where it already is shows nothing: there is nothing to preview.
+        setDrop(target === undefined || (!target.tray && sameSpan(target.span, span)) ? undefined : target);
       };
       const up = (e: PointerEvent) => {
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
         window.removeEventListener("pointercancel", up);
-        dragging.current = undefined;
-        setHover(undefined);
+        setDrop(undefined);
+        setDragging(undefined);
         const target = e.type === "pointerup" ? over(e.clientX, e.clientY) : undefined;
-        if (target === undefined) return;
-        const holder = holderIn(tokens, id, target);
-        if (holder !== undefined) {
-          setRefusal({ span: target, holder });
-          return;
-        }
-        if (JSON.stringify(target) !== JSON.stringify(span)) onPicture(placed(tokens, id, target));
+        if (target !== undefined && JSON.stringify(target.next) !== JSON.stringify(tokens)) onPicture(target.next);
       };
+      setDragging(id);
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", up);
     },
-    [root, tokens, onPicture],
+    [root, tray, tokens, cellIds, onPicture],
   );
 
-  const dismiss = useCallback(() => setRefusal(undefined), []);
-
-  return { start, hover, refusal, dismiss };
+  return { start, drop, dragging };
 }

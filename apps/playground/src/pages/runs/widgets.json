@@ -193,6 +193,11 @@
         "orderBy": "runs.orderBy"
       },
       "headerFilters": true,
+      "toolbar": [
+        {
+          "name": "reset-filters"
+        }
+      ],
       "on": {
         "load": [
           {
@@ -295,6 +300,11 @@
         "orderBy": "runs.orderBy"
       },
       "headerFilters": true,
+      "toolbar": [
+        {
+          "name": "reset-filters"
+        }
+      ],
       "on": {
         "load": [
           {

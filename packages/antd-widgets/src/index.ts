@@ -96,6 +96,8 @@ export {
 export type { AntdDescriptionsOptions, AntdTableOptions };
 export type { InfiniteTableEvents } from "./widgets/antd-infinite-table";
 export type { TableCellProps, TableCellRenderer, TableCellRenderers } from "./hooks/use-table-cell";
+export type { TableToolbarItem, TableToolbarItemProps, TableToolbarItems } from "./hooks/use-table-toolbar";
+export { RefreshItem, ResetFiltersItem, STANDARD_TOOLBAR } from "./widgets/table-toolbar";
 export { validate } from "./validation";
 export type { ValidationRule, ValidationResult } from "./validation";
 export { LABEL_TONES, VALIDATION_RULES } from "@wirework/widget-contracts";
@@ -125,17 +127,24 @@ export type { StepsEvents } from "./widgets/antd-steps";
 export interface AntdWidgetsOptions {
   /** Cell renderers the host's tables — and its descriptions — offer by name (see createAntdTable). */
   tableCells?: AntdTableOptions["cells"];
+  /** Toolbar items the host's tables offer by name, over the standard `reset-filters` and `refresh` (see createAntdTable). */
+  tableToolbar?: AntdTableOptions["toolbar"];
 }
 
-/** Every production widget, for a host to register at once — with the host's own table cells, if any. */
-export function createAntdWidgets({ tableCells }: AntdWidgetsOptions = {}): AnyWidgetDefinition[] {
+/** Every production widget, for a host to register at once — with the host's own table cells and toolbar items, if any. */
+export function createAntdWidgets({ tableCells, tableToolbar }: AntdWidgetsOptions = {}): AnyWidgetDefinition[] {
+  const own = tableCells !== undefined || tableToolbar !== undefined;
+  const tableOptions: AntdTableOptions = {
+    ...(tableCells === undefined ? {} : { cells: tableCells }),
+    ...(tableToolbar === undefined ? {} : { toolbar: tableToolbar }),
+  };
   return [
     antdLabel,
     antdEcho,
     antdFilterBar,
     antdCounter,
-    tableCells === undefined ? antdTable : createAntdTable({ cells: tableCells }),
-    tableCells === undefined ? antdInfiniteTable : createAntdInfiniteTable({ cells: tableCells }),
+    own ? createAntdTable(tableOptions) : antdTable,
+    own ? createAntdInfiniteTable(tableOptions) : antdInfiniteTable,
     // A fact sheet shows the table's cells: the host's renderers serve it too.
     tableCells === undefined ? antdDescriptions : createAntdDescriptions({ cells: tableCells }),
     antdButton,

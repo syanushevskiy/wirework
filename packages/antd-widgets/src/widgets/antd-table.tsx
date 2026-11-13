@@ -12,14 +12,19 @@
  * A HOST that wants cells no predefined kind shows makes its own table with
  * `createAntdTable({ cells })` — renderers by name, which a column selects
  * with `cell: { kind: "custom", name }` — and registers it instead of
- * `antdTable` (or the whole set with `createAntdWidgets`).
+ * `antdTable` (or the whole set with `createAntdWidgets`). The TOOLBAR's
+ * items are registered the same way, `createAntdTable({ toolbar })`: by
+ * name, which a page lists with `toolbar: [{ name }]`.
  */
 import { Table } from "antd";
 import type { ContractProps } from "@wirework/schema";
 import { implementContract } from "@wirework/react";
 import { tableContract } from "@wirework/widget-contracts";
-import { useTable } from "../hooks/use-table";
+import { NO_CELLS, useTable } from "../hooks/use-table";
 import type { TableCellRenderers } from "../hooks/use-table-cell";
+import type { TableToolbarItems } from "../hooks/use-table-toolbar";
+import { CellMenu } from "./cell-menu";
+import { TableToolbar, toolbarItems } from "./table-toolbar";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
 export type TableEvents = (typeof tableContract)["events"];
@@ -27,11 +32,28 @@ export type TableEvents = (typeof tableContract)["events"];
 export interface AntdTableOptions {
   /** Renderers the host registers by name, for `cell: { kind: "custom", name }`. */
   cells?: TableCellRenderers;
+  /**
+   * Toolbar items the host registers by name, for `toolbar: [{ name }]` — beside the standard `reset-filters` and
+   * `refresh`, and INSTEAD of one of them when registered under its name (the host's own refresher as `refresh`).
+   */
+  toolbar?: TableToolbarItems;
 }
 
-export function createAntdTable({ cells }: AntdTableOptions = {}) {
+export function createAntdTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTableOptions = {}) {
+  const items = toolbarItems(ownItems);
+
   function AntdTable({ viewModel, store, emit }: ContractProps<typeof tableContract>) {
-    const { columns, rows, loading, rowProps, change } = useTable(
+    const {
+      columns,
+      rows,
+      loading,
+      rowProps,
+      change,
+      columnMenu,
+      toolbar,
+      scroll,
+      cells: selection,
+    } = useTable(
       store,
       emit,
       {
@@ -40,7 +62,9 @@ export function createAntdTable({ cells }: AntdTableOptions = {}) {
         columns: viewModel.inputs.columns,
         filterIn: viewModel.inputs.filterIn,
         filterLike: viewModel.inputs.filterLike,
+        filterBetween: viewModel.inputs.filterBetween,
         orderBy: viewModel.inputs.orderBy,
+        columnState: viewModel.inputs.columnState,
       },
       tableContract.io.inputs,
       {
@@ -48,18 +72,31 @@ export function createAntdTable({ cells }: AntdTableOptions = {}) {
         rowKey: viewModel.rowKey,
         headerFilters: viewModel.headerFilters,
         filterRow: viewModel.filterRow,
+        columnMenu: viewModel.columnMenu,
+        columnStateKey: viewModel.columnStateKey,
+        toolbar: viewModel.toolbar,
+        cellSelection: viewModel.cellSelection,
+        exportName: viewModel.exportName,
       },
       cells,
+      items,
     );
 
     return (
+      // The root hears every press, right click and key of its cells: the cell selection is decided in one place.
       <div
         className="ww-table"
         data-testid="antd-table"
         data-path={viewModel.inputs.rows}
         data-loading={loading}
         data-filter-row={viewModel.filterRow}
+        data-min-width={scroll.x}
+        data-cell-selection={viewModel.cellSelection}
+        data-selected={selection.selected}
+        {...selection.root}
       >
+        <CellMenu view={selection} />
+        <TableToolbar items={toolbar} columnMenu={columnMenu} />
         <Table
           size="small"
           pagination={false}
@@ -70,6 +107,7 @@ export function createAntdTable({ cells }: AntdTableOptions = {}) {
           locale={{ emptyText: viewModel.emptyText }}
           onRow={rowProps}
           onChange={change}
+          scroll={scroll}
         />
       </div>
     );

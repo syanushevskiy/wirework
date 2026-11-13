@@ -36,10 +36,15 @@ is reported by `validate` (a warning above the page, an error at boot)
 and does nothing.
 
 In edit mode every row has a bar with a field for its classes, and every
-cell a handle with its id, four arrows (left / right within the row, up /
-down into the row above or below — past the ends a new row) and a field
-for its own classes; Enter or leaving the field commits ONE change. The
-change payload (`FlexRowsChange`) is `{ kind: "cell", id, classes }`,
-`{ kind: "row", row, classes }` or `{ kind: "move", id, row, index }`;
-`applyFlexRowsChange`, `moveTarget` and `removeFlexCell` are the pure
-operations behind it.
+cell a handle with its id and a field for its own classes; Enter or
+leaving the field commits ONE change. A cell is MOVED by dragging its
+handle (`flex-handle`): let go on another cell's middle the two swap
+places, on its left or right quarter the dragged one goes before or after
+it, on the strip between two rows (`flex-row-drop`) it takes a row of its
+own; the target is marked while the drag lasts (`data-drop`), nothing
+moves before the drop. The change payload (`FlexRowsChange`) is
+`{ kind: "cell", id, classes }`, `{ kind: "row", row, classes }`,
+`{ kind: "move", id, row, index, own? }` (`own`: a new row before `row`)
+or `{ kind: "swap", id, with }`; `applyFlexRowsChange`, `dropChange` (the
+change a drop asks for) and `removeFlexCell` are the pure operations
+behind it.

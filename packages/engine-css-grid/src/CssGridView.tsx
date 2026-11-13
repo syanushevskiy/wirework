@@ -3,22 +3,31 @@
  * areas are the page's cell ids; every cell an item placed by `gridArea`.
  * In edit mode the grid grows a ghost per slot (the drop targets, the
  * trailing "+" ones growing the picture), every item a handle bar to drag
- * it by and a corner to resize it, and a TYPED form above the grid: the slot
- * table (a select per slot), the row and column buttons, the track fields.
+ * it by — onto a slot, or onto another widget to swap places — and four
+ * edges and a corner to resize it by, taking slots from its neighbours; a
+ * widget left with no slot waits in the TRAY under the grid, with a warning,
+ * to be dragged back in. Above the grid a TYPED form: the slot table (a
+ * select per slot), the row and column buttons, the track fields.
  * Render-only: logic in useCssGridView, the drag in useCssGridDrag.
  */
 import { useRef } from "react";
 import type { LayoutRendererProps } from "@wirework/react";
-import { isRectangle, spanOf, spanText } from "./areas";
-import { EMPTY, type CssGridChange, type CssGridPage, type Span } from "./schema";
+import { RESIZE_EDGES, isRectangle, spanOf, spanText, type ResizeEdge } from "./areas";
+import { EMPTY, type CssGridChange, type CssGridPage } from "./schema";
 import { TrackInput } from "./TrackInput";
 import { useCssGridView } from "./useCssGridView";
 
 /** The stylesheet's gap, shown in the form until the template says one. */
 const DEFAULT_GAP = "0.5rem";
 
-const inSpan = (span: Span | undefined, row: number, column: number): boolean =>
-  span !== undefined && row >= span.r1 && row <= span.r2 && column >= span.c1 && column <= span.c2;
+const TAKES = "it takes the slots it is pulled over, a neighbour gives way";
+const EDGE_TITLES: Readonly<Record<ResizeEdge, string>> = {
+  n: `drag the top edge — ${TAKES}`,
+  e: `drag the right edge — ${TAKES}`,
+  s: `drag the bottom edge — ${TAKES}`,
+  w: `drag the left edge — ${TAKES}`,
+  se: `drag the corner — ${TAKES}`,
+};
 
 export function CssGridView({
   template,
@@ -29,9 +38,84 @@ export function CssGridView({
   renderChrome,
 }: LayoutRendererProps<CssGridPage, CssGridChange>) {
   const root = useRef<HTMLDivElement | null>(null);
-  const view = useCssGridView(template, onChange, editable, root);
+  const tray = useRef<HTMLDivElement | null>(null);
+  const view = useCssGridView(template, onChange, editable, root, tray);
   const { tokens, shown, width, height, drag } = view;
-  const refusal = drag.refusal;
+  const drop = drag.drop;
+
+  /** One cell: in its slots, or — with none — in the tray (edit mode) or after the grid. */
+  const item = (gridCell: CssGridPage["cells"][number]) => {
+    const cell = cellById(gridCell.id);
+    const span = spanOf(tokens, gridCell.id);
+    const fate =
+      drop === undefined
+        ? undefined
+        : drop.id === gridCell.id
+          ? "moving"
+          : drop.swap === gridCell.id
+            ? "swap"
+            : drop.out.includes(gridCell.id)
+              ? "out"
+              : undefined;
+    return (
+      <div
+        key={gridCell.id}
+        className="ww-css-grid-item"
+        data-testid="css-grid-item"
+        data-cell={gridCell.id}
+        data-area={span === undefined ? undefined : spanText(span)}
+        data-dragging={drag.dragging === gridCell.id ? "true" : undefined}
+        data-drop={fate}
+        // A non-rectangle is not placed: CSS would drop the whole picture, so the item auto-flows and the warning says why.
+        style={span === undefined || !isRectangle(tokens, gridCell.id) ? undefined : { gridArea: gridCell.id }}
+      >
+        {editable ? (
+          // The whole bar is the drag handle (as react-grid-layout's); the chrome buttons keep their press to themselves.
+          <div
+            className="ww-css-grid-handle"
+            data-testid="css-grid-handle"
+            data-cell={gridCell.id}
+            title={
+              span === undefined
+                ? "no slot yet — drag onto the grid"
+                : "drag to a slot, or onto another widget to swap places"
+            }
+            onPointerDown={(event) => drag.start("move", gridCell.id, event)}
+          >
+            <span className="ww-css-grid-grip" aria-hidden="true">
+              ✥
+            </span>
+            <span className="ww-css-grid-handle-label" data-testid="css-grid-handle-label">
+              {gridCell.id}
+              {span === undefined ? " · no slot" : ""}
+            </span>
+            {cell ? renderChrome?.(cell) : null}
+          </div>
+        ) : null}
+        {cell ? renderCell(cell) : null}
+        {fate === "swap" || fate === "out" ? (
+          <span className="ww-css-grid-fate" data-testid="css-grid-fate">
+            {fate === "swap" ? "swaps places" : "loses its slot"}
+          </span>
+        ) : null}
+        {editable && span !== undefined
+          ? RESIZE_EDGES.map((edge) => (
+              <div
+                key={edge}
+                className="ww-css-grid-resize"
+                data-testid="css-grid-resize"
+                data-cell={gridCell.id}
+                data-edge={edge}
+                role="presentation"
+                title={EDGE_TITLES[edge]}
+                onPointerDown={(event) => drag.start(edge, gridCell.id, event)}
+              />
+            ))
+          : null}
+      </div>
+    );
+  };
+
   return (
     <div className="ww-css-grid-root">
       {editable ? (
@@ -166,12 +250,6 @@ export function CssGridView({
               </tr>
             </tbody>
           </table>
-          {refusal === undefined ? null : (
-            <p className="ww-css-grid-refusal" role="status" data-testid="css-grid-refusal">
-              refused: the slot row {refusal.holder.row + 1} column {refusal.holder.column + 1} holds &quot;
-              {refusal.holder.id}&quot;
-            </p>
-          )}
         </form>
       ) : null}
       <div
@@ -182,81 +260,64 @@ export function CssGridView({
         data-columns={width}
         data-column-sizes={view.columns.join(" ")}
         data-row-sizes={view.rows.join(" ")}
+        data-dragging={drag.dragging === undefined ? undefined : "true"}
         style={view.style}
       >
         {editable
           ? shown.map((row, r) =>
-              row.map((token, c) => {
-                const hovered = inSpan(drag.hover?.span, r, c);
-                const refused = inSpan(refusal?.span, r, c);
-                return (
-                  <div
-                    key={`${r}-${c}`}
-                    className="ww-css-grid-ghost"
-                    data-testid="css-grid-ghost"
-                    data-row={r}
-                    data-column={c}
-                    data-held={token === EMPTY ? undefined : token}
-                    data-new={r >= height ? "row" : c >= width ? "column" : undefined}
-                    data-hover={hovered ? (drag.hover?.blocked ? "blocked" : "free") : undefined}
-                    data-refused={refused ? "true" : undefined}
-                    title={refused && refusal ? `holds "${refusal.holder.id}"` : undefined}
-                    style={{ gridRow: r + 1, gridColumn: c + 1 }}
-                  >
-                    {r >= height || c >= width ? "+" : null}
-                  </div>
-                );
-              }),
+              row.map((token, c) => (
+                <div
+                  key={`${r}-${c}`}
+                  className="ww-css-grid-ghost"
+                  data-testid="css-grid-ghost"
+                  data-row={r}
+                  data-column={c}
+                  data-held={token === EMPTY ? undefined : token}
+                  data-new={r >= height ? "row" : c >= width ? "column" : undefined}
+                  style={{ gridRow: r + 1, gridColumn: c + 1 }}
+                >
+                  {r >= height || c >= width ? "+" : null}
+                </div>
+              )),
             )
           : null}
-        {template.cells.map((gridCell) => {
-          const cell = cellById(gridCell.id);
-          const span = spanOf(tokens, gridCell.id);
-          return (
-            <div
-              key={gridCell.id}
-              className="ww-css-grid-item"
-              data-testid="css-grid-item"
-              data-cell={gridCell.id}
-              data-area={span === undefined ? undefined : spanText(span)}
-              // A non-rectangle is not placed: CSS would drop the whole picture, so the item auto-flows and the warning says why.
-              style={span === undefined || !isRectangle(tokens, gridCell.id) ? undefined : { gridArea: gridCell.id }}
-            >
-              {editable ? (
-                // The whole bar is the drag handle (as react-grid-layout's); the chrome buttons keep their press to themselves.
-                <div
-                  className="ww-css-grid-handle"
-                  data-testid="css-grid-handle"
-                  data-cell={gridCell.id}
-                  data-draggable={span === undefined ? undefined : "true"}
-                  title={span === undefined ? "no slot — placed after the grid" : "drag to another slot"}
-                  onPointerDown={span === undefined ? undefined : (event) => drag.start("move", gridCell.id, event)}
-                >
-                  <span className="ww-css-grid-grip" aria-hidden="true">
-                    ✥
-                  </span>
-                  <span className="ww-css-grid-handle-label" data-testid="css-grid-handle-label">
-                    {gridCell.id}
-                    {span === undefined ? " · no slot" : ""}
-                  </span>
-                  {cell ? renderChrome?.(cell) : null}
-                </div>
-              ) : null}
-              {cell ? renderCell(cell) : null}
-              {editable && span !== undefined ? (
-                <div
-                  className="ww-css-grid-resize"
-                  data-testid="css-grid-resize"
-                  data-cell={gridCell.id}
-                  role="presentation"
-                  title="drag to span more slots"
-                  onPointerDown={(event) => drag.start("resize", gridCell.id, event)}
-                />
-              ) : null}
-            </div>
-          );
-        })}
+        {/* In edit mode a cell with no slot waits in the tray below; on the page as people see it, it flows after the grid. */}
+        {template.cells.filter((gridCell) => !editable || !view.offGrid.includes(gridCell.id)).map(item)}
+        {/* What letting go now would do: the slots the dragged widget would fill, drawn over whatever is there. */}
+        {drop?.span === undefined ? null : (
+          <div
+            className="ww-css-grid-drop"
+            data-testid="css-grid-drop"
+            data-area={spanText(drop.span)}
+            style={{
+              gridRow: `${drop.span.r1 + 1} / ${drop.span.r2 + 2}`,
+              gridColumn: `${drop.span.c1 + 1} / ${drop.span.c2 + 2}`,
+            }}
+          />
+        )}
       </div>
+      {editable ? (
+        <div
+          ref={tray}
+          className="ww-css-grid-tray"
+          data-testid="css-grid-tray"
+          data-count={view.offGrid.length}
+          data-hover={drop?.tray ? "true" : undefined}
+        >
+          {view.offGrid.length === 0 ? (
+            <p className="ww-css-grid-tray-note">Off the grid: drop a widget here to take it out of its slots.</p>
+          ) : (
+            <p className="ww-css-grid-tray-note" role="alert" data-testid="css-grid-unassigned">
+              {view.offGrid.length === 1 ? "1 widget has" : `${view.offGrid.length} widgets have`} no slot in the grid:{" "}
+              {view.offGrid.join(", ")}. Drag {view.offGrid.length === 1 ? "it" : "each"} onto a slot — until then{" "}
+              {view.offGrid.length === 1 ? "it shows" : "they show"} after the grid.
+            </p>
+          )}
+          <div className="ww-css-grid-tray-items">
+            {template.cells.filter((gridCell) => view.offGrid.includes(gridCell.id)).map(item)}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

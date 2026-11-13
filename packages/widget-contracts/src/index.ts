@@ -36,13 +36,35 @@ export {
   tableHeaderPorts,
   searchValuesSchema,
   columnOrderSchema,
+  columnStateSchema,
+  periodValuesSchema,
+  tableColumnEvents,
+  tableColumnPorts,
+  tableToolbarEvents,
+  tableCellEvents,
+  COLUMN_WIDTH,
+  columnWidth,
+  isIdColumn,
+  tableWidth,
+  toolbarItemSchema,
+  TOOLBAR_ITEMS,
 } from "./table";
-export type { TableColumn, ColumnFilter, TableRow, SearchValues, ColumnOrder } from "./table";
+export type {
+  ToolbarItem,
+  TableColumn,
+  ColumnFilter,
+  TableRow,
+  SearchValues,
+  ColumnOrder,
+  ColumnState,
+  PeriodValues,
+} from "./table";
 export { tableCellSchema, appPathSchema, cellText, cellTone, cellHref } from "./table-cell";
 export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
-export { infiniteTableContract } from "./infinite-table";
+export { infiniteTableContract, SLICE_EDGES } from "./infinite-table";
+export type { SliceEdge } from "./infinite-table";
 export { listPercent, listPositionContract } from "./list-position";
 // More of what every UI library has.
 export { switchContract } from "./switch";

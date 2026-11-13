@@ -9,20 +9,28 @@
 export { cssGridEngine } from "./engine";
 export { appendCssGridCell, applyCssGridChange, cssGridProblems, emptyCssGrid, removeCssGridCell } from "./operations";
 export {
+  RESIZE_EDGES,
   areasOf,
+  claimed,
+  cleared,
   columnCount,
+  dropped,
   grownTo,
   isDrawable,
   isRectangle,
   isTrackSize,
   pictureProblems,
   placed,
+  resizedSpan,
   spanOf,
   spanText,
+  swapped,
   tokensOf,
   trackParts,
+  unplaced,
   withSlot,
   withoutColumn,
   withoutRow,
+  type ResizeEdge,
 } from "./areas";
 export * from "./schema";

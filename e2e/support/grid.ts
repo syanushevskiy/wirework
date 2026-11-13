@@ -55,12 +55,22 @@ export async function dragBetween(page: Page, from: Locator, to: Locator) {
  * a wide handle's preserved offset would carry the pointer past the slot.
  */
 export async function dragOnto(page: Page, from: Locator, to: Locator) {
+  await dragToPart(page, from, to, 0.5, 0.5);
+}
+
+/**
+ * Grab `from` at its centre and release with the pointer over a PART of
+ * `to`, given as fractions of its width and height — where the part of the
+ * target under the pointer decides (flex rows: a cell's left or right
+ * quarter puts the dragged one beside it, its middle swaps the two).
+ */
+export async function dragToPart(page: Page, from: Locator, to: Locator, across: number, down: number) {
   await page.getByTestId("page").scrollIntoViewIfNeeded();
   await from.scrollIntoViewIfNeeded();
   const a = await settledBox(from);
   const b = await settledBox(to);
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
   await page.mouse.down();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
+  await page.mouse.move(b.x + b.width * across, b.y + b.height * down, { steps: 12 });
   await page.mouse.up();
 }

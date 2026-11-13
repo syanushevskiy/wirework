@@ -497,3 +497,66 @@ left open:
 - **Not built, as decided:** responsive areas, named areas with a
   mapping, a generic engine form, conversion from another engine, the
   widget type beside the id in the slot select.
+
+## Drag and drop, amended (12 November 2026): nothing is refused
+
+The owner's word, after using it: a drag that refuses is a drag that "is
+not implemented" — a hand that lets go over a widget expects the two to
+change places, and a corner that stops at a neighbour is "hard to
+understand". This section REPLACES "Overlap refuses" above, the refusal
+line of "Built", and Ren's "refuse on overlap, never push" — his worry (a
+layout that rearranges itself under the hand) is answered another way: the
+drag shows the whole outcome BEFORE the drop, and only the widgets named in
+it move.
+
+- **A move swaps.** Let go over a slot another widget holds, the two
+  exchange rectangles, whatever their sizes (`swapped`: the two tokens
+  trade, so both stay rectangles). Over a free slot the widget keeps its
+  size where it was grabbed when those slots are free, else with its corner
+  at the slot, else it takes the one slot (`dropped`); it is never pushed
+  past the grid's edge unless the pointer is on a "+" slot, which grows the
+  grid as before.
+- **A resize takes.** Every placed widget has FOUR EDGES and the corner to
+  pull (`css-grid-resize` with `data-edge` `n`, `e`, `s`, `w`, `se`; a
+  strip along each side that lights up under the pointer). The widget
+  fills the rectangle its edge is pulled to (`resizedSpan`) whoever held
+  those slots (`claimed`): a neighbour with a rectangle left SHRINKS; one
+  left with an L or with nothing has NO SLOT. The owner's example — a row
+  of three, the left widget over two thirds, the right in the last: the
+  left's right edge pulled over the last third leaves the right one off
+  the grid. An edge pulled back frees the slots it leaves.
+- **The tray.** In edit mode a widget with no slot is not auto-placed
+  after the grid: it waits in the TRAY under it (`css-grid-tray`,
+  `data-count`), whole — its handle, its chrome, itself — under a warning
+  that names it (`css-grid-unassigned`, `role="alert"`: "1 widget has no
+  slot in the grid: custom-2. Drag it onto a slot…"), beside the page's
+  own warning from `validate` (`cell "custom-2" has no slot and is placed
+after the grid`). It is dragged from there like any widget: onto a free
+  slot it takes that slot, onto a widget it takes that widget's rectangle
+  and the other goes to the tray. A widget dropped ON the tray leaves the
+  grid (`cleared`). Outside edit mode nothing changed: a cell with no slot
+  flows after the grid.
+- **The outcome shows first.** While a drag lasts the widget stays where
+  it is, faded (`data-dragging`); an outline over the grid marks the slots
+  it would fill (`css-grid-drop`, `data-area`); the widget it would swap
+  with says "swaps places" and one that would lose its slot "loses its
+  slot" (`data-drop="swap" | "out"`, `css-grid-fate`). A pointer in a gap
+  or just outside the grid still means the nearest slot; a move let go
+  elsewhere changes nothing.
+- **The pure functions** are in `areas.ts` with the rest of the picture's
+  arithmetic — `swapped`, `dropped`, `claimed`, `resizedSpan`, `cleared`,
+  `unplaced` — each unit-tested on the shapes that bite (a swap of unequal
+  sizes, a size that does not fit, the owner's row of three, a bite that
+  leaves an L, a neighbour that is none of the resize's business).
+  `useCssGridDrag` only measures, hit-tests and reports the picture; the
+  change is still the one `areas` kind, so hosts replay it unchanged.
+- **Gone:** `css-grid-refusal`, `data-refused`, `data-hover="blocked"`,
+  the step `the drop is refused because the slot holds "<id>"`.
+- **Steps:** `I drop the cell "<a>" onto the cell "<b>"` (a swap),
+  `I pull the right|left|top|bottom edge of the cell "<id>" to the slot
+row R column C`, `I drag the cell "<id>" off the grid`, `the cell "<id>"
+waits off the grid`, `the grid says N widgets have no slot`, `every
+widget of the grid has a slot`; `I drag the cell … to the slot …` works
+  from the tray too, and `I resize the cell …` is the corner still.
+  `css-grid.feature` has eight scenarios: the refusal's is now the swap,
+  and the owner's row of three is the new one.

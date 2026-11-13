@@ -42,15 +42,23 @@ grid and a size that is not CSS.
 Edit mode: the grid grows a ghost per slot (`css-grid-ghost`, `data-row`,
 `data-column`; the trailing `+` ones grow the picture when dropped on),
 every item a handle bar to drag it by (`css-grid-handle`, its label
-`css-grid-handle-label`; the chrome buttons in it keep their press) and a
-resize corner (`css-grid-resize`) — a drop on slots another cell holds is refused, the
-ghosts red and `css-grid-refusal` saying which — and a TYPED form above the
-grid (`css-grid-form`): a select per slot listing the page's cells
+`css-grid-handle-label`; the chrome buttons in it keep their press) — onto
+a free slot it goes there, onto another widget the two SWAP places — and
+four edges and a corner to resize it by (`css-grid-resize`, `data-edge`
+`n` / `e` / `s` / `w` / `se`): the cell takes the slots it is pulled over,
+a neighbour with a rectangle left shrinks, and one left with no slot waits
+in the TRAY under the grid (`css-grid-tray`, `data-count`, the warning
+`css-grid-unassigned`) until it is dragged onto a slot; a drop on the tray
+takes a cell off the grid. Nothing is refused, and the outcome shows
+before the drop (`css-grid-drop`, `data-drop` on the widgets it touches).
+Above the grid a TYPED form
+(`css-grid-form`): a select per slot listing the page's cells
 (`css-grid-slot`), `+ row` / `+ column` and a `−` per row and column
 (disabled, with the reason, while a cell there has no other slot), and a
 number-and-unit field per track (`css-grid-column`, `css-grid-row-size`,
 `css-grid-gap`; `fr`, `px`, `rem`, `%`, or `auto`, `min-content`,
 `max-content`). The pure picture functions (`tokensOf`, `spanOf`,
-`isRectangle`, `placed`, `withSlot`, `grownTo`, `withoutRow`,
+`isRectangle`, `placed`, `swapped`, `dropped`, `claimed`, `resizedSpan`,
+`cleared`, `unplaced`, `withSlot`, `grownTo`, `withoutRow`,
 `withoutColumn`, `pictureProblems`, `isTrackSize`) are exported for hosts
 and tests.

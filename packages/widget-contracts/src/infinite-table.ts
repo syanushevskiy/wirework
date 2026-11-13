@@ -6,7 +6,8 @@
  * no pagination stand next to it.
  *
  * Everything `table` says holds (the rows, their key, the columns, the
- * cells, the header filters and their ports and events, `row-selected`,
+ * cells, the header filters and their ports and events, the column menu
+ * and its state, the toolbar and its `refresh`, `row-selected`,
  * `link-clicked`, `load`). On top:
  *
  * - The `total` port says how many rows the server has: while fewer are
@@ -22,14 +23,19 @@
  *   every row rendered.
  * - WINDOWED (the `windowed` setting; doc/row-window-design.md, "A slice of
  *   the list"): the widget does not hold the list either — only a SLICE of
- *   it, the rows from `offset` on. Its scrollbar spans the `total`; when the
- *   rows in view are not among the ones held (and nothing is loading) it
- *   EMITS `window` with the offset the next slice should begin at — the
- *   rows in view in its middle — and the reactions replace the slice:
- *   `{ set: "<into>.wanted", from: "offset" }`, then `{ call:
- *   "table-view/load", with: { into, window: true } }`. `more` is never
- *   emitted. Ten thousand rows on the server are two hundred in the store
- *   and two dozen in the DOM.
+ *   it, the rows from `offset` on. Its scrollbar spans the `total`, and it
+ *   EMITS `window` AHEAD OF TIME: when the rows in view passed three
+ *   quarters of the ones held and the list goes on, with `edge: "after"`
+ *   and the offset the next batch begins at — the rows in view are still
+ *   held, so the user scrolls into rows that are already there —; the same
+ *   towards the start with `edge: "before"`; and, when the rows in view are
+ *   not among the ones held (a jump), `edge: "around"` with the first row
+ *   wanted. Never while loading. The reactions store the request and load:
+ *   `{ set: "<into>.wanted" }` (the whole payload), then `{ call:
+ *   "table-view/load", with: { into, window: true } }` — a batch joins the
+ *   rows held (the farthest ones dropped beyond three batches), a slice
+ *   around replaces them. `more` is never emitted. Ten thousand rows on the
+ *   server are a few hundred in the store and two dozen in the DOM.
  * - WHERE THE LIST STANDS is the `position` port: the first row in view,
  *   0-based in the whole list. The widget emits `position-changed` as it
  *   scrolls (written back by default) and SCROLLS to the position when
@@ -46,7 +52,21 @@
  */
 import { z } from "zod";
 import { defineContract } from "@wirework/schema";
-import { tableEvents, tableHeaderEvents, tableHeaderPorts, tablePorts, tableSettings } from "./table";
+import {
+  tableCellEvents,
+  tableColumnEvents,
+  tableColumnPorts,
+  tableEvents,
+  tableHeaderEvents,
+  tableHeaderPorts,
+  tablePorts,
+  tableSettings,
+  tableToolbarEvents,
+} from "./table";
+
+/** What a windowed list asks for: the batch after the rows held, the one before them, or a slice around a row. */
+export const SLICE_EDGES = ["after", "before", "around"] as const;
+export type SliceEdge = (typeof SLICE_EDGES)[number];
 
 export const infiniteTableContract = defineContract({
   kind: "infinite-table",
@@ -55,6 +75,7 @@ export const infiniteTableContract = defineContract({
     inputs: {
       ...tablePorts,
       ...tableHeaderPorts,
+      ...tableColumnPorts,
       total: {
         description: "Store path holding how many rows the server has (optional; without it nothing more is asked for)",
         value: z.number().int().min(0),
@@ -78,6 +99,9 @@ export const infiniteTableContract = defineContract({
   events: {
     ...tableEvents,
     ...tableHeaderEvents,
+    ...tableColumnEvents,
+    ...tableToolbarEvents,
+    ...tableCellEvents,
     more: {
       description:
         "Fired when the end of the list comes into view and the server has more rows; carries the offset of the next one — call table-view/load with more: true",
@@ -86,8 +110,8 @@ export const infiniteTableContract = defineContract({
     },
     window: {
       description:
-        "Windowed list: fired when the rows in view are not among the ones held; carries the offset the next slice should begin at — store it and call table-view/load with window: true",
-      payload: z.object({ offset: z.number().int().min(0) }),
+        'Windowed list: fired AHEAD OF TIME, when the rows in view passed three quarters of the ones held — edge "after" (offset: where the next batch begins) or "before" (offset: the first row held) — and when they are not among the ones held — edge "around" (offset: the first row wanted). Store the whole payload ({ set: "<into>.wanted" }) and call table-view/load with window: true',
+      payload: z.object({ offset: z.number().int().min(0), edge: z.enum(SLICE_EDGES) }),
       primary: "offset",
     },
     "position-changed": {

@@ -11,6 +11,69 @@
   cursor: pointer;
 }
 
+/*
+ * The cell selection (both tables): cells are selected, not their text; the selected rectangle is tinted with an
+ * outline along its edges (each cell draws the sides it lies on), the cell it started at stays clear, and the last
+ * cell carries the small square that says the corner can be dragged.
+ */
+.ww-table[data-cell-selection="true"] .ant-table-tbody > tr > td {
+  user-select: none;
+}
+
+/* The row under the pointer and a sorted column have a background of antd's own: the selection's tint is said over both. */
+.ww-table .ant-table-tbody > tr.ant-table-row > td.ant-table-cell[data-selected="true"],
+.ww-table .ant-table-tbody > tr.ant-table-row:hover > td.ant-table-cell[data-selected="true"] {
+  --ww-select: var(--ww-color-select, var(--ant-color-primary, #1677ff));
+  position: relative;
+  background: color-mix(in srgb, var(--ww-select) 12%, var(--ant-color-bg-container, #fff));
+  box-shadow:
+    inset 0 var(--ww-edge-top, 0) 0 0 var(--ww-select),
+    inset calc(-1 * var(--ww-edge-right, 0px)) 0 0 0 var(--ww-select),
+    inset 0 calc(-1 * var(--ww-edge-bottom, 0px)) 0 0 var(--ww-select),
+    inset var(--ww-edge-left, 0) 0 0 0 var(--ww-select);
+}
+
+.ww-table .ant-table-tbody > tr.ant-table-row > td.ant-table-cell[data-anchor="true"],
+.ww-table .ant-table-tbody > tr.ant-table-row:hover > td.ant-table-cell[data-anchor="true"] {
+  background: var(--ant-color-bg-container, #fff);
+}
+
+.ww-table .ant-table-tbody > tr > td[data-edge~="top"] {
+  --ww-edge-top: 2px;
+}
+
+.ww-table .ant-table-tbody > tr > td[data-edge~="right"] {
+  --ww-edge-right: 2px;
+}
+
+.ww-table .ant-table-tbody > tr > td[data-edge~="bottom"] {
+  --ww-edge-bottom: 2px;
+}
+
+.ww-table .ant-table-tbody > tr > td[data-edge~="left"] {
+  --ww-edge-left: 2px;
+}
+
+.ww-table .ant-table-tbody > tr > td[data-handle="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  background: var(--ww-select);
+  border: 1px solid var(--ant-color-bg-container, #fff);
+  cursor: crosshair;
+}
+
+/* Where the cell menu hangs: the point of the window the right click was at (a pixel — a mark with no size is not placed by). */
+.ww-table__menu-at {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
 /* A link cell reads as a link; the row around it stays a row. */
 .ww-table__link {
   color: var(--ant-color-link, var(--ant-color-primary, #1677ff));
@@ -41,8 +104,9 @@
   cursor: default;
 }
 
-/* The search box a text filter opens from a column header (both tables). */
-.ww-table__search {
+/* What a column's filter opens from its header (both tables): the search box of a text filter, the period of a date column. */
+.ww-table__search,
+.ww-table__dropdown {
   display: grid;
   gap: 0.5rem;
   padding: 0.5rem;
@@ -58,6 +122,17 @@
 .ww-table__filter {
   min-width: 7rem;
   font-weight: normal;
+}
+
+/* The list of values a column's filter opens: as wide as a few tags, so the chosen ones wrap onto more lines. */
+.ww-table__values {
+  width: 16rem;
+}
+
+/* A date column's filter in the filter row: the start and the end of the period, side by side. */
+.ww-table__period {
+  display: flex;
+  gap: 0.25rem;
 }
 
 /*
@@ -76,6 +151,20 @@
 .ww-list-position__scale {
   flex: 1 1 8rem;
   min-width: 6rem;
+}
+
+/* The column menu's button, above the table at its right edge; its list no wider than it needs. */
+.ww-table__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ww-table__column-list {
+  min-width: 12rem;
+  max-height: 20rem;
+  overflow-y: auto;
 }
 
 /* Upright, the scale takes the height its cell gives — beside a list, the list's own. */

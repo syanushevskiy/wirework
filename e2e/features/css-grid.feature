@@ -2,10 +2,12 @@ Feature: CSS grid — a page laid out by template areas, filled by drag and drop
   "css-grid" lays a page out as a CSS grid of SLOTS. Its picture is CSS's own
   grid-template-areas, one line per row, every token the id of a widget and
   "." an empty slot — a widget spanning several slots is one area. In edit
-  mode the picture is DRAWN: a widget dragged by its handle onto the slot
-  where it starts, its corner pulled over the slots it spans, a drop on a
-  slot another widget holds refused; or filled from a form that can only
-  hold what exists — a select per slot. The columns and rows are sized in
+  mode the picture is DRAWN: a widget dragged by its handle onto a slot, or
+  onto another widget to swap places with it; an edge or the corner pulled
+  over the slots it spans, taking them from a neighbour — one left with no
+  slot waits in a tray under the grid, with a warning, until it is dragged
+  back; or filled from a form that can only hold what exists — a select per
+  slot. Nothing is refused. The columns and rows are sized in
   the same form as a number with a unit or a keyword. The demo's run page is
   such a skeleton. (doc/css-grid-design.md)
 
@@ -82,7 +84,7 @@ Feature: CSS grid — a page laid out by template areas, filled by drag and drop
     And the state JSON contains '"custom-1 custom-2"'
     And the state JSON contains '". custom-2"'
 
-  Scenario: A drop onto a slot another widget holds is refused
+  Scenario: A drop onto another widget swaps the two places
     Given I open the "builder" page
     When I select the "css-grid" layout engine
     And I choose the "antd-label" widget
@@ -92,10 +94,61 @@ Feature: CSS grid — a page laid out by template areas, filled by drag and drop
     And I set the setting "text" to "second"
     And I add the widget
     And I edit the page
-    And I drag the cell "custom-2" to the slot row 1 column 1
-    Then the drop is refused because the slot holds "custom-1"
+    And I drop the cell "custom-2" onto the cell "custom-1"
+    Then the cell "custom-2" fills the slots "1-1/1-1"
+    And the cell "custom-1" fills the slots "2-1/2-1"
+    And the cell "custom-1" sits below the cell "custom-2"
+    And every widget of the grid has a slot
+    # The same drop by the slot's place: nothing is refused, the two swap back.
+    When I drag the cell "custom-2" to the slot row 2 column 1
+    Then the cell "custom-1" fills the slots "1-1/1-1"
     And the cell "custom-2" fills the slots "2-1/2-1"
-    And the cell "custom-1" fills the slots "1-1/1-1"
+
+  Scenario: A widget widened over its neighbour takes its slots, and the neighbour waits off the grid until it is dragged back
+    Given I open the "builder" page
+    When I select the "css-grid" layout engine
+    And I choose the "antd-label" widget
+    And I set the setting "text" to "first"
+    And I add the widget
+    And I choose the "antd-label" widget
+    And I set the setting "text" to "second"
+    And I add the widget
+    And I edit the page
+    And I add a column
+    And I add a column
+    # One row of three: the first widget over two thirds, the second in the last third.
+    And I pull the right edge of the cell "custom-1" to the slot row 1 column 2
+    And I drag the cell "custom-2" to the slot row 1 column 3
+    And I remove row 2
+    Then the grid has 1 row and 3 columns
+    And the cell "custom-1" fills the slots "1-1/1-2"
+    And the cell "custom-2" fills the slots "1-3/1-3"
+    # Pulled over the last third, the first takes it: the second has no slot left and says so until it is placed.
+    When I pull the right edge of the cell "custom-1" to the slot row 1 column 3
+    Then the cell "custom-1" fills the slots "1-1/1-3"
+    And the cell "custom-2" waits off the grid
+    And the grid says 1 widget has no slot
+    And the page warns 'cell "custom-2" has no slot'
+    # Dragged from the tray onto the "+" row it is in the grid again.
+    When I drag the cell "custom-2" to the slot row 2 column 1
+    Then the grid has 2 rows and 3 columns
+    And the cell "custom-2" fills the slots "2-1/2-1"
+    And every widget of the grid has a slot
+    And the page shows no warnings
+    # An edge pulled back lets the slots go; a neighbour with a rectangle left only shrinks.
+    When I pull the right edge of the cell "custom-1" to the slot row 1 column 2
+    Then the cell "custom-1" fills the slots "1-1/1-2"
+    When I pull the right edge of the cell "custom-2" to the slot row 2 column 3
+    And I pull the bottom edge of the cell "custom-1" to the slot row 2 column 1
+    Then the cell "custom-1" fills the slots "1-1/2-2"
+    And the cell "custom-2" fills the slots "2-3/2-3"
+    # Off the grid by hand, and back onto a widget: it takes the place, the other one waits.
+    When I drag the cell "custom-2" off the grid
+    Then the cell "custom-2" waits off the grid
+    When I drop the cell "custom-2" onto the cell "custom-1"
+    Then the cell "custom-2" fills the slots "1-1/2-2"
+    And the cell "custom-1" waits off the grid
+    And the grid says 1 widget has no slot
 
   Scenario: The slot table fills the same picture by name, and marks an area that is no rectangle
     Given I open the "builder" page

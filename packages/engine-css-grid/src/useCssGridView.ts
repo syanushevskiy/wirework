@@ -2,11 +2,11 @@
  * ALL CssGridView logic: the picture as tokens, the grid's size, the inline
  * style the template says (and nothing more), and every change edit mode
  * reports — a slot picked in the table, a row or column added or removed,
- * a track sized, the gap set, a rectangle dropped or resized (useCssGridDrag).
+ * a track sized, the gap set, a cell dropped, swapped or resized (useCssGridDrag).
  * The picture's rules live in areas.ts; this hook only composes payloads.
  */
 import { useCallback, useMemo, type CSSProperties, type RefObject } from "react";
-import { columnCount, grownTo, isDrawable, tokensOf, withSlot, withoutColumn, withoutRow } from "./areas";
+import { columnCount, grownTo, isDrawable, tokensOf, unplaced, withSlot, withoutColumn, withoutRow } from "./areas";
 import { EMPTY, type CssGridChange, type CssGridPage } from "./schema";
 import { useCssGridDrag } from "./useCssGridDrag";
 
@@ -28,6 +28,8 @@ export function useCssGridView(
   editable: boolean,
   /** The grid element, whose ghost slots the drag measures. */
   root: RefObject<HTMLElement | null>,
+  /** The tray under the grid: a drop there takes a cell off the grid. */
+  tray: RefObject<HTMLElement | null>,
 ) {
   const tokens = useMemo(() => tokensOf(template.areas), [template.areas]);
   const width = columnCount(tokens);
@@ -69,14 +71,13 @@ export function useCssGridView(
     [template.columns, template.rows, onChange],
   );
 
-  const drag = useCssGridDrag(root, tokens, picture);
+  const drag = useCssGridDrag(root, tray, tokens, cellIds, picture);
+  /** The cells with no slot: edit mode keeps them in the tray under the grid, to be dragged back in. */
+  const offGrid = useMemo(() => unplaced(tokens, cellIds), [tokens, cellIds]);
 
   const pickSlot = useCallback(
-    (row: number, column: number, id: string | undefined) => {
-      drag.dismiss();
-      picture(withSlot(tokens, row, column, id));
-    },
-    [tokens, picture, drag],
+    (row: number, column: number, id: string | undefined) => picture(withSlot(tokens, row, column, id)),
+    [tokens, picture],
   );
   const addRow = useCallback(
     () => picture(grownTo(tokens, height + 1, Math.max(1, width))),
@@ -133,6 +134,7 @@ export function useCssGridView(
     columns: columnSizes(template, width),
     rows: rowSizes(template, height),
     drag,
+    offGrid,
     pickSlot,
     addRow,
     addColumn,

@@ -91,16 +91,17 @@ export const RowSelected: Story = conformance.RowSelected;
 export const LoadsOnAppearance: Story = conformance.LoadsOnAppearance;
 export const BoundToEmptyPath: Story = conformance.BoundToEmptyPath;
 
-/** A values filter lives in its column header: tick a value, OK — the whole choice reaches the store under the request's own name. */
+/** A values filter lives in its column header: pick a value — at once the whole choice reaches the store under the request's own name. */
 export const HeaderFilter: Story = {
   play: async ({ canvas, userEvent }) => {
     const header = canvas.getByRole("columnheader", { name: /Status/ });
     await expect(within(header).getByRole("img", { name: "filter" })).toBeVisible();
     await userEvent.click(within(header).getByRole("button"));
-    await userEvent.click(await page().findByRole("menuitem", { name: "Failed" }));
-    await userEvent.click(page().getByRole("button", { name: "OK" }));
+    const values = within(await page().findByRole("group", { name: "Values of Status" }));
+    await userEvent.click(values.getByRole("combobox"));
+    await userEvent.click(await page().findByTitle("Failed"));
     const store = canvas.getByTestId("story-store");
-    await expect(store).toHaveTextContent('"filterIn": { "status": [ "Failed" ] }');
+    await waitFor(() => expect(store).toHaveTextContent('"filterIn": { "status": [ "Failed" ] }'));
     await expect(store).toHaveTextContent('"filterLike": {}');
   },
 };
@@ -266,7 +267,8 @@ export const Window: Story = {
 /**
  * WINDOWED: two thousand rows on the server, the hundred from row 500 held.
  * The scrollbar spans the whole list; scrolled to where the slice is, its
- * rows render; scrolled out of it, `window` asks for the slice around the
+ * rows render; scrolled past three quarters of it, `window` asks for the
+ * batch after it ahead of time; scrolled out of it, for the slice around the
  * rows in view — and `more` never goes out. With the position port bound
  * the list says where it stands, and goes where it is told.
  */
@@ -275,11 +277,11 @@ export const Windowed: Story = {
     <WidgetStory
       key="windowed"
       definition={antdInfiniteTable}
-      seed={{ demo: { rows: manyRows.slice(0, 100), total: 2000, offset: 500, position: 520 } }}
+      seed={{ demo: { rows: manyRows.slice(0, 100), total: 2000, offset: 500, position: 540 } }}
       viewModel={{
         inputs: { rows: "demo.rows", total: "demo.total", offset: "demo.offset", position: "demo.position" },
         on: {
-          window: [{ set: "demo.wanted", from: "offset" }],
+          window: [{ set: "demo.wanted" }],
           more: [{ set: "demo.asked", from: "offset" }],
           "position-changed": [
             { set: "demo.position", from: "position" },
@@ -296,15 +298,60 @@ export const Windowed: Story = {
     const box = canvas.getByTestId("infinite-table-scroll");
     const store = canvas.getByTestId("story-store");
     await expect(canvas.getByTestId("infinite-table-status")).toHaveTextContent("2000 rows");
-    // Told to stand at row 520 of the list: the 21st of the slice, "Run 21", is the first in view.
-    await expect(canvas.findByText("Run 21")).resolves.toBeVisible();
+    // Told to stand at row 540 of the list: the 41st of the slice, "Run 41", is the first in view.
+    await expect(canvas.findByText("Run 41")).resolves.toBeVisible();
     expect(canvas.getAllByTestId("table-row").length).toBeLessThan(60);
+    // In the middle of the rows held: nothing is asked for — not even for the rows the list passed on its way here.
     await expect(store).not.toHaveTextContent("wanted");
+    // Scrolled on to row 580, past three quarters of the slice: the batch AFTER it is asked for ahead of time —
+    // the rows in view are still the ones held.
+    const rowHeight = (canvas.getAllByTestId("table-row")[0] as HTMLElement).offsetHeight;
+    box.scrollTop = 580 * rowHeight;
+    await waitFor(() => expect(store).toHaveTextContent('"wanted": { "offset": 600, "edge": "after" }'));
+    await expect(canvas.findByText("Run 81")).resolves.toBeVisible();
     // Scrolled to the top of the list: nothing of the slice is there — the slice around the first rows is asked for.
     box.scrollTop = 0;
-    await waitFor(() => expect(store).toHaveTextContent('"wanted": 0'));
+    await waitFor(() => expect(store).toHaveTextContent('"wanted": { "offset": 0, "edge": "around" }'));
     await waitFor(() => expect(store).toHaveTextContent('"position": 0'));
     await expect(store).not.toHaveTextContent("asked");
+  },
+};
+
+/**
+ * SIDEWAYS SCROLL, as the table has it: eight plain columns need 8 × 110 =
+ * 880 px; in a box of 600 the list keeps that width and scrolls sideways —
+ * its header with it —, and still scrolls down inside its own box.
+ */
+export const SidewaysScroll: Story = {
+  render: () => (
+    <div style={{ width: 600 }}>
+      <WidgetStory
+        key="sideways"
+        definition={antdInfiniteTable}
+        seed={{ demo: { rows: manyRows, total: 200 } }}
+        viewModel={{
+          inputs: { rows: "demo.rows", total: "demo.total" },
+          columns: ["a", "b", "c", "d", "e", "f", "g", "h"].map((name) => ({
+            title: `Column ${name}`,
+            property: name,
+          })),
+          height: 240,
+        }}
+      />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const widget = canvas.getByTestId("antd-infinite-table");
+    await expect(widget).toHaveAttribute("data-min-width", "880");
+    const sideways = () =>
+      [...widget.querySelectorAll<HTMLElement>("*")].filter(
+        (box) => ["auto", "scroll"].includes(getComputedStyle(box).overflowX) && box.scrollWidth > box.clientWidth + 1,
+      );
+    await waitFor(() => expect(sideways().length).toBeGreaterThan(0));
+    // The rows still scroll down in the list's own box, and only a window of them renders.
+    const box = canvas.getByTestId("infinite-table-scroll");
+    await expect(box.scrollHeight).toBeGreaterThan(box.clientHeight);
+    await expect(canvas.getAllByTestId("table-row").length).toBeLessThan(60);
   },
 };
 

@@ -18,9 +18,11 @@
  *    the end are where they would be with every row rendered.
  *  - WINDOWED (the setting): the rows held are a SLICE of the list, `offset`
  *    rows into it. The window runs over the whole list (the `total`), the
- *    slice's rows in it render, and when the window leaves the slice
- *    `window` is emitted with the offset of the slice around it — `more`
- *    never.
+ *    slice's rows in it render, and `window` is emitted AHEAD OF TIME —
+ *    when the window passed three quarters of the slice, for the batch
+ *    after it (or before it), so the user scrolls into rows already held —
+ *    or, when the window left the slice (a jump), for a slice around it;
+ *    `more` never.
  *  - POSITION (the port, when bound): the first row in view is emitted as
  *    the box scrolls (`position-changed`), and a position written by
  *    something else scrolls the box there.
@@ -32,12 +34,14 @@ import { useAfterMount, usePort } from "@wirework/react";
 import type { TableRow } from "@wirework/widget-contracts";
 import type { InfiniteTableEvents } from "../widgets/antd-infinite-table";
 import { SPACED_BODY, type RowSpace } from "../widgets/row-spacers";
-import { rowPosition, sliceWindow } from "../row-window";
+import { useCellSelection } from "./use-cell-selection";
+import { useTableToolbar, type TableToolbarItems } from "./use-table-toolbar";
+import { rowPosition, sliceRequest, sliceWindow, type SliceRequest } from "../row-window";
 import { useRowWindow } from "./use-row-window";
 import type { TableCellRenderers } from "./use-table-cell";
-import type { TablePaths, TablePorts, TableSettings, TableView } from "./use-table";
+import { useMenuColumns, type TablePaths, type TablePorts, type TableSettings, type TableView } from "./use-table";
 import { useTableHeaders } from "./use-table-headers";
-import { NO_CELLS, NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
+import { NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
 /** What the antd Table and the box around it are given (see use-table.ts on naming antd's public types). */
 export interface InfiniteTableView extends TableView {
@@ -81,7 +85,8 @@ export function useInfiniteTable(
     position: PortDefinition<number>;
   },
   settings: TableSettings & { height: number; windowed: boolean },
-  cells: TableCellRenderers = NO_CELLS,
+  cells: TableCellRenderers,
+  toolbarItems: TableToolbarItems,
 ): InfiniteTableView {
   // The table appeared: `load`, once — the reaction calls whatever fetches its
   // data. After the mount, so the page has bound its reactions (useAfterMount).
@@ -93,17 +98,38 @@ export function useInfiniteTable(
   const total = usePort(store, paths.total, ports.total);
   const columns = useTableColumns(store, paths.columns, ports.columns, settings.columns, rows);
   const renderedRows = useRenderedRows(rows, settings.rowKey);
+  const menu = useMenuColumns(store, emit, paths, ports, settings, columns);
+  // WINDOWED: the rows held are a slice of the list, `offset` rows into it; the box scrolls over the whole list.
+  const { windowed } = settings;
+  const offset = usePort(store, paths.offset, ports.offset) ?? 0;
+  // The cells selected count through the whole list: a slice that moves on keeps the selection where it was.
+  const selection = useCellSelection(
+    emit,
+    settings.cellSelection,
+    menu.columns,
+    rows,
+    windowed ? offset : 0,
+    settings.exportName,
+    paths.rows,
+  );
   const headers = useTableHeaders(
     store,
     emit,
     paths,
     ports,
-    columns,
+    menu.columns,
     cells,
     settings.headerFilters,
     settings.filterRow,
+    settings.rowKey,
+    selection.cellAttributes,
   );
   const rowProps = useRowProps(emit);
+  const toolbar = useTableToolbar(emit, settings.toolbar, toolbarItems, {
+    loading,
+    filtered: headers.filtered,
+    resetFilters: headers.resetFilters,
+  });
 
   // The scroll box of the widget's own; the header sticks to its top.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -128,9 +154,6 @@ export function useInfiniteTable(
     return () => observer.disconnect();
   }, []);
 
-  // WINDOWED: the rows held are a slice of the list, `offset` rows into it; the box scrolls over the whole list.
-  const { windowed } = settings;
-  const offset = usePort(store, paths.offset, ports.offset) ?? 0;
   const count = windowed ? Math.max(total ?? 0, offset + rows.length) : renderedRows.length;
 
   // The window: which rows of the list render — of the ones held —, and the blank space around them.
@@ -141,29 +164,42 @@ export function useInfiniteTable(
   );
   const windowRows = useMemo(() => renderedRows.slice(shown.start, shown.end), [renderedRows, shown.start, shown.end]);
 
-  // The rows the window wants are not all held: ask for the slice with them in its middle — once per set of rows
-  // and place, never while loading, and never for the slice already held (a server with fewer rows than it said).
-  const wanted = useRef<{ rows: TableRow[]; offset: number } | undefined>(undefined);
+  // What to ask for (sliceRequest): the next batch AHEAD OF TIME — the window passed three quarters of the rows
+  // held, which are still the ones in view —, the batch before the same way, or a slice around the window when it
+  // left the rows held. Once per set of rows and request, never while loading; and a slice around the same row is
+  // not asked for twice in a row (a server with fewer rows than it said would be asked for ever).
+  const wanted = useRef<{ rows: TableRow[]; request: SliceRequest } | undefined>(undefined);
+  const around = useRef<number | undefined>(undefined);
+  /** The position the list was TOLD to stand at, the row height it was scrolled there by and where that put the box — until the user scrolls. */
+  const told = useRef<{ position: number; rowHeight: number; top: number } | undefined>(undefined);
   useEffect(() => {
-    if (looks === 0 || !windowed || loading || total === undefined || total === 0) return;
-    if (whole.start >= offset && whole.end <= offset + rows.length) return;
-    const size = Math.max(rows.length, whole.end - whole.start);
-    const middle = Math.floor((whole.start + whole.end) / 2);
-    const next = Math.max(0, Math.min(middle - Math.floor(size / 2), total - size));
-    if (rows.length > 0 && next === offset) return;
-    if (wanted.current?.rows === rows && wanted.current.offset === next) return;
-    wanted.current = { rows, offset: next };
-    emit("window", { offset: next });
+    if (looks === 0 || !windowed || loading || total === undefined) return;
+    const request = sliceRequest({ start: whole.start, end: whole.end }, offset, rows.length, total);
+    if (request?.edge !== "around") around.current = undefined;
+    if (request === undefined) return;
+    // Told where to stand, the list is not there yet (its rows were not measured, or it was not as tall as it will
+    // be): the rows it passes on the way are not where the user is — nothing is fetched ahead for them.
+    // (Still where it was told to stand — the user has not scrolled since: the box is where that put it.)
+    const stood = told.current;
+    const untouched = stood !== undefined && Math.abs((scrollRef.current?.scrollTop ?? 0) - stood.top) <= 1;
+    if (request.edge !== "around" && untouched && (stood.position < whole.start || stood.position >= whole.end)) return;
+    const last = wanted.current;
+    if (last?.rows === rows && last.request.offset === request.offset && last.request.edge === request.edge) return;
+    if (request.edge === "around") {
+      if (around.current === request.offset) return;
+      around.current = request.offset;
+    }
+    wanted.current = { rows, request };
+    emit("window", request);
   }, [looks, windowed, loading, total, whole.start, whole.end, offset, rows, emit]);
 
   // WHERE THE LIST STANDS (the `position` port, when bound): the first row in view is emitted as the box scrolls —
   // a frame after the scroll, and a frame after the mount, when the page has bound its reactions — and the box
   // scrolls to the position when something else changed it.
-  const position = usePort(store, paths.position, ports.position);
-  const follows = paths.position !== undefined;
+  const positionPath = paths.position;
+  const positionPort = ports.position;
+  const follows = positionPath !== undefined;
   const stands = useRef<{ position: number; visible: number } | undefined>(undefined);
-  /** The position the list was TOLD to stand at, the row height it was scrolled there by and where that put the box — until the user scrolls. */
-  const told = useRef<{ position: number; rowHeight: number; top: number } | undefined>(undefined);
   const measured = useRef({ rowHeight: whole.rowHeight, count, height: settings.height });
   useEffect(() => {
     measured.current = { rowHeight: whole.rowHeight, count, height: settings.height };
@@ -201,14 +237,22 @@ export function useInfiniteTable(
     };
     // The list got its rows, or their height was measured: look again.
   }, [follows, count, whole.rowHeight, emit]);
+  // The position is LISTENED to, not rendered from: the list writes it on every frame of a scroll, and reading it
+  // as state would render the whole table again for a number it has just said itself.
   useEffect(() => {
-    const box = scrollRef.current;
-    if (!follows || box === null || position === undefined || position === stands.current?.position) return;
-    stands.current = { position, visible: stands.current?.visible ?? 0 };
-    box.scrollTop = position * measured.current.rowHeight;
-    // Where the box really is now: a list not yet as tall as it will be stops short.
-    told.current = { position, rowHeight: measured.current.rowHeight, top: box.scrollTop };
-  }, [follows, position]);
+    if (positionPath === undefined) return undefined;
+    const stand = () => {
+      const box = scrollRef.current;
+      const position = store.getAs(positionPath, positionPort.value);
+      if (box === null || position === undefined || position === stands.current?.position) return;
+      stands.current = { position, visible: stands.current?.visible ?? 0 };
+      box.scrollTop = position * measured.current.rowHeight;
+      // Where the box really is now: a list not yet as tall as it will be stops short.
+      told.current = { position, rowHeight: measured.current.rowHeight, top: box.scrollTop };
+    };
+    stand();
+    return store.subscribe(positionPath, stand);
+  }, [store, positionPath, positionPort]);
   const space = useMemo<RowSpace>(
     () => ({ above: shown.above, below: shown.below, columns: Math.max(1, columns.length) }),
     [shown.above, shown.below, columns.length],
@@ -234,6 +278,10 @@ export function useInfiniteTable(
     loading,
     rowProps,
     change: headers.change,
+    columnMenu: menu.menu,
+    cells: selection,
+    scroll: headers.scroll,
+    toolbar,
     sticky,
     components: SPACED_BODY,
     space,

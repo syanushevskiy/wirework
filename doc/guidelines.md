@@ -44,7 +44,11 @@ invariant or by a test — so a reviewer checks the exception, not the rule.
 - A crash inside a widget or a layout renderer is isolated by a boundary
   and REPORTED (`PageView.onError`), never swallowed. Nothing in a package
   writes to the console except the one documented default a host can
-  replace (`use-commit.ts`); `no-console` is an error in `packages/**/src`.
+  replace (`use-commit.ts`) and a NAME that arrives at runtime with nothing
+  registered under it — a table's custom cell or toolbar item
+  (`use-table-cell.ts`, `use-table-toolbar.ts`): warned once per name,
+  because no boot check has seen it; `no-console` is an error in
+  `packages/**/src`.
 - A reason a control is locked is a code (`AddLock`, `EditLock`,
   `EngineLock`, `OverlayLock`), and the UI says it in words: the headless
   packages carry no user-facing text.

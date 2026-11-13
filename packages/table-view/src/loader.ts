@@ -9,7 +9,7 @@
  *   <into>.data       the rows                         -> the table's `rows` port
  *   <into>.total      all rows on the server           -> the pagination's / infinite table's `total` port
  *   <into>.offset     where the rows held begin in the whole list -> a windowed infinite table's `offset` port
- *   <into>.wanted     the offset a windowed list asked for (its `window` reaction writes it; read by `window: true`)
+ *   <into>.wanted     what a windowed list asked for, { offset, edge } (its `window` reaction writes it; read by `window: true`)
  *   <into>.loading    true while a request is in flight
  *   <into>.error      what failed (the last good rows stay)
  *
@@ -90,16 +90,19 @@ export const tableViewArgsSchema = z
       .optional()
       .describe("More: append the rows after those held (an infinite list's `more`). Off or not set: replace them"),
     /**
-     * Per CALL: ask for the SLICE of rows that begins at `<into>.wanted` —
-     * what a windowed list's `window` reaction does after storing the offset
-     * it asked for — and replace the rows held with it. The page is not
-     * touched; `<into>.offset` says where the slice begins.
+     * Per CALL: ask for the rows `<into>.wanted` names — what a windowed
+     * list's `window` reaction does after storing what it asked for: the
+     * batch AFTER the rows held or the one BEFORE them joins them (ahead of
+     * time, so the list scrolls into rows already there; beyond three
+     * batches the farthest rows are dropped), a slice AROUND a row replaces
+     * them. The page is not touched; `<into>.offset` says where the rows
+     * held begin.
      */
     window: z
       .boolean()
       .optional()
       .describe(
-        "Window: replace the rows held with the slice that begins at <into>.wanted (a windowed list's `window`). Off or not set: the page asked for",
+        "Window: load what <into>.wanted names (a windowed list's `window`) — the batch after or before the rows held joins them, a slice around a row replaces them. Off or not set: the page asked for",
       ),
     pageSize: tableViewSchema.shape.pageSize,
     columns: tableViewSchema.shape.columns,
@@ -119,6 +122,75 @@ const searchedSchema = searchValuesSchema;
 const rangedSchema = z.record(z.string(), dateRangeSchema);
 const orderSchema = columnOrderSchema;
 const rowsSchema = tableRowsSchema;
+
+/**
+ * What a windowed list asked for (`<into>.wanted`, its `window` event's
+ * payload): a batch AFTER the rows held, the one BEFORE them, or a slice
+ * AROUND a row. A bare number is a slice that BEGINS there.
+ */
+const wantedSchema = z.union([
+  offsetSchema,
+  z.object({ offset: offsetSchema, edge: z.enum(["after", "before", "around"]) }),
+]);
+type Wanted = z.infer<typeof wantedSchema>;
+
+/** How many batches (page sizes) of rows a windowed list keeps as it scrolls on; the farthest are dropped. */
+export const KEEP_BATCHES = 3;
+
+/** The rows to ask for, and what becomes of the answer: it replaces the slice held, or joins it at one end. */
+export interface SlicePlan {
+  from: number;
+  limit: number;
+  join: "replace" | "append" | "prepend";
+}
+
+/**
+ * The request a windowed list's wish becomes, given the slice held
+ * (`length` rows from `offset`) and the batch size. A batch joins the slice
+ * only when it is asked for at the slice's own edge — a wish made for other
+ * rows than the ones now held (a filter came between) is a slice of its own.
+ */
+export function slicePlan(
+  wanted: Wanted,
+  offset: number,
+  length: number,
+  pageSize: number,
+  /** The rows the server has, when known: a slice around the last rows is the last full one. */
+  total?: number,
+): SlicePlan {
+  if (typeof wanted === "number") return { from: wanted, limit: pageSize, join: "replace" };
+  if (wanted.edge === "after" && length > 0 && wanted.offset === offset + length) {
+    return { from: wanted.offset, limit: pageSize, join: "append" };
+  }
+  if (wanted.edge === "before" && length > 0 && wanted.offset === offset && offset > 0) {
+    const from = Math.max(0, offset - pageSize);
+    return { from, limit: offset - from, join: "prepend" };
+  }
+  if (wanted.edge === "around") {
+    // The row wanted in the slice's middle: as many rows held before the view as after it.
+    const last = total === undefined ? Infinity : Math.max(0, total - pageSize);
+    const from = Math.max(0, Math.min(wanted.offset - Math.floor(pageSize / 2), last));
+    return { from, limit: pageSize, join: "replace" };
+  }
+  return { from: wanted.offset, limit: pageSize, join: "replace" };
+}
+
+/** The slice held with a batch joined to it, at most `keep` rows: the ones farthest from the batch are dropped. */
+export function joinedSlice(
+  held: { rows: Record<string, unknown>[]; offset: number },
+  batch: Record<string, unknown>[],
+  plan: SlicePlan,
+  keep: number,
+): { rows: Record<string, unknown>[]; offset: number } {
+  if (plan.join === "prepend") {
+    // Fewer rows than asked for would leave a gap before the ones held: the batch stands alone then.
+    if (batch.length !== plan.limit) return { rows: batch, offset: plan.from };
+    return { rows: [...batch, ...held.rows].slice(0, keep), offset: plan.from };
+  }
+  const rows = [...held.rows, ...batch];
+  const dropped = Math.max(0, rows.length - keep);
+  return { rows: rows.slice(dropped), offset: held.offset + dropped };
+}
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
@@ -196,18 +268,33 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
     const describe = metadata ?? (declared.url !== undefined || store.get(at("columns")) === undefined);
 
     const { isLatest, signal } = begin(store, into);
-    store.set(at("loading"), true);
     try {
       // Live store values are not validated; an inspector may hold anything.
       let page = store.getAs(at("page"), positiveInt) ?? 1;
       const pageSize = store.getAs(at("pageSize"), positiveInt) ?? view.pageSize ?? DEFAULT_PAGE_SIZE;
       // MORE: the rows after the ones held, which the answer is appended to.
       const held = more ? (store.getAs(at("data"), rowsSchema) ?? []) : undefined;
-      // WINDOW: the slice that begins where the list asked, replacing the one held.
-      const wanted = slice ? (store.getAs(at("wanted"), offsetSchema) ?? 0) : undefined;
+      // WINDOW: the rows the list asked for — a batch that joins the slice held, or a slice that replaces it.
+      const sliceHeld = slice
+        ? { rows: store.getAs(at("data"), rowsSchema) ?? [], offset: store.getAs(at("offset"), offsetSchema) ?? 0 }
+        : undefined;
+      const plan =
+        sliceHeld === undefined
+          ? undefined
+          : slicePlan(
+              store.getAs(at("wanted"), wantedSchema) ?? 0,
+              sliceHeld.offset,
+              sliceHeld.rows.length,
+              pageSize,
+              store.getAs(at("total"), offsetSchema),
+            );
+      const replaces = held === undefined && (plan === undefined || plan.join === "replace");
+      // A batch that joins a windowed list's slice is fetched AHEAD OF TIME, under rows the user is reading: it is
+      // not "loading" — a table would lay its spinner over them. Everything else is.
+      if (plan === undefined || plan.join === "replace") store.set(at("loading"), true);
       const query: TableViewQuery = {
-        offset: held !== undefined ? held.length : (wanted ?? (page - 1) * pageSize),
-        limit: pageSize,
+        offset: held !== undefined ? held.length : (plan?.from ?? (page - 1) * pageSize),
+        limit: plan?.limit ?? pageSize,
         filterIn: store.getAs(at("filterIn"), chosenSchema) ?? {},
         filterLike: store.getAs(at("filterLike"), searchedSchema),
         filterBetween: store.getAs(at("filterBetween"), rangedSchema),
@@ -219,10 +306,10 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       // The page asked for lies behind the last one (a filter shrank the
       // table): ask once more, for the last page there is.
       const total = answer.totalRecords ?? undefined;
-      if (held === undefined && total !== undefined && total > 0 && query.offset >= total) {
+      if (replaces && total !== undefined && total > 0 && query.offset >= total) {
         page = Math.ceil(total / pageSize);
         // A slice asked for behind the end is the last one there is; a page, the last page.
-        query.offset = wanted === undefined ? (page - 1) * pageSize : Math.max(0, total - pageSize);
+        query.offset = plan === undefined ? (page - 1) * pageSize : Math.max(0, total - pageSize);
         const again = tableViewResponseSchema.parse(await transport(view.url, requestOf(view, query, false), signal));
         if (!isLatest()) return;
         answer = { ...answer, ...again, metadata: answer.metadata ?? again.metadata };
@@ -235,14 +322,22 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
       if (answer.data) {
         // Nothing more to append leaves the rows as they are — the same
         // array, so a list watching them knows nothing came.
-        if (held === undefined) store.set(at("data"), answer.data);
-        else if (answer.data.length > 0) store.set(at("data"), [...held, ...answer.data]);
+        if (replaces) {
+          store.set(at("data"), answer.data);
+        } else if (held !== undefined) {
+          if (answer.data.length > 0) store.set(at("data"), [...held, ...answer.data]);
+        } else if (sliceHeld !== undefined && plan !== undefined && answer.data.length > 0) {
+          // A BATCH joins the slice held; beyond KEEP_BATCHES of them the rows farthest from it are dropped.
+          const joined = joinedSlice(sliceHeld, answer.data, plan, KEEP_BATCHES * pageSize);
+          store.set(at("data"), joined.rows);
+          store.set(at("offset"), joined.offset);
+        }
       }
       // Where in the whole list the rows held begin: a windowed list reads it; appended rows begin where they did.
-      if (held === undefined) store.set(at("offset"), query.offset);
+      if (replaces) store.set(at("offset"), query.offset);
       if (answer.totalRecords !== undefined && answer.totalRecords !== null)
         store.set(at("total"), answer.totalRecords);
-      if (held === undefined && wanted === undefined) store.set(at("page"), page);
+      if (held === undefined && plan === undefined) store.set(at("page"), page);
       store.set(at("pageSize"), pageSize);
       store.set(at("error"), undefined);
     } catch (error) {

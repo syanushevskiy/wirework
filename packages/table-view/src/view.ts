@@ -22,6 +22,8 @@ const columnOverrideSchema = z
     title: z.string().optional(),
     /** How the column's cells are shown (the table's predefined kinds, or a renderer the host registered). */
     cell: tableCellSchema.optional(),
+    /** The column's width in pixels instead of the table's default (110; 88 for an id). */
+    width: z.number().int().min(20).optional(),
   })
   .strict();
 
@@ -114,22 +116,30 @@ function valuesOf(metadata: TableMetadata, definition: ColumnDefinition, view: P
   return override?.values ?? fromServer;
 }
 
+/** Whether the server's column type is a date: `date`, `datetime`, `timestamp`, `timestamp(p) with time zone`… */
+export const isDateType = (type: string | null | undefined): boolean => /^\s*(date|timestamp)/i.test(type ?? "");
+
 /**
- * What a column's HEADER can filter by (the infinite table): the values
- * where there are any; else free text where the server calls the column
- * filterable without offering values (`filterLike`) and the page did not
- * drop the filter; else nothing.
+ * What a column's HEADER can filter by: the page's own values where it
+ * gives any; a PERIOD (`filterBetween`: a start and an end date) for a
+ * DATE column — by default, the server need not call it filterable, only
+ * not say that it is not —; else the server's values where there are any;
+ * else free text where the server calls the column filterable without
+ * offering values (`filterLike`); else nothing. The page's `false` and the
+ * table's `enableFilter: false` drop every one of them.
  */
 function headerFilterOf(
   metadata: TableMetadata,
   definition: ColumnDefinition,
   view: Pick<TableView, "filters">,
 ): ColumnFilter | undefined {
+  const override = view.filters?.[definition.id];
   const values = valuesOf(metadata, definition, view);
+  const own = override !== false && override?.values !== undefined;
+  const allowed = override !== false && metadata.enableFilter !== false && definition.isFilterable !== false;
+  if (!own && allowed && isDateType(definition.type)) return { kind: "dates" };
   if (values.length > 0) return { kind: "values", options: values.map((value) => ({ value })) };
-  const text =
-    view.filters?.[definition.id] !== false && metadata.enableFilter !== false && definition.isFilterable === true;
-  return text ? { kind: "text" } : undefined;
+  return allowed && definition.isFilterable === true ? { kind: "text" } : undefined;
 }
 
 /**
@@ -150,6 +160,7 @@ export function columnsOf(metadata: TableMetadata, view: Pick<TableView, "column
         property: definition.id,
         // How the cells are shown is the page's word alone: the server describes data, not looks.
         ...(override?.cell === undefined ? {} : { cell: override.cell }),
+        ...(override?.width === undefined ? {} : { width: override.width }),
         ...(filter === undefined ? {} : { filter }),
         ...(sortable ? { sortable } : {}),
       };

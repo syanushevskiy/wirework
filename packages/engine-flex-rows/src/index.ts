@@ -7,5 +7,5 @@
  */
 export { flexRowsEngine } from "./engine";
 export { LAYOUT_CLASSES, LAYOUT_CLASS_NAMES, classTokens, layoutStyle, styleOf, unknownClasses } from "./classes";
-export { applyFlexRowsChange, flexRowsProblems, moveTarget, removeFlexCell } from "./operations";
+export { applyFlexRowsChange, dropChange, flexRowsProblems, removeFlexCell } from "./operations";
 export * from "./schema";

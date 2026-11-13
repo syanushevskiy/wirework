@@ -7,11 +7,12 @@
  * measurements and the row count — never state that lags a frame behind:
  * a frame rendering no rows because the count changed first would bring
  * the end of the list into view and ask the server for more. The
- * measurements are replaced only when the window they give changes, so a
- * scroll of a few pixels re-renders nothing.
+ * measurements are replaced only when the window in place no longer SERVES
+ * the box (`windowServes`: the rows in view near its edge) — about every
+ * half a box of scrolling, so a row scrolled past re-renders nothing.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { rowWindow, sameRowWindow, type RowWindow } from "../row-window";
+import { rowWindow, sameRowWindow, windowServes, type RowWindow } from "../row-window";
 
 /** antd's small table row — two 8 px paddings, a 22 px line, a 1 px border — the guess until rows are measured. */
 const SMALL_ROW_HEIGHT = 39;
@@ -22,6 +23,7 @@ interface Measure {
   scrollTop: number;
   boxHeight: number;
   rowHeight: number;
+  heading?: "down" | "up" | undefined;
 }
 
 export function useRowWindow(scrollRef: RefObject<HTMLElement | null>, count: number, height: number): RowWindow {
@@ -37,12 +39,21 @@ export function useRowWindow(scrollRef: RefObject<HTMLElement | null>, count: nu
     if (box === null) return;
     const { rowHeight, count, height } = latest.current;
     setMeasure((current) => {
+      const boxHeight = box.clientHeight === 0 ? height : box.clientHeight;
+      const moved = box.scrollTop - current.scrollTop;
       const next: Measure = {
         scrollTop: box.scrollTop,
-        boxHeight: box.clientHeight === 0 ? height : box.clientHeight,
+        boxHeight,
         rowHeight,
+        // Scrolled on by less than a box: the new window keeps its spare rows on the side the view is heading to.
+        // A jump (the list told where to stand, the scrollbar dragged far) has no heading.
+        heading: moved === 0 || Math.abs(moved) > boxHeight ? undefined : moved > 0 ? "down" : "up",
       };
-      return sameRowWindow(rowWindow({ ...current, count }), rowWindow({ ...next, count })) ? current : next;
+      // The window in place still holds the rows in view, with a row to spare: it stays, and nothing renders. It is
+      // made again when the view nears its edge — or the box or the rows changed size.
+      const shown = rowWindow({ ...current, count });
+      if (current.boxHeight === next.boxHeight && windowServes(shown, { ...next, count })) return current;
+      return sameRowWindow(shown, rowWindow({ ...next, count })) ? current : next;
     });
   }, [scrollRef]);
 

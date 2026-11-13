@@ -62,8 +62,8 @@ export async function chooseOption(page: Page, testId: string, label: string, ma
 export const isSelect = async (control: Locator): Promise<boolean> => (await control.getByRole("combobox").count()) > 0;
 
 /**
- * The open filter dropdown of a table column header (antd's own list of
- * values with OK and Reset, or the widget's search box). Like a Select's
+ * The open filter dropdown of a table column header (the widget's list of
+ * values, its search box or its period). Like a Select's
  * popup it lives outside the table; one that is animating out is excluded.
  */
 export const headerFilterDropdown = (page: Page) =>
@@ -75,10 +75,6 @@ export const headerFilterDropdown = (page: Page) =>
  * buttons and icons too (the field's clear, its search icon).
  */
 export const headerFilterTrigger = (header: Locator) => header.locator(".ant-table-filter-trigger");
-
-/** One value of the open filter dropdown's list: antd renders each as a menu item holding a checkbox and the text. */
-export const headerFilterValue = (page: Page, text: string) =>
-  headerFilterDropdown(page).getByRole("menuitem", { name: text });
 
 /** A button of the open Popconfirm (a question asked before a destructive click); it lives outside the trigger. */
 export const confirmButton = (page: Page, label: string) =>

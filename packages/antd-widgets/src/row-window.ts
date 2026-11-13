@@ -17,6 +17,13 @@ export interface RowWindowInput {
   rowHeight: number;
   /** The rows held. */
   count: number;
+  /**
+   * Which way the box is being scrolled, when known: the window then keeps
+   * most of its spare rows AHEAD of the view — below it going down, above it
+   * going up — so it serves for longer before it is made again. Without it,
+   * half a box above and what is left below.
+   */
+  heading?: "down" | "up" | undefined;
 }
 
 export interface RowWindow {
@@ -51,6 +58,62 @@ export function sliceWindow(shown: RowWindow, count: number, offset: number, hel
   };
 }
 
+/** Which rows a windowed list asks for: the batch AFTER the ones held, the one BEFORE them, or a slice AROUND a row. */
+export type SliceEdge = "after" | "before" | "around";
+
+/** What a windowed list's `window` event carries. */
+export interface SliceRequest {
+  /**
+   * `after`: the row after the last one held (where the next batch begins);
+   * `before`: the first row held (where the batch before ends); `around`:
+   * the first row the window shows.
+   */
+  offset: number;
+  edge: SliceEdge;
+}
+
+/** How far into the rows held the window may go before the next batch is asked for — ahead of time. */
+export const FETCH_AHEAD = 0.75;
+
+/**
+ * How many windows the rows held must exceed for a batch to be asked for
+ * ahead of time. Six: with three batches kept, the window that asked for a
+ * fourth stands a batch and a quarter into the trimmed slice, and must end
+ * up clear of its first quarter — it does while it is shorter than half a
+ * batch, a sixth of the three held.
+ */
+export const AHEAD_WINDOWS = 6;
+
+/**
+ * What a windowed list should ask for, given the rows its window shows
+ * (`view`, in the whole list) and the slice it holds (`held` rows from
+ * `offset`) — or nothing:
+ *
+ *  - the window is not wholly inside the slice (a jump, a filter, a scroll
+ *    faster than the server): a slice AROUND it, replacing the one held;
+ *  - the window passed three quarters of the slice and the list goes on:
+ *    the batch AFTER, while the rows in view are still held — the user
+ *    scrolls into rows that are already there;
+ *  - the same towards the start: the batch BEFORE.
+ */
+export function sliceRequest(
+  view: { start: number; end: number },
+  offset: number,
+  held: number,
+  total: number,
+): SliceRequest | undefined {
+  if (total <= 0) return undefined;
+  const end = offset + held;
+  if (held === 0 || view.start < offset || view.end > end) return { offset: view.start, edge: "around" };
+  // Too few rows held for the window (a small batch in a tall box): a batch joining them would put the window
+  // past the opposite mark at once, and the two would be asked for in turn, for ever. Such a list waits until
+  // the window leaves its rows.
+  if (held <= AHEAD_WINDOWS * (view.end - view.start)) return undefined;
+  if (end < total && view.end >= offset + Math.ceil(held * FETCH_AHEAD)) return { offset: end, edge: "after" };
+  if (offset > 0 && view.start <= offset + Math.floor(held * (1 - FETCH_AHEAD))) return { offset, edge: "before" };
+  return undefined;
+}
+
 /** The first row in view and how many fit the box — where a list STANDS; `rowHeight` as measured. */
 export function rowPosition(
   scrollTop: number,
@@ -69,15 +132,35 @@ export function rowPosition(
 const visibleRows = (boxHeight: number, rowHeight: number): number =>
   Math.max(1, Math.ceil(Math.max(0, boxHeight) / Math.max(1, rowHeight)));
 
-export function rowWindow({ scrollTop, boxHeight, rowHeight, count }: RowWindowInput): RowWindow {
+export function rowWindow({ scrollTop, boxHeight, rowHeight, count, heading }: RowWindowInput): RowWindow {
   const height = Math.max(1, rowHeight);
   const visible = visibleRows(boxHeight, height);
   const size = 2 * visible;
   const first = Math.floor(Math.max(0, scrollTop) / height);
-  const end = Math.min(count, Math.max(0, first - Math.floor(visible / 2)) + size);
+  // The rows kept above the first one in view: one going down (the rest wait below), all but the view and two
+  // going up (one below the view, one for a row cut by the box's edge), half a box when the way is not known.
+  const lead = heading === "down" ? 1 : heading === "up" ? Math.max(1, size - visible - 2) : Math.floor(visible / 2);
+  const end = Math.min(count, Math.max(0, first - lead) + size);
   // The end of the list fills the window backwards, so the last rows never render alone.
   const start = Math.max(0, end - size);
   return { start, end, above: start * height, below: (count - end) * height, rowHeight: height };
+}
+
+/**
+ * Whether a window made earlier still SERVES a box scrolled since: the rows
+ * in view lie inside it with a row to spare on either side (none where the
+ * window already reaches the list's end). While it does, the same rows stay
+ * rendered — the window is made again only when the view nears its edge,
+ * about every half a box of scrolling, not at every row: a table rendered
+ * again for each row scrolled past cannot keep up with the wheel.
+ */
+export function windowServes(shown: RowWindow, { scrollTop, boxHeight, rowHeight, count }: RowWindowInput): boolean {
+  if (shown.rowHeight !== Math.max(1, rowHeight)) return false;
+  const first = Math.floor(Math.max(0, scrollTop) / shown.rowHeight);
+  const last = Math.ceil((Math.max(0, scrollTop) + Math.max(0, boxHeight)) / shown.rowHeight);
+  const spareAbove = shown.start > 0 ? 1 : 0;
+  const spareBelow = shown.end < count ? 1 : 0;
+  return first >= shown.start + spareAbove && last <= shown.end - spareBelow;
 }
 
 export const sameRowWindow = (a: RowWindow, b: RowWindow): boolean =>

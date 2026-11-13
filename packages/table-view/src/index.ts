@@ -24,7 +24,8 @@
  * the standard widget contracts' data shapes only — no engine, no React.
  */
 export { createTableViewActions, TABLE_VIEW_LOAD } from "./actions";
-export { createTableViewLoader, tableViewArgsSchema } from "./loader";
+export { createTableViewLoader, joinedSlice, KEEP_BATCHES, slicePlan, tableViewArgsSchema } from "./loader";
+export type { SlicePlan } from "./loader";
 export type { TableViewArgs, TableViewLoader } from "./loader";
 export { columnsOf, filtersOf, requestOf, tableViewSchema, DEFAULT_PAGE_SIZE } from "./view";
 export type { TableView, TableViewQuery } from "./view";

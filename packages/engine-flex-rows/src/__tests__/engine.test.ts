@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { layoutEngineProblems } from "@wirework/engine";
 import { flexRowsEngine } from "../engine";
-import { moveTarget } from "../operations";
-import type { FlexRowsPage } from "../schema";
+import { dropChange } from "../operations";
+import type { FlexDrop, FlexRowsPage } from "../schema";
 
 const cell = (id: string, classes?: string) => ({
   id,
@@ -48,28 +48,61 @@ describe("flexRowsEngine", () => {
     );
   });
 
-  it("moves a cell within its row and across rows, a row left empty going with it, a new row made at either end", () => {
-    const apply = (template: FlexRowsPage, id: string, direction: "left" | "right" | "up" | "down") => {
-      const change = moveTarget(template, id, direction);
-      if (!change) throw new Error(`no move for ${id}`);
-      return flexRowsEngine.applyChange(template, change);
-    };
-    expect(ids(apply(page(), "b", "left"))).toEqual([["b", "a"], ["c"]]);
-    expect(ids(apply(page(), "a", "right"))).toEqual([["b", "a"], ["c"]]);
-    expect(ids(apply(page(), "c", "up"))).toEqual([["a", "b", "c"]]);
-    expect(ids(apply(page(), "a", "down"))).toEqual([["b"], ["a", "c"]]);
-    expect(ids(apply(page(), "b", "down"))).toEqual([["a"], ["b", "c"]]);
-    // Before the first row, or past the last: a new one. Alone in its row already: nothing changes.
-    expect(ids(apply(page(), "a", "up"))).toEqual([["a"], ["b"], ["c"]]);
+  /** The template after the cell is dropped there — the drop must change something. */
+  const drop = (template: FlexRowsPage, id: string, where: FlexDrop): FlexRowsPage => {
+    const change = dropChange(template, id, where);
+    if (!change) throw new Error(`the drop of ${id} changes nothing`);
+    return flexRowsEngine.applyChange(template, change);
+  };
+
+  it("drops a cell before or after another, in its row or across rows, a row left empty going with it", () => {
+    expect(ids(drop(page(), "b", { on: "cell", id: "a", side: "before" }))).toEqual([["b", "a"], ["c"]]);
+    expect(ids(drop(page(), "a", { on: "cell", id: "b", side: "after" }))).toEqual([["b", "a"], ["c"]]);
+    expect(ids(drop(page(), "c", { on: "cell", id: "b", side: "after" }))).toEqual([["a", "b", "c"]]);
+    expect(ids(drop(page(), "c", { on: "cell", id: "b", side: "before" }))).toEqual([["a", "c", "b"]]);
+    expect(ids(drop(page(), "a", { on: "cell", id: "c", side: "before" }))).toEqual([["b"], ["a", "c"]]);
+    // The row keeps its classes when a cell leaves it, and the cell its own.
+    const across = drop(page(), "a", { on: "cell", id: "c", side: "after" });
+    expect(across.rows[0]?.classes).toBe("items-center");
+    expect(across.rows[1]?.cells[1]).toEqual(cell("a", "flex-1"));
+    // Where it already is — on itself, or on the side of its neighbour it stands at — nothing changes.
+    expect(dropChange(page(), "a", { on: "cell", id: "a", side: "swap" })).toBeUndefined();
+    expect(dropChange(page(), "a", { on: "cell", id: "b", side: "before" })).toBeUndefined();
+    expect(dropChange(page(), "b", { on: "cell", id: "a", side: "after" })).toBeUndefined();
+    expect(dropChange(page(), "a", { on: "cell", id: "nope", side: "before" })).toBeUndefined();
+  });
+
+  it("swaps two cells' places, each keeping its classes", () => {
+    const swapped = drop(page(), "a", { on: "cell", id: "c", side: "swap" });
+    expect(ids(swapped)).toEqual([["c", "b"], ["a"]]);
+    expect(swapped.rows[1]?.cells[0]).toEqual(cell("a", "flex-1"));
+    expect(ids(drop(page(), "b", { on: "cell", id: "a", side: "swap" }))).toEqual([["b", "a"], ["c"]]);
+    // An unknown cell swaps with nobody.
+    expect(flexRowsEngine.applyChange(page(), { kind: "swap", id: "a", with: "nope" })).toEqual(page());
+    expect(flexRowsEngine.applyChange(page(), { kind: "swap", id: "nope", with: "a" })).toEqual(page());
+  });
+
+  it("gives a cell dropped between two rows a row of its own, wherever that is", () => {
+    expect(ids(drop(page(), "b", { on: "gap", row: 0 }))).toEqual([["b"], ["a"], ["c"]]);
+    expect(ids(drop(page(), "a", { on: "gap", row: 1 }))).toEqual([["b"], ["a"], ["c"]]);
+    expect(ids(drop(page(), "a", { on: "gap", row: 2 }))).toEqual([["b"], ["c"], ["a"]]);
+    // A cell alone in its row, dropped on the strip above or below it, stays where it is.
+    expect(dropChange(page(), "c", { on: "gap", row: 1 })).toBeUndefined();
+    expect(dropChange(page(), "c", { on: "gap", row: 2 })).toBeUndefined();
+    expect(ids(drop(page(), "c", { on: "gap", row: 0 }))).toEqual([["c"], ["a", "b"]]);
+  });
+
+  it("still moves a cell to a place by number: before the first row or past the last makes a new one", () => {
+    expect(ids(flexRowsEngine.applyChange(page(), { kind: "move", id: "a", row: -1, index: 0 }))).toEqual([
+      ["a"],
+      ["b"],
+      ["c"],
+    ]);
     expect(ids(flexRowsEngine.applyChange(page(), { kind: "move", id: "a", row: 2, index: 0 }))).toEqual([
       ["b"],
       ["c"],
       ["a"],
     ]);
-    expect(ids(apply(page(), "c", "down"))).toEqual(ids(page()));
-    // The row keeps its classes when a cell leaves it; an unknown cell moves nothing.
-    expect(apply(page(), "b", "down").rows[0]?.classes).toBe("items-center");
-    expect(moveTarget(page(), "nope", "up")).toBeUndefined();
     expect(flexRowsEngine.applyChange(page(), { kind: "move", id: "nope", row: 0, index: 0 })).toEqual(page());
   });
 

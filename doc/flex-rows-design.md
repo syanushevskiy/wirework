@@ -321,6 +321,47 @@ about a day's work.
 - **A host's own field**: a host that wants an antd select instead of the
   native input reads `LAYOUT_CLASS_NAMES` and reports the same change.
 
+## Moved by drag and drop (12 November 2026): the arrows are gone
+
+The owner's word, after using it: moving is "pure drag and drop, not
+arrows". This section REPLACES the four arrows, `moveTarget`,
+`MOVE_DIRECTIONS` and "Drag between rows" just above — no library was
+needed: the drag is pointer events and rectangles, as css-grid's is.
+
+- **The handle drags.** A cell's whole handle bar is the grip
+  (`flex-handle`, its label `flex-handle-label`); the classes field and the
+  chrome buttons in it keep their press. While the drag lasts the cell
+  stays where it is, faded (`data-dragging`), and the TARGET is marked —
+  nothing moves until the drop, so the rectangles measured when the drag
+  started stay true.
+- **Where it is let go decides** (`dropChange` in `operations.ts`, pure):
+  on another cell's MIDDLE the two swap places (`data-drop="swap"`, the
+  cell says "swaps places"); on its left or right QUARTER the dragged cell
+  goes before or after it, into its row (`data-drop="before" | "after"`, a
+  bar on that side); in a row's free room, beside the nearest cell; on the
+  STRIP between two rows — one above every row and one under the last
+  (`flex-row-drop`, `data-row`), dashed while a drag is on — it takes a
+  new row of its own. A drop that would change nothing (on itself, on the
+  side of its neighbour it already stands at) is no change at all.
+- **The change payload** grew: `{ kind: "swap", id, with }` — each cell
+  keeps its own classes, they are its, not the place's — and `own: true`
+  on a `move`, a new row of the cell's own BEFORE `row` wherever that is
+  (the old `row: -1` / past-the-last still mean a new row at the ends). A
+  row left empty goes, as before.
+- **A card on flex rows inside a cell** has cells and rows of its own:
+  the drag measures only the view's own (`closest('[data-testid=
+"flex-rows"]')`), so a drop on a card is a drop on the card's cell.
+- **Sizes are still classes.** Nothing is resized by drag here: how wide a
+  cell is, is `flex-1`, `basis-1/3`, `w-[320px]` in its field, and a
+  dragged divider would have to rewrite words the author typed.
+- **Steps:** `I drop the cell "<a>" before|after the cell "<b>"`,
+  `I swap the cell "<a>" with the cell "<b>"`, `I drop the cell "<id>"
+into a new row above|below row N`, `the cell "<id>" has no arrows to
+move it by`; `I move the cell "<id>" up` is gone (`flex-rows.feature`,
+  and the greeting of `containers.feature`). Sasha's ask below — a
+  regression scenario should a drag ever replace the arrows — is the
+  builder scenario of `flex-rows.feature`.
+
 ## Reviewed 2026-11-03 (after the build), against doc/guidelines.md and doc/react-best-practices
 
 - **Alexei:** the engine owns its template, its vocabulary and its edit

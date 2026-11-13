@@ -48,24 +48,60 @@
   border-style: dotted;
 }
 
-.ww-css-grid .ww-css-grid-ghost[data-hover="free"] {
-  border-color: var(--ww-color-edit, var(--ant-color-primary, #2563eb));
-  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
+/* What letting go now would do: the slots the dragged widget would fill, over whatever is there. */
+.ww-css-grid .ww-css-grid-drop {
+  z-index: 3;
+  pointer-events: none;
+  border: 2px solid var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--ww-color-edit, var(--ant-color-primary, #2563eb)) 18%, transparent);
 }
 
-.ww-css-grid .ww-css-grid-ghost[data-hover="blocked"],
-.ww-css-grid .ww-css-grid-ghost[data-refused="true"] {
-  border-color: var(--ww-color-danger, var(--ant-color-error, #dc2626));
-  background: var(--ww-color-danger-bg, var(--ant-color-error-bg, #fee2e2));
-}
-
-.ww-page[data-layout-mode="edit"] .ww-css-grid .ww-css-grid-item {
+.ww-page[data-layout-mode="edit"] .ww-css-grid-root .ww-css-grid-item {
   outline: 1px dashed var(--ww-color-edit, var(--ant-color-primary, #2563eb));
   border-radius: 0.25rem;
   background: var(--ww-color-field, var(--ant-color-bg-container, #fff));
 }
 
-.ww-css-grid .ww-css-grid-handle {
+/* The widget being dragged stays where it is, faded; the drop outline says where it would go. */
+.ww-css-grid-root .ww-css-grid-item[data-dragging="true"] {
+  opacity: 0.45;
+}
+
+.ww-page[data-layout-mode="edit"] .ww-css-grid-root .ww-css-grid-item[data-drop="swap"] {
+  outline: 2px solid var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+}
+
+.ww-page[data-layout-mode="edit"] .ww-css-grid-root .ww-css-grid-item[data-drop="out"] {
+  outline: 2px solid var(--ww-color-warning, var(--ant-color-warning, #d97706));
+}
+
+.ww-css-grid-root .ww-css-grid-fate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  white-space: nowrap;
+  pointer-events: none;
+  color: #fff;
+  background: var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+  border-radius: 0.75rem;
+}
+
+.ww-css-grid-root .ww-css-grid-item[data-drop="out"] .ww-css-grid-fate {
+  background: var(--ww-color-warning, var(--ant-color-warning, #d97706));
+}
+
+/* While a drag lasts nothing on the page is selected and the widgets do not take the pointer. */
+.ww-css-grid[data-dragging="true"] {
+  user-select: none;
+}
+
+.ww-css-grid-root .ww-css-grid-handle {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
@@ -79,18 +115,11 @@
   border-radius: 0.25rem 0.25rem 0 0;
   /* A drag that starts here must never select text across the page. */
   user-select: none;
-}
-
-.ww-css-grid .ww-css-grid-handle[data-draggable="true"] {
   cursor: grab;
   touch-action: none;
 }
 
-.ww-css-grid .ww-css-grid-handle:not([data-draggable]) .ww-css-grid-grip {
-  opacity: 0.4;
-}
-
-.ww-css-grid .ww-css-grid-handle-label {
+.ww-css-grid-root .ww-css-grid-handle-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -98,16 +127,104 @@
   white-space: nowrap;
 }
 
+/* An edge to pull: a strip along each side that lights up under the pointer, and the corner. */
 .ww-css-grid .ww-css-grid-resize {
   position: absolute;
+  z-index: 2;
+  touch-action: none;
+  border-radius: 0.25rem;
+}
+
+.ww-css-grid .ww-css-grid-resize:hover {
+  background: var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="n"],
+.ww-css-grid .ww-css-grid-resize[data-edge="s"] {
+  left: 1rem;
+  right: 1rem;
+  height: 0.375rem;
+  cursor: ns-resize;
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="e"],
+.ww-css-grid .ww-css-grid-resize[data-edge="w"] {
+  top: 1rem;
+  bottom: 1rem;
+  width: 0.375rem;
+  cursor: ew-resize;
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="n"] {
+  top: -0.1875rem;
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="s"] {
+  bottom: -0.1875rem;
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="w"] {
+  left: -0.1875rem;
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="e"] {
+  right: -0.1875rem;
+}
+
+.ww-css-grid .ww-css-grid-resize[data-edge="se"] {
   right: 0;
   bottom: 0;
   width: 1rem;
   height: 1rem;
   cursor: nwse-resize;
-  touch-action: none;
   background: linear-gradient(135deg, transparent 50%, var(--ww-color-edit, var(--ant-color-primary, #2563eb)) 50%);
   border-radius: 0 0 0.25rem 0;
+}
+
+/* ---- the tray: where a widget with no slot waits, and where one is dropped to take it off the grid ---- */
+
+.ww-css-grid-tray {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-gap, 0.5rem);
+  padding: var(--ww-gap, 0.5rem);
+  font-size: 0.75rem;
+  border: 1px dashed var(--ww-color-border, var(--ant-color-border, #d1d5db));
+  border-radius: 0.25rem;
+}
+
+.ww-css-grid-tray[data-hover="true"] {
+  border-color: var(--ww-color-edit, var(--ant-color-primary, #2563eb));
+  background: var(--ww-color-handle, var(--ant-color-primary-bg, #dbeafe));
+}
+
+.ww-css-grid-tray:not([data-count="0"]) {
+  border-style: solid;
+  border-color: var(--ww-color-warning, var(--ant-color-warning, #d97706));
+  background: var(--ww-color-warning-bg, var(--ant-color-warning-bg, #fffbeb));
+}
+
+.ww-css-grid-tray .ww-css-grid-tray-note {
+  margin: 0;
+  color: var(--ww-color-muted, var(--ant-color-text-secondary, #6b7280));
+}
+
+.ww-css-grid-tray:not([data-count="0"]) .ww-css-grid-tray-note {
+  color: var(--ww-color-warning-text, var(--ant-color-warning-text, #92400e));
+}
+
+.ww-css-grid-tray .ww-css-grid-tray-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-gap, 0.5rem);
+}
+
+.ww-css-grid-tray .ww-css-grid-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 16rem;
+  min-width: 0;
 }
 
 .ww-css-grid-form {
@@ -167,9 +284,4 @@
 
 .ww-css-grid-form .ww-css-grid-track-raw {
   font-family: monospace;
-}
-
-.ww-css-grid-form .ww-css-grid-refusal {
-  margin: 0;
-  color: var(--ww-color-danger, var(--ant-color-error, #dc2626));
 }

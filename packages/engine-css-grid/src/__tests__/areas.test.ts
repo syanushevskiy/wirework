@@ -1,16 +1,22 @@
 /** The picture's arithmetic: spans, the rectangle rule on the shapes that bite, a drop placed or refused, the grid grown and shrunk, track sizes. */
 import { describe, expect, it } from "vitest";
 import {
+  claimed,
+  cleared,
+  dropped,
   grownTo,
   holderIn,
   isDrawable,
   isRectangle,
   isTrackSize,
   placed,
+  resizedSpan,
   spanOf,
   spanText,
+  swapped,
   tokensOf,
   trackParts,
+  unplaced,
   withSlot,
   withoutColumn,
   withoutRow,
@@ -49,10 +55,72 @@ describe("a drop", () => {
     );
   });
 
-  it("is refused where another cell holds a slot, never where the cell itself does", () => {
+  it("knows the slot another cell holds in a rectangle, never one the cell itself does", () => {
     expect(holderIn(T, "b", { r1: 0, c1: 1, r2: 0, c2: 2 })).toEqual({ row: 0, column: 1, id: "a" });
     expect(holderIn(T, "a", { r1: 0, c1: 0, r2: 0, c2: 1 })).toBeUndefined();
     expect(holderIn(T, "a", { r1: 0, c1: 3, r2: 0, c2: 4 })).toBeUndefined();
+  });
+
+  it("onto another widget swaps the two places, whatever their sizes", () => {
+    expect(dropped(T, "b", { row: 0, column: 0 })).toEqual(tokensOf(["b b a", "c d e", "f f f"]));
+    expect(dropped(T, "c", { row: 2, column: 1 })).toEqual(tokensOf(["a a b", "f d e", "c c c"]));
+    expect(swapped(T, "a", "f")).toEqual(tokensOf(["f f b", "c d e", "a a a"]));
+  });
+
+  it("onto a free slot keeps the cell's size where it fits, and takes the one slot where it does not", () => {
+    const G = tokensOf(["a a .", ". . .", "b . ."]);
+    // Grabbed by its second slot and let go over row 2 column 3: the rectangle stays under the pointer.
+    expect(dropped(G, "a", { row: 1, column: 2 }, { dr: 0, dc: 1 })).toEqual(tokensOf([". . .", ". a a", "b . ."]));
+    // Never past the edge unless the pointer is: grabbed by its first slot at the last column, it is pushed back in.
+    expect(dropped(G, "a", { row: 1, column: 2 })).toEqual(tokensOf([". . .", ". a a", "b . ."]));
+    // b is in the way of both the grabbed place and the corner: one slot it is.
+    expect(dropped(tokensOf(["a a .", ". b ."]), "a", { row: 1, column: 0 })).toEqual(tokensOf([". . .", "a b ."]));
+    // On its own slots nothing moves.
+    expect(dropped(G, "a", { row: 0, column: 1 }, { dr: 0, dc: 1 })).toEqual(G);
+    // Past the edge — a "+" slot — the grid grows.
+    expect(dropped(tokensOf(["a", "b"]), "b", { row: 0, column: 1 })).toEqual(tokensOf(["a b", ". ."]));
+  });
+
+  it("from the tray takes one free slot, or the place of the widget it lands on — which goes to the tray", () => {
+    const G = tokensOf(["a a .", "b . ."]);
+    expect(dropped(G, "x", { row: 1, column: 1 })).toEqual(tokensOf(["a a .", "b x ."]));
+    const taken = dropped(G, "x", { row: 0, column: 1 });
+    expect(taken).toEqual(tokensOf(["x x .", "b . ."]));
+    expect(unplaced(taken, ["a", "b", "x"])).toEqual(["a"]);
+    expect(cleared(G, "a")).toEqual(tokensOf([". . .", "b . ."]));
+  });
+});
+
+describe("a resize", () => {
+  const ROW = tokensOf(["a a b"]);
+
+  it("pulls one edge to a slot, never to less than one slot", () => {
+    const span = { r1: 1, c1: 1, r2: 2, c2: 2 };
+    expect(resizedSpan(span, "e", { row: 0, column: 4 })).toEqual({ ...span, c2: 4 });
+    expect(resizedSpan(span, "w", { row: 0, column: 0 })).toEqual({ ...span, c1: 0 });
+    expect(resizedSpan(span, "n", { row: 0, column: 9 })).toEqual({ ...span, r1: 0 });
+    expect(resizedSpan(span, "s", { row: 1, column: 9 })).toEqual({ ...span, r2: 1 });
+    expect(resizedSpan(span, "se", { row: 3, column: 3 })).toEqual({ ...span, r2: 3, c2: 3 });
+    expect(resizedSpan(span, "e", { row: 0, column: 0 })).toEqual({ ...span, c2: 1 });
+    expect(resizedSpan(span, "w", { row: 0, column: 5 })).toEqual({ ...span, c1: 2 });
+  });
+
+  it("over a neighbour's only slot leaves the neighbour with none — off the grid", () => {
+    const next = claimed(ROW, "a", { r1: 0, c1: 0, r2: 0, c2: 2 });
+    expect(next).toEqual(tokensOf(["a a a"]));
+    expect(unplaced(next, ["a", "b"])).toEqual(["b"]);
+  });
+
+  it("shrinks a neighbour that still has a rectangle left, and frees the slots the cell lets go", () => {
+    expect(claimed(tokensOf(["a b b"]), "a", { r1: 0, c1: 0, r2: 0, c2: 1 })).toEqual(tokensOf(["a a b"]));
+    expect(claimed(ROW, "a", { r1: 0, c1: 0, r2: 0, c2: 0 })).toEqual(tokensOf(["a . b"]));
+    expect(claimed(tokensOf(["a b", ". b"]), "a", { r1: 0, c1: 0, r2: 0, c2: 1 })).toEqual(tokensOf(["a a", ". b"]));
+  });
+
+  it("takes a neighbour off the grid when what it has left is no rectangle, and touches nobody else", () => {
+    // b is a 2×2 block; a's corner bites one slot of it: an L is left, so b goes. c, an L already, is not this resize's business.
+    const before = tokensOf(["a b b c", ". b b c", ". . c c"]);
+    expect(claimed(before, "a", { r1: 0, c1: 0, r2: 0, c2: 1 })).toEqual(tokensOf(["a a . c", ". . . c", ". . c c"]));
   });
 });
 

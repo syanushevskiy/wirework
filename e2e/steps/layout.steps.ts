@@ -1,7 +1,7 @@
 /** Page layout: the engine and view in use, cells and their placement, the edit session (drag, resize, save, cancel). */
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { dragBetween, dragOnto, gridItem, settledBox } from "../support/grid";
+import { dragBetween, dragOnto, dragToPart, gridItem, settledBox } from "../support/grid";
 import { cell, live } from "../support/page";
 
 const { When, Then } = createBdd();
@@ -68,9 +68,38 @@ Then("the flex classes field of the cell {string} is marked invalid", async ({ p
   await expect(flexItem(page, id).getByTestId("flex-cell-classes").first()).toHaveAttribute("aria-invalid", "true");
 });
 
-/** Edit mode: the arrows in the cell's handle — left / right within its row, up / down into the row above / below. */
-When("I move the cell {string} {word}", async ({ page }, id: string, direction: string) => {
-  await page.locator(`[data-testid="flex-move"][data-cell="${id}"][data-direction="${direction}"]`).click();
+/**
+ * Edit mode: a cell is DRAGGED by its handle (the step grabs the label in it). Where it is let go on another cell
+ * decides: its left or right quarter puts the dragged one before or after it, its middle swaps the two.
+ */
+const flexGrip = (page: Page, id: string) => flexItem(page, id).getByTestId("flex-handle-label").first();
+
+When(
+  /^I drop the cell "([^"]*)" (before|after) the cell "([^"]*)"$/,
+  async ({ page }, id: string, side: string, target: string) => {
+    await dragToPart(page, flexGrip(page, id), flexItem(page, target), side === "before" ? 0.1 : 0.9, 0.5);
+  },
+);
+
+When("I swap the cell {string} with the cell {string}", async ({ page }, id: string, target: string) => {
+  await dragToPart(page, flexGrip(page, id), flexItem(page, target), 0.5, 0.5);
+});
+
+/** The strip above a row (`flex-row-drop`, one more under the last row): a drop there is a new row of the cell's own. */
+const rowStrip = (page: Page, row: number) =>
+  live(page).locator(`xpath=.//*[@data-testid="flex-row-drop" and @data-row="${row}" ${OWN}]`);
+
+When("I drop the cell {string} into a new row above row {int}", async ({ page }, id: string, row: number) => {
+  await dragOnto(page, flexGrip(page, id), rowStrip(page, row - 1));
+});
+
+When("I drop the cell {string} into a new row below row {int}", async ({ page }, id: string, row: number) => {
+  await dragOnto(page, flexGrip(page, id), rowStrip(page, row));
+});
+
+Then("the cell {string} has no arrows to move it by", async ({ page }, id: string) => {
+  await expect(flexItem(page, id).getByTestId("flex-handle").first()).toBeVisible();
+  await expect(page.getByTestId("flex-move")).toHaveCount(0);
 });
 
 /** The named cells share a band, whatever engine placed them and however they align in it: left to right in the order given. */
@@ -352,16 +381,55 @@ When(
   },
 );
 
+/** A cell's own resize grips (a card inside it may hold a grid with grips of its own): `n`, `e`, `s`, `w` and the corner `se`. */
+const grip = (page: Page, id: string, edge: string) =>
+  live(page).locator(`[data-testid="css-grid-resize"][data-cell="${id}"][data-edge="${edge}"]`);
+
 /** Drag the resize corner onto the slot that becomes the cell's bottom-right. */
 When(
   "I resize the cell {string} to the slot row {int} column {int}",
   async ({ page }, id: string, row: number, column: number) => {
-    await dragOnto(page, gridCell(page, id).getByTestId("css-grid-resize"), ghost(page, row, column));
+    await dragOnto(page, grip(page, id, "se"), ghost(page, row, column));
   },
 );
 
-Then("the drop is refused because the slot holds {string}", async ({ page }, id: string) => {
-  await expect(page.getByTestId("css-grid-refusal")).toContainText(`holds "${id}"`);
+const EDGES: Readonly<Record<string, string>> = { top: "n", right: "e", bottom: "s", left: "w" };
+
+/** Drag one EDGE of the cell to a slot: the cell takes the slots it is pulled over — from whoever held them — or lets go of the ones it leaves. */
+When(
+  "I pull the {word} edge of the cell {string} to the slot row {int} column {int}",
+  async ({ page }, edge: string, id: string, row: number, column: number) => {
+    const code = EDGES[edge];
+    if (code === undefined) throw new Error(`no such edge: ${edge} (top, right, bottom, left)`);
+    await dragOnto(page, grip(page, id, code), ghost(page, row, column));
+  },
+);
+
+/** A drop onto another widget: the two swap places (a widget from the tray takes the place, the other goes to the tray). */
+When("I drop the cell {string} onto the cell {string}", async ({ page }, id: string, target: string) => {
+  await dragOnto(page, gridCell(page, id).getByTestId("css-grid-handle-label"), gridCell(page, target));
+});
+
+/** The TRAY under the grid (edit mode): where a widget with no slot waits, and where one is dropped to take it off the grid. */
+const tray = (page: Page) => live(page).getByTestId("css-grid-tray");
+
+When("I drag the cell {string} off the grid", async ({ page }, id: string) => {
+  await dragOnto(page, gridCell(page, id).getByTestId("css-grid-handle-label"), tray(page));
+});
+
+Then("the cell {string} waits off the grid", async ({ page }, id: string) => {
+  await expect(tray(page).locator(`[data-testid="css-grid-item"][data-cell="${id}"]`)).toBeVisible();
+  await expect(gridCell(page, id)).not.toHaveAttribute("data-area");
+});
+
+Then("the grid says {int} widget(s) has/have no slot", async ({ page }, count: number) => {
+  await expect(tray(page)).toHaveAttribute("data-count", String(count));
+  await expect(page.getByTestId("css-grid-unassigned")).toContainText("no slot in the grid");
+});
+
+Then("every widget of the grid has a slot", async ({ page }) => {
+  await expect(tray(page)).toHaveAttribute("data-count", "0");
+  await expect(page.getByTestId("css-grid-unassigned")).toHaveCount(0);
 });
 
 /** The slot table: "empty" or a cell id. */

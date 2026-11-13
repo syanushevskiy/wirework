@@ -93,13 +93,29 @@
             }
           }
         ],
+        "refresh": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "history"
+            }
+          }
+        ],
         "link-clicked": [
           {
             "call": "nav/follow"
           }
         ]
       },
-      "height": 320
+      "height": 320,
+      "toolbar": [
+        {
+          "name": "reset-filters"
+        },
+        {
+          "name": "refresh"
+        }
+      ]
     }
   },
   "widgets.history.title": {

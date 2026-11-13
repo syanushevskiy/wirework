@@ -7,7 +7,7 @@ Feature: Infinite list — a table that grows as you scroll, with its filters in
   height), with blank space of the right height standing in for the rest,
   so a list of thousands stays smooth. Filtering and sorting live in the
   column headers: a column the server offers VALUES for shows a filter icon
-  opening a list to tick; a column the server calls filterable without
+  opening a list to pick from — every pick filters at once; a column the server calls filterable without
   values shows a SEARCH icon opening a box to type in; a sortable column
   sorts on a click of its header — ascending, descending, then not at all.
   Every choice is a request to the server (the view table API's filterIn,
@@ -75,7 +75,7 @@ Feature: Infinite list — a table that grows as you scroll, with its filters in
     Then the header filter offers "Queued, Running, Success, Failed"
     When I tick "Failed" in the header filter
     And I apply the header filter
-    Then the event log shows widget "antd-infinite-table" event "filter-changed" with payload '{"filterIn":{"state":["Failed"]},"filterLike":{}}'
+    Then the event log shows widget "antd-infinite-table" event "filter-changed" with payload '{"filterIn":{"state":["Failed"]},"filterLike":{},"filterBetween":{}}'
     # 6 runs fail from the start; the ones running when the page opened have all succeeded by this second request.
     And the table has 6 rows
     And the infinite table shows "6 of 6"

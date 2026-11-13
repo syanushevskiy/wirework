@@ -1,10 +1,10 @@
 /**
  * The flex-rows operations, PURE (hosts replay them): what a change does
- * to a template, where an arrow moves a cell, and what `validate` says
+ * to a template, the change a drop asks for, and what `validate` says
  * about the classes a template names.
  */
 import { unknownClasses } from "./classes";
-import type { FlexCell, FlexRow, FlexRowsChange, FlexRowsMove, FlexRowsPage, MoveDirection } from "./schema";
+import type { FlexCell, FlexDrop, FlexRow, FlexRowsChange, FlexRowsMove, FlexRowsPage } from "./schema";
 
 /** The item with its classes set — or without the key at all when cleared: a record keeps no empty values. */
 function classed<T extends { classes?: string | undefined }>(item: T, classes: string): T {
@@ -35,12 +35,14 @@ const inserted = (cells: readonly FlexCell[], cell: FlexCell, index: number): Fl
  * a row before the first or past the last is a new one; a row left
  * empty is gone. An unknown cell changes nothing.
  */
-function moved(template: FlexRowsPage, { id, row, index }: FlexRowsMove): FlexRowsPage {
-  const cell = template.rows.flatMap((candidate) => candidate.cells).find((candidate) => candidate.id === id);
+function moved(template: FlexRowsPage, { id, row, index, own }: FlexRowsMove): FlexRowsPage {
+  const cell = cellOf(template, id);
   if (!cell) return template;
   const rows = rowsWithout(template.rows, id);
-  const placed =
-    row < 0
+  const at = Math.min(Math.max(row, 0), rows.length);
+  const placed = own
+    ? [...rows.slice(0, at), { cells: [cell] }, ...rows.slice(at)]
+    : row < 0
       ? [{ cells: [cell] }, ...rows]
       : row >= rows.length
         ? [...rows, { cells: [cell] }]
@@ -48,6 +50,23 @@ function moved(template: FlexRowsPage, { id, row, index }: FlexRowsMove): FlexRo
             at === row ? { ...candidate, cells: inserted(candidate.cells, cell, index) } : candidate,
           );
   return { ...template, rows: placed.filter(nonEmpty) };
+}
+
+const cellOf = (template: FlexRowsPage, id: string): FlexCell | undefined =>
+  template.rows.flatMap((row) => row.cells).find((cell) => cell.id === id);
+
+/** Two cells in each other's places, each keeping its own classes. An unknown cell, or a cell with itself, changes nothing. */
+function swapped(template: FlexRowsPage, a: string, b: string): FlexRowsPage {
+  const first = cellOf(template, a);
+  const second = cellOf(template, b);
+  if (!first || !second || a === b) return template;
+  return {
+    ...template,
+    rows: template.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => (cell.id === a ? second : cell.id === b ? first : cell)),
+    })),
+  };
 }
 
 export function applyFlexRowsChange(template: FlexRowsPage, change: FlexRowsChange): FlexRowsPage {
@@ -67,21 +86,33 @@ export function applyFlexRowsChange(template: FlexRowsPage, change: FlexRowsChan
       };
     case "move":
       return moved(template, change);
+    case "swap":
+      return swapped(template, change.id, change.with);
   }
 }
 
-/** The move an arrow asks for: a step within the row, or the end of the row above / the start of the row below. */
-export function moveTarget(template: FlexRowsPage, id: string, direction: MoveDirection): FlexRowsMove | undefined {
-  const row = template.rows.findIndex((candidate) => candidate.cells.some((cell) => cell.id === id));
-  const index = template.rows[row]?.cells.findIndex((cell) => cell.id === id) ?? -1;
-  if (index < 0) return undefined;
-  const to = {
-    left: { row, index: Math.max(index - 1, 0) },
-    right: { row, index: index + 1 },
-    up: { row: row - 1, index: template.rows[row - 1]?.cells.length ?? 0 },
-    down: { row: row + 1, index: 0 },
-  }[direction];
-  return { kind: "move", id, ...to };
+/** The change a drop asks for, before it is known whether it changes anything. */
+function dropOf(template: FlexRowsPage, id: string, drop: FlexDrop): FlexRowsChange | undefined {
+  if (drop.on === "gap") return { kind: "move", id, row: drop.row, index: 0, own: true };
+  if (drop.id === id) return undefined;
+  if (drop.side === "swap") return { kind: "swap", id, with: drop.id };
+  const row = template.rows.findIndex((candidate) => candidate.cells.some((cell) => cell.id === drop.id));
+  // The place among the row's cells once the dragged one has left it.
+  const index = (template.rows[row]?.cells ?? []).filter((cell) => cell.id !== id).findIndex((c) => c.id === drop.id);
+  return index < 0 ? undefined : { kind: "move", id, row, index: drop.side === "before" ? index : index + 1 };
+}
+
+/**
+ * The change a DROP asks for (useFlexRowsDrag says where the pointer was
+ * let go): on another cell's middle the two swap places, on its left or
+ * right edge the dragged cell goes before or after it, between two rows it
+ * takes a new row of its own. Undefined when nothing would change — a cell
+ * dropped where it already is.
+ */
+export function dropChange(template: FlexRowsPage, id: string, drop: FlexDrop): FlexRowsChange | undefined {
+  const change = dropOf(template, id, drop);
+  if (change === undefined) return undefined;
+  return JSON.stringify(applyFlexRowsChange(template, change)) === JSON.stringify(template) ? undefined : change;
 }
 
 const problemsOf = (where: string, classes: string | undefined): string[] => {

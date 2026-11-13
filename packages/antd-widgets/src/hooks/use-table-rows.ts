@@ -13,14 +13,21 @@ import { createElement, useCallback, useMemo, type MouseEvent, type TdHTMLAttrib
 import type { TableColumnType, TableProps } from "antd";
 import { getPath, type Emit, type PortDefinition, type ReadableStore } from "@wirework/schema";
 import { usePort } from "@wirework/react";
-import { appPathSchema, type tableEvents, type TableColumn, type TableRow } from "@wirework/widget-contracts";
+import {
+  appPathSchema,
+  columnWidth,
+  type tableEvents,
+  type TableColumn,
+  type TableRow,
+} from "@wirework/widget-contracts";
 import { TableCell } from "../widgets/table-cells";
 import type { TableCellRenderers } from "./use-table-cell";
 
-/** One rendered row: its identity and the record. */
+/** One rendered row: its identity, the record, and its place among the rows held (from 0). */
 export interface RenderedRow {
   key: string;
   row: TableRow;
+  index: number;
 }
 
 /** The events a row emits — the part of every table kind's events a row click decides. */
@@ -30,7 +37,7 @@ export const NO_ROWS: TableRow[] = [];
 export const NO_CELLS: TableCellRenderers = {};
 
 /** Content inside a cell that owns its clicks: the row must not react to them. */
-const INTERACTIVE = "a[href], button, input, select, textarea, [role='button']";
+export const INTERACTIVE = "a[href], button, input, select, textarea, [role='button']";
 
 /** The row's own key, or its position when it has none (not stable — configure rowKey). */
 function keyOf(row: TableRow, rowKey: string, index: number): string {
@@ -89,7 +96,7 @@ export function useTableColumns(
 /** One rendered row per record, keyed by its `rowKey` property. */
 export function useRenderedRows(rows: TableRow[], rowKey: string): RenderedRow[] {
   return useMemo<RenderedRow[]>(
-    () => rows.map((row, index) => ({ key: keyOf(row, rowKey, index), row })),
+    () => rows.map((row, index) => ({ key: keyOf(row, rowKey, index), row, index })),
     [rows, rowKey],
   );
 }
@@ -99,16 +106,22 @@ export function antdColumnOf(
   column: TableColumn,
   index: number,
   cells: TableCellRenderers,
+  rowKey: string,
+  /** The cell selection's attributes of a cell of this column (use-cell-selection.ts), when cells are selected. */
+  selection?: (column: number, rendered: RenderedRow) => Readonly<Record<string, string | undefined>>,
 ): TableColumnType<RenderedRow> & { key: string } {
   return {
     key: `${index}:${column.property}`,
     title: column.title,
+    // The width the table's least width is the sum of (tableWidth): narrower than that, the table scrolls sideways.
+    width: columnWidth(column, rowKey),
     render: (_, rendered) =>
       createElement(TableCell, { column, row: rendered.row, value: getPath(rendered.row, column.property), cells }),
-    onCell: () =>
+    onCell: (rendered) =>
       ({
         "data-property": column.property,
         "data-cell": column.cell?.kind ?? "text",
+        ...selection?.(index, rendered),
       }) as TdHTMLAttributes<HTMLElement>,
   };
 }
