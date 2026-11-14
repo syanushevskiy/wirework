@@ -71,7 +71,7 @@ describe("PageViews", () => {
     expect(screen.getByTitle(/Turn the user overlay on/)).toBeTruthy();
   });
 
-  it("editing for a role, the list is open and the user's own view is not the role's to rename (doc/roles-design.md)", () => {
+  it("editing for a role, the list is open and the user's own view is not the role's to rename (doc/ADR/0012-roles.md)", () => {
     renderViews({ shown: "compact", target: { role: "admin" }, roles: ["admin"] });
     expect(screen.getByTestId("page-view-kind").textContent).toBe("prebuilt");
     expect(screen.getByTestId("page-view-select").className).not.toContain("disabled");

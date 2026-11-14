@@ -196,7 +196,7 @@ describe("resolvePage", () => {
     expect(resolved.cells[0]?.viewModel).toMatchObject({ label: "OVERRIDE" });
   });
 
-  describe("the role layer (doc/roles-design.md): base, then the roles in the order given, then the user", () => {
+  describe("the role layer (doc/ADR/0012-roles.md): base, then the roles in the order given, then the user", () => {
     const templates3 = {
       counter: {
         default: { inputs: { value: "demo.n" }, on: { changed: [{ set: "demo.n", from: "value" }] }, label: "Base" },

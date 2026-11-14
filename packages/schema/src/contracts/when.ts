@@ -1,5 +1,5 @@
 /**
- * Conditions — WHEN a widget shows (doc/conditions-design.md).
+ * Conditions — WHEN a widget shows (doc/ADR/0008-conditions.md).
  *
  * Beside `inputs` and `on`, a widget's view model may carry `when`: a list
  * of tests that must ALL hold for the widget to show. A test reads ONE

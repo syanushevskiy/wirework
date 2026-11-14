@@ -52,6 +52,28 @@ export {
   parsePageFile,
 } from "./pages-file";
 export type { MergedPages, PageFileInput } from "./pages-file";
+export {
+  createMigrations,
+  defineMigration,
+  mapValue,
+  pinDefault,
+  remove,
+  rename,
+  renameAction,
+  renameWidget,
+  stampProblem,
+  stamped,
+  upgradeTrees,
+} from "./migrations";
+export type {
+  Migration,
+  Migrations,
+  MigrationsOptions,
+  SettingsStep,
+  UpgradeInput,
+  UpgradeOptions,
+  Upgraded,
+} from "./migrations";
 export { validateViewModels } from "./validate";
 export type { ValidateInput, ValidationProblem, ValidationReport } from "./validate";
 export { createEmitter } from "./emitter";

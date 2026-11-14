@@ -1,5 +1,5 @@
 /**
- * The CONDITION part of the widget form (doc/conditions-design.md): the
+ * The CONDITION part of the widget form (doc/ADR/0008-conditions.md): the
  * rows a user fills — a store path, a check picked by its phrase, the value
  * the check takes (typed as text), "when" or "unless" — and how they become
  * the template's `when` and back. The CONSTRUCTOR is built step by step as

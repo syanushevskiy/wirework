@@ -19,12 +19,22 @@ import {
 import type { RunsServer } from "../api/runs-server";
 import type { PlaygroundPage } from "../boot";
 
+declare global {
+  interface Window {
+    /** A test's stand-in for what the server has stored as the user's views: any document, of any data format. */
+    wireworkSavedViews?: unknown;
+  }
+}
+
 /** The user's page-size setting is a select's value: text. */
 const pageSizeSetting = z.coerce.number().int().min(1);
 
 /** The application's long-lived state: the user's own views and their settings; the user, the permissions and the lists arrive with the session request. */
 export const demoSessionState = (): Record<string, unknown> => ({
-  userViewModels: demoUserViewModels,
+  // What a server would hand back as the user's saved views. A test puts a document of its own there before the
+  // application starts (`window.wireworkSavedViews`) — one saved long ago, or by a newer version
+  // (doc/ADR/0017-versioning-and-upgrades.md).
+  userViewModels: window.wireworkSavedViews ?? demoUserViewModels,
   ...demoAppState,
 });
 
@@ -64,14 +74,16 @@ export function demoPages(runsServer: RunsServer, archiveServer: RunsServer): Re
     // which run: the router's parameter, at route.params.runId.
     run: demoPage("run"),
     settings: demoPage("settings"),
-    // Two cards as FlexLayout tabsets, a layout engine of its own inside each: a grid, flex rows (doc/flex-rows-design.md).
+    // Two cards as FlexLayout tabsets, a layout engine of its own inside each: a grid, flex rows (doc/ADR/0010-flex-rows.md).
     cards: demoPage("cards"),
-    // One card showing how roles work: an input for everyone, a button and its echo for the admin by a condition (doc/roles-design.md).
+    // One card showing how roles work: an input for everyone, a button and its echo for the admin by a condition (doc/ADR/0012-roles.md).
     roles: demoPage("roles"),
+    // The one page with the LAZY widget (doc/ADR/0018-lazy-widgets.md): the code editor's code is asked for here only.
+    editor: demoPage("editor"),
   };
 }
 
-/** The roles the builder page grants from the start (doc/roles-design.md): a builder adds more in the toolbar. */
+/** The roles the builder page grants from the start (doc/ADR/0012-roles.md): a builder adds more in the toolbar. */
 export const BUILDER_ROLES = ["app-user", "admin"] as const;
 
 /**

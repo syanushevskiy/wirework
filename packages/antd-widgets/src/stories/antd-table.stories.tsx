@@ -847,3 +847,64 @@ export const CellSelectionOff: Story = {
     await expect(within(document.body).queryByRole("menuitem")).toBeNull();
   },
 };
+
+const LONG_NAME = "A nightly run of every suite the project has, on every browser it supports, twice over";
+const longRows = [
+  { id: "1", name: LONG_NAME, note: "short" },
+  { id: "2", name: "Smoke", note: "short" },
+];
+const longColumns = [
+  { title: "#", property: "id" },
+  { title: "Name", property: "name", width: 140 },
+  { title: "Note", property: "note" },
+];
+
+/**
+ * A cell is ONE LINE: a text longer than its column is cut with an ellipsis
+ * — the pointer over it shows the value whole, in a tip —, so the row with
+ * it is as tall as the row without. A cell that fits has no tip.
+ */
+export const OneLineCells: Story = {
+  render: () => (
+    <div style={{ width: 420 }}>
+      <WidgetStory
+        key="one-line-cells"
+        definition={antdTable}
+        seed={{ demo: { rows: longRows } }}
+        viewModel={{ inputs: { rows: "demo.rows" }, columns: longColumns }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement, userEvent }) => {
+    const long = bodyCell(canvasElement, "1", "name");
+    const body = within(document.body);
+    await expect(getComputedStyle(long).textOverflow).toBe("ellipsis");
+    await expect(long.scrollWidth).toBeGreaterThan(long.clientWidth);
+    await expect(long.offsetHeight).toBe(bodyCell(canvasElement, "2", "name").offsetHeight);
+    await expect(body.queryByRole("tooltip")).toBeNull();
+    await userEvent.hover(long);
+    await expect(await body.findByRole("tooltip")).toHaveTextContent(LONG_NAME);
+    // A cell that fits says nothing more than it shows.
+    await userEvent.hover(bodyCell(canvasElement, "2", "name"));
+    await waitFor(() => expect(body.queryByRole("tooltip")).toBeNull());
+  },
+};
+
+/** With `wrapCells` on the text wraps instead: nothing is cut, and the row grows with it. */
+export const WrappedCells: Story = {
+  render: () => (
+    <div style={{ width: 420 }}>
+      <WidgetStory
+        key="wrapped-cells"
+        definition={antdTable}
+        seed={{ demo: { rows: longRows } }}
+        viewModel={{ inputs: { rows: "demo.rows" }, columns: longColumns, wrapCells: true }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const long = bodyCell(canvasElement, "1", "name");
+    await expect(long.scrollWidth).toBe(long.clientWidth);
+    await expect(long.offsetHeight).toBeGreaterThan(bodyCell(canvasElement, "2", "name").offsetHeight);
+  },
+};

@@ -1,4 +1,8 @@
-# Containers — a Card (and tabs, panels, drawers) that hold other widgets, added in the builder
+# ADR-0009: Containers — a Card (and tabs, panels, drawers) that hold other widgets, added in the builder
+
+- **Status:** Accepted — built
+- **Date:** 2026-11-02
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 
@@ -26,7 +30,7 @@ the differences the build found listed under "Built".
 - EDITING: adding a widget INTO the container, moving one in or out,
   editing the children — with one edit session per page today;
 - SHARING: a page with cards must share as one thing — a view (Share /
-  Import, doc/page-views-design.md), a user's own copy of the layout, and
+  Import, doc/ADR/0006-page-views.md), a user's own copy of the layout, and
   a future bundle of a page for another installation;
 - everything that already works per page — resolution, boot validation,
   reactions, `load` events, the user overlay, the condition `when` — must
@@ -109,7 +113,7 @@ template, the content goes wherever the card's template goes.
 
 ## Sharing a page with cards
 
-- **A view** (doc/page-views-design.md) is the screen's layout: it names
+- **A view** (doc/ADR/0006-page-views.md) is the screen's layout: it names
   the card cell and the card's model path, as it names every cell's. The
   card's template — content included — is the page's configuration,
   which every user of the application has. Share and Import need nothing
@@ -123,7 +127,7 @@ template, the content goes wherever the card's template goes.
   tab's) — built on 3 November 2026, when the product owner asked for it
   (see "Built"); since 9 November 2026 it is held PER VIEW of the page
   (`viewCells["my-own"]["card-1"].settings.default.content`,
-  doc/page-views-design.md "A view holds the layouts inside its
+  doc/ADR/0006-page-views.md "A view holds the layouts inside its
   containers"), with "Reset to original" on every card.
 - **A bundle** — a layout plus every widget template it references,
   recursively, for moving a page to another installation — is not built

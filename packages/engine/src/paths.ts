@@ -40,7 +40,7 @@ export function collectPaths(root: unknown, maxDepth = 8): string[] {
 /**
  * Existing DATA paths whose CURRENT value satisfies the given validator —
  * the autocomplete source for binding a typed input port
- * (doc/widget-io-design.md). Configuration trees are excluded: a binding
+ * (doc/ADR/0001-widget-io.md). Configuration trees are excluded: a binding
  * may not address the view models (see `storePathSchema`), so offering
  * them would only produce templates the widget then rejects. A live value
  * may still change shape later; this is a tooling aid, not a guarantee.

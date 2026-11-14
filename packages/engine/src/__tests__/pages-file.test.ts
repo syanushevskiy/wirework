@@ -135,7 +135,7 @@ describe("pageFile", () => {
     expect(pageFileName("demo")).toBe("demo.page.json");
   });
 
-  it("carries what every role says about the page, and the widgets the roles' layouts reference (doc/roles-design.md)", () => {
+  it("carries what every role says about the page, and the widgets the roles' layouts reference (doc/ADR/0012-roles.md)", () => {
     const admin = {
       view: "admin",
       templates: { admin: layout([cell({ id: "c" }), cell({ id: "owner", model: "widgets.demo.owner" })]) },

@@ -1,4 +1,8 @@
-# In-table filters and rows as cards — a filter row under the headers, and a table that becomes cards on a narrow screen
+# ADR-0016: In-table filters and rows as cards — a filter row under the headers, and a table that becomes cards on a narrow screen
+
+- **Status:** Accepted — partly built (the filter row; the cards not)
+- **Date:** 2026-11-09
+- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
 
 Written 9 November 2026 (story WW-35; phase 1, the filter row, built the
 same day — "Built" at the end; the cards not built). The ask: "design
@@ -8,7 +12,7 @@ small screens so every row becomes a card".
 ## What there is
 
 Both tables (`table`, `infinite-table`) already filter and sort IN THEIR
-HEADERS (doc/row-window-design.md, the `headerFilters` setting — off for the
+HEADERS (doc/ADR/0007-row-window-and-header-filters.md, the `headerFilters` setting — off for the
 paged table by default, on for the infinite one; the runs page turns it on):
 a column whose filter is a list of values carries antd's filter icon with
 a list to tick; a column the server calls filterable without values
@@ -90,7 +94,7 @@ already produce everything a card needs: the rendered rows (`key`, `row`),
 the columns, the cell renderer (`TableCell`), the row props that decide a
 click. A CARDS renderer renders the same `renderedRows` as a list of
 cards — each card one `DescriptionField` per visible column, the exact
-component the `descriptions` widget shows (doc/more-widgets-design.md), so
+component the `descriptions` widget shows (doc/ADR/0015-more-widgets.md), so
 a status is the same tag and the reference the same Copy button — with the
 row's `data-row-key`, the same `row-selected` on a click and
 `link-clicked` on a link. The filter row's controls move to a bar ABOVE
@@ -317,6 +321,6 @@ built, and where it departs from the design above:
 - A user-flipped toggle (cards / table) as a per-cell setting the overlay
   stores.
 - The repeater: a layout per record, which these cards hand their fields
-  to (doc/more-widgets-design.md, answer E).
+  to (doc/ADR/0015-more-widgets.md, answer E).
 - A filter row on the `descriptions` widget's items? No: a fact sheet is
   one record.

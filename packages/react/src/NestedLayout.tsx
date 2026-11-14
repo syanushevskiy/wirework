@@ -1,5 +1,5 @@
 /**
- * A layout INSIDE a widget (doc/containers-design.md): what a card, a tab
+ * A layout INSIDE a widget (doc/ADR/0009-containers.md): what a card, a tab
  * or a panel renders as its content. Render-only: logic in useNestedLayout.
  * Nothing is editable in place — a container's content is edited where a
  * page is edited.

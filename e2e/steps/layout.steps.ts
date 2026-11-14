@@ -14,7 +14,7 @@ Then("the page uses the {string} view", async ({ page }, view: string) => {
   await expect(page.getByTestId("page")).toHaveAttribute("data-view", view);
 });
 
-/* ---- flex rows (doc/flex-rows-design.md): rows of a flexbox each, Tailwind's flex class names on rows and cells ---- */
+/* ---- flex rows (doc/ADR/0010-flex-rows.md): rows of a flexbox each, Tailwind's flex class names on rows and cells ---- */
 
 /** Outside any layout a container holds: the page's OWN rows and items (a card on flex rows has rows of its own). */
 const OWN = 'and not(ancestor::*[@data-testid="layout"])';
@@ -145,7 +145,7 @@ Then("the container {string} runs on the {string} engine", async ({ page }, id: 
 Then("the page has {int} cell(s)", async ({ page }, count: number) => {
   // The page must exist: a count of 0 must never pass because nothing rendered.
   await expect(page.getByTestId("page")).toBeVisible();
-  // The page's OWN cells: the ones inside a container's layout are the container's (doc/containers-design.md).
+  // The page's OWN cells: the ones inside a container's layout are the container's (doc/ADR/0009-containers.md).
   await expect(
     page
       .getByTestId("page")
@@ -164,7 +164,7 @@ Then("the cell {string} reads {string}", async ({ page }, id: string, text: stri
   await expect(cell(page, id)).toHaveText(text);
 });
 
-/* ---- conditions (doc/conditions-design.md): a cell keeps its place; `data-when` says whether its widget shows ---- */
+/* ---- conditions (doc/ADR/0008-conditions.md): a cell keeps its place; `data-when` says whether its widget shows ---- */
 
 Then("the cell {string} is hidden", async ({ page }, id: string) => {
   await expect(cell(page, id)).toHaveAttribute("data-when", "false");
@@ -185,7 +185,7 @@ Then("the cell {string} says it is hidden now {string}", async ({ page }, id: st
   await expect(note.locator("xpath=following-sibling::*").first()).toBeVisible();
 });
 
-/* ---- containers (doc/containers-design.md): a layout inside a widget's cell ---- */
+/* ---- containers (doc/ADR/0009-containers.md): a layout inside a widget's cell ---- */
 
 /** The cells of the layout inside a container, in order: "input-name, select-page-size". */
 Then("the container {string} holds the cells {string}", async ({ page }, id: string, ids: string) => {
@@ -338,7 +338,7 @@ When("I widen the cell {string} by {int} column(s)", async ({ page }, id: string
   await page.mouse.up();
 });
 
-/* ---- css grid (doc/css-grid-design.md): a grid of slots, the picture drawn by drag or filled from the slot table ---- */
+/* ---- css grid (doc/ADR/0013-css-grid.md): a grid of slots, the picture drawn by drag or filled from the slot table ---- */
 
 /** The page's OWN grid (a card on css-grid has one of its own); DOM rows and columns count from 0, scenarios from 1. */
 const ownGrid = (page: Page) => live(page).locator(`xpath=.//*[@data-testid="css-grid" ${OWN}]`);

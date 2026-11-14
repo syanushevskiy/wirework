@@ -1,6 +1,6 @@
 /**
  * `card` contract — a card with a title around a LAYOUT of other widgets
- * (doc/containers-design.md). The layout lives in the card's own template
+ * (doc/ADR/0009-containers.md). The layout lives in the card's own template
  * (`content`, a page template: engine + cells), so it travels with the
  * card; the adapter renders it with the page's machinery. Nothing bound,
  * nothing emitted: the widgets inside do that.

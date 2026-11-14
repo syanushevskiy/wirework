@@ -1,5 +1,5 @@
 /**
- * Actions contract — what a `call` reaction invokes (doc/widget-events-design.md).
+ * Actions contract — what a `call` reaction invokes (doc/ADR/0002-widget-events.md).
  *
  * Anything a user may attach to an event that is NOT a store write is host
  * code: refresh the runs, reset a counter, open a dialog. The host
@@ -31,7 +31,7 @@ export interface ActionDefinition {
   /** Shown by builders next to the name. */
   description?: string;
   /**
-   * What a reaction's `with` may hold (doc/actions-design.md). A builder
+   * What a reaction's `with` may hold (doc/ADR/0005-actions.md). A builder
    * renders one field per parameter (`settingFields`, like widget
    * settings), boot validation and page resolution check every `with`
    * against it, and the handler receives the PARSED arguments (defaults
@@ -41,7 +41,7 @@ export interface ActionDefinition {
   /**
    * Host code. May be async: the reactions of ONE event run in declaration
    * order and an async action is awaited before the next starts
-   * (doc/actions-design.md), so `[load, navigate]` navigates after the load.
+   * (doc/ADR/0005-actions.md), so `[load, navigate]` navigates after the load.
    * Synchronous reactions run synchronously, inside the emit.
    */
   handler: (context: ActionContext) => void | Promise<void>;

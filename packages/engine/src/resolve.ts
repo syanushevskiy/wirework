@@ -8,7 +8,7 @@
  *
  * The plan carries the page template VALIDATED by its engine (opaque to
  * the core) plus every cell resolved by id; the engine's renderer places
- * them (doc/layout-engines-design.md).
+ * them (doc/ADR/0003-layout-engines.md).
  *
  * Fallback chain per cell template:
  *   user-selected view -> the roles' views, the most specific role first ->
@@ -17,7 +17,7 @@
  * silent — and so is a user overlay that had to be ignored, and the layout
  * engine's own validation warnings.
  *
- * The LAYERS (layers.ts, doc/roles-design.md): the base is read through
+ * The LAYERS (layers.ts, doc/ADR/0012-roles.md): the base is read through
  * the entries of the roles the user holds — `roles`, in the session's order
  * from the broadest to the most specific — then the user's own overlay;
  * the last layer that sets a thing wins (`ResolveLayers`).
@@ -40,6 +40,7 @@ import type { ActionRegistry } from "./actions";
 import { resolveTemplate, type LayoutEngineRegistry } from "./layout-engines";
 import { cellViewCandidates, foldSettings, overlayLayers, viewCandidates, viewLayers, type Overlays } from "./layers";
 import { errorText, issuesText, problemText } from "./messages";
+import { stampProblem, type Migrations } from "./migrations";
 import { checkPageReactions } from "./page-events";
 import { deepMerge } from "./paths";
 import { appearanceProblems, type AppearanceRegistry } from "./appearances";
@@ -137,14 +138,21 @@ export interface ResolveCommon {
   layoutEngines: LayoutEngineRegistry;
   /** When given, reactions calling an unregistered action are a cell problem. */
   actions?: ActionRegistry | undefined;
-  /** The predicates a `when` may name; the standard ones alone when absent (doc/conditions-design.md). */
+  /** The predicates a `when` may name; the standard ones alone when absent (doc/ADR/0008-conditions.md). */
   predicates?: PredicateRegistry | undefined;
   /** The appearances `appear` and `disappear` may name; the standard ones alone when absent. */
   appearances?: AppearanceRegistry | undefined;
+  /**
+   * The data formats this version reads (doc/ADR/0017-versioning-and-upgrades.md):
+   * a tree stamped newer — or older than the oldest step kept — is not
+   * read. Absent: every owner is at format 1, and any stamp above it is
+   * refused.
+   */
+  migrations?: Migrations | undefined;
 }
 
 /**
- * How the base is read (doc/roles-design.md) — ONE of two ways:
+ * How the base is read (doc/ADR/0012-roles.md) — ONE of two ways:
  *  - a PAGE: the roles the user holds, in the session's order from the
  *    broadest to the most specific (their entries in `viewModels.roles` are
  *    read between the base and the user's overlay), and the user's overlay,
@@ -169,11 +177,18 @@ export interface CheckRegistries {
  * The user overlay when it is structurally valid; otherwise undefined and
  * WHY — an invalid overlay is ignored as a whole, and that must be visible.
  */
-export function checkOverlay(userViewModels: UserViewModels | undefined): {
+export function checkOverlay(
+  userViewModels: UserViewModels | undefined,
+  migrations?: Migrations,
+): {
   overlay?: UserViewModels;
   problem?: string;
 } {
   if (userViewModels === undefined) return {};
+  // A document this version cannot read — saved by a newer one, say — is not guessed at
+  // (doc/ADR/0017-versioning-and-upgrades.md): the page shows without it, and it is never written over.
+  const unread = stampProblem((userViewModels as { versions?: unknown } | null)?.versions, migrations);
+  if (unread !== undefined) return { problem: `user view models ignored: ${unread}` };
   const parsed = userViewModelsSchema.safeParse(userViewModels);
   return parsed.success
     ? { overlay: parsed.data }
@@ -391,10 +406,15 @@ export function resolvePage(input: ResolveInput): ResolvedPage {
   const { viewModels, page, layoutEngines } = input;
   // Checked once per page. A broken overlay is ignored here exactly as boot
   // validation ignores it — and the plan says so.
-  const { overlay: userViewModels, problem: overlayProblem } = checkOverlay(input.userViewModels);
+  const { overlay: userViewModels, problem: overlayProblem } = checkOverlay(input.userViewModels, input.migrations);
   // The page's own reactions belong to the BASE view models only: a user's view never carries any.
   const pageReactions = checkPageReactions(viewModels, page, input.actions);
   const notes = { on: pageReactions.on, ...(overlayProblem === undefined ? {} : { overlayProblem }) };
+  // The shared tree itself from a format this version does not read: nothing of it is shown.
+  const unread = stampProblem(viewModels.versions, input.migrations);
+  if (unread !== undefined) {
+    return { page, view: "default", problem: `The pages cannot be read: they were ${unread}`, ...notes };
+  }
   // The layers: the roles' entries in the session's order, then the user's — made once, read everywhere below.
   const overlays = input.overlays ?? overlayLayers(viewModels, input.roles, userViewModels);
 

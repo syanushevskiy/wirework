@@ -109,7 +109,7 @@ export const EmptyBuilder: Story = {
   },
 };
 
-/** Editing FOR A ROLE (doc/roles-design.md): the roles the host lists, "everyone" for none, and where edits go says the role. */
+/** Editing FOR A ROLE (doc/ADR/0012-roles.md): the roles the host lists, "everyone" for none, and where edits go says the role. */
 export const ForARole: Story = {
   args: {
     overlay: false,

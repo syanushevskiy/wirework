@@ -1,5 +1,5 @@
 /**
- * Layouts INSIDE widgets (doc/containers-design.md): a container's template
+ * Layouts INSIDE widgets (doc/ADR/0009-containers.md): a container's template
  * holds a page template in one of its settings (`WidgetDefinition.contains`),
  * and the adapter, boot validation and the builder all need the same three
  * facts about it — which layouts a view model holds, how deep they may go,

@@ -1,4 +1,8 @@
-# Widget contracts — declarations without components
+# ADR-0004: Widget contracts — declarations without components
+
+- **Status:** Accepted — built
+- **Date:** 2026-09-16
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 
@@ -35,7 +39,7 @@ gives an implementation its typed view model and `emit`. A CONTROLLED
 kind's event names the port it changes — `changed: { ..., primary:
 "value", writesBack: "value" }` — and the engine writes the value back to
 that port's path by default, so a template binds the port and nothing else
-(doc/widget-events-design.md, "Default write-back").
+(doc/ADR/0002-widget-events.md, "Default write-back").
 
 ## Implementing (`@wirework/react`)
 
@@ -106,7 +110,7 @@ The basics every UI library has:
   `filter` (a list of `values`, or `text`) and `sortable` are DATA a loader
   derives from the server's description; with `headerFilters` on (off here,
   on for the infinite table) they are offered IN THE HEADERS
-  (doc/row-window-design.md): a values column gets a list to tick (a filter
+  (doc/ADR/0007-row-window-and-header-filters.md): a values column gets a list to tick (a filter
   icon), a text column a SEARCH icon opening a box to type in; what is
   chosen is controlled through the `filterIn` (`{ property: [values] }`)
   and `filterLike` (`{ property: text }`) ports and every change emits
@@ -139,7 +143,7 @@ The basics every UI library has:
   to append the next rows (`table-view/load` with `more: true`). It renders
   a WINDOW of the rows it holds — those around the visible part of the box,
   twice its height in all, the rest blank space of their height — so it is
-  a virtual list (doc/row-window-design.md). Implementations expose the
+  a virtual list (doc/ADR/0007-row-window-and-header-filters.md). Implementations expose the
   scroll box as `infinite-table-scroll`, the rows held as `data-held` and a
   line "held of total" under the rows; the box takes the keyboard focus (a
   region named by that line) so End, Home and Page Down scroll it — a
@@ -171,7 +175,7 @@ conformance set and an antd implementation):
 - `divider` — display, nothing bound: `text`, `orientation` (where the
   title sits), `dashed`; role=separator.
 
-The dashboard set (added 2026-11-09, doc/more-widgets-design.md; each
+The dashboard set (added 2026-11-09, doc/ADR/0015-more-widgets.md; each
 with a conformance set and an antd implementation, each on a demo page):
 
 - `number` — controlled: `value` port a finite number or `null` (the
@@ -217,7 +221,7 @@ property, record }`. The antd implementation is a factory,
 - `timeline` — a HISTORY: `items` port (`[{ text, time?, title?,
 tone? }]`, data from the server), `mode`, `reverse`, `pending` (an open
   last entry); each entry exposes its tone as `data-tone`.
-- `dialog` — a CONTAINER with a port (doc/containers-design.md): `open`
+- `dialog` — a CONTAINER with a port (doc/ADR/0009-containers.md): `open`
   port, `changed { open: false }` written back when the user closes it
   (the close icon, the mask, Escape); `title`, `as` (modal / drawer),
   `placement`, `width`, `inline` (shown in place — previews, stories),

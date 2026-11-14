@@ -1,0 +1,49 @@
+{
+  "pages": {
+    "demo": {
+      "default": {
+        "engine": "list",
+        "items": [
+          { "id": "c1", "widget": "counter", "model": "widgets.counter", "template": "default" },
+          { "id": "c2", "widget": "counter", "model": "widgets.counter", "template": "quiet" }
+        ]
+      }
+    }
+  },
+  "on": {
+    "demo": {
+      "load": [{ "call": "counter/reset" }]
+    }
+  },
+  "widgets": {
+    "counter": {
+      "default": {
+        "inputs": { "value": "demo.count" },
+        "label": "Clicks",
+        "on": { "changed": [{ "call": "counter/reset" }, { "set": "demo.count", "from": "value" }] }
+      },
+      "quiet": {
+        "inputs": { "value": "demo.count" },
+        "step": 2,
+        "on": { "changed": [{ "set": "demo.count", "from": "value" }] }
+      }
+    }
+  },
+  "roles": {
+    "admin": {
+      "pages": {
+        "demo": {
+          "templates": {
+            "compact": {
+              "engine": "list",
+              "items": [{ "id": "c1", "widget": "counter", "model": "widgets.counter", "template": "default" }]
+            }
+          },
+          "cells": {
+            "c1": { "settings": { "default": { "label": "Admin clicks" } } }
+          }
+        }
+      }
+    }
+  }
+}

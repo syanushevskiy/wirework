@@ -1,0 +1,42 @@
+{
+  "templates": {
+    "default": {
+      "engine": "flex-rows",
+      "rows": [
+        {
+          "cells": [
+            {
+              "id": "label-editor-title",
+              "widget": "antd-label",
+              "model": "widgets.editor.title",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
+        },
+        {
+          "cells": [
+            {
+              "id": "editor-main",
+              "widget": "demo-code-editor",
+              "model": "widgets.editor.code",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
+        },
+        {
+          "cells": [
+            {
+              "id": "label-editor-source",
+              "widget": "antd-label",
+              "model": "widgets.editor.source",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -2,7 +2,7 @@
  * `result` contract — an OUTCOME, large: what happened (a status picture),
  * a title, a line of detail and, optionally, one action to take next. The
  * face of "there is no such run", "the request failed — Retry", "saved":
- * placed under a `when` like any widget (doc/conditions-design.md), it
+ * placed under a `when` like any widget (doc/ADR/0008-conditions.md), it
  * knows nothing about requests.
  *
  * Display with one intent: the action button EMITS `clicked` with its

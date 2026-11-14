@@ -1,5 +1,5 @@
 /**
- * Widget IO contract — typed INPUT ports (see doc/widget-io-design.md).
+ * Widget IO contract — typed INPUT ports (see doc/ADR/0001-widget-io.md).
  *
  * A widget declares WHAT store values it reads as named, typed ports. The
  * view model binds port names to concrete store paths under the reserved
@@ -7,7 +7,7 @@
  * schema from the declaration, so the contract and the schema can never
  * drift. Widgets never WRITE the store: a write is an event the widget
  * emits plus a reaction declared in the view model
- * (doc/widget-events-design.md).
+ * (doc/ADR/0002-widget-events.md).
  */
 import { z } from "zod";
 import { STORE_PATH, hasForbiddenSegment, isConfigPath } from "./names";

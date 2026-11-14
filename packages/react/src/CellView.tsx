@@ -5,7 +5,7 @@
  * Placement is the engine renderer's job: it wraps what `renderCell`
  * returns in its own item (a grid item, a flex row slot, a tab).
  *
- * A cell with a CONDITION (`when`, doc/conditions-design.md) keeps its
+ * A cell with a CONDITION (`when`, doc/ADR/0008-conditions.md) keeps its
  * place whatever the answer: `data-when` says it, and while the condition
  * does not hold the widget is unmounted — or, in edit mode, shown dimmed
  * with a note saying why it would be hidden, so it can still be found and
@@ -21,6 +21,7 @@ import {
   type ResolvedCell,
   type ResolvedCellOk,
 } from "@wirework/engine";
+import { useCellLoading } from "./lazy";
 import { CellKeyContext } from "./PageContext";
 import { useCellEmitter } from "./useCellEmitter";
 import { useShowing, type Showing } from "./useShowing";
@@ -94,6 +95,8 @@ function WidgetCell({
   // The registry stores framework-agnostic definitions; this adapter renders
   // React components (see ReactWidgetDefinition).
   const Widget = cell.definition.component as ComponentType<WidgetProps>;
+  // A lazy widget's code on its way (doc/ADR/0018-lazy-widgets.md): the cell says so, and a failure reaches the host.
+  const loading = useCellLoading(Widget, (failure) => onError?.(failure, { componentStack: null }));
   const hiddenNow = !shown && error === undefined;
   return (
     <div
@@ -103,6 +106,7 @@ function WidgetCell({
       data-widget={cell.widget}
       data-kind={cell.definition.kind}
       data-fallback={cell.fallback?.used}
+      {...(loading && showing.mounted ? { "data-loading": "true" } : {})}
       {...(when === undefined ? {} : { "data-when": String(shown) })}
       {...(appear === undefined ? {} : { "data-appear": appear })}
       {...(disappear === undefined ? {} : { "data-disappear": disappear })}

@@ -4,7 +4,7 @@ Feature: More widgets
   statistic and a divider. The controls store what the user picks at their
   port with nothing wired (their `changed` writes back by default); the
   statistic and the divider only show. Then the dashboard set
-  (doc/more-widgets-design.md): a number, a date and a date range stored
+  (doc/ADR/0015-more-widgets.md): a number, a date and a date range stored
   as JSON (a number or null, a text, a pair of texts — never a Date), a
   fact sheet, a result, a dialog, steps and a timeline, plus a long text
   and a confirmation as settings on the input and the button.

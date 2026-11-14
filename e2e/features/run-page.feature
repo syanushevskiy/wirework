@@ -1,5 +1,5 @@
 Feature: The run page — a fact sheet, a pipeline, a history, an outcome and a dialog
-  One run shown with the dashboard set (doc/more-widgets-design.md): the
+  One run shown with the dashboard set (doc/ADR/0015-more-widgets.md): the
   record as labelled FIELDS in the table's own cell kinds (a tag per state,
   the company's Copy button on the reference), where it stands in its
   PIPELINE, its HISTORY as the server tells it, a RESULT saying there is no

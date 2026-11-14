@@ -6,13 +6,13 @@
  * definitions are rejected. boot.ts is the host and keeps working without
  * this file; a real application replaces it with its own registrations.
  */
-import { errorText } from "@wirework/engine";
+import { defineMigration, errorText, renameWidget } from "@wirework/engine";
 import { cssGridEngine } from "@wirework/engine-css-grid";
 import { flexRowsEngine } from "@wirework/engine-flex-rows";
 import { flexLayoutEngine } from "@wirework/engine-flexlayout";
 import { gridstackEngine } from "@wirework/engine-gridstack";
 import { reactGridLayoutEngine } from "@wirework/engine-react-grid-layout";
-import type { Store, ViewModels } from "@wirework/schema";
+import { APP_OWNER, type Store, type ViewModels } from "@wirework/schema";
 import { createTableViewActions } from "@wirework/table-view";
 import { z } from "zod";
 import { demoAppState, sampleRuns, type DemoPage, type DemoRole, type Run } from "@wirework/view-data-models-examples";
@@ -36,8 +36,10 @@ import {
   forbidden,
 } from "../api/transport";
 import type { PlaygroundPage, Registries } from "../boot";
+import { codeEditorContract } from "../contracts/code-editor";
 import { statusBadgeContract } from "../contracts/status-badge";
-import { pageViewModels } from "../pages";
+import { allViewModels, pageViewModels } from "../pages";
+import { codeEditor } from "../widgets/code-editor-widget";
 import { CopyCell } from "../widgets/copy-cell";
 import { RunStatusCell } from "../widgets/run-status-cell";
 import { statusBadge } from "../widgets/status-badge";
@@ -58,27 +60,45 @@ export interface Demo {
   sessionState: Record<string, unknown>;
   /** One page's view models as its folder says (src/pages): what the store gets when the page opens, that page alone. */
   pageViewModels(page: DemoPage): ViewModels;
+  /** Every page's view models as one tree — what the user's saved views are read with when a session opens (boot.ts). */
+  allViewModels(): ViewModels;
   /** A session starts: the fake servers start over and the session request goes out. */
   startSession(shared: Store): void;
-  /** "Sign in as" another of the demo's people (doc/roles-design.md): the session request goes out again; resolves when it answered. */
+  /** "Sign in as" another of the demo's people (doc/ADR/0012-roles.md): the session request goes out again; resolves when it answered. */
   signIn(shared: Store, person: DemoRole): Promise<void>;
   pages: Record<DemoPage, PlaygroundPage>;
   builderPage: PlaygroundPage;
 }
 
 export function installDemo(
-  { contracts, registry, layoutEngines, actions, predicates, appearances }: Registries,
+  { contracts, registry, layoutEngines, actions, predicates, appearances, migrations }: Registries,
   navigator: Navigator,
 ): Demo {
+  // The application's own DATA FORMAT (doc/ADR/0017-versioning-and-upgrades.md) is at 2: the status badge's widget
+  // type was once `run-badge`. A view a user saved back then still names it; the step brings such a view forward
+  // when it is loaded (boot.ts), and nothing else in the application knows the old name.
+  migrations.register(
+    defineMigration({
+      owner: APP_OWNER,
+      to: 2,
+      description: 'The widget type "run-badge" is "status-badge"',
+      cell: renameWidget("run-badge", "status-badge"),
+    }),
+  );
+
   // Contracts: the standard kinds plus this app's own; widgets implement them.
   for (const contract of standardContracts) contracts.register(contract);
   contracts.register(statusBadgeContract);
+  contracts.register(codeEditorContract);
 
   // The table — and the fact sheet — offer this app's own cell renderers by name (`cell: { kind: "custom", name: "copy" }`).
   for (const widget of createAntdWidgets({ tableCells: { copy: CopyCell, "run-status": RunStatusCell } })) {
     registry.register(widget);
   }
   registry.register(statusBadge);
+  // A LAZY widget (doc/ADR/0018-lazy-widgets.md): its contract is registered here like any other, its component's
+  // code is asked for by the pages that show it — the editor page alone.
+  registry.register(codeEditor);
   // A playground is a test bench: the always-crashing widget proves isolation.
   for (const widget of antdTestWidgets) registry.register(widget);
 
@@ -90,7 +110,7 @@ export function installDemo(
   layoutEngines.register(flexLayoutEngine);
 
   // Host ACTIONS: what a user may attach to an event beyond a store write
-  // (doc/widget-events-design.md, "Listening"). Business code lives here,
+  // (doc/ADR/0002-widget-events.md, "Listening"). Business code lives here,
   // named and described; the builder lists them.
   actions.register({
     name: "reset-counter",
@@ -107,7 +127,7 @@ export function installDemo(
     description: "console.log the event (debugging)",
     handler: ({ event, args }) => console.log("[action log-event]", event, args),
   });
-  // The admin's Danger zone (doc/roles-design.md): the settings back to what the application starts with.
+  // The admin's Danger zone (doc/ADR/0012-roles.md): the settings back to what the application starts with.
   actions.register({
     name: "settings/reset-all",
     description: "Put every setting back to its default",
@@ -119,7 +139,7 @@ export function installDemo(
   const archiveServer = createRunsServer({ seed: sampleRuns, total: ARCHIVE_TOTAL, latencyMs: 300, details: true });
   const sessionApi = createSessionApi({ latencyMs: 300 });
   const loadSession = createSessionLoader(sessionApi);
-  // The Wirework admin's button (doc/roles-design.md): a role-only ACTION is a server call the session must be
+  // The Wirework admin's button (doc/ADR/0012-roles.md): a role-only ACTION is a server call the session must be
   // allowed — never a store write a condition hides. The fake server refuses every other session.
   actions.register({
     name: "runs/delete-selected",
@@ -150,7 +170,7 @@ export function installDemo(
   // action, the URL comes from the page. The playground's "network" is the
   // fake server; a real host passes `fetchTransport` instead. Every request
   // carries the SESSION, and the admin's view refuses a session without the
-  // admin role (doc/roles-design.md): the page asks, the server decides.
+  // admin role (doc/ADR/0012-roles.md): the page asks, the server decides.
   const transport = createFakeTransport(
     {
       [RUNS_VIEW_URL]: (request) => runsServer.fetchView(request),
@@ -167,7 +187,7 @@ export function installDemo(
   // Navigation: the host owns the router, pages only name where to go.
   for (const action of createNavActions(navigator)) actions.register(action);
 
-  // A PREDICATE of this application's own (doc/conditions-design.md): what
+  // A PREDICATE of this application's own (doc/ADR/0008-conditions.md): what
   // no standard check can say — two properties and a rule — as code with a
   // name, which a page's `when` picks like a standard one. The rule is the
   // fake server's: a failed run with an even id would run again.
@@ -177,7 +197,7 @@ export function installDemo(
     phrase: "can be retried",
     test: (run) => isRetryable(run),
   });
-  // The roles the user holds are a LIST (app.user.roles, doc/roles-design.md): "has the role" reads it —
+  // The roles the user holds are a LIST (app.user.roles, doc/ADR/0012-roles.md): "has the role" reads it —
   // "is one of" and "equals" are for a single value and do not apply to the list.
   predicates.register({
     name: "user/has-role",
@@ -188,7 +208,7 @@ export function installDemo(
   });
 
   // An appearance of this application's own: the name here, the keyframes
-  // `ww-drop` in index.css (doc/conditions-design.md, "Appearance").
+  // `ww-drop` in index.css (doc/ADR/0008-conditions.md, "Appearance").
   appearances.register({ name: "drop", description: "Drops in from above" });
 
   // Negative proof: every broken definition must be rejected loudly.
@@ -205,6 +225,7 @@ export function installDemo(
     rejections,
     sessionState: demoSessionState(),
     pageViewModels,
+    allViewModels,
     startSession: (shared) => {
       runsServer.reset();
       void loadSession(shared);

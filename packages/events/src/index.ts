@@ -1,4 +1,4 @@
-/** @wirework/events — default implementation of the EventBus contract (doc/widget-events-design.md). */
+/** @wirework/events — default implementation of the EventBus contract (doc/ADR/0002-widget-events.md). */
 import type { EventBus, EventFilter, EventListener, Unsubscribe, WidgetEvent } from "@wirework/schema";
 
 /** Nested-emit limit before the bus assumes a loop. */

@@ -4,7 +4,7 @@ Feature: Containers — a card that holds other widgets
   cards is still one page. The widgets inside read the store, emit and
   react exactly as on the page; a card's content is edited where a page is
   edited — the builder shows it as the page, with a breadcrumb back.
-  (doc/containers-design.md)
+  (doc/ADR/0009-containers.md)
 
   Scenario: The settings page keeps its controls in a card, and they work inside it
     Given I open the "settings" page

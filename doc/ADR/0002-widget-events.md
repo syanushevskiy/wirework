@@ -1,11 +1,15 @@
-# Widget events — typed signals widgets emit
+# ADR-0002: Widget events — typed signals widgets emit
+
+- **Status:** Accepted — built
+- **Date:** 2026-09-15
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 Diagrams: doc/events-and-reactions.drawio (1: from a click to the store,
 2: how one event's reaction chain runs).
 
 ## Motivation
 
-Widgets already exchange STATE through the store (doc/widget-io-design.md).
+Widgets already exchange STATE through the store (doc/ADR/0001-widget-io.md).
 Nothing expresses INTENT: "a row was clicked", "filters were applied",
 "refresh requested". Modelling those as store writes gives last-value
 semantics (bursts collapse to one render), pollutes exported state with

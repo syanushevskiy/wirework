@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { EventDefinition, SettingField } from "@wirework/schema";
+import { createMigrations, defineMigration, renameWidget } from "@wirework/engine";
 import { createStore } from "@wirework/store";
 import type { EditableTrees, SaveTrees } from "../use-commit";
 import { commitTrees } from "../use-commit";
@@ -24,7 +25,7 @@ import {
 } from "../form-drafts";
 import { counter, dial } from "./fixtures";
 
-describe("a named-list setting's entries (tabs, panels — doc/containers-design.md)", () => {
+describe("a named-list setting's entries (tabs, panels — doc/ADR/0009-containers.md)", () => {
   const panels: SettingField = {
     name: "panels",
     kind: "items",
@@ -336,5 +337,55 @@ describe("commitTrees — the one write path", () => {
       z.object({ pages: z.record(z.unknown()), widgets: z.record(z.unknown()) }).safeParse(seen[0]?.viewModels).success,
     ).toBe(true);
     expect(seen[0]?.userViewModels).toEqual({});
+  });
+
+  describe("with data formats (doc/ADR/0017-versioning-and-upgrades.md)", () => {
+    const migrations = createMigrations();
+    migrations.register(defineMigration({ owner: "app", to: 2, cell: renameWidget("old", "new") }));
+
+    it("stamps what it writes with the format this version writes", async () => {
+      const store = createStore({ viewModels: { pages: {}, widgets: {} } });
+      const saved: EditableTrees[] = [];
+      commitTrees(store, (trees) => void saved.push(trees), { viewModels, userViewModels }, undefined, migrations);
+      await tick();
+      expect(store.get("viewModels")).toEqual({ versions: { app: 2 }, ...viewModels });
+      expect(saved[0]?.userViewModels).toEqual({ versions: { app: 2 }, pages: {} });
+    });
+
+    it("never writes over a tree saved by a newer version: the commit is refused whole, and the host told", async () => {
+      const newer = { versions: { app: 9 }, pages: { p: { view: "theirs" } } };
+      const store = createStore({ viewModels, userViewModels: newer });
+      const save = vi.fn();
+      const failures: unknown[] = [];
+      const refused = (error: unknown) => void failures.push(error);
+      commitTrees(store, save, { viewModels: { pages: {}, widgets: {} }, userViewModels }, refused, migrations);
+      await tick();
+      expect(store.get("userViewModels")).toBe(newer);
+      expect(store.get("viewModels")).toBe(viewModels);
+      expect(save).not.toHaveBeenCalled();
+      expect(failures).toEqual([
+        new Error(
+          "Nothing was changed: what is stored was saved by a newer version of the application (data format app 9; this version reads up to 2)",
+        ),
+      ]);
+      // The shared page alone is another tree: writing it does not touch the user's.
+      commitTrees(store, save, { viewModels: { pages: { q: {} }, widgets: {} } }, refused, migrations);
+      await tick();
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(store.get("userViewModels")).toBe(newer);
+    });
+
+    it("refuses any stamp above 1 when the host gave no formats", () => {
+      const store = createStore({ viewModels, userViewModels: { versions: { app: 2 } } });
+      const failures: unknown[] = [];
+      commitTrees(
+        store,
+        () => undefined,
+        { userViewModels },
+        (error) => void failures.push(error),
+      );
+      expect(failures).toHaveLength(1);
+      expect(store.get("userViewModels")).toEqual({ versions: { app: 2 } });
+    });
   });
 });

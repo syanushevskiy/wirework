@@ -1,4 +1,8 @@
-# Page views — the team's prebuilt layouts and the user's own, chosen from a list, shared as JSON
+# ADR-0006: Page views — the team's prebuilt layouts and the user's own, chosen from a list, shared as JSON
+
+- **Status:** Accepted — built
+- **Date:** 2026-10-24
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 
@@ -74,7 +78,7 @@ change through resolve, validation, the editor and every scenario, for a
 secondary need); a `kind` field in the file; a modal dialog (the widget
 editor set the precedent: a panel above the page, nothing floats over it).
 
-## Where edits go (amends doc/layout-engines-design.md)
+## Where edits go (amends doc/ADR/0003-layout-engines.md)
 
 With the overlay on, a page-template op edits what the user SEES: a user
 view in place; a prebuilt view as a fresh copy named "my-own" — or the

@@ -37,17 +37,21 @@ import {
   createAppearances,
   createContracts,
   createLayoutEngines,
+  createMigrations,
   createPredicates,
   createRegistry,
+  upgradeTrees,
   type ActionRegistry,
   type AppearanceRegistry,
   type ContractRegistry,
   type LayoutEngineRegistry,
+  type Migrations,
   type PredicateRegistry,
+  type Upgraded,
   type WidgetRegistry,
 } from "@wirework/engine";
 import { createEventBus } from "@wirework/events";
-import type { EventBus, Store } from "@wirework/schema";
+import type { EventBus, Store, UserViewModels } from "@wirework/schema";
 import { layerStores } from "@wirework/store";
 import type { DemoPage, DemoRole } from "@wirework/view-data-models-examples";
 import type { Navigator } from "./actions/nav-actions";
@@ -63,10 +67,12 @@ export interface Registries {
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;
   actions: ActionRegistry;
-  /** The checks a widget's `when` may name: the standard ones, plus this application's (doc/conditions-design.md). */
+  /** The checks a widget's `when` may name: the standard ones, plus this application's (doc/ADR/0008-conditions.md). */
   predicates: PredicateRegistry;
   /** The animations a conditional widget may appear and disappear with: the standard ones, plus this application's. */
   appearances: AppearanceRegistry;
+  /** The steps that bring a stored document of an older data format to today's (doc/ADR/0017-versioning-and-upgrades.md). */
+  migrations: Migrations;
 }
 
 /** What the router matched: put at `route` in a demo page's store, so widgets can bind to it. */
@@ -123,15 +129,38 @@ export function boot({ navigator }: { navigator: Navigator }) {
     actions: createActions(),
     predicates: createPredicates(),
     appearances: createAppearances(),
+    migrations: createMigrations(),
   };
   const demo = installDemo(registries, navigator);
   // Boot is over: the registries are what the pages render against, and a
   // registration after this point would be invisible to them — so it fails.
   for (const extensionPoint of Object.values(registries)) extensionPoint.seal();
 
+  /**
+   * THE DOOR (doc/ADR/0017-versioning-and-upgrades.md): whatever this host
+   * loads — a page's folder, the user's saved views — goes through
+   * `upgradeTrees` before it reaches a store, so everything after it reads
+   * today's data format. What the door could not read comes back as it was
+   * and is shown as a problem on the page; a step that failed is said here.
+   */
+  const { registry, migrations } = registries;
+  const told = (what: string, { problems, unread }: Upgraded): void => {
+    for (const problem of [...problems, ...Object.values(unread)]) console.warn(`[wirework] ${what}: ${problem}`);
+  };
+
   let demoSession: AppSession | undefined;
   const openDemoSession = (): AppSession => {
-    const shared = createPlaygroundStore("app", demo.sessionState);
+    // The user's own views are read WITH every page of the application: the widgets their settings belong to live there.
+    const loaded = upgradeTrees(
+      { viewModels: demo.allViewModels(), userViewModels: demo.sessionState["userViewModels"] as UserViewModels },
+      { registry, migrations },
+    );
+    const unreadViews = loaded.unread.userViewModels;
+    told("the user's saved views", {
+      ...loaded,
+      unread: unreadViews === undefined ? {} : { userViewModels: unreadViews },
+    });
+    const shared = createPlaygroundStore("app", { ...demo.sessionState, userViewModels: loaded.userViewModels });
     let started = false;
     // The pages' view models as this session last saw them — an inspector edit, a saved page — this demo's
     // stand-in for the server a host would ask. The page shown is the only one in the store.
@@ -146,7 +175,9 @@ export function boot({ navigator }: { navigator: Navigator }) {
       },
       enter: (page) => {
         if (current !== undefined) remembered.set(current, shared.get("viewModels"));
-        shared.setConfig("viewModels", remembered.get(page) ?? demo.pageViewModels(page));
+        const opened = upgradeTrees({ viewModels: demo.pageViewModels(page) }, { registry, migrations });
+        told(`the page "${page}"`, opened);
+        shared.setConfig("viewModels", remembered.get(page) ?? opened.viewModels);
         current = page;
       },
     };
@@ -191,7 +222,7 @@ export function boot({ navigator }: { navigator: Navigator }) {
   };
 
   /**
-   * "Sign in as" another person (doc/roles-design.md): the session request
+   * "Sign in as" another person (doc/ADR/0012-roles.md): the session request
    * goes out again and rewrites the application's global state — the user
    * with their roles, the permissions, the lists — and once it has answered
    * the page at `path` is opened AGAIN, a fresh visit: its data starts over

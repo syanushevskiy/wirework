@@ -1,7 +1,7 @@
 # @wirework/engine-css-grid
 
 A page as a CSS grid of SLOTS laid out by template areas
-(doc/css-grid-design.md). `areas` is CSS's own `grid-template-areas`, one
+(doc/ADR/0013-css-grid.md). `areas` is CSS's own `grid-template-areas`, one
 string per row, its tokens the ids of the page's cells and `.` for an empty
 slot: the cell's id IS its area, there is no mapping. Peer: `react`. No
 layout library: the browser lays the slots out, the engine only says which

@@ -1,5 +1,5 @@
 /**
- * css-grid renderer (doc/css-grid-design.md) — one CSS grid whose template
+ * css-grid renderer (doc/ADR/0013-css-grid.md) — one CSS grid whose template
  * areas are the page's cell ids; every cell an item placed by `gridArea`.
  * In edit mode the grid grows a ghost per slot (the drop targets, the
  * trailing "+" ones growing the picture), every item a handle bar to drag

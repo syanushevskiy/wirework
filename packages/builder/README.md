@@ -61,7 +61,7 @@ ships English defaults a host can replace.
 
 ## Page views
 
-A page's VIEWS (doc/page-views-design.md) are its templates as the user sees
+A page's VIEWS (doc/ADR/0006-page-views.md) are its templates as the user sees
 them: the prebuilt ones under `viewModels.pages.<page>` and the user's own
 under `userViewModels.pages.<page>.templates`; the kind is where a view
 lives, nothing is stored. `pageViews(trees, page)` lists them; `usePageViews`
@@ -75,7 +75,7 @@ layouts and your application decides where the files go.
 
 ## Roles
 
-A page read through the user's ROLES (doc/roles-design.md): the engine folds
+A page read through the user's ROLES (doc/ADR/0012-roles.md): the engine folds
 the base, then the entries of `viewModels.roles.<role>` for the roles the
 session lists, then the user's overlay. The builder's third edit target is
 a role: `EditTarget` is `"base" | "user" | { role }` (`roleOf`), and every
@@ -100,7 +100,7 @@ refuses throws from `changeLayout` instead of warning on the console.
 
 ## Export page
 
-The WHOLE shared page as one file (doc/pages-as-code-design.md): the
+The WHOLE shared page as one file (doc/ADR/0011-pages-as-code.md): the
 engine's `pageFile` — the page's prebuilt templates, its `on`, the widget
 templates its cells reference down into its containers, and the route your
 application gives it — as `<page>.page.json`. `usePageExport` takes the
@@ -123,7 +123,7 @@ models with the engine's `mergePageFiles([file], viewModels)`.
   following the port's path) and a list of rows, run in order, each `set` a
   path from a payload field or `call` an action with its declared
   parameters (`addReaction`, `removeReaction`); and the CONDITION under
-  which the widget shows (doc/conditions-design.md) as rows of a path, a
+  which the widget shows (doc/ADR/0008-conditions.md) as rows of a path, a
   check picked from the predicate registry by its phrase — or the
   `CONSTRUCTOR`, a tree of groups (and / or, negated, nested as
   parentheses) and tests built step by step (`editConstructor`, `editTree`,
@@ -149,7 +149,7 @@ models with the engine's `mergePageFiles([file], viewModels)`.
   `changeLayoutOp`, `removeCellOp`, `wrapCellOp`, `saveWidgetOp`,
   `setCellViewOp`, and `plannedInput` for the shown layout's plan — so the
   routing by target and location is tested without a hook. With `at`
-  (doc/containers-design.md — a chain of containers, `card-1`,
+  (doc/ADR/0009-containers.md — a chain of containers, `card-1`,
   `tabs-1/tabs.0.content`) the session edits the layout INSIDE a container's
   template, shown as the page under its nested name (`layoutPage`); every
   op remembers where it was made, and a host saves or cancels the session

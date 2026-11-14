@@ -1,6 +1,6 @@
 /**
  * The blank space around the infinite table's ROW WINDOW
- * (doc/row-window-design.md): antd renders the window's rows into a table
+ * (doc/ADR/0007-row-window-and-header-filters.md): antd renders the window's rows into a table
  * body of ours, which puts a blank row as tall as the rows above the window
  * before them and one as tall as the rows below after them — so the
  * scrollbar and the end of the list are where every row rendered would put

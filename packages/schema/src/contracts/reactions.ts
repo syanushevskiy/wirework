@@ -1,6 +1,6 @@
 /**
  * Event reactions — DECLARATIVE subscriptions in a widget's view model
- * (doc/widget-events-design.md).
+ * (doc/ADR/0002-widget-events.md).
  *
  *   on: { "<event>": [ { set: "<store path>", from?: "<payload path>", value?: <literal> }
  *                    | { call: "<action name>", with?: { ...static args } } ] }

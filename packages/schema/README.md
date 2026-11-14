@@ -17,7 +17,7 @@ against, plus the shared path rules. Depends on zod only.
   `callReactionSchema` / `CallReaction`), `Reaction`, `EventBindings`,
   `reactionsByEventSchema`, `eventBindingsSchema`, `widgetBindingsSchema`
   (ports + reactions in one go), `WidgetBindings`.
-- **Conditions** (doc/conditions-design.md): `whenSchema` / `When`
+- **Conditions** (doc/ADR/0008-conditions.md): `whenSchema` / `When`
   (`whenTestSchema` / `WhenTest`, `whenAnySchema` / `WhenAny`,
   `whenExpressionSchema` / `WhenExpression` — the constructor, a condition
   in words —, `WhenMember`) — the `when` section of a view model, a list
@@ -48,13 +48,13 @@ against, plus the shared path rules. Depends on zod only.
 
 - `ViewModels` / `viewModelsSchema` — pages (`PageViewModel`,
   `pageViewModelSchema`, `Templates`), widget templates, page-level
-  reactions and `roles` (doc/roles-design.md): what a ROLE's pages are, in
+  reactions and `roles` (doc/ADR/0012-roles.md): what a ROLE's pages are, in
   the user overlay's shape, keyed by role name (`ROLE_NAME`); `CellBase` /
   `cellBaseSchema` is what every layout engine's cell carries.
 - `UserViewModels` / `userViewModelsSchema` — a user's overlay (and a
   role's entry): `PageUserViewModel` (template choice, own templates, cells)
   and `WidgetUserViewModel` (template choice, settings), every level strict.
-- `PageFile` / `pageFileSchema` — one page as a file (doc/pages-as-code-design.md):
+- `PageFile` / `pageFileSchema` — one page as a file (doc/ADR/0011-pages-as-code.md):
   its templates, `on`, the widgets its cells reference, its `route`, and
   `roles` — what every role says about the page.
 

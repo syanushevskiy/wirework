@@ -49,7 +49,7 @@ export const dial: AnyWidgetDefinition = {
   component: () => null,
 };
 
-/** A CONTAINER: its `content` holds a layout (doc/containers-design.md). */
+/** A CONTAINER: its `content` holds a layout (doc/ADR/0009-containers.md). */
 export const box: AnyWidgetDefinition = {
   type: "box",
   io: { inputs: {} },

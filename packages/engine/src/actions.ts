@@ -1,6 +1,6 @@
 /**
  * Action registry — what a `call` reaction invokes. Names may be namespaced
- * ("runs/load"), as doc/actions-design.md requires.
+ * ("runs/load"), as doc/ADR/0005-actions.md requires.
  */
 import { ACTION_NAME, type ActionDefinition } from "@wirework/schema";
 import { createNamedRegistry, type NamedRegistry } from "./named-registry";

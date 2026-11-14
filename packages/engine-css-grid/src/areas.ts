@@ -1,5 +1,5 @@
 /**
- * The PICTURE's arithmetic, pure (doc/css-grid-design.md): `areas` read as
+ * The PICTURE's arithmetic, pure (doc/ADR/0013-css-grid.md): `areas` read as
  * a grid of tokens, a cell's span, the rectangle rule CSS insists on, a
  * rectangle placed or a slot filled, the grid grown or shrunk, and what is
  * wrong with a picture or a track size — one place for every rule the

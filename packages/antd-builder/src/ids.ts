@@ -27,7 +27,7 @@ export const reactionFieldId = (event: string, part: string, index = 0): string 
 export const paramFieldId = (event: string, param: string, index = 0): string =>
   reactionFieldId(event, `param-${param}`, index);
 /**
- * The CONDITION rows ("Show when", doc/conditions-design.md), numbered like
+ * The CONDITION rows ("Show when", doc/ADR/0008-conditions.md), numbered like
  * the reactions: `condition-path`, `condition-2-path`, … (`index` from 0);
  * the section's own control is `condition-add`.
  */

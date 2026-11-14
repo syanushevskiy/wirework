@@ -2,9 +2,69 @@
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { confirmButton, dropdown, option } from "../support/antd";
+import type { Console } from "../support/console";
 import { cell, live } from "../support/page";
 
-const { When, Then } = createBdd();
+const { Given, When, Then } = createBdd();
+
+/* --------------------- lazy widgets (doc/ADR/0018-lazy-widgets.md) --------------------- */
+
+/** The lazy widgets whose code arrived, as the playground reports them (`wirework.loaded()`), one entry per fetch. */
+const loadedCode = (page: Page): Promise<readonly string[]> =>
+  page.evaluate(() => (window as Console).wirework?.loaded() ?? []);
+
+Then("the code of the widget {string} was not loaded", async ({ page }, type: string) => {
+  expect(await loadedCode(page)).not.toContain(type);
+});
+
+Then("the code of the widget {string} was loaded once", async ({ page }, type: string) => {
+  await expect.poll(async () => (await loadedCode(page)).filter((name) => name === type)).toHaveLength(1);
+});
+
+/** Its widget's code is on the way: say `the server is slow to answer` first, or this races the code. */
+Then("the cell {string} is loading", async ({ page }, id: string) => {
+  await expect(cell(page, id)).toHaveAttribute("data-loading", "true");
+  await expect(cell(page, id).getByTestId("cell-loading")).toHaveCount(1);
+});
+
+Then("the cell {string} shows its widget", async ({ page }, id: string) => {
+  await expect(cell(page, id)).not.toHaveAttribute("data-loading");
+  await expect(cell(page, id).getByTestId("cell-loading")).toHaveCount(0);
+  await expect(cell(page, id).getByTestId("widget-error")).toHaveCount(0);
+});
+
+/** A lost connection, as far as a lazy widget's code goes — say it before opening the page. */
+Given("the code of the widgets cannot be fetched", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as Console).wireworkFailCode = true;
+  });
+});
+
+When("the code of the widgets can be fetched again", async ({ page }) => {
+  await page.evaluate(() => {
+    (window as Console).wireworkFailCode = false;
+  });
+});
+
+Then("the cell {string} says its widget could not be loaded", async ({ page }, id: string) => {
+  const problem = cell(page, id).getByTestId("widget-error");
+  await expect(problem).toHaveAttribute("data-problem", "load-failed");
+  await expect(problem).toContainText("could not be loaded");
+});
+
+When("I load the widget of the cell {string} again", async ({ page }, id: string) => {
+  await cell(page, id).getByRole("button", { name: "Load again" }).click();
+});
+
+const codeEditor = (page: Page) => live(page).getByTestId("code-editor");
+
+When("I replace the code in the editor with {string}", async ({ page }, code: string) => {
+  await codeEditor(page).getByRole("textbox").fill(code);
+});
+
+Then("the code editor has {int} line(s)", async ({ page }, lines: number) => {
+  await expect(codeEditor(page)).toHaveAttribute("data-lines", String(lines));
+});
 
 /* ------------------------------ binding ------------------------------ */
 

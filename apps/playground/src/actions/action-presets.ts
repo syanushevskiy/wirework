@@ -1,6 +1,6 @@
 /**
  * Action PRESETS — a call reaction with a name a user reads
- * (doc/actions-design.md, "Hundreds of actions"). The PROPOSED contract: it
+ * (doc/ADR/0005-actions.md, "Hundreds of actions"). The PROPOSED contract: it
  * moves to @wirework/schema when phase 5 is built; it lives here so the
  * demo's action-config.ts typechecks against the actions it names.
  *

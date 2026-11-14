@@ -2,7 +2,7 @@
  * ALL page-toolbar logic lives here (guidelines: render-only components):
  * what the toolbar above a page offers — the engine choice while the page
  * is empty, the edit session's Edit / Save / Cancel with its pending count,
- * the user-overlay switch, the ROLE edited for (doc/roles-design.md) and
+ * the user-overlay switch, the ROLE edited for (doc/ADR/0012-roles.md) and
  * where edits go — and WHY a control is locked, as a reason code the UI
  * says in its own words. The facts come from the host's composition of
  * `useBuilder` and `usePageEditing`; this hook only decides what the
@@ -14,7 +14,7 @@ import { chainSteps } from "@wirework/engine";
 import type { EditLock, EngineLock, OverlayLock } from "./locks";
 import { roleOf, type EditTarget } from "./page-edits";
 
-/** Why a role name typed in the toolbar cannot be added yet — or nothing, when it can (doc/roles-design.md). */
+/** Why a role name typed in the toolbar cannot be added yet — or nothing, when it can (doc/ADR/0012-roles.md). */
 export function roleNameProblem(name: string, known: readonly string[]): string | undefined {
   if (name === "") return "type a role name";
   if (!ROLE_NAME.test(name)) return "a role name is kebab-case — letters, digits and dashes, like app-user";
@@ -30,7 +30,7 @@ export interface LayoutCrumb {
 }
 
 export interface PageToolbarInput {
-  /** The page shown, and — when the layout shown sits inside its containers (doc/containers-design.md) — the chain to it. */
+  /** The page shown, and — when the layout shown sits inside its containers (doc/ADR/0009-containers.md) — the chain to it. */
   page: string;
   at?: string | undefined;
   /** Show the page itself (undefined) or the layout at a chain: following a breadcrumb. */
@@ -53,7 +53,7 @@ export interface PageToolbarInput {
   onToggleOverlay: (on: boolean) => void;
   target: EditTarget;
   /**
-   * The roles a builder may edit FOR (doc/roles-design.md) — every role the
+   * The roles a builder may edit FOR (doc/ADR/0012-roles.md) — every role the
    * application grants, as the host knows them. With `onSelectRole`, the
    * toolbar offers the choice: everyone, or one of them.
    */

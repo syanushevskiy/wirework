@@ -1,0 +1,27 @@
+{
+  "widgets.editor.code": {
+    "default": {
+      "inputs": {
+        "value": "editor.source"
+      },
+      "label": "Source",
+      "language": "json",
+      "rows": 10
+    }
+  },
+  "widgets.editor.source": {
+    "default": {
+      "inputs": {
+        "text": "editor.source"
+      },
+      "text": "",
+      "tone": "muted"
+    }
+  },
+  "widgets.editor.title": {
+    "default": {
+      "text": "Editor — a heavy widget whose code only this page loads",
+      "tone": "accent"
+    }
+  }
+}

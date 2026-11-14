@@ -1,7 +1,7 @@
 /**
  * Page views — ONLY presentation (logic in @wirework/builder's
  * usePageViews): the list of a page's views grouped into the team's
- * PREBUILT ones, the held ROLES' (doc/roles-design.md) and the user's own
+ * PREBUILT ones, the held ROLES' (doc/ADR/0012-roles.md) and the user's own
  * (MINE), the shown one chosen, and the
  * five actions — Save as, Rename, Delete, Share, Import — with a panel
  * under the row for the name to type or the JSON to read or paste. Every

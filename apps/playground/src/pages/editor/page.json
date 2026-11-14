@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "editor",
+  "route": {
+    "path": "/demo/editor",
+    "title": "Editor",
+    "menu": true
+  }
+}

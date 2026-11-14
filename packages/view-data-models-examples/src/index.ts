@@ -8,7 +8,7 @@
  * showing how roles work. Its PAGES — their layouts, reactions, roles'
  * entries and widget templates — are NOT here: each is a folder of the
  * host's own source (`apps/playground/src/pages/<page>/`, one JSON file for
- * the page, its view model and its widgets; doc/pages-as-code-design.md),
+ * the page, its view model and its widgets; doc/ADR/0011-pages-as-code.md),
  * which the store gets when the page opens. Here is what the pages are
  * named (`DEMO_PAGES`), the GLOBAL state a session starts with
  * (`demoAppState`: the user's settings — who the user is, what they may do
@@ -39,7 +39,17 @@ export const builderViewModels: ViewModels = {
 };
 
 /** The demo application's pages, in menu order. "run" is reached from the runs list, not the menu. */
-export const DEMO_PAGES = ["overview", "runs", "history", "archive", "run", "settings", "cards", "roles"] as const;
+export const DEMO_PAGES = [
+  "overview",
+  "runs",
+  "history",
+  "archive",
+  "run",
+  "settings",
+  "cards",
+  "roles",
+  "editor",
+] as const;
 export type DemoPage = (typeof DEMO_PAGES)[number];
 
 /**
@@ -201,7 +211,7 @@ export const demoAppState: { app: { settings: UserSettings } } = {
 
 /**
  * Who the user is, as the session answers it: a name, a title, and the
- * ROLES they hold (doc/roles-design.md) from the broadest to the most
+ * ROLES they hold (doc/ADR/0012-roles.md) from the broadest to the most
  * specific — the server knows a Wirework admin is also an admin, so the list
  * says so and the configuration never has to.
  */
@@ -247,6 +257,8 @@ export const demoPageData: Record<DemoPage, Record<string, unknown>> = {
   settings: {},
   cards: { demo: { counter: 0 } },
   roles: {},
+  // The code the editor opens with: three lines, so the page shows what a change does.
+  editor: { editor: { source: '{\n  "hello": "world"\n}' } },
 };
 
 /**

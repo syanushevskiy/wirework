@@ -101,7 +101,7 @@ describe("useBuilder", () => {
   });
 });
 
-describe("useBuilder — for a role (doc/roles-design.md)", () => {
+describe("useBuilder — for a role (doc/ADR/0012-roles.md)", () => {
   it("places the widget in the role's own view — a copy of the shared layout with the new cell — and its template for everyone", () => {
     const shared: ViewModels = {
       pages: { builder: { default: { engine: "list", cells: [cell({ id: "custom-1" })] } } },
@@ -138,7 +138,7 @@ describe("useBuilder — for a role (doc/roles-design.md)", () => {
   });
 });
 
-describe("useBuilder — containers (doc/containers-design.md)", () => {
+describe("useBuilder — containers (doc/ADR/0009-containers.md)", () => {
   it("starts a placed container's layout empty, on the engine of the layout it is placed in, and names it to the host", () => {
     const { result, store, onAdded } = setup(emptyPage());
     act(() => result.current.setEngine("grid"));

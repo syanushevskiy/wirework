@@ -4,7 +4,7 @@
  *  - premade rules are a closed set the builder offers as a select,
  *  - a custom rule is a regular expression from the view model.
  * Code-level custom validators would be a host registry injected like
- * actions (doc/widget-events-design.md, "Input validation") — not built.
+ * actions (doc/ADR/0002-widget-events.md, "Input validation") — not built.
  */
 import type { ValidationRule } from "@wirework/widget-contracts";
 export type { ValidationRule } from "@wirework/widget-contracts";

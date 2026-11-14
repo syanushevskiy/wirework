@@ -10,18 +10,18 @@ export const KEBAB_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 /**
  * Action names: kebab, optionally namespaced ("runs/load", "nav/go") as
- * doc/actions-design.md requires. One namespace segment, no nesting.
+ * doc/ADR/0005-actions.md requires. One namespace segment, no nesting.
  */
 export const ACTION_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*)?$/;
 
 /**
- * Predicate names (doc/conditions-design.md): the action grammar — the
+ * Predicate names (doc/ADR/0008-conditions.md): the action grammar — the
  * standard checks are plain ("equal", "one-of"), a host's own carry its
  * namespace ("runs/retryable").
  */
 export const PREDICATE_NAME = ACTION_NAME;
 /**
- * Role names (doc/roles-design.md): the action grammar — `admin`,
+ * Role names (doc/ADR/0012-roles.md): the action grammar — `admin`,
  * `ops/on-call` — so a role is a word in a condition's sentence and a key
  * of `viewModels.roles`. What the names mean is the host's: they come from
  * its session, and may as well be permissions.

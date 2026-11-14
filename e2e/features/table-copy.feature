@@ -6,7 +6,7 @@ Feature: Cells of a table are selected like a spreadsheet's, copied and exported
   copied pastes into a spreadsheet as cells: a line per row, tabs between;
   a tag copies its text, a link cell the address it leads to. Ctrl/Cmd+C
   copies too. The export saves every row the table holds, in the columns
-  it shows. (doc/row-window-design.md, "Cells are selected and copied")
+  it shows. (doc/ADR/0007-row-window-and-header-filters.md, "Cells are selected and copied")
 
   Scenario: A click selects a cell, a drag a rectangle, and the menu copies it with its headers
     Given I open the "history" page

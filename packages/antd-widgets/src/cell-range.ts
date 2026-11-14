@@ -1,5 +1,5 @@
 /**
- * The CELL SELECTION's arithmetic, pure (doc/row-window-design.md, "Cells
+ * The CELL SELECTION's arithmetic, pure (doc/ADR/0007-row-window-and-header-filters.md, "Cells
  * are selected and copied"): a range as the cell it started at and the cell
  * it reaches, its rectangle, which of the rectangle's edges a cell lies on,
  * what a cell COPIES — its text, and for a link cell the address it leads

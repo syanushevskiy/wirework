@@ -570,7 +570,7 @@ interface ItemsEditorProps {
 
 /**
  * The entries of a NAMED LIST (a tabs widget's tabs, a collapse's panels —
- * doc/containers-design.md): one row per entry with the label the user
+ * doc/ADR/0009-containers.md): one row per entry with the label the user
  * gives it, its other fields and Remove, and "+ one more" under them. The
  * layout an entry holds stays behind its row; a new entry gets an empty one
  * when the widget is added or saved.
@@ -814,7 +814,7 @@ export function WidgetForm({ form, bindingsLocked = false }: WidgetFormProps) {
         )}
       </Flex>
 
-      {/* The CONDITION (doc/conditions-design.md): rows that must all hold
+      {/* The CONDITION (doc/ADR/0008-conditions.md): rows that must all hold
           for the widget to show, saved as the template's `when`. Wiring,
           like ports and reactions: read-only in a user's own view. */}
       <Flex vertical gap="small" data-testid="widget-conditions">

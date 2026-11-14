@@ -1,5 +1,5 @@
 /**
- * `tabs` contract — a layout per tab (doc/containers-design.md). Each tab
+ * `tabs` contract — a layout per tab (doc/ADR/0009-containers.md). Each tab
  * holds a page template as its `content`, in the tabs widget's own
  * template; a tab's widgets mount when the tab is first shown and keep
  * what they had after. Nothing bound, nothing emitted.

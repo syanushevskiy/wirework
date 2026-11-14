@@ -52,7 +52,7 @@ export const dial: AnyWidgetDefinition = {
   component: () => null,
 };
 
-/** A CONTAINER with a NAMED LIST: panels with a key, a label, an `open` flag and a layout each (doc/containers-design.md). */
+/** A CONTAINER with a NAMED LIST: panels with a key, a label, an `open` flag and a layout each (doc/ADR/0009-containers.md). */
 export const panels: AnyWidgetDefinition = {
   type: "panels",
   io: { inputs: {} },

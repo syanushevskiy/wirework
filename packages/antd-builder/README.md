@@ -20,7 +20,7 @@ import { PageToolbar, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder
 - `PageToolbar` takes what `usePageToolbar` returns (`toolbar`) and,
   optionally, `texts` — the words for the lock codes and the edit targets
   (`DEFAULT_PAGE_TOOLBAR_TEXTS` is English: edits go to "everyone", "me"
-  or "role: {role}"). With roles to edit for (doc/roles-design.md) it
+  or "role: {role}"). With roles to edit for (doc/ADR/0012-roles.md) it
   shows the choice "for everyone / a role" (`edit-role`).
 - `PageViews` takes what `usePageViews` returns (`views`) and, optionally,
   `texts` (`DEFAULT_PAGE_VIEW_TEXTS`): the page's views in one list grouped
@@ -31,7 +31,7 @@ import { PageToolbar, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder
 - `PageExport` takes what `usePageExport` returns (`export`) and, optionally,
   `texts` (`DEFAULT_PAGE_EXPORT_TEXTS`): the button "Export page…" and a
   panel with the whole shared page as JSON, read-only, Close and "Download
-  `<page>.page.json`" (doc/pages-as-code-design.md).
+  `<page>.page.json`" (doc/ADR/0011-pages-as-code.md).
 - `WidgetBuilder` takes the registries, the store, the actions, the
   predicates a condition may pick (optional: the standard ones alone), the
   page name, `addLock` (why adding is not offered right now, or

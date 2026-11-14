@@ -1,5 +1,5 @@
 /**
- * The infinite table's ROW WINDOW (doc/row-window-design.md): `rowWindow`
+ * The infinite table's ROW WINDOW (doc/ADR/0007-row-window-and-header-filters.md): `rowWindow`
  * decides which rows render; this hook MEASURES what it needs — how far the
  * box is scrolled, its visible height, the average height of the rows on
  * screen — and looks again whenever the box scrolls or resizes, the rows

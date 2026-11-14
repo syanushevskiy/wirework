@@ -138,7 +138,7 @@ export interface SettingDraft extends SettingField {
 }
 
 /**
- * One entry of a NAMED-LIST setting (a tab, a panel — doc/containers-design.md)
+ * One entry of a NAMED-LIST setting (a tab, a panel — doc/ADR/0009-containers.md)
  * as the form edits it: the label the user types, its other fields' drafts,
  * and the saved entry behind it, kept whole for what the form does not show
  * (its key, the layout it holds). A new entry has no original.

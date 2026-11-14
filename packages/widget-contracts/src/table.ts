@@ -29,7 +29,7 @@
  *   request as they are — or `sort-changed` with the whole order; the
  *   reactions write them back and re-request.
  * - With the `filterRow` setting on, a column's `filter` is a control UNDER
- *   its header, always in view (doc/table-filters-cards-design.md): a search
+ *   its header, always in view (doc/ADR/0016-table-filters-and-cards.md): a search
  *   field with a search icon for free text — Enter or leaving the field
  *   applies it —, a list of values to pick otherwise. It reads the same
  *   `filterIn` / `filterLike` ports and emits the same `filter-changed`, so
@@ -67,6 +67,9 @@
  *   (`isIdColumn`: the rows' key, or a property named like one) 88, unless
  *   it says its own `width`; the sum over the columns shown (`tableWidth`)
  *   is the least the table needs. In a wider box it stretches to fill it.
+ * - A cell is ONE LINE: what does not fit its column is cut with an ellipsis
+ *   and the cell's `title` says it whole. The `wrapCells` setting lets the
+ *   text wrap instead.
  * - CELLS ARE SELECTED as in a spreadsheet (the `cellSelection` setting,
  *   on by default): a click selects a cell, a drag from it — or from the
  *   small square at the selection's bottom-right corner — or a Shift+click
@@ -400,6 +403,12 @@ export const tableSettings = {
     .string()
     .default("")
     .describe("The name of the CSV file the menu's export saves, without .csv; empty = one made from the rows path"),
+  wrapCells: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Let a cell's text wrap onto more lines; off (the default), every cell is one line, cut with an ellipsis where it does not fit its column",
+    ),
 };
 
 export const tableContract = defineContract({

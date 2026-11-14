@@ -8,7 +8,7 @@
  *
  * A page template DECLARES its layout engine by name; the engine plugin
  * owns the rest of the template's shape and validates it
- * (contracts/layout-engine.ts, doc/layout-engines-design.md).
+ * (contracts/layout-engine.ts, doc/ADR/0003-layout-engines.md).
  */
 import { z } from "zod";
 

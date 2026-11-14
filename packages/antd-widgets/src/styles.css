@@ -12,6 +12,39 @@
 }
 
 /*
+ * A cell is ONE LINE (both tables; the `wrapCells` setting turns it off): what does not fit its column is cut with
+ * an ellipsis — the pointer over it shows the value whole, in a tip —, so every row is as tall as the next. The
+ * table is laid out FIXED for it (the widgets say so): a column is as wide as its width says, never as its longest
+ * text.
+ */
+.ww-table[data-wrap-cells="false"] .ant-table-tbody > tr.ant-table-row > td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The tip of a cut cell: in the body, hung at the middle of the cell's top edge (its bottom edge at the window's top). */
+.ww-table__tip {
+  position: fixed;
+  z-index: 1070;
+  max-width: min(28rem, 90vw);
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  color: var(--ant-color-text-light-solid, #fff);
+  background: var(--ant-color-bg-spotlight, rgba(0, 0, 0, 0.85));
+  border-radius: var(--ant-border-radius, 6px);
+  box-shadow: var(--ant-box-shadow-secondary, 0 6px 16px rgba(0, 0, 0, 0.08));
+  transform: translate(-50%, calc(-100% - 0.375rem));
+}
+
+.ww-table__tip[data-below="true"] {
+  transform: translate(-50%, 0.375rem);
+}
+
+/*
  * The cell selection (both tables): cells are selected, not their text; the selected rectangle is tinted with an
  * outline along its edges (each cell draws the sides it lies on), the cell it started at stays clear, and the last
  * cell carries the small square that says the corner can be dragged.

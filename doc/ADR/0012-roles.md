@@ -1,4 +1,8 @@
-# Roles — one page, different for an admin and for everybody else
+# ADR-0012: Roles — one page, different for an admin and for everybody else
+
+- **Status:** Accepted — built
+- **Date:** 2026-11-05
+- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
 
 Designed 5 November 2026 with the tiger team (doc/team_tiger.md), at the
 product owner's ask. Status: BUILT 6 November 2026, both phases (story
@@ -29,7 +33,7 @@ Three things hide in that sentence, and they are not the same thing:
   (`actions/session-loader.ts`). Global state, present on every page of
   the demo application. One role as text today; the fixture's is "QA
   engineer".
-- **Conditions** (doc/conditions-design.md, WW-25): a widget's `when` is a
+- **Conditions** (doc/ADR/0008-conditions.md, WW-25): a widget's `when` is a
   list of tests over store paths with named predicates, AND of ORs, or the
   constructor in words. The design doc already shows the role case —
   `{ path: "app.permissions.role", is: "one-of", to: ["admin", "owner"] }`
@@ -37,7 +41,7 @@ Three things hide in that sentence, and they are not the same thing:
   cell in the layout as a blank (accepted then: no reflow on store
   changes). A `when` lives in the widget's template beside `inputs` and
   `on`; the user overlay may not carry one.
-- **Page views** (doc/page-views-design.md, WW-22): a page has several
+- **Page views** (doc/ADR/0006-page-views.md, WW-22): a page has several
   prebuilt templates (`viewModels.pages.runs.default`, `.compact`), the
   user picks one in the overlay (`userViewModels.pages.runs.view`). A view
   is a LAYOUT of the same page: which cells, where. Two views may hold
@@ -556,7 +560,7 @@ Verified by `roles.feature` (nine scenarios), the engine's fold, validation,
 tree and page-file tests, the React adapter's role tests, the builder's role
 tests for the editing session and the views, and the toolbar story.
 
-**The roles page (9 November 2026, doc/more-widgets-design.md "Built";
+**The roles page (9 November 2026, doc/ADR/0015-more-widgets.md "Built";
 rebuilt the same day on the role layer).** A page of the demo that shows
 a role in the layer's own shape: one card with TWO templates — `default`,
 an input everyone sees and a line saying how it works; `admin`, the same

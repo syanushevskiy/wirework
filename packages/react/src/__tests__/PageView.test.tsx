@@ -67,7 +67,7 @@ describe("PageView", () => {
     expect(problem.textContent).toBe('Unknown widget "ghost"');
   });
 
-  it("shows the page as the user's roles see it, the last role's view winning (doc/roles-design.md)", () => {
+  it("shows the page as the user's roles see it, the last role's view winning (doc/ADR/0012-roles.md)", () => {
     const admin = { engine: "list", cells: [cell(), cell({ id: "c2" })] };
     const withRoles = {
       ...echoModels(),

@@ -1,5 +1,5 @@
 /**
- * Appearances (doc/conditions-design.md, "Appearance"): the sixth
+ * Appearances (doc/ADR/0008-conditions.md, "Appearance"): the sixth
  * extension point. A conditional widget's `appear` and `disappear` name an
  * animation; this registry holds the standard five from the start and
  * whatever the host registers — a name and a description for the builder's

@@ -18,12 +18,23 @@ export function usePagePlan(input: ResolveInput, provided?: ResolvedPage): Resol
     actions,
     predicates,
     appearances,
+    migrations,
   } = input;
   return useMemo(() => {
     if (provided) return provided;
     // The layers one way or the other (ResolveLayers): ready-made for a layout inside a container, else the user's.
     const layers: ResolveLayers = overlays === undefined ? { roles, userViewModels } : { overlays };
-    return resolvePage({ viewModels, page, registry, layoutEngines, actions, predicates, appearances, ...layers });
+    return resolvePage({
+      viewModels,
+      page,
+      registry,
+      layoutEngines,
+      actions,
+      predicates,
+      appearances,
+      migrations,
+      ...layers,
+    });
   }, [
     provided,
     viewModels,
@@ -36,5 +47,6 @@ export function usePagePlan(input: ResolveInput, provided?: ResolvedPage): Resol
     actions,
     predicates,
     appearances,
+    migrations,
   ]);
 }

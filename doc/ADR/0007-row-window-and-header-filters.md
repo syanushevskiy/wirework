@@ -1,4 +1,8 @@
-# Row window and shared header filters — the infinite table as a virtual list, the header filters on every table
+# ADR-0007: Row window and shared header filters — the infinite table as a virtual list, the header filters on every table
+
+- **Status:** Accepted — built
+- **Date:** 2026-10-24
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 

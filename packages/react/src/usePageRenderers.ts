@@ -25,7 +25,7 @@ export interface PageRenderersInput {
   plan: ResolvedPage;
   viewModels: ViewModels;
   userViewModels: UserViewModels | undefined;
-  /** The roles the user holds, in the session's order (doc/roles-design.md). */
+  /** The roles the user holds, in the session's order (doc/ADR/0012-roles.md). */
   roles: readonly string[] | undefined;
   registry: WidgetRegistry;
   layoutEngines: LayoutEngineRegistry;

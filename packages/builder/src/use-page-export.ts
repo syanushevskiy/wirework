@@ -3,7 +3,7 @@
  * the WHOLE shared page as one JSON file — its prebuilt views, what it
  * loads, the widgets its cells reference down into its cards, its route —
  * for an admin to download and hand to a developer, who puts it in the
- * application's source (doc/pages-as-code-design.md, "Export page"). The
+ * application's source (doc/ADR/0011-pages-as-code.md, "Export page"). The
  * file is the engine's `pageFile`; nothing here is stored and nothing is
  * written: an export changes no tree, so it goes through no commit.
  *

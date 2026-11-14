@@ -1,4 +1,8 @@
-# More widgets on Ant Design — which to build next, as the tiger team weighed them
+# ADR-0015: More widgets on Ant Design — which to build next, as the tiger team weighed them
+
+- **Status:** Accepted — built (the repeater still to be designed)
+- **Date:** 2026-11-09
+- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
 
 Written 9 November 2026 (story WW-34, not built). The ask: "consult with
 team tiger of what widgets to create based on AntD components more".
@@ -342,7 +346,7 @@ departed from the table above:
   rows with two templates — `default`, the input everyone sees and a line
   saying how it works; `admin`, the same plus a button with the echo of
   what it sets — and `roles.json` picking `admin` for the admin
-  (doc/roles-design.md, the role layer's cell template choice). A first
+  (doc/ADR/0012-roles.md, the role layer's cell template choice). A first
   cut had two cards; a second had the two admin widgets in the one card
   under a condition (`app.user.roles has the role admin`); the product
   owner chose the role layer (9 November 2026) so that what the admin sees

@@ -1,11 +1,11 @@
 /**
  * Filter actions — the logic behind the demo's DEPENDENT multi-selects.
- * Reactions never transform (doc/widget-events-design.md), so "the suites on
+ * Reactions never transform (doc/ADR/0002-widget-events.md), so "the suites on
  * offer depend on the applications chosen" is host code with a name: the
  * Applications multi-select stores its choice, then calls
  * `filters/sync-suites`, which offers the chosen applications' suites and
  * drops chosen suites that no longer belong. It is synchronous, so both
- * writes land inside the same pick (doc/widget-events-design.md, timing).
+ * writes land inside the same pick (doc/ADR/0002-widget-events.md, timing).
  */
 import { z } from "zod";
 import type { ActionDefinition } from "@wirework/schema";

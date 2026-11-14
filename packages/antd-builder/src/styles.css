@@ -134,7 +134,7 @@
   margin-left: auto;
 }
 
-/* The way back up from a layout inside a container: the page, then a crumb per container (doc/containers-design.md). */
+/* The way back up from a layout inside a container: the page, then a crumb per container (doc/ADR/0009-containers.md). */
 .ww-builder-crumbs {
   flex: 1 0 100%;
 }
@@ -152,7 +152,7 @@
   margin-bottom: 0.5rem;
 }
 
-/* ---- page export: the whole page as a file (doc/pages-as-code-design.md) ---- */
+/* ---- page export: the whole page as a file (doc/ADR/0011-pages-as-code.md) ---- */
 
 .ww-builder-export {
   display: grid;

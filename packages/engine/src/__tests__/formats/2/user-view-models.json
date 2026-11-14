@@ -1,0 +1,17 @@
+{
+  "versions": { "wirework": 2 },
+  "pages": {
+    "demo": {
+      "view": "mine",
+      "templates": {
+        "mine": {
+          "engine": "list",
+          "cells": [{ "id": "c1", "widget": "counter", "model": "widgets.counter", "template": "default" }]
+        }
+      },
+      "cells": {
+        "c1": { "settings": { "default": { "title": "My clicks" } } }
+      }
+    }
+  }
+}

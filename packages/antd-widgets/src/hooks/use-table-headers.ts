@@ -1,5 +1,5 @@
 /**
- * The HEADER FILTERS the two antd tables share (doc/row-window-design.md;
+ * The HEADER FILTERS the two antd tables share (doc/ADR/0007-row-window-and-header-filters.md;
  * `headerFilters` in the `table` contract), on top of the columns of
  * use-table-rows.ts:
  *
@@ -17,7 +17,7 @@
  * Not offered (the setting is off): the plain columns, and a `change` that
  * antd never has a reason to call.
  *
- * And the FILTER ROW (`filterRow`, doc/table-filters-cards-design.md): a
+ * And the FILTER ROW (`filterRow`, doc/ADR/0016-table-filters-and-cards.md): a
  * column with a `filter` shows its control under its title (HeaderFilter),
  * reading the same two ports and emitting the same `filter-changed` — with
  * the dropdowns on too, both show one choice.

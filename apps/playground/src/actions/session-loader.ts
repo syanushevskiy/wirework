@@ -2,7 +2,7 @@
  * Loads the demo application's GLOBAL state — once, when the application
  * starts, and again when "Sign in as" picks another person. Like every
  * loader it goes through the store one visible step at a time: app.loading,
- * then app.user (with the roles the user holds, doc/roles-design.md),
+ * then app.user (with the roles the user holds, doc/ADR/0012-roles.md),
  * app.permissions and app.lists. A failed session leaves the permissions
  * UNSET — which forbids editing (the host fails closed, use-playground.ts)
  * — and says what failed at app.error.

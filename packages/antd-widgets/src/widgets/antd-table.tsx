@@ -23,7 +23,9 @@ import { tableContract } from "@wirework/widget-contracts";
 import { NO_CELLS, useTable } from "../hooks/use-table";
 import type { TableCellRenderers } from "../hooks/use-table-cell";
 import type { TableToolbarItems } from "../hooks/use-table-toolbar";
+import { useCellTip } from "../hooks/use-cell-tip";
 import { CellMenu } from "./cell-menu";
+import { CellTip } from "./cell-tip";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
@@ -81,6 +83,7 @@ export function createAntdTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTab
       cells,
       items,
     );
+    const tip = useCellTip(!viewModel.wrapCells);
 
     return (
       // The root hears every press, right click and key of its cells: the cell selection is decided in one place.
@@ -92,10 +95,13 @@ export function createAntdTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTab
         data-filter-row={viewModel.filterRow}
         data-min-width={scroll.x}
         data-cell-selection={viewModel.cellSelection}
+        data-wrap-cells={viewModel.wrapCells}
         data-selected={selection.selected}
         {...selection.root}
+        {...tip.root}
       >
         <CellMenu view={selection} />
+        <CellTip tip={tip.tip} />
         <TableToolbar items={toolbar} columnMenu={columnMenu} />
         <Table
           size="small"
@@ -108,6 +114,8 @@ export function createAntdTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTab
           onRow={rowProps}
           onChange={change}
           scroll={scroll}
+          // One line a cell: the columns keep their widths whatever the text (styles.css).
+          tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
         />
       </div>
     );

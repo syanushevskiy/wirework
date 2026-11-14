@@ -1,6 +1,6 @@
 /**
  * Page events — what a PAGE itself emits, next to the events of its widgets
- * (doc/widget-events-design.md, "Page events").
+ * (doc/ADR/0002-widget-events.md, "Page events").
  *
  * A page declares reactions to them exactly like a widget does, with the
  * same two verbs — but in the view models' own `on` section, keyed by page:

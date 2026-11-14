@@ -90,7 +90,7 @@ export const WaitsForTheWiring: Story = {
 };
 
 /**
- * A CONDITION typed in words (doc/conditions-design.md): a path, a check by
+ * A CONDITION typed in words (doc/ADR/0008-conditions.md): a path, a check by
  * its phrase, the value it takes; the row reads itself back as a sentence,
  * a value the check refuses holds Add back, and what Add hands over carries
  * the condition as the template's `when`.

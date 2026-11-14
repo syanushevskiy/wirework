@@ -1,5 +1,5 @@
 /**
- * The demo's action PRESETS (doc/actions-design.md, "Hundreds of actions"):
+ * The demo's action PRESETS (doc/ADR/0005-actions.md, "Hundreds of actions"):
  * the arguments users attach most often, each under a name a user — or a
  * model — understands. The builder's picker offers presets first; a
  * reaction refers to one by id (`{ call, preset }`) and may override fields

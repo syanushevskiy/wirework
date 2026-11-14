@@ -26,7 +26,7 @@ declares:
 - `statisticContract` (one number, large, with its title) and
   `dividerContract` (`DIVIDER_ORIENTATIONS`, `DividerOrientation`) —
   display, like the first group.
-- The dashboard set (doc/more-widgets-design.md): `numberContract` (a
+- The dashboard set (doc/ADR/0015-more-widgets.md): `numberContract` (a
   number, `null` while the field is empty — never 0), `dateContract`
   (`DATE_PICKERS`, `DatePicker`, `DATE_FORMAT`: a day as the text
   `YYYY-MM-DD`, or ISO with the time; `format` is only what is SHOWN) and
@@ -50,7 +50,7 @@ declares:
   (`layoutItemSchema`, `LayoutItem`), `collapseContract` and
   `dialogContract` (`DIALOG_KINDS`, `DRAWER_PLACEMENTS`: a modal or a
   drawer open while its `open` port is true, closing written back) —
-  CONTAINERS (doc/containers-design.md): a layout of other widgets inside,
+  CONTAINERS (doc/ADR/0009-containers.md): a layout of other widgets inside,
   held in the widget's own template (a card's `content`; a `content` per
   tab or panel) and declared with `contains`, so the adapter renders it,
   boot validation walks into it and a builder edits it where it edits a

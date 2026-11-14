@@ -8,7 +8,7 @@
  * (`session()`: the roles of whoever is signed in), and an endpoint decides
  * what it answers from that — never from what the page asked for. The
  * admin's view of the runs refuses a session without the admin role
- * (doc/roles-design.md): the role layer decides what the page SHOWS and
+ * (doc/ADR/0012-roles.md): the role layer decides what the page SHOWS and
  * ASKS, the server what it ANSWERS — and `app.user.roles` in the store is
  * what the page shows by, never what the server trusts.
  */

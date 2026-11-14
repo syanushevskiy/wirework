@@ -1,7 +1,7 @@
 /**
  * @wirework/engine-flex-rows — the flex-rows layout engine plugin: rows
  * of cells, each row a flexbox, laid out by Tailwind's layout class names
- * (doc/flex-rows-design.md). Register it with the host's layout-engine
+ * (doc/ADR/0010-flex-rows.md). Register it with the host's layout-engine
  * registry; page templates use `engine: "flex-rows"`. Import
  * "./styles.css" once in the host.
  */

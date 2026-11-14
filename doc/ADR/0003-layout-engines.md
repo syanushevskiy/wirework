@@ -1,4 +1,8 @@
-# Layout engines — plugins, one page session, edits routed to a target
+# ADR-0003: Layout engines — plugins, one page session, edits routed to a target
+
+- **Status:** Accepted — built
+- **Date:** 2026-09-15
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 
@@ -30,7 +34,7 @@ whole model document for a docking layout. The core never looks inside a
 template. `PageViewModel` in the core is only `{ engine: string }` plus
 whatever the engine validates. `appendCell`'s `size` is a HINT: the
 builder asks for a `"tall"` cell when the widget holds a layout of its own
-(doc/containers-design.md); the grid engines give it twice their rows, an
+(doc/ADR/0009-containers.md); the grid engines give it twice their rows, an
 engine whose cells size to content ignores it.
 
 The React adapter narrows the renderer slot (`ReactLayoutEngine`,
@@ -69,14 +73,14 @@ cells: [{ id, widget, model, template, x, y, w, h }] }`; change payload =
 - `@wirework/engine-flex-rows` — `{ engine, rows: [{ classes?, cells: [{
 ..., classes? }] }] }`: each row a flexbox, a row's and a cell's `classes`
   Tailwind's flex class names, turned into style by the engine's own
-  table (doc/flex-rows-design.md); change payload = a cell's or a row's
+  table (doc/ADR/0010-flex-rows.md); change payload = a cell's or a row's
   classes, or a cell moved to a row and index; `validate` names unknown
   classes. Edit mode: a bar per row and a handle per cell with four arrows
   and a field for the classes; chrome sits in the handle.
 - `@wirework/engine-css-grid` — `{ engine, areas, columns?, rows?, gap?,
 cells }`: a CSS grid of SLOTS whose `areas` is CSS's own
   `grid-template-areas`, one string per row, its tokens the cells' ids and
-  `.` an empty slot — the cell's id IS its area (doc/css-grid-design.md);
+  `.` an empty slot — the cell's id IS its area (doc/ADR/0013-css-grid.md);
   change payload = the whole picture (with the tracks when the grid grew
   or shrank) or the tracks; `validate` names a non-rectangle (which CSS
   would silently drop, so the renderer leaves the picture unset), a token
@@ -161,10 +165,10 @@ The playground routes every op by an EDIT TARGET:
   templates (`userViewModels.pages.<page>.templates.<name>`) in place while
   it is the page `view`, otherwise a fresh copy of the shown prebuilt
   template named "my-own" (the sketch's "my own" pill; "my-own-2", … when
-  taken), selected as the view (doc/page-views-design.md: the views list,
+  taken), selected as the view (doc/ADR/0006-page-views.md: the views list,
   Save as, Rename, Delete, Share, Import). Widget edits become per-cell SETTINGS
   overlays (`...cells[<cellId>].settings[<template>]`). A layout INSIDE a
-  container (doc/containers-design.md) is a setting of the container, so
+  container (doc/ADR/0009-containers.md) is a setting of the container, so
   "Edit content" with the overlay on writes the user's own copy of it
   there (`cells["card-1"].settings.default.content`), and the widgets
   inside are customised under their chain keys (`cells["card-1/button"]`). The overlay never
@@ -202,7 +206,7 @@ independent.
   UNSET a base value.
 - "Add widget" is disabled while a page edit is open (Save or Cancel first).
 - flex-rows moves cells by arrows, not by drag, and knows no responsive
-  variants (`md:`) — doc/flex-rows-design.md, "Later".
+  variants (`md:`) — doc/ADR/0010-flex-rows.md, "Later".
 
 ## Tested (e2e/features/layout.feature, overlay.feature, builder.feature, flex-rows.feature)
 

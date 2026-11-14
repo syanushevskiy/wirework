@@ -13,7 +13,8 @@ import {
   templateNameProblem,
 } from "../page-views";
 import type { EditableTrees } from "../use-commit";
-import { enginesWith, listEngine, treesWithCounter } from "./fixtures";
+import { createMigrations, defineMigration, renameWidget } from "@wirework/engine";
+import { counter, enginesWith, listEngine, registryWith, treesWithCounter } from "./fixtures";
 
 const engines = enginesWith(listEngine);
 const compact = { engine: "list", cells: [] };
@@ -92,5 +93,33 @@ describe("the view file", () => {
     expect(parsePageViewFile(unknown, engines)).toMatchObject({ problem: { kind: "invalid-template" } });
     const broken = exportPageView(pageViewFile("demo", "x", { engine: "list", cells: "nope" }));
     expect(parsePageViewFile(broken, engines)).toMatchObject({ problem: { kind: "invalid-template" } });
+  });
+
+  describe("of another data format (doc/ADR/0017-versioning-and-upgrades.md)", () => {
+    const migrations = createMigrations();
+    migrations.register(defineMigration({ owner: "app", to: 2, cell: renameWidget("old-counter", "counter") }));
+    const door = { migrations, registry: registryWith(counter) };
+    const cell = (widget: string) => ({ id: "c1", widget, model: "widgets.counter", template: "default" });
+    const old = exportPageView(pageViewFile("demo", "mine", { engine: "list", cells: [cell("old-counter")] }));
+
+    it("says the format it is in when it is shared", () => {
+      expect(pageViewFile("demo", "mine", compact, migrations.current()).versions).toEqual({ app: 2 });
+      expect(pageViewFile("demo", "mine", compact, {})).not.toHaveProperty("versions");
+    });
+
+    it("is brought forward on import when it is older", () => {
+      expect(parsePageViewFile(old, engines, door)).toEqual({
+        file: pageViewFile("demo", "mine", { engine: "list", cells: [cell("counter")] }, { app: 2 }),
+      });
+    });
+
+    it("is refused when it was saved by a newer version — also by a host that knows no formats", () => {
+      const newer = JSON.stringify({ ...pageViewFile("demo", "mine", compact), versions: { app: 3 } });
+      const refusal = {
+        problem: { kind: "not-a-view", detail: expect.stringContaining("saved by a newer version") as unknown },
+      };
+      expect(parsePageViewFile(newer, engines, door)).toMatchObject(refusal);
+      expect(parsePageViewFile(newer, engines)).toMatchObject(refusal);
+    });
   });
 });

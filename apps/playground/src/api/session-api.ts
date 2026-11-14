@@ -1,7 +1,7 @@
 /**
  * Fake SESSION request of the demo application: who the user is — with the
  * ROLES they hold, from the broadest to the most specific
- * (doc/roles-design.md) —, what they may do, and the lists every page
+ * (doc/ADR/0012-roles.md) —, what they may do, and the lists every page
  * needs. One simulated round trip when the application starts, and one more
  * every time "Sign in as" picks another person — so the global state, like
  * everything else, reaches the store through a visible step. The API also

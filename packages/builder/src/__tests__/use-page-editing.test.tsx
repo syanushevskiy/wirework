@@ -36,7 +36,7 @@ interface Props {
 /**
  * An overlay's entry for the demo page after an edit INSIDE the box emptied
  * it: the page's layout copied as the overlay's own view, shown, and the
- * box's layout held FOR THAT VIEW (doc/page-views-design.md) — plus what
+ * box's layout held FOR THAT VIEW (doc/ADR/0006-page-views.md) — plus what
  * the overlay holds for the cells in every view.
  */
 const boxedOwn = (view: string, cells?: PageUserViewModel["cells"]): PageUserViewModel => ({
@@ -257,7 +257,7 @@ describe("usePageEditing — the ops", () => {
     expect(Object.keys(result.current.shownUserViewModels?.pages?.["demo"]?.templates ?? {})).toEqual(["mine"]);
   });
 
-  describe("for a ROLE (doc/roles-design.md): the same ops, written into the role's entry", () => {
+  describe("for a ROLE (doc/ADR/0012-roles.md): the same ops, written into the role's entry", () => {
     const admin = { role: "admin" } as const;
     const withRole = () => {
       const trees = treesWithCounter();
@@ -414,7 +414,7 @@ describe("usePageEditing — the ops", () => {
   });
 });
 
-describe("usePageEditing — layouts inside containers (doc/containers-design.md)", () => {
+describe("usePageEditing — layouts inside containers (doc/ADR/0009-containers.md)", () => {
   it("shows the layout at a chain as the page, under its nested name, and edits it in place", () => {
     const { result, commit } = setup({ trees: treesWithBoxedCounter(), at: "custom-2" });
     expect(result.current.layoutPage).toBe("demo/custom-2");

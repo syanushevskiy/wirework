@@ -1,7 +1,7 @@
 /**
  * The read-only view of a store handed to widgets. Not a type cast: the
  * `set` / `replace` methods simply do not exist on it, so a widget cannot
- * write even by accident (Alexei's enforcement, doc/widget-events-design.md).
+ * write even by accident (Alexei's enforcement, doc/ADR/0002-widget-events.md).
  */
 import type { ReadableStore, Store } from "@wirework/schema";
 

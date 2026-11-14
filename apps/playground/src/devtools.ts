@@ -19,7 +19,7 @@ import { createStore as createZustandStore } from "zustand/vanilla";
 import { devtools } from "zustand/middleware";
 import type { Store } from "@wirework/schema";
 import { fromZustand } from "@wirework/store";
-import { releaseAnswers, requests, type RequestCounts } from "./api/requests";
+import { loaded, releaseAnswers, requests, type RequestCounts } from "./api/requests";
 
 const KEY = "wirework.devtools";
 
@@ -31,6 +31,8 @@ declare global {
       requests: () => RequestCounts;
       /** Let the answers a test held (`window.wireworkHoldAnswers`) through. */
       releaseAnswers: () => void;
+      /** The lazy widgets whose code arrived, in order (doc/ADR/0018-lazy-widgets.md). */
+      loaded: () => readonly string[];
     };
   }
 }
@@ -68,5 +70,6 @@ export function installDevtoolsCommand(): void {
     },
     requests,
     releaseAnswers,
+    loaded,
   };
 }

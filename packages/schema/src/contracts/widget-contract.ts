@@ -1,6 +1,6 @@
 /**
  * Widget contracts — a widget declaration WITHOUT the component
- * (doc/widget-contracts-design.md).
+ * (doc/ADR/0004-widget-contracts.md).
  *
  * A contract fixes what a KIND of widget is: its input ports, its events
  * and its settings. "A button" is: no inputs, a `clicked` event, a `label`

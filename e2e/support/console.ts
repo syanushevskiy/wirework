@@ -11,7 +11,14 @@ export interface RequestCounts {
 
 export type Console = Window & {
   wireworkHoldAnswers?: boolean;
-  wirework?: { requests: () => RequestCounts; releaseAnswers: () => void };
+  /** While true, a lazy widget's code cannot be fetched (doc/ADR/0018-lazy-widgets.md). */
+  wireworkFailCode?: boolean;
+  wirework?: {
+    requests: () => RequestCounts;
+    releaseAnswers: () => void;
+    /** The lazy widgets whose code arrived, in order — one entry per fetch. */
+    loaded: () => readonly string[];
+  };
 };
 
 export const requests = (page: Page): Promise<RequestCounts> =>

@@ -3,7 +3,7 @@
  *
  * The store is the ONLY way widgets touch data. Widgets get the READ side
  * (`ReadableStore`); writes reach the store through events + reactions
- * (doc/widget-events-design.md), never from widget code. The engine and
+ * (doc/ADR/0002-widget-events.md), never from widget code. The engine and
  * hosts use the full `Store`; `@wirework/store` provides the default
  * implementation and host applications may substitute their own (e.g. an
  * instrumented store in e2e, or one backed by a real fetching layer).

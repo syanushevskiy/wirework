@@ -1,6 +1,6 @@
 /**
  * `collapse` contract — panels that fold, a layout per panel
- * (doc/containers-design.md). Like `tabs`, with every panel on view at once
+ * (doc/ADR/0009-containers.md). Like `tabs`, with every panel on view at once
  * and `open` saying which start unfolded. Nothing bound, nothing emitted.
  */
 import { z } from "zod";

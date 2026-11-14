@@ -1,6 +1,6 @@
 /**
  * Widget settings introspection — what a builder can ASK for beyond IO
- * ports and events (doc/widget-io-design.md, "Builder settings").
+ * ports and events (doc/ADR/0001-widget-io.md, "Builder settings").
  *
  * A widget's view model is its settings; the reserved `inputs`/
  * `on` sections are bindings. This helper reads the PRIMITIVE top-level
@@ -22,7 +22,7 @@ import type { Validator } from "./widget";
 export const RESERVED_VIEW_MODEL_KEYS = new Set(["inputs", "on", "when", "appear", "disappear"]);
 
 /**
- * "items": a named list — entries with a `key` and a `label` (doc/containers-design.md).
+ * "items": a named list — entries with a `key` and a `label` (doc/ADR/0009-containers.md).
  * "json": anything else that is not a primitive (an object, a list) — only on request, see `settingFields`.
  */
 export type SettingKind = "text" | "number" | "boolean" | "select" | "items" | "json";
@@ -149,7 +149,7 @@ export function validatorKeys(validator: Validator<unknown>): string[] | undefin
 
 /**
  * What a builder shows for ONE value a validator describes — a predicate's
- * `to` (doc/conditions-design.md): nothing for no validator, a number, a
+ * `to` (doc/ADR/0008-conditions.md): nothing for no validator, a number, a
  * list (an array), a yes/no, a choice (an enum), JSON for an object, text
  * for everything else.
  */

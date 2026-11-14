@@ -1,4 +1,8 @@
-# Actions — business logic users can reuse
+# ADR-0005: Actions — business logic users can reuse
+
+- **Status:** Accepted — partly built (phase 1; phases 4–7 designed 2026-10-14)
+- **Date:** 2026-09-16
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## The model
 

@@ -1,0 +1,31 @@
+{
+  "pages": {
+    "overview": {
+      "view": "compact"
+    },
+    "run": {
+      "view": "badge-first",
+      "templates": {
+        "badge-first": {
+          "engine": "css-grid",
+          "columns": ["12rem", "1fr"],
+          "areas": ["status-run label-run-name"],
+          "cells": [
+            {
+              "id": "status-run",
+              "widget": "run-badge",
+              "model": "widgets.run.status",
+              "template": "default"
+            },
+            {
+              "id": "label-run-name",
+              "widget": "antd-label",
+              "model": "widgets.run.name",
+              "template": "default"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

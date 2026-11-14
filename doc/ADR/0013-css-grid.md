@@ -1,4 +1,8 @@
-# CSS grid — a page laid out by template areas, every widget an area of its own
+# ADR-0013: CSS grid — a page laid out by template areas, every widget an area of its own
+
+- **Status:** Accepted — built
+- **Date:** 2026-11-07
+- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
 
 Designed 7 November 2026 with the tiger team (doc/team_tiger.md), at the
 product owner's ask; amended the same day after the owner's question
@@ -16,10 +20,10 @@ what exists.
 
 ## What there is
 
-- **Four engines** (doc/layout-engines-design.md): two grids that drag and
+- **Four engines** (doc/ADR/0003-layout-engines.md): two grids that drag and
   resize (react-grid-layout, gridstack), a docking layout (FlexLayout) and
   `flex-rows`, which lays cells out in rows of a flexbox each and takes
-  Tailwind's layout class names (doc/flex-rows-design.md) — including
+  Tailwind's layout class names (doc/ADR/0010-flex-rows.md) — including
   `grid grid-cols-3` on a row and `col-span-2` on a cell, so a ROW can be
   a grid today. What none of them has is a whole-page skeleton: an area
   that spans several rows and columns at once (a sidebar beside three rows
@@ -35,9 +39,9 @@ what exists.
 - **The builder** picks the engine while the page is empty (toolbar select),
   appends cells through `appendCell`, replays the renderer's changes as
   ops, and routes them to the shared page, the user's view or a role's
-  (doc/roles-design.md). Every cell has a stable `id` whatever the engine
+  (doc/ADR/0012-roles.md). Every cell has a stable `id` whatever the engine
   (`CellBase`); the builder names them `custom-1`, `custom-2`, …
-- **Nested layouts** (doc/containers-design.md): a card's content is a
+- **Nested layouts** (doc/ADR/0009-containers.md): a card's content is a
   template of any engine, rendered by `NestedLayout`, edited as the page
   with a breadcrumb — a new engine works inside a card for free.
 - **Typed forms**: the widget form is generated from a widget's zod schema
@@ -56,7 +60,7 @@ textbook shape, and it lets a skeleton exist before its widgets. Rejected:
 two names for one thing. A cell already has an id; the area name would be
 a second one to invent, keep unique, keep in step with the first, and
 mistype — and a skeleton without widgets is a page VIEW's job
-(doc/page-views-design.md), not a layout's. Kept as a fallback (see
+(doc/ADR/0006-page-views.md), not a layout's. Kept as a fallback (see
 "Later") if a host ever wants skeletons shared between pages.
 
 **B. The cell's id IS its area.** `areas` is CSS's own
@@ -360,7 +364,7 @@ antd-label`), and that "− row" says why it refuses.
   rectangle check in `validate` AND the renderer refusing to set it, a
   builder would see a page auto-flow with no word why — keep both. Third,
   the empty slot `.` is a hole that renders as nothing; when a cell's
-  condition hides it the slot stays, as everywhere (doc/conditions-design.md),
+  condition hides it the slot stays, as everywhere (doc/ADR/0008-conditions.md),
   and the design should say so, because a grid makes a hole more visible
   than a row does. Fourth, responsive: a skeleton that is right on a desk
   is wrong on a phone; one `areas` cannot say both. Not now — but the
@@ -422,7 +426,7 @@ generic engine form, responsive areas, conversion from another engine.
 h` on twelve columns) ARE an areas picture, losslessly: twelve `1fr`
   columns, a row per grid row, the rectangles as tokens. The project
   decided against conversion between engines
-  (doc/layout-engines-design.md, "Choosing an engine"); this is the one
+  (doc/ADR/0003-layout-engines.md, "Choosing an engine"); this is the one
   pair where the mapping is exact and a one-off "Copy as css-grid" would
   cost twenty lines. Revisit when a page wants to move.
 

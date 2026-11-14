@@ -1,5 +1,5 @@
 /**
- * The DRAG of edit mode (doc/css-grid-design.md, "Drag and drop, amended"):
+ * The DRAG of edit mode (doc/ADR/0013-css-grid.md, "Drag and drop, amended"):
  * a cell MOVED by its handle bar — onto a free slot it goes there, onto
  * another widget the two swap places, onto the tray it leaves the grid — or
  * RESIZED by an edge or its corner, taking the slots it is pulled over from

@@ -1,6 +1,6 @@
 /**
  * Announces that the page has OPENED — the page's own `load` event
- * (doc/widget-events-design.md, "Page events"), which runs what the page
+ * (doc/ADR/0002-widget-events.md, "Page events"), which runs what the page
  * declares at `viewModels.on.<page>.load`: typically the action that fetches
  * what the page shows.
  *

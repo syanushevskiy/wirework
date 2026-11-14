@@ -1,4 +1,8 @@
-# Pages as code — an admin builds a page in the builder and lands it in the application's source
+# ADR-0011: Pages as code — an admin builds a page in the builder and lands it in the application's source
+
+- **Status:** Accepted — partly built (the file, Export page, the page folders)
+- **Date:** 2026-11-04
+- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
 
 Designed 4 November 2026 with the tiger team (doc/team_tiger.md), at the
 product owner's ask. Status: designed (story WW-29); its first step —
@@ -32,11 +36,11 @@ in.
   in order, one save at a time. The doc comment already says what a real
   host does there: "writes the trees somewhere and reads them back when it
   boots". Nothing writes a file today.
-- **A file format exists for one view** (doc/page-views-design.md, "The
+- **A file format exists for one view** (doc/ADR/0006-page-views.md, "The
   file"): `wirework-page-view` v1 carries one page template. Share and
   Import move it through the clipboard. It does not carry the widget
   templates the cells reference, so a page shared this way "ships without
-  its widgets" — the bundle question doc/containers-design.md left open.
+  its widgets" — the bundle question doc/ADR/0009-containers.md left open.
 - **Boot validation** (`validateViewModels`) checks every template against
   the registered widgets, engines, actions, predicates and appearances and
   reports `rejections`; the playground shows them above the page. A page
@@ -101,7 +105,7 @@ middle.
 
 One file per page, `apps/playground/src/pages/<name>.page.json` (a host
 chooses its folder), holding EVERYTHING the page needs that is
-configuration — the bundle doc/containers-design.md asked for:
+configuration — the bundle doc/ADR/0009-containers.md asked for:
 
 ```json
 {
@@ -435,7 +439,7 @@ The product owner opened the roles page's folder and found
 `viewModel.json` holding one root layout with one card in it, and the
 layout INSIDE the card — the input, the button, the echo, the note — in
 `widgets.json`, because a container's layout lives in its widget template
-(doc/containers-design.md: `content: { engine, cells }`). "This is not
+(doc/ADR/0009-containers.md: `content: { engine, cells }`). "This is not
 convenient. Combine in one, or somehow split so that all layout and views
 are in viewModel." The tiger team weighed five answers.
 
@@ -468,7 +472,7 @@ two-way invariant between two files that a hand edit breaks silently.
 carries its inner layout itself. Changes the model: a cell is identity and
 binding, the LAYOUT belongs to the template so that a role or a user may
 pick another template of the same card and a user's own copy of a card's
-content lives in their overlay as a setting (doc/containers-design.md).
+content lives in their overlay as a setting (doc/ADR/0009-containers.md).
 Rejected on the model, not the file.
 
 **E. Leave it and document.** Rejected: the owner read the folder and

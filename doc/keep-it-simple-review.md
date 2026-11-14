@@ -39,7 +39,7 @@ around one-use types, and prose kept in three places.
 - The `Subscription` interface and a `notify` helper were folded into one
   `for` loop over the snapshot, with the isolation `try`/`catch` inline.
 - The 18-line header duplicated the README and
-  `widget-events-design.md`; it is one line pointing at the doc.
+  `doc/ADR/0002-widget-events.md`; it is one line pointing at the doc.
 
 ### Open
 
@@ -92,7 +92,7 @@ extension point" is withdrawn until a host wants one.
 | E4  | **`errorText` is `problemText` minus a case.** `problemText` falls back to `errorText` for anything that is not a validator error. The thirteen callers of `errorText` would be correct with `problemText`; one function instead of two.                                                                                                                                                                                                       | `messages.ts`                                                        | 1 export  | **decide** |
 | E5  | **Severity plumbing.** `validateViewModels` builds two closures (`error`, `warn`) of one `Report` type and passes both down to `validateCells`. Tried as one `report(severity, location, message)`: 28 lines in, 29 out, and twelve call sites that read as English (`warn(location, text)`) became `report("warning", location, text)`, three of them wrapped onto four lines. Reverted: a cut that saves nothing and costs reading is churn. | `validate.ts`                                                        | 0 lines   | **keep**   |
 | E6  | **Three tree walkers.** `collectPaths`, `boundPaths` and `deepMerge` each hand-roll a bounded recursive walk over a plain-object tree with its own depth guard and prototype filter. A shared `walk(tree, visit)` would leave each with only its visit.                                                                                                                                                                                        | `paths.ts`                                                           | ~15 lines | **decide** |
-| E9  | **Module headers restate the docs.** `reactions.ts` (28 lines), `resolve.ts` (18), `page-events.ts` (13) and `validate.ts` (13) open with the design rationale that `widget-events-design.md` and `actions-design.md` hold. The events package now keeps one line and a pointer; the engine could follow. What stays in code is the non-obvious local decision (`// Own properties only: …`).                                                  | every module                                                         | ~70 lines | **decide** |
+| E9  | **Module headers restate the docs.** `reactions.ts` (28 lines), `resolve.ts` (18), `page-events.ts` (13) and `validate.ts` (13) open with the design rationale that `doc/ADR/0002-widget-events.md` and `doc/ADR/0005-actions.md` hold. The events package now keeps one line and a pointer; the engine could follow. What stays in code is the non-obvious local decision (`// Own properties only: …`).                                      | every module                                                         | ~70 lines | **decide** |
 
 Not findings, though they look like candidates: the conditional spreads
 (`...(note === undefined ? {} : { note })`) follow the guidelines'

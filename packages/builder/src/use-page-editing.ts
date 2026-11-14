@@ -25,6 +25,7 @@ import {
   type ActionRegistry,
   type AppearanceRegistry,
   type LayoutEngineRegistry,
+  type Migrations,
   type PredicateRegistry,
   type ResolvedCell,
   type WidgetRegistry,
@@ -84,13 +85,15 @@ export interface PageEditingInput {
   predicates?: PredicateRegistry | undefined;
   /** The appearances a cell's `appear` and `disappear` may name; the standard ones alone when absent. */
   appearances?: AppearanceRegistry | undefined;
+  /** The data formats this version reads (doc/ADR/0017-versioning-and-upgrades.md): a tree of another is not shown as if it were today's. */
+  migrations?: Migrations | undefined;
   page: string;
   /** The layout edited: the page's own when absent, else the one inside the containers chained here. */
   at?: string | undefined;
   /** Where edits go — and whether the user overlay is on: it is, exactly for the user's target. */
   target: EditTarget;
   /**
-   * The roles the page is shown AS (doc/roles-design.md): the viewer's, in
+   * The roles the page is shown AS (doc/ADR/0012-roles.md): the viewer's, in
    * the session's order — or, editing for a role, the application's roles
    * up to it. Their entries are read between the base and the user's overlay.
    */
@@ -114,6 +117,7 @@ export function usePageEditing({
   actions,
   predicates,
   appearances,
+  migrations,
   page,
   at,
   target,
@@ -133,7 +137,7 @@ export function usePageEditing({
     [layoutEngines, page, at, target, roles],
   );
   const planned = useMemo(() => plannedInput(where, shown), [where, shown]);
-  const plan = usePagePlan({ ...planned, registry, layoutEngines, actions, predicates, appearances });
+  const plan = usePagePlan({ ...planned, registry, layoutEngines, actions, predicates, appearances, migrations });
   const activeView = plan.problem === undefined ? plan.view : undefined;
   /** The PAGE's view, also while a layout inside a container is the one shown (its plan has a view of its own). */
   const pageView = useMemo(

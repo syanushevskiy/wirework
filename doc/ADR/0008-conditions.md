@@ -1,4 +1,8 @@
-# Conditions — a widget shown when a predicate holds
+# ADR-0008: Conditions — a widget shown when a predicate holds
+
+- **Status:** Accepted — built
+- **Date:** 2026-11-01
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 

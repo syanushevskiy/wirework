@@ -12,6 +12,7 @@
  */
 import { useCallback } from "react";
 import type { Store, UserViewModels, ViewModels } from "@wirework/schema";
+import { stampProblem, stamped, type Migrations } from "@wirework/engine";
 
 /** Both editable trees, as they live in the store. */
 export interface EditableTrees {
@@ -56,10 +57,25 @@ export function commitTrees(
   save: SaveTrees,
   next: TreesChange,
   onError: SaveError = reportToConsole,
+  migrations?: Migrations,
 ): void {
-  // The store dedups unchanged trees, so writing both is always safe.
-  if ("viewModels" in next) store.setConfig("viewModels", next.viewModels);
-  if ("userViewModels" in next) store.setConfig("userViewModels", next.userViewModels);
+  // A tree this version cannot read — saved by a newer one — is never written over
+  // (doc/ADR/0017-versioning-and-upgrades.md): the commit is refused whole, and the host is told.
+  const unread = (["viewModels", "userViewModels"] as const)
+    .filter((tree) => tree in next)
+    .map((tree) => stampProblem(store.get<{ versions?: unknown }>(tree)?.versions, migrations))
+    .find((problem) => problem !== undefined);
+  if (unread !== undefined) {
+    const held: EditableTrees = {
+      viewModels: store.get<ViewModels>("viewModels") ?? NO_VIEW_MODELS,
+      userViewModels: store.get<UserViewModels>("userViewModels") ?? {},
+    };
+    onError(new Error(`Nothing was changed: what is stored was ${unread}`), held);
+    return;
+  }
+  // What is written says which data format it is in. The store dedups unchanged trees, so writing both is always safe.
+  if ("viewModels" in next) store.setConfig("viewModels", stamped(next.viewModels, migrations));
+  if ("userViewModels" in next) store.setConfig("userViewModels", stamped(next.userViewModels, migrations));
   const saved: EditableTrees = {
     viewModels: store.get<ViewModels>("viewModels") ?? NO_VIEW_MODELS,
     userViewModels: store.get<UserViewModels>("userViewModels") ?? {},
@@ -76,9 +92,15 @@ export interface CommitInput {
   /** Where the host keeps its pages. Required: a builder never guesses where pages go. */
   save: SaveTrees;
   onError?: SaveError | undefined;
+  /**
+   * The data formats this version writes (doc/ADR/0017-versioning-and-upgrades.md):
+   * every tree committed is stamped with them, and a tree in the store that
+   * this version cannot read is never written over. Absent: format 1, no stamp.
+   */
+  migrations?: Migrations | undefined;
 }
 
 /** `commitTrees` bound to this store and this host's `save`. */
-export function useCommit({ store, save, onError }: CommitInput): Commit {
-  return useCallback((next) => commitTrees(store, save, next, onError), [store, save, onError]);
+export function useCommit({ store, save, onError, migrations }: CommitInput): Commit {
+  return useCallback((next) => commitTrees(store, save, next, onError, migrations), [store, save, onError, migrations]);
 }

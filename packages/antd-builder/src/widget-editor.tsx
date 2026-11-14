@@ -5,7 +5,7 @@
  * page and its toolbar stay visible and reachable — nothing floats over
  * them. "Save widget" reports the collected bindings + settings and the
  * host records them in the page session. Editing for a ROLE
- * (doc/roles-design.md) the hook offers the widget's TEMPLATES to pick
+ * (doc/ADR/0012-roles.md) the hook offers the widget's TEMPLATES to pick
  * from: how a role's table gets its own wiring without touching wiring.
  */
 import { Button, Card, Flex, Form, Select, Typography } from "antd";

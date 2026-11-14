@@ -15,6 +15,7 @@ export * from "./contracts/actions";
 export * from "./contracts/widget-contract";
 export * from "./contracts/settings";
 export * from "./contracts/layout-engine";
+export * from "./models/versions";
 export * from "./models/page-template";
 export * from "./models/view-models";
 export * from "./models/user-view-models";

@@ -1,5 +1,5 @@
 /**
- * The demo application's PAGES, one folder each (doc/pages-as-code-design.md):
+ * The demo application's PAGES, one folder each (doc/ADR/0011-pages-as-code.md):
  *
  *   pages/<page>/page.json       what the page is — its name and its route
  *   pages/<page>/viewModel.json  what it looks like and does — its prebuilt
@@ -55,3 +55,6 @@ export const demoPageRoutes: readonly (PageRoute & { page: DemoPage })[] = DEMO_
 
 /** One page's view models — a tree holding this page alone: its templates, its reactions, its roles' entries, its widgets. */
 export const pageViewModels = (page: DemoPage): ViewModels => mergePageFiles([demoPageFiles[page]]).viewModels;
+
+/** Every page's view models as one tree: what a user's saved views are read with when they are loaded (boot.ts). */
+export const allViewModels = (): ViewModels => mergePageFiles(Object.values(demoPageFiles)).viewModels;

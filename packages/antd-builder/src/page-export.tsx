@@ -3,7 +3,7 @@
  * usePageExport): one button, "Export page…", and a panel under it with the
  * whole shared page as a JSON file to read and to download
  * (`<page>.page.json`), for an admin to hand to a developer
- * (doc/pages-as-code-design.md). The lock the hook reports as a code is
+ * (doc/ADR/0011-pages-as-code.md). The lock the hook reports as a code is
  * said here in words — the defaults below, or the host's own.
  */
 import { Button, Card, Flex, Input, Typography } from "antd";

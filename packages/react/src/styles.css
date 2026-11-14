@@ -16,7 +16,7 @@
   min-width: 0;
 }
 
-/* ---- conditions (doc/conditions-design.md) ---- */
+/* ---- conditions (doc/ADR/0008-conditions.md) ---- */
 
 /* In edit mode a cell whose condition does not hold stays visible, dimmed, with the reason above it. */
 .ww-cell-hidden-now {
@@ -94,6 +94,32 @@
   }
 }
 
+/* ---- lazy widgets (doc/ADR/0018-lazy-widgets.md) ---- */
+
+/*
+ * What a cell shows while its widget's code is on the way: a quiet block,
+ * and only after 200 ms — code that is cached never flashes one. It has a
+ * least height, so a cell that sizes to its content does not jump when the
+ * widget arrives (an implementation that knows its size says it).
+ */
+.ww-cell-loading {
+  min-height: 4.5rem;
+  border-radius: 0.25rem;
+  background: var(--ww-color-loading, var(--ant-color-fill-quaternary, #f1f5f9));
+  animation: ww-loading-in 1ms linear 200ms both;
+}
+
+@keyframes ww-loading-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The problem of code that did not arrive carries its own way out. */
+.ww-widget-error .ww-cell-action {
+  margin-left: 0.25rem;
+}
+
 /* ---- edit-mode chrome (placed by each engine) ---- */
 
 .ww-cell-actions {
@@ -119,7 +145,7 @@
   opacity: 0.5;
 }
 
-/* ---- layouts inside widgets (doc/containers-design.md) ---- */
+/* ---- layouts inside widgets (doc/ADR/0009-containers.md) ---- */
 
 /* A container shown outside a page (a palette preview): only that it holds a layout. */
 .ww-layout-preview {

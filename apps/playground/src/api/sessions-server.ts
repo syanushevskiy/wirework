@@ -1,7 +1,7 @@
 /**
  * Fake SESSIONS endpoint of the demo application: who is signed in, as a
  * table the server describes (the Wirework admin's Sessions card,
- * doc/roles-design.md). Three rows — the demo's people — and the columns
+ * doc/ADR/0012-roles.md). Three rows — the demo's people — and the columns
  * with the first answer; a session without the Wirework admin role is refused.
  */
 import type { TableViewRequest, TableViewResponse } from "@wirework/table-view";

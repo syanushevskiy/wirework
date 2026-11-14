@@ -15,6 +15,7 @@ import { getPath, type Emit, type PortDefinition, type ReadableStore } from "@wi
 import { usePort } from "@wirework/react";
 import {
   appPathSchema,
+  cellText,
   columnWidth,
   type tableEvents,
   type TableColumn,
@@ -119,6 +120,8 @@ export function antdColumnOf(
       createElement(TableCell, { column, row: rendered.row, value: getPath(rendered.row, column.property), cells }),
     onCell: (rendered) =>
       ({
+        // A cell is one line, cut where it does not fit: what its tip then says (use-cell-tip.ts).
+        "data-tip": cellText(getPath(rendered.row, column.property)) || undefined,
         "data-property": column.property,
         "data-cell": column.cell?.kind ?? "text",
         ...selection?.(index, rendered),

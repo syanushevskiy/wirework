@@ -61,7 +61,7 @@ describe("NestedLayout", () => {
     expect(nested.querySelector('[data-testid="cell"][data-cell="inner"]')).not.toBeNull();
   });
 
-  it("reads the role layer for the cells inside a container, the user's own choice over it (doc/roles-design.md)", () => {
+  it("reads the role layer for the cells inside a container, the user's own choice over it (doc/ADR/0012-roles.md)", () => {
     const store = createStore({ demo: { text: "inside", other: "elsewhere" } });
     const models = viewModels([cell({ id: "box-1", widget: "box", model: "widgets.box" })], {
       box: { default: { content: layout([cell({ id: "inner" })]) } },

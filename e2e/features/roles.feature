@@ -7,7 +7,7 @@ Feature: Roles — one page, different for an admin and for everybody else
   user's own overlay: the later wins, per thing. A role's layout is a page
   view; a role's wiring is a widget template; one more widget for a
   stronger role is a condition on the user's roles. What the server answers
-  stays the server's decision from the session. (doc/roles-design.md)
+  stays the server's decision from the session. (doc/ADR/0012-roles.md)
 
   Scenario: As QA the runs table is the page's; signed in as admin it loads every owner's runs, with an Owner column and filter — and back as QA it is the page's again
     Given I open the "runs" page

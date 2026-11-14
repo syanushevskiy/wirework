@@ -84,7 +84,7 @@ function withEntry<T>(record: Record<string, T> | undefined, key: string, value:
   return value === undefined ? rest : { ...rest, [key]: value };
 }
 
-/** What every role says about the page — the role's entry cut down to this page (doc/roles-design.md). */
+/** What every role says about the page — the role's entry cut down to this page (doc/ADR/0012-roles.md). */
 function rolesOf(viewModels: ViewModels, page: string): Record<string, UserViewModels> {
   return Object.fromEntries(
     Object.entries(viewModels.roles ?? {}).flatMap(([role, entry]) => {

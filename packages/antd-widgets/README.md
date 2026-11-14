@@ -68,7 +68,7 @@ path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
   row held, the columns shown, `<exportName>.csv`; `rows-exported`). The infinite table scrolls
   inside its own box, asks for more rows at its end, and renders only a
   WINDOW of the rows it holds — twice the box's height, the rest blank space
-  of the right height (doc/row-window-design.md) — so it is a virtual list;
+  of the right height (doc/ADR/0007-row-window-and-header-filters.md) — so it is a virtual list;
   `data-held` says how many rows it holds, `data-window` which render. With
   `windowed` on it holds only a SLICE of the list (`data-offset` rows into
   it) and asks for the slice around the rows in view (`window`); with its

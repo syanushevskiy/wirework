@@ -1,6 +1,6 @@
 /**
  * Widget events contract — typed signals a widget EMITS
- * (see doc/widget-events-design.md).
+ * (see doc/ADR/0002-widget-events.md).
  *
  * Store vs events: if another widget needs to DISPLAY it, it is state and
  * goes through the Store. If another party needs to REACT to it once, it is

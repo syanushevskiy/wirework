@@ -21,7 +21,9 @@ import { infiniteTableContract } from "@wirework/widget-contracts";
 import { useInfiniteTable } from "../hooks/use-infinite-table";
 import { NO_CELLS } from "../hooks/use-table";
 import type { AntdTableOptions } from "./antd-table";
+import { useCellTip } from "../hooks/use-cell-tip";
 import { CellMenu } from "./cell-menu";
+import { CellTip } from "./cell-tip";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 import { RowSpaceProvider } from "./row-spacers";
 
@@ -65,6 +67,7 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
       cells,
       items,
     );
+    const tip = useCellTip(!viewModel.wrapCells);
 
     return (
       <div
@@ -80,10 +83,13 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
         data-total={view.total}
         data-window={view.window}
         data-cell-selection={viewModel.cellSelection}
+        data-wrap-cells={viewModel.wrapCells}
         data-selected={view.cells.selected}
         {...view.cells.root}
+        {...tip.root}
       >
         <CellMenu view={view.cells} />
+        <CellTip tip={tip.tip} />
         <TableToolbar items={view.toolbar} columnMenu={view.columnMenu} />
         {/*
           The box the rows scroll in: as tall as the setting says, at most. It is the element that HOLDS the focus for
@@ -112,6 +118,8 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
               onChange={view.change}
               sticky={view.sticky}
               scroll={view.scroll}
+              // One line a cell: the columns keep their widths whatever the text (styles.css).
+              tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
               components={view.components}
             />
           </RowSpaceProvider>

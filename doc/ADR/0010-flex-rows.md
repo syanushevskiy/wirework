@@ -1,4 +1,8 @@
-# Flex rows — Tailwind's layout classes as the layout vocabulary
+# ADR-0010: Flex rows — Tailwind's layout classes as the layout vocabulary
+
+- **Status:** Accepted — built
+- **Date:** 2026-11-03
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 Designed with the tiger team on 3 November 2026 (doc/team_tiger.md), built
 the same day. Status: built and tested (`flex-rows.feature`, the engine's
@@ -177,7 +181,7 @@ counts changes). While it names a class the table lacks it is
 `aria-invalid` with the strangers in its title. Outside edit mode the
 rows render bare: no bars, no inputs, no handles.
 
-A layout inside a card (doc/containers-design.md) is the same engine
+A layout inside a card (doc/ADR/0009-containers.md) is the same engine
 rendered by `NestedLayout`, never editable in place; "Edit content" shows
 it as the page, bars and arrows and all. The layout element now carries
 `data-engine`, so a scenario can say which engine a card runs on.
@@ -317,7 +321,7 @@ about a day's work.
   reach the children; a stylesheet could, the day a row's `gap-*` is not
   enough.
 - **Drag between rows**: the arrows do the job without a library; a drag
-  would need one, and its own gotchas (doc/layout-engines-design.md).
+  would need one, and its own gotchas (doc/ADR/0003-layout-engines.md).
 - **A host's own field**: a host that wants an antd select instead of the
   native input reads `LAYOUT_CLASS_NAMES` and reports the same change.
 

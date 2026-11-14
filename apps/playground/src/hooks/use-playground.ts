@@ -23,7 +23,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UserViewModels, ViewModels } from "@wirework/schema";
-import { layoutChain, validateViewModels } from "@wirework/engine";
+import { layoutChain, stampProblem, validateViewModels } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import {
   DEFAULT_BUILDER_NAMING,
@@ -58,7 +58,7 @@ const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
 const NO_USER_VIEW_MODELS: UserViewModels = {};
 
 export function usePlayground(playground: Playground, visit: PageVisit) {
-  const { registry, contracts, layoutEngines, actions, predicates, appearances, rejections } = playground;
+  const { registry, contracts, layoutEngines, actions, predicates, appearances, migrations, rejections } = playground;
   const { page, store, bus } = visit;
   // The page's opening (the first server request, the application's session
   // request) is a side effect: it belongs here, not in the router's loader
@@ -69,7 +69,33 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   // through the store.
   const viewModels = useStorePath<ViewModels>(store, "viewModels") ?? NO_VIEW_MODELS;
   const userViewModels = useStorePath<UserViewModels>(store, "userViewModels") ?? NO_USER_VIEW_MODELS;
-  const trees = useMemo(() => ({ viewModels, userViewModels }), [viewModels, userViewModels]);
+
+  /**
+   * The layout shown and edited (doc/ADR/0009-containers.md): the page, or —
+   * after "Edit content" on a container — the layout inside it, `at` the
+   * chain of containers down to it. Visit state, not an address: a new
+   * address would open a new visit, and the builder's starts from nothing.
+   * With the overlay on it is the layout the USER sees — their own copy,
+   * once they change it.
+   */
+  const [at, setAt] = useState<string | undefined>(undefined);
+
+  /**
+   * The user's views as stored may be of a data format this version cannot
+   * read — saved by a newer one (doc/ADR/0017-versioning-and-upgrades.md).
+   * They stay in the store exactly as they are and are never written over
+   * (`useCommit` refuses); the page shows without them and says so (the plan
+   * checks the overlay it is given), and a layout inside a container, which
+   * is read through the overlay directly, is shown as if there were none.
+   */
+  const unreadViews = useMemo(() => stampProblem(userViewModels.versions, migrations), [userViewModels, migrations]);
+  const trees = useMemo(
+    () => ({
+      viewModels,
+      userViewModels: unreadViews !== undefined && at !== undefined ? NO_USER_VIEW_MODELS : userViewModels,
+    }),
+    [viewModels, userViewModels, unreadViews, at],
+  );
 
   /**
    * The user overlay. Every page has one, and a visit starts with it on or
@@ -89,17 +115,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   const withUserOverlay = overlayWanted && overlayLock === undefined;
 
   /**
-   * The layout shown and edited (doc/containers-design.md): the page, or —
-   * after "Edit content" on a container — the layout inside it, `at` the
-   * chain of containers down to it. Visit state, not an address: a new
-   * address would open a new visit, and the builder's starts from nothing.
-   * With the overlay on it is the layout the USER sees — their own copy,
-   * once they change it.
-   */
-  const [at, setAt] = useState<string | undefined>(undefined);
-
-  /**
-   * ROLES (doc/roles-design.md): the ones this user holds arrive with the
+   * ROLES (doc/ADR/0012-roles.md): the ones this user holds arrive with the
    * session (app.user.roles, from the broadest to the most specific) and
    * the ones the application grants with its lists (app.lists.roles, in
    * that same order) — the roles a builder may edit for. The builder page
@@ -122,9 +138,10 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
         actions,
         predicates,
         appearances,
+        migrations,
         knownRoles,
       }),
-    [registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances, knownRoles],
+    [registry, layoutEngines, viewModels, userViewModels, actions, predicates, appearances, migrations, knownRoles],
   );
 
   /** This demo's own host-side wiring — not the builder's and not the engine's. */
@@ -138,8 +155,11 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * for.
    */
   const editPages = useStorePath<boolean>(store, "app.permissions.editPages");
-  const editLock: EditLock | undefined =
+  const permissionLock: EditLock | undefined =
     page === BUILDER_PAGE || editPages === true ? undefined : editPages === undefined ? "loading" : "permission";
+  // With the overlay on, an edit is the user's own view — and views this version cannot read are not written over.
+  const editLock: EditLock | undefined =
+    permissionLock ?? (withUserOverlay && unreadViews !== undefined ? "newer-data" : undefined);
   const canEditPages = editLock === undefined;
 
   /**
@@ -156,12 +176,14 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     store.set("saved", (store.get<number>("saved") ?? 0) + 1);
   }, [store]);
 
+  const viewDoor = useMemo(() => ({ migrations, registry }), [migrations, registry]);
+
   /** THE write path: everything that changes a page goes through it. */
-  const commit = useCommit({ store, save: persist });
+  const commit = useCommit({ store, save: persist, migrations });
 
   /**
    * With the overlay on, edits are the USER's; with a role chosen in the
-   * toolbar they are that ROLE's (doc/roles-design.md); otherwise they
+   * toolbar they are that ROLE's (doc/ADR/0012-roles.md); otherwise they
    * change the shared page. The page is shown AS the target sees it: this
    * user's roles with the overlay on; for a role, the application's roles
    * up to it — what a person holding it sees; for everyone, none.
@@ -185,6 +207,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     actions,
     predicates,
     appearances,
+    migrations,
     page,
     at,
     target,
@@ -219,7 +242,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   );
 
   /**
-   * "Sign in as" (doc/roles-design.md): the session request goes out again
+   * "Sign in as" (doc/ADR/0012-roles.md): the session request goes out again
    * for another of the demo's people, and the page is opened again as them.
    * The people on offer, as a select shows them, on the demo's pages only.
    */
@@ -245,7 +268,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * silently dropped), not in a user's own view (the overlay carries
    * settings, view and layout only). For a ROLE it is offered: the widget's
    * template is everyone's and its cell goes into the role's own view
-   * (doc/roles-design.md), so the role sees one widget more.
+   * (doc/ADR/0012-roles.md), so the role sees one widget more.
    */
   const addLock: AddLock | undefined = !canEditPages
     ? "permission"
@@ -358,12 +381,12 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     target,
     knownRoles,
     onSelectRole: selectRole,
-    // The roles the application grants are a LIST in the store (app.lists.roles, doc/roles-design.md): a builder adds one there.
+    // The roles the application grants are a LIST in the store (app.lists.roles, doc/ADR/0012-roles.md): a builder adds one there.
     onAddRole: (role) => store.set("app.lists.roles", [...(knownRoles ?? []), role]),
   });
 
   /**
-   * The page's VIEWS (doc/page-views-design.md): the team's prebuilt
+   * The page's VIEWS (doc/ADR/0006-page-views.md): the team's prebuilt
    * templates, the held roles' and the user's own, chosen in the overlay or
    * for a role; Save as and Import write where the edit target says — the
    * overlay, the role's entry, or the shared page.
@@ -379,10 +402,12 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     roles: viewerRoles,
     shown: editing.pageView,
     cancelEditing,
+    // A shared view of an older data format is brought forward on Import; a newer one is refused.
+    door: viewDoor,
   });
 
   /**
-   * The whole SHARED page as a file (doc/pages-as-code-design.md): what an
+   * The whole SHARED page as a file (doc/ADR/0011-pages-as-code.md): what an
    * admin downloads and hands to a developer. The route is this host's to
    * know — the file carries it so a page can be loaded at its address.
    */
@@ -413,7 +438,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     rejections,
     page,
     target,
-    /** The roles the page is shown as (doc/roles-design.md): the user's, or the one edited for. */
+    /** The roles the page is shown as (doc/ADR/0012-roles.md): the user's, or the one edited for. */
     roles: viewerRoles,
     /** "Sign in as": the demo's people as options, the one signed in, and the switch — on the demo's pages only. */
     people,

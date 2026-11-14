@@ -4,11 +4,11 @@
  * the user's own — which one is shown, choosing another, and the five
  * things a user does with views: Save as (a copy of the shown one under a
  * new name), Rename and Delete (their own only), Share (the shown one as a
- * JSON file) and Import (such a file, as a new view). doc/page-views-design.md.
+ * JSON file) and Import (such a file, as a new view). doc/ADR/0006-page-views.md.
  *
  * Writes follow the EDIT TARGET, like every other edit: with the overlay on
  * a new view is the user's own; editing for a ROLE it is that role's
- * (doc/roles-design.md), and choosing a view sets what the role sees; with
+ * (doc/ADR/0012-roles.md), and choosing a view sets what the role sees; with
  * neither it is a prebuilt one — that is how an administrator ships
  * alternatives. Choosing a view is a preference and needs no permission;
  * making, renaming, deleting and importing one change a page and are gated
@@ -41,6 +41,7 @@ import {
   parsePageViewFile,
   templateNameProblem,
   type PageViewChoice,
+  type ViewFileDoor,
 } from "./page-views";
 import type { Commit, EditableTrees, TreesChange } from "./use-commit";
 import { overlayTargetOf, roleOf, type EditTarget } from "./page-edits";
@@ -76,7 +77,7 @@ export interface PageViewsInput {
   /** Where a new view goes and whose choice the list changes: `"user"` the user's own (the overlay on), a role's, or `"base"` a prebuilt one. */
   target: EditTarget;
   /**
-   * The roles the page is shown AS (doc/roles-design.md): the viewer's, or
+   * The roles the page is shown AS (doc/ADR/0012-roles.md): the viewer's, or
    * the one edited for. Their templates are offered as the role's, their
    * chosen view is what the page falls back to.
    */
@@ -85,6 +86,12 @@ export interface PageViewsInput {
   shown: string | undefined;
   /** Choosing, saving or deleting a view changes what is on screen: an open edit session ends. */
   cancelEditing: () => void;
+  /**
+   * What reads a shared view of another data format (doc/ADR/0017-versioning-and-upgrades.md):
+   * an older file is brought forward on Import, a newer one refused, and a
+   * file shared says the format it is in. Absent: format 1 only.
+   */
+  door?: ViewFileDoor | undefined;
 }
 
 export function usePageViews({
@@ -98,6 +105,7 @@ export function usePageViews({
   roles,
   shown,
   cancelEditing,
+  door,
 }: PageViewsInput) {
   const role = roleOf(target);
   /** The overlay the target writes (use-page-editing's): none for the shared page. */
@@ -182,8 +190,9 @@ export function usePageViews({
   }, [canManage]);
   const openShare = useCallback(() => {
     if (shown === undefined || shownTemplate === undefined) return;
-    setPanel({ kind: "share", name: shown, text: exportPageView(pageViewFile(page, shown, shownTemplate)) });
-  }, [page, shown, shownTemplate]);
+    const file = pageViewFile(page, shown, shownTemplate, door?.migrations.current());
+    setPanel({ kind: "share", name: shown, text: exportPageView(file) });
+  }, [page, shown, shownTemplate, door]);
 
   const setName = useCallback((name: string) => {
     setPanel((current) => (current ? { kind: current.kind, name, text: current.text } : current));
@@ -214,7 +223,7 @@ export function usePageViews({
       commit(put(name, shownTemplate, shownCells));
       return close();
     }
-    const parsed = parsePageViewFile(panel.text, layoutEngines);
+    const parsed = parsePageViewFile(panel.text, layoutEngines, door);
     if ("problem" in parsed) return refuse(parsed.problem);
     if (parsed.file.page !== page) return refuse({ kind: "other-page", page: parsed.file.page });
     const imported = name === "" ? parsed.file.name : name;
@@ -238,6 +247,7 @@ export function usePageViews({
     cancelEditing,
     put,
     layoutEngines,
+    door,
   ]);
 
   /** Delete the shown view (the target's own only): the page goes back to its default. */

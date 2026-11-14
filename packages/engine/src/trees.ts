@@ -1,7 +1,7 @@
 /**
  * View-model tree surgery shared by resolve, builders and editors. Nothing
  * here knows any layout engine: templates are opaque values, engines change
- * them (doc/layout-engines-design.md).
+ * them (doc/ADR/0003-layout-engines.md).
  * Every function is pure and returns a NEW tree.
  */
 import {
@@ -35,7 +35,7 @@ export function pageTemplates(
 }
 
 /**
- * One ROLE's entry of the view models (doc/roles-design.md), rebuilt
+ * One ROLE's entry of the view models (doc/ADR/0012-roles.md), rebuilt
  * immutably (created when absent): the overlay ops below write a role's
  * pages exactly as they write a user's — `updateRole(viewModels, "admin",
  * (entry) => putUserPageTemplate(entry, page, name, template))`.

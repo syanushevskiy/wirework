@@ -381,7 +381,7 @@ Then(
 /* ----------------------------- conditions ----------------------------- */
 
 /**
- * The "Show when" rows (doc/conditions-design.md): "the condition" is the
+ * The "Show when" rows (doc/ADR/0008-conditions.md): "the condition" is the
  * first row, "condition 2" the next (`conditionFieldId` counts from 0). A
  * check is picked by its PHRASE ("is greater than", "can be retried"), the
  * value typed as text — nothing for a check that takes none.

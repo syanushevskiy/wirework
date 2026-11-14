@@ -17,11 +17,11 @@
  *   { into, more: true } }`. Without a total nothing is asked for.
  * - The rows held may be thousands; the widget renders a WINDOW of them —
  *   the rows around the visible part of its box, twice the box's height in
- *   all (doc/row-window-design.md) — so it works as a virtual list. The
+ *   all (doc/ADR/0007-row-window-and-header-filters.md) — so it works as a virtual list. The
  *   rows above and below the window are blank space of their height, so
  *   the scrollbar and the end of the list are where they would be with
  *   every row rendered.
- * - WINDOWED (the `windowed` setting; doc/row-window-design.md, "A slice of
+ * - WINDOWED (the `windowed` setting; doc/ADR/0007-row-window-and-header-filters.md, "A slice of
  *   the list"): the widget does not hold the list either — only a SLICE of
  *   it, the rows from `offset` on. Its scrollbar spans the `total`, and it
  *   EMITS `window` AHEAD OF TIME: when the rows in view passed three

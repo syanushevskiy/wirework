@@ -1,5 +1,5 @@
 /**
- * Load events on a mounted page (doc/widget-events-design.md, "Timing"):
+ * Load events on a mounted page (doc/ADR/0002-widget-events.md, "Timing"):
  * a widget's `load` fires before the page's, and both fire AFTER the page's
  * reactions are bound — so what they declare actually runs.
  */

@@ -9,7 +9,7 @@ Feature: CSS grid — a page laid out by template areas, filled by drag and drop
   back; or filled from a form that can only hold what exists — a select per
   slot. Nothing is refused. The columns and rows are sized in
   the same form as a number with a unit or a keyword. The demo's run page is
-  such a skeleton. (doc/css-grid-design.md)
+  such a skeleton. (doc/ADR/0013-css-grid.md)
 
   Scenario: The run page is a css-grid skeleton
     Given I open the address "/demo/runs/123459"

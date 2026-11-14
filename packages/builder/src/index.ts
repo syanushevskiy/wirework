@@ -62,7 +62,7 @@ export {
   parsePageViewFile,
   templateNameProblem,
 } from "./page-views";
-export type { PageViewChoice, PageViewFile, PageViewKind } from "./page-views";
+export type { PageViewChoice, PageViewFile, PageViewKind, ViewFileDoor } from "./page-views";
 export { usePageViews } from "./use-page-views";
 export type { PageViewPanel, PageViewPanelKind, PageViewsInput, PageViewsState } from "./use-page-views";
 

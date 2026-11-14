@@ -6,15 +6,15 @@
  * replayed over the store's live trees; what it needs it reads from the
  * trees it is given, never from the moment it was made.
  *
- * Edit target (doc/layout-engines-design.md, "Where edits go"):
+ * Edit target (doc/ADR/0003-layout-engines.md, "Where edits go"):
  *  - "user": a page with the user overlay on — the demo as it opens, the
  *    builder once it holds a widget and the visitor turns the overlay on.
  *    Page-template ops edit what the user SEES: one of their own views in
  *    place, or a prebuilt one as a fresh copy named USER_PAGE_TEMPLATE (the
  *    first free "my-own", "my-own-2", …) that becomes the page view
- *    (doc/page-views-design.md); widget edits become per-cell settings
+ *    (doc/ADR/0006-page-views.md); widget edits become per-cell settings
  *    overlays. The base view models stay untouched.
- *  - { role }: a ROLE's pages (doc/roles-design.md) — the same ops as the
+ *  - { role }: a ROLE's pages (doc/ADR/0012-roles.md) — the same ops as the
  *    user's, written into `viewModels.roles.<role>` through `updateRole`:
  *    a prebuilt view edited becomes the role's own copy named after the
  *    role, a widget's edit the role's settings for that cell, a chosen
@@ -27,7 +27,7 @@
  * Engine ops never look inside a template: the registered plugin for the
  * template's engine applies the change, removes the cell, etc.
  *
- * The LOCATION (doc/containers-design.md): an edit is of the page's layout
+ * The LOCATION (doc/ADR/0009-containers.md): an edit is of the page's layout
  * — or, `at` a chain of containers (`card-1`, `tabs-1/tabs.0.content`), of
  * the layout INSIDE a container's widget template, shown as the page and
  * edited by the same ops. On the shared page the ops rewrite that template;
@@ -138,7 +138,7 @@ export interface EditLocation {
   readonly at: string | undefined;
   /** Where edits go — and whether the user overlay is on: it is, exactly for the user's target. */
   readonly target: EditTarget;
-  /** The roles the page is shown AS (doc/roles-design.md): the viewer's, or the application's up to the role edited for. */
+  /** The roles the page is shown AS (doc/ADR/0012-roles.md): the viewer's, or the application's up to the role edited for. */
   readonly roles: readonly string[] | undefined;
 }
 
@@ -358,7 +358,7 @@ export function resetLayoutOp(ctx: EditContext, cellId: string, widget: string):
 }
 
 /**
- * Wrap a cell in a CONTAINER (doc/containers-design.md, "Wrap in a card"):
+ * Wrap a cell in a CONTAINER (doc/ADR/0009-containers.md, "Wrap in a card"):
  * one op on the shared page — a new container cell appended (tall) where
  * the layout puts it, its first layout the engine's empty one with the cell
  * inside, the cell gone from the layout it was in. The container's
@@ -399,7 +399,7 @@ export function wrapCellOp(ctx: EditContext, cellId: string, widget: string): Op
 /**
  * The editor's form saved into the cell's template. An overlay carries
  * SETTINGS only — a user's or a role's view never rewires inputs or
- * reactions (doc/layout-engines-design.md, "Where edits go") — and keeps
+ * reactions (doc/ADR/0003-layout-engines.md, "Where edits go") — and keeps
  * its own copy of a layout the container holds, which the form never shows.
  * On the shared page a container's edit may have ADDED a tab (its layout
  * starts empty, on the engine of the layout the cell is in) or REMOVED one
@@ -434,7 +434,7 @@ export function saveWidgetOp(
 
 /**
  * A cell's widget TEMPLATE chosen for the overlay (the user's or a role's
- * `view` for that cell, doc/roles-design.md): how an admin's table gets
+ * `view` for that cell, doc/ADR/0012-roles.md): how an admin's table gets
  * its admin wiring without touching wiring. Nothing on the shared page:
  * there the cell's own `template` is edited as configuration.
  */

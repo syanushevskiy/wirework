@@ -89,7 +89,7 @@ describe("usePageViews — the list", () => {
   });
 });
 
-describe("usePageViews — for a ROLE (doc/roles-design.md)", () => {
+describe("usePageViews — for a ROLE (doc/ADR/0012-roles.md)", () => {
   const admin = { engine: "list", cells: [] };
   /** The admin's own "admin" view, chosen by the admin; the user holds qa and admin. */
   const treesWithRole = (): EditableTrees => {

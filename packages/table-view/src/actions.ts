@@ -10,7 +10,7 @@
  * refresh, a filter — only names it: `with: { into: "jobs" }`.
  *
  * A factory over the host's transport, like every action that needs a host
- * service (doc/actions-design.md, "Registration").
+ * service (doc/ADR/0005-actions.md, "Registration").
  */
 import type { ActionDefinition } from "@wirework/schema";
 import type { TableViewTransport } from "./api";

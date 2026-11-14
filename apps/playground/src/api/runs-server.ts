@@ -47,14 +47,14 @@ export interface RunsServer {
   /** The view table API of the runs list: resolves after the simulated latency. */
   fetchView(request: TableViewRequest): Promise<TableViewResponse>;
   /**
-   * The ADMIN's view of the list (doc/roles-design.md): every owner's runs,
+   * The ADMIN's view of the list (doc/ADR/0012-roles.md): every owner's runs,
    * with an `owner` column the server offers a filter for. The same list,
    * the same clock — a page change here moves time like one on the plain view.
    */
   fetchViewAll(request: TableViewRequest): Promise<TableViewResponse>;
   /** One run as it is now, with its history, or undefined when there is none with this id. Time does not move. */
   fetchRun(id: string): Promise<RunDetails | undefined>;
-  /** Delete one run (doc/roles-design.md: the Wirework admin's button). Time does not move. */
+  /** Delete one run (doc/ADR/0012-roles.md: the Wirework admin's button). Time does not move. */
   deleteRun(id: string): Promise<void>;
   /** Queue one run again, noting why (the run page's Retry dialog). Time does not move. */
   retryRun(id: string, reason: string): Promise<void>;

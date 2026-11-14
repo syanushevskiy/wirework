@@ -1,6 +1,6 @@
 /**
  * `dialog` contract — a LAYOUT of other widgets shown over the page, as a
- * modal or a drawer (doc/containers-design.md: a container; the layout
+ * modal or a drawer (doc/ADR/0009-containers.md: a container; the layout
  * lives in the dialog's own template, `content`). The first container with
  * a PORT: whether it is open lives at the `open` port — a button opens it
  * with a `set` reaction on that path; the close icon, the mask and Escape

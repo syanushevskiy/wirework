@@ -113,7 +113,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
       </div>
 
       <div>
-        {/* "Sign in as" (doc/roles-design.md): the HOST's, not a widget — the session request goes out again for the person picked. */}
+        {/* "Sign in as" (doc/ADR/0012-roles.md): the HOST's, not a widget — the session request goes out again for the person picked. */}
         {people ? (
           <Flex gap="small" align="center" className="pg-sign-in" data-visit={visit.id}>
             <label htmlFor="sign-in-as">Signed in as</label>
@@ -132,7 +132,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
         <PageToolbar toolbar={toolbar} />
         {/* The page's views: prebuilt and the user's own, chosen, saved, shared as JSON. */}
         <PageViews views={views} />
-        {/* The whole shared page as a file, for an admin to hand to a developer (doc/pages-as-code-design.md). */}
+        {/* The whole shared page as a file, for an admin to hand to a developer (doc/ADR/0011-pages-as-code.md). */}
         <PageExport export={exporting} />
         <Typography.Paragraph type="secondary" data-testid="visit-note" className="pg-note">
           {page === BUILDER_PAGE
@@ -172,7 +172,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
         ) : null}
 
         <PageView
-          /* The page — or, inside a container, the layout shown under its nested name (doc/containers-design.md). */
+          /* The page — or, inside a container, the layout shown under its nested name (doc/ADR/0009-containers.md). */
           page={layoutPage}
           viewModels={shownViewModels}
           userViewModels={shownUserViewModels}

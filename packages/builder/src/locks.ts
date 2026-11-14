@@ -5,11 +5,15 @@
  * no user-facing text lives in this package.
  */
 
-/** Why the builder's Add is locked: the user may not change pages, a page edit is open, or a user's own view is shown. (For a ROLE, Add places the widget in the role's own view — doc/roles-design.md.) */
+/** Why the builder's Add is locked: the user may not change pages, a page edit is open, or a user's own view is shown. (For a ROLE, Add places the widget in the role's own view — doc/ADR/0012-roles.md.) */
 export type AddLock = "permission" | "editing" | "user-view";
 
-/** Why the page cannot be edited: the user may not, or whether they may is not known yet. */
-export type EditLock = "permission" | "loading";
+/**
+ * Why the page cannot be edited: the user may not, whether they may is not
+ * known yet, or what is stored was saved by a version this one cannot read
+ * — and must not write over (doc/ADR/0017-versioning-and-upgrades.md).
+ */
+export type EditLock = "permission" | "loading" | "newer-data";
 
 /**
  * Why the layout engine can no longer be chosen: widgets are placed (there
@@ -29,7 +33,7 @@ export type ViewsLock = "overlay-off" | "no-page";
 
 /**
  * Why a page view could not be made, renamed or imported — a code the UI
- * says in words (doc/page-views-design.md).
+ * says in words (doc/ADR/0006-page-views.md).
  */
 export type ViewProblem =
   | { kind: "empty-name" }

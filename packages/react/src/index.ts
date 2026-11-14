@@ -7,6 +7,9 @@
  */
 export { defineWidget, implementContract } from "./definition";
 export type { ContractImplementation, ReactWidgetDefinition } from "./definition";
+export { lazyComponent, loadingOf } from "./lazy";
+export type { ComponentLoader, LazyComponent, LazyOptions, Loaded, Loading } from "./lazy";
+export { preloadPage } from "./usePreload";
 export { defineLayoutEngine } from "./layout";
 export type { LayoutRendererProps, ReactLayoutEngine } from "./layout";
 export { CellChrome } from "./CellChrome";

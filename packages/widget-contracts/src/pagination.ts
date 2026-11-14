@@ -6,7 +6,7 @@
  * event carrying the page the user asked for. The default reaction writes
  * the page back (`writesBack`), exactly like the input contract's text; a
  * template adds the rest — the page size, a fetch — so a table, a URL and a
- * request can all react to the same change (doc/widget-contracts-design.md).
+ * request can all react to the same change (doc/ADR/0004-widget-contracts.md).
  */
 import { z } from "zod";
 import { defineContract } from "@wirework/schema";

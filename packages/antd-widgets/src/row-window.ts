@@ -1,5 +1,5 @@
 /**
- * The WINDOW of rows an infinite table renders (doc/row-window-design.md):
+ * The WINDOW of rows an infinite table renders (doc/ADR/0007-row-window-and-header-filters.md):
  * the rows around the visible part of its scroll box, twice the box's
  * height in all — half a box above the first visible row, the box itself,
  * and what is left below — so a list of thousands renders a few dozen

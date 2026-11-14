@@ -1,5 +1,5 @@
 /**
- * A PAGE's own events and reactions (doc/widget-events-design.md, "Page
+ * A PAGE's own events and reactions (doc/ADR/0002-widget-events.md, "Page
  * events"): `viewModels.on.<page>` says what happens when the page loads —
  * typically the action that fetches what the page shows.
  *

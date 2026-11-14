@@ -1,5 +1,5 @@
 /**
- * What a page gives the layouts INSIDE its widgets (doc/containers-design.md):
+ * What a page gives the layouts INSIDE its widgets (doc/ADR/0009-containers.md):
  * everything `PageView` was given, so a container widget can render its
  * layout with the page's own machinery without receiving any of it as
  * props. `PageView` provides it for the page; `NestedLayout` provides it

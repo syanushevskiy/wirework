@@ -1,5 +1,5 @@
 /**
- * Reaction interpreter (doc/widget-events-design.md). For every resolved
+ * Reaction interpreter (doc/ADR/0002-widget-events.md). For every resolved
  * cell whose view model carries an `on` section, subscribe to THAT cell's
  * events on the bus and run the declared reactions: `set` writes the store,
  * `call` runs a host-registered action.
@@ -11,7 +11,7 @@
  *    controlled input's `set` must land in its change handler, or React
  *    restores the old text and the caret jumps;
  *  - an async action is awaited before the next reaction starts, so
- *    `[ load, navigate ]` navigates after the load (doc/actions-design.md);
+ *    `[ load, navigate ]` navigates after the load (doc/ADR/0005-actions.md);
  *  - a failing reaction is logged and stops that event's chain; it never
  *    takes the page down or throws at the emitting widget;
  *  - LATEST WINS: the reactions of an event describe what to do for its

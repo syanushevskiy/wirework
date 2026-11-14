@@ -9,7 +9,7 @@
  * template a cell could pick (a user may select any of them later), views
  * that do not exist, and overlay config nobody reads.
  *
- * The LAYERS (doc/roles-design.md): the shared page is checked as everyone
+ * The LAYERS (doc/ADR/0012-roles.md): the shared page is checked as everyone
  * sees it (`pages.runs.default`), then once more through each layer — a
  * role's entry read with the roles before it in the application's order
  * (`knownRoles`), the user's overlay — at the layer's own location
@@ -26,6 +26,7 @@ import { viewModelsSchema, type CellBase, type UserViewModels } from "@wirework/
 import { foldSettings, viewLayers, type Overlays } from "./layers";
 import { resolveTemplate } from "./layout-engines";
 import { issuesText } from "./messages";
+import { stampProblem } from "./migrations";
 import { MAX_LAYOUT_DEPTH, innerOverlay, innerOverlays, layoutsOf } from "./nesting";
 import { checkPageReactions } from "./page-events";
 import type { WidgetRegistry } from "./registry";
@@ -109,13 +110,19 @@ export function validateViewModels(input: ValidateInput): ValidationReport {
     problems.push({ location, message, severity: "warning" });
   };
 
+  // A tree of a data format this version does not read is not checked against today's shapes: it is not read at all.
+  const unread = stampProblem((viewModels as { versions?: unknown } | null)?.versions, input.migrations);
+  if (unread !== undefined) {
+    error("viewModels", `the view models cannot be read: ${unread}`);
+    return report(problems);
+  }
   // Shape-check EVERY tree first: everything below reads through them (the roles' entries with the tree's).
   const baseShape = viewModelsSchema.safeParse(viewModels);
   if (!baseShape.success) {
     error("viewModels", `invalid view models: ${issuesText(baseShape.error)}`);
     return report(problems);
   }
-  const { overlay, problem: overlayProblem } = checkOverlay(input.userViewModels);
+  const { overlay, problem: overlayProblem } = checkOverlay(input.userViewModels, input.migrations);
   if (overlayProblem !== undefined) error("userViewModels", `${overlayProblem} — the overlay is ignored entirely`);
 
   const roles = viewModels.roles ?? {};

@@ -1,5 +1,5 @@
 /**
- * The css-grid layout engine plugin (doc/css-grid-design.md): template
+ * The css-grid layout engine plugin (doc/ADR/0013-css-grid.md): template
  * shape + every layout operation the core delegates. Cells append as a row
  * each; removing a cell empties its slots; edit mode reports the whole
  * picture after a drop or a pick, or a track size (operations.ts).

@@ -1,5 +1,5 @@
 /**
- * The constructor (doc/conditions-design.md): a condition written in words,
+ * The constructor (doc/ADR/0008-conditions.md): a condition written in words,
  * parsed against the predicate registry into a tree the interpreter walks.
  *
  *   expression := or

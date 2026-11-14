@@ -1,0 +1,16 @@
+{
+  "pages": {
+    "demo": {
+      "view": "mine",
+      "templates": {
+        "mine": {
+          "engine": "list",
+          "items": [{ "id": "c1", "widget": "counter", "model": "widgets.counter", "template": "default" }]
+        }
+      },
+      "cells": {
+        "c1": { "settings": { "default": { "label": "My clicks" } } }
+      }
+    }
+  }
+}

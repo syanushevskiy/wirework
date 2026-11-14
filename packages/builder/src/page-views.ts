@@ -1,15 +1,23 @@
 /**
- * Page VIEWS as pure functions (doc/page-views-design.md): a view is a page
+ * Page VIEWS as pure functions (doc/ADR/0006-page-views.md): a view is a page
  * template as the user sees it, and its KIND is where it lives — a base
  * template (`viewModels.pages.<page>.<name>`, prebuilt), one of a ROLE's
  * (`viewModels.roles.<role>.pages.<page>.templates.<name>`, the role's —
- * prebuilt for that role, doc/roles-design.md) or one of the user's own
+ * prebuilt for that role, doc/ADR/0012-roles.md) or one of the user's own
  * (`userViewModels.pages.<page>.templates.<name>`, mine). Nothing here is
  * stored: the list is derived from the trees, the file is the template with
  * its page and name around it.
  */
-import { isPlainObject, type PageViewModel } from "@wirework/schema";
-import { errorText, resolveTemplate, type LayoutEngineRegistry } from "@wirework/engine";
+import { isPlainObject, type FormatStamp, type PageViewModel } from "@wirework/schema";
+import {
+  errorText,
+  resolveTemplate,
+  stampProblem,
+  upgradeTrees,
+  type LayoutEngineRegistry,
+  type Migrations,
+  type WidgetRegistry,
+} from "@wirework/engine";
 import type { ViewProblem } from "./locks";
 import type { EditableTrees } from "./use-commit";
 
@@ -71,18 +79,33 @@ export const PAGE_VIEW_FILE_VERSION = 1;
 export interface PageViewFile {
   kind: typeof PAGE_VIEW_FILE_KIND;
   version: typeof PAGE_VIEW_FILE_VERSION;
+  /** The data format of the template (doc/ADR/0017-versioning-and-upgrades.md) — `version` is the envelope's. Absent = format 1. */
+  versions?: FormatStamp;
   page: string;
   name: string;
   template: PageViewModel;
 }
 
-export const pageViewFile = (page: string, name: string, template: PageViewModel): PageViewFile => ({
+/** The file of a view; `versions` is the format the trees it is taken from are in (`migrations.current()`). */
+export const pageViewFile = (
+  page: string,
+  name: string,
+  template: PageViewModel,
+  versions?: FormatStamp,
+): PageViewFile => ({
   kind: PAGE_VIEW_FILE_KIND,
   version: PAGE_VIEW_FILE_VERSION,
+  ...(versions === undefined || Object.keys(versions).length === 0 ? {} : { versions }),
   page,
   name,
   template,
 });
+
+/** What reads a view file of ANOTHER data format: the steps, and the widgets as registered now. */
+export interface ViewFileDoor {
+  migrations: Migrations;
+  registry: WidgetRegistry;
+}
 
 export const exportPageView = (file: PageViewFile): string => JSON.stringify(file, null, 2);
 
@@ -101,10 +124,15 @@ function parseJson(text: string): { value: unknown } | { problem: ViewProblem } 
  * it refuses). The page and the name are checked by the caller, who knows
  * which page is open and which names are taken. The template kept is the
  * one the engine validated.
+ *
+ * A file of an OLDER data format is brought forward first, through the same
+ * door every stored tree goes through (`door`); one saved by a NEWER
+ * version — or by one too old to read — is refused, with the reason.
  */
 export function parsePageViewFile(
   text: string,
   layoutEngines: LayoutEngineRegistry,
+  door?: ViewFileDoor,
 ): { file: PageViewFile } | { problem: ViewProblem } {
   const parsed = parseJson(text);
   if ("problem" in parsed) return parsed;
@@ -118,7 +146,22 @@ export function parsePageViewFile(
   const { page, name } = value;
   if (typeof page !== "string" || page === "") return { problem: { kind: "not-a-view", detail: "no page" } };
   if (typeof name !== "string") return { problem: { kind: "not-a-view", detail: "no name" } };
-  const resolution = resolveTemplate(layoutEngines, value["template"]);
+  const unread = stampProblem(value["versions"], door?.migrations);
+  if (unread !== undefined) return { problem: { kind: "not-a-view", detail: unread } };
+  // The template as an overlay of one view: the shape the door reads.
+  const template =
+    door === undefined
+      ? value["template"]
+      : upgradeTrees(
+          {
+            userViewModels: {
+              versions: value["versions"] as FormatStamp | undefined,
+              pages: { [page]: { templates: { [name]: value["template"] as PageViewModel } } },
+            },
+          },
+          door,
+        ).userViewModels?.pages?.[page]?.templates?.[name];
+  const resolution = resolveTemplate(layoutEngines, template);
   if (resolution.problem !== undefined) return { problem: { kind: "invalid-template", detail: resolution.problem } };
-  return { file: pageViewFile(page, name, resolution.template) };
+  return { file: pageViewFile(page, name, resolution.template, door?.migrations.current()) };
 }

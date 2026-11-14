@@ -1,5 +1,5 @@
 /**
- * The CELL SELECTION the two antd tables share (doc/row-window-design.md,
+ * The CELL SELECTION the two antd tables share (doc/ADR/0007-row-window-and-header-filters.md,
  * "Cells are selected and copied"; the `cellSelection` setting):
  *
  *  - A press on a cell selects it; dragging on selects the RECTANGLE from

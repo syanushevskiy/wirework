@@ -10,6 +10,7 @@ export const PAGE_PATHS: Record<string, string> = {
   settings: "/demo/settings",
   cards: "/demo/cards",
   roles: "/demo/roles",
+  editor: "/demo/editor",
   builder: "/builder",
 };
 

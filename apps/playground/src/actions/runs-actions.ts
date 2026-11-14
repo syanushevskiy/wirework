@@ -1,6 +1,6 @@
 /**
  * Runs — business logic packaged as factories over host services
- * (doc/actions-design.md, "Registration").
+ * (doc/ADR/0005-actions.md, "Registration").
  *
  * The runs LIST needs no code here any more: it is a table the server
  * describes, loaded by `table-view/load` (@wirework/table-view) from the

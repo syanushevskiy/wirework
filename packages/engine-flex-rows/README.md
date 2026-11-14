@@ -1,7 +1,7 @@
 # @wirework/engine-flex-rows
 
 Rows of cells, each row a CSS flexbox, laid out by Tailwind's LAYOUT CLASS
-NAMES (doc/flex-rows-design.md). A good first engine to read, and the one
+NAMES (doc/ADR/0010-flex-rows.md). A good first engine to read, and the one
 the engine's own tests use. Peer: `react`. No Tailwind: the names are
 borrowed because page builders know them; the CSS is the engine's own.
 

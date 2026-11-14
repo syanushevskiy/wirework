@@ -2,7 +2,7 @@
  * Page toolbar — ONLY presentation (logic in @wirework/builder's
  * usePageToolbar): the engine of the shown template (a choice while the
  * page is empty), Edit / Save / Cancel with the pending count, the
- * user-overlay switch, the role edited for (doc/roles-design.md) and where
+ * user-overlay switch, the role edited for (doc/ADR/0012-roles.md) and where
  * edits go. Every lock the hook reports as a code is said here in words —
  * the defaults below, or the host's own.
  */
@@ -26,6 +26,7 @@ export const DEFAULT_PAGE_TOOLBAR_TEXTS: PageToolbarTexts = {
   editLocks: {
     permission: "Your permissions do not include editing pages",
     loading: "Whether you may edit pages is not known yet",
+    "newer-data": "Saved by a newer version of the application — it is kept as it is and cannot be changed here",
   },
   overlayLocks: { "no-widgets": "Add a widget first — there is nothing to personalise yet" },
   targets: { base: "everyone", user: "me", role: "role: {role}" },
@@ -70,7 +71,7 @@ export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
 
   return (
     <Flex wrap gap="small" align="center" data-testid="layout-toolbar" className="ww-builder-toolbar">
-      {/* Inside a container (doc/containers-design.md): the way back up, a crumb per layout. */}
+      {/* Inside a container (doc/ADR/0009-containers.md): the way back up, a crumb per layout. */}
       {crumbs.length > 1 ? (
         <Breadcrumb
           data-testid="layout-crumbs"
@@ -151,7 +152,7 @@ export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
           user overlay
         </Checkbox>
       </span>
-      {/* The role edited for (doc/roles-design.md): everyone, or one of the roles the host lists. */}
+      {/* The role edited for (doc/ADR/0012-roles.md): everyone, or one of the roles the host lists. */}
       {roleChoice ? (
         <>
           <label htmlFor="edit-role">for</label>
@@ -169,7 +170,7 @@ export function PageToolbar({ toolbar, texts }: PageToolbarProps) {
           />
         </>
       ) : null}
-      {/* "Add a role" the application grants (doc/roles-design.md): a kebab-case name, Enter adds it to the choice. */}
+      {/* "Add a role" the application grants (doc/ADR/0012-roles.md): a kebab-case name, Enter adds it to the choice. */}
       {toolbar.newRole ? (
         <Input
           data-testid="add-role"

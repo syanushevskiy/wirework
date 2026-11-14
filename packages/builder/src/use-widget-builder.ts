@@ -2,7 +2,7 @@
  * ALL widget-builder logic lives here (guidelines: render-only components):
  * a widget-type selection on top of the shared widget form. "Add" hands the
  * collected bindings and settings to the host, which writes them into the
- * view models (doc/widget-io-design.md, doc/widget-events-design.md).
+ * view models (doc/ADR/0001-widget-io.md, doc/ADR/0002-widget-events.md).
  */
 import { useCallback, useMemo, useState } from "react";
 import type { AnyWidgetDefinition, Store, WidgetBindings } from "@wirework/schema";

@@ -72,7 +72,7 @@ export interface WidgetDefinition<VM = unknown, TComponent = unknown, E extends 
   /**
    * The settings that hold a LAYOUT (a page template) the widget shows
    * INSIDE itself — a card's `content`, a tabs widget's `tabs` (a list of
-   * items each with a `content`) — doc/containers-design.md. The adapter
+   * items each with a `content`) — doc/ADR/0009-containers.md. The adapter
    * renders them with the page's own machinery; boot validation walks into
    * them; a builder edits them where it edits a page.
    */
@@ -80,12 +80,12 @@ export interface WidgetDefinition<VM = unknown, TComponent = unknown, E extends 
   /**
    * Typed input ports (store values the widget reads). The view model
    * binds port names to store paths under the reserved `inputs` key.
-   * See doc/widget-io-design.md.
+   * See doc/ADR/0001-widget-io.md.
    */
   io: WidgetIO;
   /**
    * Typed events the widget emits (kebab-case name -> payload validator).
-   * Required; use NO_EVENTS for none. See doc/widget-events-design.md.
+   * Required; use NO_EVENTS for none. See doc/ADR/0002-widget-events.md.
    */
   events: E;
   /**

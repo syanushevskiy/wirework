@@ -1,5 +1,5 @@
 /**
- * css-grid page template (doc/css-grid-design.md): the page is a CSS grid
+ * css-grid page template (doc/ADR/0013-css-grid.md): the page is a CSS grid
  * of SLOTS. `areas` is CSS's own `grid-template-areas`, one string per row,
  * its tokens the ids of the page's cells and "." for an empty slot — the
  * cell's id IS its area, there is no mapping. `columns` and `rows` size the

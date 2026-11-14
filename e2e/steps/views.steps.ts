@@ -1,12 +1,46 @@
 /**
  * Page views: the list of a page's prebuilt and own views, choosing one, Save as, Rename, Delete, Share and Import —
- * and Export page, the whole shared page as a file (doc/pages-as-code-design.md).
+ * and Export page, the whole shared page as a file (doc/ADR/0011-pages-as-code.md).
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { chooseOption, closeDropdown, confirmButton, dropdown, option } from "../support/antd";
 
-const { When, Then } = createBdd();
+const { Given, When, Then } = createBdd();
+
+/* ------------- views saved under another data format (doc/ADR/0017-versioning-and-upgrades.md) ------------- */
+
+/** What the server "has stored" as the user's views, put there before the application starts (demo/pages.ts). */
+const savedViews = (page: Page, document: unknown) =>
+  page.addInitScript((saved) => {
+    (window as Window & { wireworkSavedViews?: unknown }).wireworkSavedViews = saved;
+  }, document);
+
+/** A document frozen when the application was at that format (e2e/fixtures/formats/<n>/saved-views.json). The suite runs in e2e/. */
+Given("my saved views are from data format {int}", async ({ page }, format: number) => {
+  const file = join("fixtures", "formats", String(format), "saved-views.json");
+  await savedViews(page, JSON.parse(readFileSync(file, "utf8")));
+});
+
+Given("my saved views were saved by a newer version of the application", async ({ page }) => {
+  await savedViews(page, { versions: { wirework: 99 }, pages: { overview: { view: "from-the-future" } } });
+});
+
+Then("the page says my own views were not applied: {string}", async ({ page }, reason: string) => {
+  await expect(page.getByTestId("overlay-ignored")).toContainText(reason);
+});
+
+Then("the page cannot be edited because {string}", async ({ page }, reason: string) => {
+  await expect(page.getByTestId("page-edit")).toBeDisabled();
+  await expect(page.getByTestId("page-edit")).toHaveAttribute("title", new RegExp(reason));
+});
+
+/** The choice is made in the list; whether the page follows is for the next step to say. */
+When("I try to choose the view {string}", async ({ page }, name: string) => {
+  await chooseOption(page, "page-view-select", name);
+});
 
 /* ------------------------------- the list ------------------------------- */
 

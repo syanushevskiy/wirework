@@ -16,7 +16,7 @@ import "@wirework/react/styles.css";
   makes the page load again in place; `onError` reports a `PageError` — a
   widget's or the layout renderer's crash, or a predicate that threw — that
   the page isolated; `predicates` is the registry a cell's `when` may name
-  (doc/conditions-design.md). A cell whose condition does not hold keeps
+  (doc/ADR/0008-conditions.md). A cell whose condition does not hold keeps
   its place with `data-when="false"` and no widget inside; in edit mode
   the widget stays, dimmed, with the reason (`cell-hidden-note`). A
   template's `appear` and `disappear` name the animations the widget
@@ -34,14 +34,14 @@ ww-<name>` in the host's stylesheet.
   it holds (`onEditLayout(cellId, layoutPath)`), and a host's wrap action
   (`WrapCell`: `{ label, onWrap }`, `PageView.wrapCell`).
 - `NestedLayout` (`NestedLayoutProps`: `template`, `path`) — a layout INSIDE
-  a widget (doc/containers-design.md): a container renders the page
+  a widget (doc/ADR/0009-containers.md): a container renders the page
   template its own view model holds with the page's registries, store and
   bus from `PageContext` (`PageScope`, provided by `PageView`; the cell's
   id from `CellKeyContext`), its cells reacting under the nested page name
   (`overview/card-1`) and their overlay entries under the chain key
   (`card-1/button`) — every layer's, a role's entry as much as the user's
   (`PageScope.overlays` — `userViewModels` until 6 November 2026 —,
-  `PageView.roles`; doc/roles-design.md) —, never
+  `PageView.roles`; doc/ADR/0012-roles.md) —, never
   editable in place; four deep at most, a
   problem placeholder beyond; outside a page only how many widgets it
   holds. Its element is `data-testid="layout"`.
@@ -58,6 +58,34 @@ ww-<name>` in the host's stylesheet.
   the component is yours.
 - `defineLayoutEngine` (`ReactLayoutEngine`, `LayoutRendererProps`) — a
   layout-engine plugin whose renderer is a React component.
+
+## Lazy widgets
+
+A heavy widget's code is loaded only by the pages that show it
+(doc/ADR/0018-lazy-widgets.md). Its contract is registered at boot like any
+other; its implementation says `load` instead of `component`:
+
+```ts
+export const codeEditor = implementContract(codeEditorContract, {
+  type: "acme-code-editor",
+  load: () => import("./code-editor"), // the module's default export is the component
+  placeholder: { minHeight: "14rem" }, // optional: the room the cell keeps meanwhile
+});
+```
+
+- The page asks for the code of everything it shows as soon as its plan is
+  resolved; a widget a condition hides asks when it first shows.
+- The cell says `data-loading="true"` and shows a quiet block
+  (`cell-loading`) after 200 ms; code that does not arrive is that cell's
+  problem (`data-problem="load-failed"`) with "Load again", reported to
+  `PageView`'s `onError`.
+- `lazyComponent(load, { name })` is the same thing as a plain component —
+  for `defineWidget`, or a layout engine's `renderer`.
+- `preloadPage({ page, viewModels, registry, layoutEngines, … })` starts a
+  page's code before it opens — on a menu item's hover, say.
+- The contract's module must not import the component's module, not even
+  for a value: one import and the split is gone. Import the component's
+  stylesheet in the component's module, so it travels with the chunk.
 
 ## Hooks
 

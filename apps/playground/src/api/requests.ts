@@ -2,7 +2,7 @@
  * What the demo's fake servers have been asked and what they have answered
  * — so a test can wait for "the server has had time to answer" as a FACT
  * (nothing in flight) instead of a sleep, and assert WHICH view a page
- * asked for (`asked`: the URLs, in order — doc/roles-design.md). Every fake
+ * asked for (`asked`: the URLs, in order — doc/ADR/0012-roles.md). Every fake
  * request goes through `tracked`; `requests()` is on the console as
  * `wirework.requests()`.
  *
@@ -16,12 +16,15 @@
 declare global {
   interface Window {
     wireworkHoldAnswers?: boolean;
+    /** While true, the code of a lazy widget cannot be fetched — a test's stand-in for a lost connection. */
+    wireworkFailCode?: boolean;
   }
 }
 
 let pending = 0;
 let answered = 0;
 const asked: string[] = [];
+const code: string[] = [];
 
 /** The gate every held answer waits behind, made when the first request finds the hold set. */
 let gate: { opened: Promise<void>; open: () => void } | undefined;
@@ -60,6 +63,24 @@ export function tracked<T>(request: Promise<T>, url?: string): Promise<T> {
     answered += 1;
   });
 }
+
+/**
+ * The code of a LAZY widget, asked for (doc/ADR/0018-lazy-widgets.md): a
+ * request like any other — counted, held back with the answers — and noted
+ * under the widget's name once it arrived, so a test can say which code a
+ * page loaded and which it never asked for (`wirework.loaded()`).
+ */
+export function loadedCode<T>(name: string, load: () => Promise<T>): Promise<T> {
+  const fetched =
+    window.wireworkFailCode === true ? Promise.reject(new Error("its code could not be fetched")) : load();
+  return tracked(fetched).then((module) => {
+    code.push(name);
+    return module;
+  });
+}
+
+/** The lazy widgets whose code arrived since the application started, in order — one entry per fetch. */
+export const loaded = (): readonly string[] => [...code];
 
 /** Let every held answer through, and hold none from now on. */
 export function releaseAnswers(): void {

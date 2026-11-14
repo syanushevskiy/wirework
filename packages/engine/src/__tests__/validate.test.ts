@@ -137,7 +137,7 @@ describe("validateViewModels", () => {
     expect(report.problems[0]?.message).toMatch(/unknown layout engine/);
   });
 
-  describe("the role layer (doc/roles-design.md)", () => {
+  describe("the role layer (doc/ADR/0012-roles.md)", () => {
     const layout = (ids: string[]) => ({ engine: "list", cells: ids.map((id) => cell({ id })) });
     const withRoles = (roles: unknown) => ({ ...page([cell()], templates), roles });
 

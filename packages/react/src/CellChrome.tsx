@@ -1,6 +1,6 @@
 /**
  * Edit-mode chrome for one cell: the Edit and Remove actions, and for a
- * container one "Edit content" per layout it holds (doc/containers-design.md)
+ * container one "Edit content" per layout it holds (doc/ADR/0009-containers.md)
  * and, where the host offers it, "Reset to original" for a layout of the
  * viewer's own inside it.
  * Engines place it (grid handle bar, flex item header, a tab header, ...);

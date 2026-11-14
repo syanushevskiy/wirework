@@ -1,5 +1,5 @@
 /**
- * The LAYOUT VOCABULARY of flex-rows (doc/flex-rows-design.md): Tailwind's
+ * The LAYOUT VOCABULARY of flex-rows (doc/ADR/0010-flex-rows.md): Tailwind's
  * layout class names — its Layout, Flexbox & Grid, Spacing and Sizing
  * sections — each the CSS it stands for. A row's and a cell's `classes`
  * is a list of these names (`flex-1 basis-1/3 self-end`, `grid grid-cols-3

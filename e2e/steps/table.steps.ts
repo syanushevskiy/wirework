@@ -233,7 +233,7 @@ Then("the clipboard holds {string}", async ({ page }, text: string) => {
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(text);
 });
 
-/* ---- cell selection (doc/row-window-design.md "Cells are selected and copied"): a rectangle of cells, its menu ---- */
+/* ---- cell selection (doc/ADR/0007-row-window-and-header-filters.md "Cells are selected and copied"): a rectangle of cells, its menu ---- */
 
 /** The table whose cells are selected: it says what is selected as "rowStart-columnStart/rowEnd-columnEnd", from 1. */
 const selectingTable = (page: Page) => live(page).locator('[data-cell-selection="true"]').first();

@@ -29,7 +29,7 @@ export interface WidgetBuilderProps {
   contracts: ContractRegistry;
   store: Store;
   actions: ActionRegistry;
-  /** The checks a condition may pick (doc/conditions-design.md); the standard ones alone when absent. */
+  /** The checks a condition may pick (doc/ADR/0008-conditions.md); the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
   /** The animations a conditional widget may pick; the standard ones alone when absent. */
   appearances?: AppearanceRegistry | undefined;

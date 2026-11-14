@@ -24,7 +24,7 @@ template, `ResolvedCell`s and warnings, or a page problem; every cell is a
 is reported. `resolveTemplate` (a `TemplateResolution`) validates one page
 template with its engine.
 
-The base is read through LAYERS (doc/roles-design.md): the entries of
+The base is read through LAYERS (doc/ADR/0012-roles.md): the entries of
 `viewModels.roles.<role>` for the roles the user holds (`ResolveInput.roles`,
 in the session's order from the broadest to the most specific), then the
 user's overlay — the last layer that sets a thing wins, per page view, cell
@@ -59,7 +59,7 @@ validator issues into sentences.
 ## Appearances
 
 How a conditional widget appears and disappears (`appear` / `disappear`,
-doc/conditions-design.md "Appearance") is a NAME from the sixth registry:
+doc/ADR/0008-conditions.md "Appearance") is a NAME from the sixth registry:
 `createAppearances()` starts with the standard five (`standardAppearances`)
 and takes the host's own (`{ name, description }`, the name kebab-case, the
 animation itself `@keyframes ww-<name>` in the host's stylesheet);
@@ -69,7 +69,7 @@ registered — part of `contractProblems`, given `ResolveInput.appearances`.
 
 ## Layouts inside widgets
 
-doc/containers-design.md: a container's template holds a page template in
+doc/ADR/0009-containers.md: a container's template holds a page template in
 a setting its definition names in `contains`. `layoutsOf(definition,
 viewModel)` lists the layouts held (`{ path, template }` — `content`, or
 `tabs.0.content` for an item of a list); `innerCellKey`, `innerOverlay` and
@@ -93,7 +93,7 @@ every resolved view model), `emitPageLoad` (the page has opened),
 
 ## Conditions
 
-A widget's `when` (doc/conditions-design.md) names predicates from the
+A widget's `when` (doc/ADR/0008-conditions.md) names predicates from the
 fifth registry: `createPredicates()` starts with the standard eight and
 takes the host's own (`runs/retryable`), checked like every registration
 (a name in the action grammar, a `test`, a `phrase`, a `description`, an

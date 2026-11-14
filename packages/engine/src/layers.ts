@@ -1,5 +1,5 @@
 /**
- * The OVERLAY LAYERS (doc/roles-design.md): the base view models are read
+ * The OVERLAY LAYERS (doc/ADR/0012-roles.md): the base view models are read
  * through a list of overlays, every one in the user overlay's shape — the
  * entries of the roles the user holds, in the session's order from the
  * broadest to the most specific, then the user's own. ONE rule at every
@@ -28,7 +28,7 @@ export const overlayLayers = (
 /**
  * The layers as ONE VIEW of a page reads them: in every layer, what it
  * holds for that view alone (`viewCells.<view>` — a view's own layouts
- * inside its containers, doc/page-views-design.md) merged over its `cells`.
+ * inside its containers, doc/ADR/0006-page-views.md) merged over its `cells`.
  * The result has the overlays' own shape, so everything below — a cell's
  * settings, the layouts inside containers, validation — reads it unchanged.
  * A layer with nothing for the view is the layer itself.

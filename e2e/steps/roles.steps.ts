@@ -1,5 +1,5 @@
 /**
- * Roles (doc/roles-design.md): "Sign in as" another of the demo's people,
+ * Roles (doc/ADR/0012-roles.md): "Sign in as" another of the demo's people,
  * what the fake servers were asked for, and editing FOR a role in the
  * builder — the role choice in the toolbar and a cell's template chosen for
  * the role.

@@ -12,7 +12,7 @@
  * port's path as the user types it; it needs no row. An event marked
  * `required` (it carries state and has no default) needs one filled row,
  * which gates submit exactly like a required port. An action that DECLARES
- * parameters (doc/actions-design.md) gets one field per parameter — objects
+ * parameters (doc/ADR/0005-actions.md) gets one field per parameter — objects
  * and lists as JSON — saved as the reaction's `with`; its required ones gate
  * submit too. The CONDITION under which the widget shows is a list of rows
  * too (form-when.ts): a path, a check picked by its phrase, the value it
@@ -93,7 +93,7 @@ export interface WidgetFormInput {
   definition: AnyWidgetDefinition | undefined;
   store: Store;
   actions: ActionRegistry;
-  /** The checks a condition may pick (doc/conditions-design.md); the standard ones alone when absent. */
+  /** The checks a condition may pick (doc/ADR/0008-conditions.md); the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
   /** The animations a conditional widget may pick; the standard ones alone when absent. */
   appearances?: AppearanceRegistry | undefined;
@@ -157,7 +157,7 @@ export function useWidgetForm({
     [definition, paths, suggested],
   );
 
-  /** The settings the form asks for: the primitive ones and the named lists (doc/containers-design.md). */
+  /** The settings the form asks for: the primitive ones and the named lists (doc/ADR/0009-containers.md). */
   const settingList = useMemo(() => (definition ? settingFields(definition.viewModel) : []), [definition]);
   /** The settings with the user's drafts — a named list's entries from the setting's default until the user touches them. */
   const settings = useMemo<SettingDraft[]>(

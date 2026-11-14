@@ -1,5 +1,5 @@
 /**
- * The DRAG of edit mode (doc/flex-rows-design.md, "Moved by drag and
+ * The DRAG of edit mode (doc/ADR/0010-flex-rows.md, "Moved by drag and
  * drop"): a cell taken by its handle and let go on another cell — its
  * middle swaps the two, its left or right quarter puts the dragged one
  * before or after it — or on the strip between two rows, where it takes a

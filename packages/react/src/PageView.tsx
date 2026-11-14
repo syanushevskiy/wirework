@@ -14,9 +14,9 @@
  * callback (widget in its error boundary with a cell-scoped `emit` and a
  * read-only store) and, in edit mode, a `renderChrome` callback with the
  * Edit/Remove actions the engine places wherever its library allows
- * (doc/layout-engines-design.md). The plan's declared reactions — the
+ * (doc/ADR/0003-layout-engines.md). The plan's declared reactions — the
  * cells' and the page's own — stay subscribed while mounted, and the page's
- * `load` event fires once per opening (doc/widget-events-design.md).
+ * `load` event fires once per opening (doc/ADR/0002-widget-events.md).
  *
  * NOTE: registries are treated as immutable after mount — register all
  * widgets and engines BEFORE rendering.
@@ -27,6 +27,7 @@ import type {
   ActionRegistry,
   AppearanceRegistry,
   LayoutEngineRegistry,
+  Migrations,
   PredicateRegistry,
   ResolvedPage,
   WidgetRegistry,
@@ -37,6 +38,7 @@ import { PageReloadContext } from "./useAnnounce";
 import { usePageLoad } from "./usePageLoad";
 import { usePagePlan } from "./usePagePlan";
 import { usePageRenderers } from "./usePageRenderers";
+import { usePreload } from "./usePreload";
 import { useReactions } from "./useReactions";
 import { LayoutErrorBoundary } from "./WidgetErrorBoundary";
 import type { ResetLayout, WrapCell } from "./CellChrome";
@@ -51,7 +53,7 @@ export interface PageViewProps {
   viewModels: ViewModels;
   userViewModels?: UserViewModels | undefined;
   /**
-   * The roles the user holds (doc/roles-design.md), in the session's order
+   * The roles the user holds (doc/ADR/0012-roles.md), in the session's order
    * from the broadest to the most specific: their entries in
    * `viewModels.roles` are read between the base and the user's overlay.
    */
@@ -60,10 +62,16 @@ export interface PageViewProps {
   layoutEngines: LayoutEngineRegistry;
   /** Host actions that `call` reactions may invoke. */
   actions?: ActionRegistry | undefined;
-  /** The predicates a cell's `when` may name (doc/conditions-design.md); the standard ones alone when absent. */
+  /** The predicates a cell's `when` may name (doc/ADR/0008-conditions.md); the standard ones alone when absent. */
   predicates?: PredicateRegistry | undefined;
   /** The appearances a cell's `appear` and `disappear` may name; the standard ones alone when absent. */
   appearances?: AppearanceRegistry | undefined;
+  /**
+   * The data formats this version reads (doc/ADR/0017-versioning-and-upgrades.md): an overlay saved by a newer
+   * version is not applied — the shared page shows, with a note — and pages saved by one are not shown at all.
+   * Absent: format 1, and any stamp above it is refused.
+   */
+  migrations?: Migrations | undefined;
   /**
    * An already-resolved plan (from `usePagePlan`) for these same inputs.
    * When given, PageView renders it and resolves nothing itself.
@@ -78,7 +86,7 @@ export interface PageViewProps {
   /** Edit-mode chrome actions; a button renders only when its callback is given. */
   onEditCell?: ((cellId: string) => void) | undefined;
   onRemoveCell?: ((cellId: string) => void) | undefined;
-  /** A container's "Edit content": open the layout it holds at `layoutPath` (doc/containers-design.md). */
+  /** A container's "Edit content": open the layout it holds at `layoutPath` (doc/ADR/0009-containers.md). */
   onEditLayout?: ((cellId: string, layoutPath: string) => void) | undefined;
   /** "Wrap in a card": put the cell into a new container — the host names the button and does the wrapping. */
   wrapCell?: WrapCell | undefined;
@@ -106,6 +114,7 @@ export function PageView({
   actions,
   predicates,
   appearances,
+  migrations,
   plan: providedPlan,
   store,
   bus,
@@ -121,16 +130,20 @@ export function PageView({
 }: PageViewProps) {
   // Render-only component: resolution lives in the hooks (guidelines).
   const plan = usePagePlan(
-    { viewModels, userViewModels, roles, page, registry, layoutEngines, actions, predicates, appearances },
+    { viewModels, userViewModels, roles, page, registry, layoutEngines, actions, predicates, appearances, migrations },
     providedPlan,
   );
   useReactions(bus, store, plan, actions);
+  // The code of what the page shows — a lazy renderer, lazy widgets — asked for at once (doc/ADR/0018-lazy-widgets.md).
+  usePreload(plan, layoutEngines);
   // The page's own `load` event: what `viewModels.on.<page>.load` declares runs once per opening.
   usePageLoad(bus, store, page, reloadKey);
   const { cells, cellById, renderCell, renderChrome, scope } = usePageRenderers({
     plan,
     viewModels,
-    userViewModels,
+    // An overlay the plan ignored (invalid, or of a format this version does not read) is not what the layouts
+    // inside the page's containers are read through either.
+    userViewModels: plan.overlayProblem === undefined ? userViewModels : undefined,
     roles,
     registry,
     layoutEngines,

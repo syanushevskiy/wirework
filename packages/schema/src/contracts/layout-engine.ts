@@ -1,5 +1,5 @@
 /**
- * Layout engine contract — framework-agnostic (doc/layout-engines-design.md).
+ * Layout engine contract — framework-agnostic (doc/ADR/0003-layout-engines.md).
  *
  * A page template declares `engine: "<name>"`; the registered plugin of
  * that name owns the template's SHAPE and every layout operation on it.

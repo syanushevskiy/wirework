@@ -1,4 +1,8 @@
-# Documentation for page authors — people and, above all, AI agents
+# ADR-0014: Documentation for page authors — people and, above all, AI agents
+
+- **Status:** Proposed — not built
+- **Date:** 2026-11-07
+- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
 
 Designed 7 November 2026 with the tiger team (doc/team_tiger.md), at the
 product owner's ask. Status: designed (story WW-33), nothing built.
@@ -41,7 +45,7 @@ application boots without a developer in the loop.
   (`cell[2] (#tag-run-retry): unknown predicate "runs/retriable"`). None
   of this is written anywhere a reader finds it; all of it is read by the
   builder at run time.
-- **A page IS a file already** (doc/pages-as-code-design.md, "Built"):
+- **A page IS a file already** (doc/ADR/0011-pages-as-code.md, "Built"):
   `wirework-page` v1 — the page's views, its `on`, every widget template
   its cells reference, its route — cut by `pageFile`, checked by
   `parsePageFile`, merged by `mergePageFiles`. Export page produces it;
@@ -66,7 +70,7 @@ from "I need a page".
   paragraph, a rule stated once beats three places that imply it.
 - **A developer embedding Wirework**: how to register, where pages live,
   how the check runs in CI. Secondary here (the package READMEs and
-  doc/pages-as-code-design.md cover the host), but the same entry page
+  doc/ADR/0011-pages-as-code.md cover the host), but the same entry page
   must send them on in one line.
 - **A page builder who does not code**: the builder UI is their
   documentation; they are served by WW-1 and the Gherkin stories. Out of
@@ -251,7 +255,7 @@ described here. Sections, each a few lines and one JSON fragment:
     reports (unknown widget, unknown action, a setting the schema
     refuses, a path with a forbidden segment, a condition's unknown
     predicate, a non-rectangle area) and what each means; then
-    doc/pages-as-code-design.md for how the file reaches the
+    doc/ADR/0011-pages-as-code.md for how the file reaches the
     application.
 
 ### The catalog (generated)
@@ -428,7 +432,7 @@ file it names, so the commentary cannot drift either.
 - **The guide in a package**: `page-authoring.md` and the script shipped
   in `@wirework/engine`'s `dist` (`docs/`), so a host gets them from npm
   and `pnpm docs` in the host writes its own folder.
-- **Pages as code phase 1** (doc/pages-as-code-design.md) takes the
+- **Pages as code phase 1** (doc/ADR/0011-pages-as-code.md) takes the
   examples as `src/pages/*.page.json`: one folder, read by the loader and
   by the reader.
 - **A widget's own prose** — when `.describe()` is not enough (the table's

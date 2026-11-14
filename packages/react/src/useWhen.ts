@@ -1,5 +1,5 @@
 /**
- * useWhen — whether a cell's condition holds RIGHT NOW (doc/conditions-design.md).
+ * useWhen — whether a cell's condition holds RIGHT NOW (doc/ADR/0008-conditions.md).
  * One `useSyncExternalStore` subscribed to every path the condition reads,
  * whose snapshot is the answer itself: "shown", "hidden", or the message
  * of a predicate that threw — a host bug, which the cell shows as a crash

@@ -1,5 +1,5 @@
 /**
- * Predicates and conditions (doc/conditions-design.md): the fifth
+ * Predicates and conditions (doc/ADR/0008-conditions.md): the fifth
  * extension point. A widget's `when` is a list of tests over store paths —
  * every test names a predicate from this registry, which holds the
  * standard eight from the start and whatever the host registers. `holds`

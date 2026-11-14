@@ -1,5 +1,5 @@
 /**
- * Pages as FILES (doc/pages-as-code-design.md): one page cut out of the
+ * Pages as FILES (doc/ADR/0011-pages-as-code.md): one page cut out of the
  * view-model trees as a `PageFile` — its prebuilt templates with the
  * containers' layouts NESTED inside their cells, its own reactions, the
  * other widgets' templates by model path, what every role says about it
@@ -76,7 +76,7 @@ export function pageFile(
 ): PageFile | undefined {
   const templates = viewModels.pages[page];
   if (templates === undefined) return undefined;
-  // What every role says about this page (doc/roles-design.md): its layouts travel with the page.
+  // What every role says about this page (doc/ADR/0012-roles.md): its layouts travel with the page.
   const roles = Object.fromEntries(
     Object.entries(viewModels.roles ?? {}).flatMap(([role, entry]) => {
       const held = entry.pages?.[page];
@@ -119,6 +119,8 @@ export function pageFile(
   return {
     kind: PAGE_FILE_KIND,
     version: PAGE_FILE_VERSION,
+    // The data format of what the file carries is the tree's it was cut from (doc/ADR/0017-versioning-and-upgrades.md).
+    ...(viewModels.versions === undefined ? {} : { versions: viewModels.versions }),
     page,
     ...(route === undefined ? {} : { route }),
     templates: nestedTemplates,
@@ -152,9 +154,15 @@ export function parsePageFile(text: string): { file: PageFile } | { problem: str
  * as the file leaves them out.
  */
 export function pageFolder(file: PageFile): PageFolder {
-  const { kind, version, page, route, templates, on, roles = {}, widgets } = file;
+  const { kind, version, versions, page, route, templates, on, roles = {}, widgets } = file;
   return {
-    page: { kind, version, page, ...(route === undefined ? {} : { route }) },
+    page: {
+      kind,
+      version,
+      ...(versions === undefined ? {} : { versions }),
+      page,
+      ...(route === undefined ? {} : { route }),
+    },
     viewModel: { templates, ...(on === undefined ? {} : { on }) },
     roles,
     widgets,
@@ -209,12 +217,25 @@ export interface MergedPages {
  * back to the cell's model path, the cell plain again. Two files that hold
  * the same widget template differently are a problem (and the later one
  * wins): a template two pages reference must be identical in both files.
+ *
+ * The tree made carries the files' FORMAT STAMP
+ * (doc/ADR/0017-versioning-and-upgrades.md), for `upgradeTrees` to read:
+ * files of one data format merge into a tree of that format. Files — or a
+ * tree to merge into — of DIFFERENT formats are a problem: bring each
+ * forward on its own first (merge it alone, upgrade, then merge the trees).
  */
 export function mergePageFiles(files: readonly PageFile[], into?: ViewModels): MergedPages {
   const problems: string[] = [];
+  const stamps = new Set(
+    [...(into === undefined ? [] : [into.versions]), ...files.map((file) => file.versions)].map((stamp) =>
+      JSON.stringify(Object.entries(stamp ?? {}).sort()),
+    ),
+  );
+  if (stamps.size > 1) problems.push("the pages are of different data formats: upgrade each before merging them");
+  const versions = into?.versions ?? files[0]?.versions;
   const pages = new Set<string>();
   const holders = new Map<string, string>();
-  let viewModels: ViewModels = into ?? { pages: {}, widgets: {} };
+  let viewModels: ViewModels = into ?? { ...(versions === undefined ? {} : { versions }), pages: {}, widgets: {} };
   const place = (page: string, model: string, templates: unknown) => {
     const holder = holders.get(model);
     if (holder !== undefined && JSON.stringify(getPath(viewModels, model)) !== JSON.stringify(templates))

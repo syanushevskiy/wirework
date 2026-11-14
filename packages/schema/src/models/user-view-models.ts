@@ -8,7 +8,7 @@
  *    overrides per template (keyed by cell id — two cells of the same
  *    widget type are customised independently),
  *  - the same per cell FOR ONE VIEW (`viewCells`): what only that view
- *    shows — the layouts inside its containers (doc/page-views-design.md).
+ *    shows — the layouts inside its containers (doc/ADR/0006-page-views.md).
  *
  * Fallback chain: user-selected template ->
  * cell/default template -> boot-validation error. A user override referencing
@@ -17,6 +17,7 @@
 import { z } from "zod";
 import { RESERVED_VIEW_MODEL_KEYS } from "../contracts/settings";
 import { pageViewModelSchema } from "./page-template";
+import { formatStampSchema } from "./versions";
 
 /**
  * One template's settings overrides. SETTINGS only: `inputs`, `on` and
@@ -65,9 +66,16 @@ export const pageUserViewModelSchema = z
   .strict();
 export type PageUserViewModel = z.infer<typeof pageUserViewModelSchema>;
 
-/** Root user view model. */
+/**
+ * Root user view model. `versions` is the format stamp of the document as
+ * it is STORED (doc/ADR/0017-versioning-and-upgrades.md) — a user's overlay
+ * was written on another day than the shared page, so it carries its own; a
+ * role's entry (the same shape, inside the view models) has none of its own
+ * and is read by the view models' stamp.
+ */
 export const userViewModelsSchema = z
   .object({
+    versions: formatStampSchema.optional(),
     pages: z.record(z.string(), pageUserViewModelSchema).optional(),
   })
   .strict();

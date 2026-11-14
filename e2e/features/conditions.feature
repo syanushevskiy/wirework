@@ -6,7 +6,7 @@ Feature: Conditions — a widget shown when a predicate holds
   than, less than) and whatever the application registers under its own
   name. A hidden widget keeps its place on the page and comes back as it
   was; while the page is edited it stays visible, dimmed, with the reason.
-  (doc/conditions-design.md)
+  (doc/ADR/0008-conditions.md)
 
   Scenario: The runs page shows "Open run" only while a run is selected
     Given I open the "runs" page

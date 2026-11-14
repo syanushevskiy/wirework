@@ -1,6 +1,6 @@
 /**
  * useShowing — whether a conditional widget is on the page RIGHT NOW, its
- * animations included (doc/conditions-design.md, "Appearance"). Shown, it
+ * animations included (doc/ADR/0008-conditions.md, "Appearance"). Shown, it
  * mounts and plays `appear`; hidden, it plays `disappear` and leaves when
  * that ends — so it stays MOUNTED for the length of the animation, and is
  * gone at once without one, or when the person asked their system for

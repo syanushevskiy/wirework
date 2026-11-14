@@ -8,7 +8,7 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
   dragged one goes beside it, on the strip between two rows it takes a row
   of its own. The demo's cards page is a FlexLayout
   of two cards, one holding react-grid-layout and one holding flex rows:
-  three engines on one page. (doc/flex-rows-design.md)
+  three engines on one page. (doc/ADR/0010-flex-rows.md)
 
   Scenario: The cards page is a FlexLayout of two cards side by side, a grid inside one and flex rows inside the other
     Given I open the "cards" page

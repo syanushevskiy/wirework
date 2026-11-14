@@ -1,6 +1,6 @@
 /**
  * @wirework/widget-contracts — the STANDARD widget kinds as contracts:
- * declarations without components (doc/widget-contracts-design.md).
+ * declarations without components (doc/ADR/0004-widget-contracts.md).
  * Implement one with `implementContract` (@wirework/react); define your
  * own kinds with `defineContract` (@wirework/schema) and register them in
  * the host next to these.
@@ -74,7 +74,7 @@ export { rateContract } from "./rate";
 export { statisticContract } from "./statistic";
 export { dividerContract, DIVIDER_ORIENTATIONS } from "./divider";
 export type { DividerOrientation } from "./divider";
-// The dashboard set (doc/more-widgets-design.md): what a settings page and a filter row still lacked, and the
+// The dashboard set (doc/ADR/0015-more-widgets.md): what a settings page and a filter row still lacked, and the
 // display that replaces hand-laid labels.
 export { numberContract } from "./number";
 export { dateContract, DATE_PICKERS, DATE_FORMAT } from "./date";
@@ -94,7 +94,7 @@ export { stepsContract, stepItemSchema, STEPS_DIRECTIONS } from "./steps";
 export type { StepItem, StepsDirection } from "./steps";
 export { timelineContract, timelineItemSchema, timelineItemsSchema, TIMELINE_MODES } from "./timeline";
 export type { TimelineItem, TimelineMode } from "./timeline";
-// Containers: a layout of other widgets inside (doc/containers-design.md).
+// Containers: a layout of other widgets inside (doc/ADR/0009-containers.md).
 export { cardContract, CARD_SIZES } from "./card";
 export type { CardSize } from "./card";
 export { tabsContract, layoutItemSchema } from "./tabs";

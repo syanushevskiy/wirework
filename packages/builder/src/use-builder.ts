@@ -46,7 +46,7 @@ const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
 
 /**
  * Where the layout a builder adds to lives in the view models: the page's
- * own template, or — `at` a chain of containers (doc/containers-design.md)
+ * own template, or — `at` a chain of containers (doc/ADR/0009-containers.md)
  * — the layout inside a container's widget template; undefined when the
  * chain leads nowhere.
  */
@@ -102,7 +102,7 @@ export interface BuilderInput {
   /** The page changed, so it must load again by the new configuration; and what was placed. */
   onAdded: (placed: PlacedWidget) => void;
   /**
-   * Where the edits go (doc/roles-design.md): with a ROLE as the target, a
+   * Where the edits go (doc/ADR/0012-roles.md): with a ROLE as the target, a
    * placed widget's cell lands in the role's own view — a copy of the shown
    * layout when the role has none yet — through the same op every edit for
    * a role uses; its template is everyone's, as every template is. Absent,

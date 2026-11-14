@@ -1,4 +1,8 @@
-# Widget IO — typed inputs; writes are events
+# ADR-0001: Widget IO — typed inputs; writes are events
+
+- **Status:** Accepted — built
+- **Date:** 2026-09-15
+- **Deciders:** the tiger team (doc/team_tiger.md)
 
 ## Motivation
 
@@ -9,7 +13,7 @@ cannot ask "what does this widget need?" — and prevented boot validation
 from catching a widget wired to a path holding the wrong shape.
 
 Output ports existed briefly and were removed (team-tiger decision, see
-doc/widget-events-design.md): a write from widget code is unenforceable
+doc/ADR/0002-widget-events.md): a write from widget code is unenforceable
 and invisible. A widget now only READS through ports; every state change
 it causes is an emitted event plus a reaction declared in the view model.
 
@@ -45,7 +49,7 @@ type cast, a view without `set` — so a widget cannot write even by accident.
 
 The view model binds port names to store paths under the reserved `inputs`
 key, event names to reactions under the reserved `on` key, and says when
-the widget shows under the reserved `when` key (doc/conditions-design.md):
+the widget shows under the reserved `when` key (doc/ADR/0008-conditions.md):
 
 ```ts
 {
@@ -132,7 +136,7 @@ off the zod validator:
 
 Label, button, input, pagination, refresher, select, multi-select, tag,
 checkbox, progress, alert and table implement the standard CONTRACTS
-(doc/widget-contracts-design.md): their ports, events and settings are
+(doc/ADR/0004-widget-contracts.md): their ports, events and settings are
 declared once in `@wirework/widget-contracts` and reused by every
 implementation.
 

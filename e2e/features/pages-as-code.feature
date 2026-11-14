@@ -1,6 +1,6 @@
 Feature: Pages as code — the whole page as a file
   A page built in the builder reaches the application's source as a FILE
-  (doc/pages-as-code-design.md). The first step of that road is Export page:
+  (doc/ADR/0011-pages-as-code.md). The first step of that road is Export page:
   an admin downloads the whole SHARED page as one JSON file —
   "<page>.page.json": its prebuilt views, what it loads, the widgets its
   cells reference down into its cards, and its address — and sends it to a
