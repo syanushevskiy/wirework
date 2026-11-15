@@ -2,24 +2,56 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-09-15
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
 Diagrams: doc/events-and-reactions.drawio (1: from a click to the store,
 2: how one event's reaction chain runs).
 
-## Motivation
+## Description
 
 Widgets already exchange STATE through the store (doc/ADR/0001-widget-io.md).
 Nothing expresses INTENT: "a row was clicked", "filters were applied",
-"refresh requested". Modelling those as store writes gives last-value
-semantics (bursts collapse to one render), pollutes exported state with
-transient junk, and replays phantom events when the inspector applies a
-snapshot. A builder also cannot tell what a widget can signal.
+"refresh requested". A builder also cannot tell what a widget can signal.
+
+This record says how a widget signals something, who reacts to it, and —
+since output ports were removed — how a widget changes state at all.
+
+## Options considered
+
+- **Intents as store writes.** No new concept, but it gives last-value
+  semantics (bursts collapse to one render), pollutes exported state with
+  transient junk, and replays phantom events when the inspector applies a
+  snapshot.
+- **Output ports for the state a widget changes**, beside the input
+  ports. They existed and were removed ("Outputs replaced by events"
+  below): they were declarative only — the write itself was an unchecked
+  `store.set` inside widget code.
+- **Typed events on a bus, and reactions in the view model.** A widget
+  declares the events it emits with a payload validator; the engine
+  checks the name and the payload on every emit and stamps the source;
+  what an event DOES is declared in the view model (`on`). It costs a bus,
+  and a reaction for every state change — which "Default write-back"
+  below removes for controlled widgets.
+
+Two things were weighed inside the last one and turned down:
+
+- **A bus that replays or keeps the last value.** The bus is
+  fire-and-forget by design: what must be remembered is state, and state
+  is written to the store.
+- **Reactions that compute** — expressions, conditionals or formats in
+  configuration, growing into a workflow engine by accretion. Reactions
+  never transform: the moment a handler needs logic, it is an action —
+  host code with a name.
+
+## Decision
 
 **Rule:** widgets READ state from the store and EMIT everything else. A
 state change is an event plus a reaction (`on`) that writes the store; a
 one-shot intent is an event someone subscribes to. There are no output
-ports (decision below).
+ports. Events are enforced end to end: declared names, validated
+payloads, a stamped source, visible in the log, wireable by users.
+Reactions have exactly two verbs — `set` writes the store, `call` runs a
+host action by name — and never transform.
 
 ## Contract
 
@@ -162,7 +194,7 @@ log, wireable by users. So:
   top-level keys (plus "whole payload") and DEFAULTS to the only key —
   writing `{ value }` into a number-typed path was the classic wiring trap.
 
-Ren's two conditions are policy: reactions never transform (`from` selects,
+Two conditions are policy: reactions never transform (`from` selects,
 `value` is a literal — no expressions), and a noisy emitter is a widget
 problem, not a bus feature.
 
@@ -208,14 +240,14 @@ the message somewhere.
   enum settings are introspected like the others.
 - **Custom rule from configuration** is a regular expression setting
   (`pattern` + `patternMessage`), no code.
-- **Custom rule from code** is not built. The team's design: a VALIDATOR
+- **Custom rule from code** is not built. The design: a VALIDATOR
   registry the host fills (`{ name, description, validate(value) }`),
   injected into widgets like `emit` and offered as a select — the exact
-  shape of the action registry, so no new concept. Ren's condition applies:
+  shape of the action registry, so no new concept. One condition applies:
   validators stay pure functions of the value; anything needing the store
   or the bus is an action, not a validator.
 
-Team decision (Ren's guardrail, unchanged): reactions never transform.
+The decision, unchanged: reactions never transform.
 `from` selects, `value` is a literal, `with` is static. The moment a
 handler needs logic, it is an action — host code with a name — not a
 config expression. The same line holds for a table's cell kinds
@@ -239,7 +271,7 @@ on: { "row-selected": [{ set: "runs.selected", from: "key" }] }
 (`from` and `value` are exclusive) or `{ call: actionName, with?: args }`.
 `set` writes `value` if given, else the payload field at `from`, else the
 whole payload; `call` runs a host action ("Listening and handling" above —
-the second verb got its own design, as the team required). The team's
+the second verb got its own design, doc/ADR/0005-actions.md). The
 explicit decision is to NOT grow this into a workflow engine by accretion.
 
 Timing is part of the contract: the reactions of one event run in

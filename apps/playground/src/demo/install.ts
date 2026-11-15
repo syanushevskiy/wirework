@@ -16,7 +16,7 @@ import { APP_OWNER, type Store, type ViewModels } from "@wirework/schema";
 import { createTableViewActions } from "@wirework/table-view";
 import { z } from "zod";
 import { demoAppState, sampleRuns, type DemoPage, type DemoRole, type Run } from "@wirework/view-data-models-examples";
-import { standardContracts } from "@wirework/widget-contracts";
+import { standardContracts, tableRowsSchema } from "@wirework/widget-contracts";
 import { antdTestWidgets, brokenWidgets, createAntdWidgets } from "@wirework/antd-widgets";
 import { createFilterActions } from "../actions/filter-actions";
 import { createNavActions, type Navigator } from "../actions/nav-actions";
@@ -51,6 +51,13 @@ function isRetryable(run: unknown): boolean {
   const record = run as Partial<Run> | null;
   return record?.status?.state === "Failed" && typeof record.id === "string" && Number(record.id) % 2 === 0;
 }
+
+/** What the standard `favorite` row action says when it is used: which row, and the state asked for. */
+const favoriteAsked = z.object({
+  name: z.literal("favorite"),
+  key: z.string().min(1),
+  detail: z.object({ active: z.boolean() }),
+});
 
 /** What the host needs from the demo once everything is registered. */
 export interface Demo {
@@ -137,6 +144,26 @@ export function installDemo(
   const runsServer = createRunsServer({ seed: sampleRuns, total: 23, latencyMs: 600 });
   // The archive: the same kind of list, long — two thousand runs nobody holds whole (the windowed list's demo).
   const archiveServer = createRunsServer({ seed: sampleRuns, total: ARCHIVE_TOTAL, latencyMs: 300, details: true });
+  // The archive's STAR (doc/ADR/0020-row-actions.md): the table's `row-action` reaction calls this. The server is
+  // told the run's KEY and the state asked for — never a field of the row, which is only what the browser holds —
+  // and once it answered, that one row is patched where the table reads it: no list request. Another row action of
+  // the same table arrives here too (reactions have no conditions): it is not this action's and is left alone.
+  actions.register({
+    name: "archive/set-favorite",
+    description:
+      'Mark the run a row action named "favorite" was used on as a favourite, or not (detail.active), on the server and in archive.data',
+    handler: async ({ store, event }) => {
+      const asked = favoriteAsked.safeParse(event.payload);
+      if (!asked.success) return;
+      const { key, detail } = asked.data;
+      await archiveServer.setFavorite(key, detail.active);
+      const rows = store.getAs("archive.data", tableRowsSchema) ?? [];
+      store.set(
+        "archive.data",
+        rows.map((row) => (String(row.id) === key ? { ...row, favorite: detail.active } : row)),
+      );
+    },
+  });
   const sessionApi = createSessionApi({ latencyMs: 300 });
   const loadSession = createSessionLoader(sessionApi);
   // The Wirework admin's button (doc/ADR/0012-roles.md): a role-only ACTION is a server call the session must be

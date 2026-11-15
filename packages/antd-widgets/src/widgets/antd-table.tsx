@@ -26,6 +26,8 @@ import type { TableToolbarItems } from "../hooks/use-table-toolbar";
 import { useCellTip } from "../hooks/use-cell-tip";
 import { CellMenu } from "./cell-menu";
 import { CellTip } from "./cell-tip";
+import type { TableRowActions } from "../hooks/use-row-actions";
+import { rowActionsOf } from "./row-actions";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
@@ -39,10 +41,20 @@ export interface AntdTableOptions {
    * `refresh`, and INSTEAD of one of them when registered under its name (the host's own refresher as `refresh`).
    */
   toolbar?: TableToolbarItems;
+  /**
+   * Row actions the host registers by name, for `rowActions: [{ name }]` (doc/ADR/0020-row-actions.md) — beside the
+   * standard `favorite`, and INSTEAD of it when registered under its name.
+   */
+  rowActions?: TableRowActions;
 }
 
-export function createAntdTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTableOptions = {}) {
+export function createAntdTable({
+  cells = NO_CELLS,
+  toolbar: ownItems,
+  rowActions: ownActions,
+}: AntdTableOptions = {}) {
   const items = toolbarItems(ownItems);
+  const actions = rowActionsOf(ownActions);
 
   function AntdTable({ viewModel, store, emit }: ContractProps<typeof tableContract>) {
     const {
@@ -77,11 +89,13 @@ export function createAntdTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTab
         columnMenu: viewModel.columnMenu,
         columnStateKey: viewModel.columnStateKey,
         toolbar: viewModel.toolbar,
+        rowActions: viewModel.rowActions,
         cellSelection: viewModel.cellSelection,
         exportName: viewModel.exportName,
       },
       cells,
       items,
+      actions,
     );
     const tip = useCellTip(!viewModel.wrapCells);
 

@@ -416,8 +416,13 @@ export function paginationConformance(
 /** `list-position` contract: where the list stands from the store, in words and as a percent; a move of the scale stored by the default reaction. */
 export function listPositionConformance(
   definition: AnyWidgetDefinition,
-): Record<"Stands" | "Jumps" | "Vertical" | "Empty", Story> {
-  const inputs = { position: "demo.position", visible: "demo.visible", total: "demo.total" };
+): Record<"Stands" | "Jumps" | "Vertical" | "Empty" | "EndUnknown", Story> {
+  const inputs = {
+    position: "demo.position",
+    visible: "demo.visible",
+    total: "demo.total",
+    hasMore: "demo.hasMore",
+  };
   const on = { changed: [{ set: "demo.position", from: "position" }] };
   return {
     Stands: {
@@ -490,6 +495,28 @@ export function listPositionConformance(
       play: async ({ canvas }) => {
         await expect(canvas.getByText("0 rows")).toBeVisible();
         await expect(canvas.getByText("0%")).toBeVisible();
+      },
+    },
+    EndUnknown: {
+      render: () => (
+        <WidgetStory
+          key="end-unknown"
+          definition={definition}
+          seed={{ demo: { position: 400, visible: 25, total: 800, hasMore: true } }}
+          viewModel={{ inputs, on, label: "Position" }}
+        />
+      ),
+      play: async ({ canvas }) => {
+        // The rows known so far, and that there are more; a share of an unknown whole is not shown.
+        await expect(canvas.getByText("401–425 of 800+")).toBeVisible();
+        await expect(canvas.queryByText(/%$/)).toBeNull();
+        const scale = canvas.getByRole("slider", { name: "Position" });
+        await expect(scale).toHaveAttribute("aria-valuetext", "row 401 of at least 800");
+        // The scale runs over the rows known: its end is the last of them.
+        fireEvent.keyDown(scale, { key: "End", keyCode: 35, which: 35 });
+        fireEvent.keyUp(scale, { key: "End", keyCode: 35, which: 35 });
+        await waitFor(() => expect(canvas.getByTestId("story-store")).toHaveTextContent('"position": 775'));
+        await expect(canvas.getByText("776–800 of 800+")).toBeVisible();
       },
     },
   };

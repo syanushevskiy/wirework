@@ -43,9 +43,14 @@
  *   from: "filterBetween" }`.
  * - With the `columnMenu` setting on (the default), a button above the table opens the
  *   COLUMN MENU: every column with a checkbox (shown or hidden), in an
- *   order the user changes by dragging, and Reset, which brings back the
- *   columns as configured. What the user chose is the COLUMN STATE
- *   (`{ order, hidden }`, by property; both empty = as configured). WHERE
+ *   order the user changes by dragging, a way to PIN it to the table's
+ *   left or right edge — it stays in view there while the others scroll
+ *   sideways; the pinned ones stand first (left) and last (right), in the
+ *   table and in the menu —, and Reset, which brings back the columns as
+ *   configured. A column that says `required: true` is listed and cannot be
+ *   hidden (whatever a stored state says); it can still be moved and
+ *   pinned. What the user chose is the COLUMN STATE (`{ order, hidden,
+ *   pinned? }`, by property; nothing in them = as configured). WHERE
  *   it lives is configuration: bound, the `columnState` port — a store
  *   path, so the host keeps it where it keeps anything; unbound, the
  *   browser's local storage under `columnStateKey` (or a key made from the
@@ -79,6 +84,16 @@
  *   as CSV saves EVERY row the table holds, in the columns shown, as
  *   `<exportName>.csv` and EMITS `rows-exported`. What a cell copies is its
  *   text — a tag's too — and for a LINK cell the address it leads to.
+ * - ROW ACTIONS (the `rowActions` setting, doc/ADR/0020-row-actions.md) are
+ *   tools of ONE row: a list of `{ name, params? }`, each NAME a component
+ *   the implementation knows — the standard `favorite`, a star — or the
+ *   host registered. They stand in a column of their own at the START of
+ *   the row, which is no data column (not in the column menu, the cell
+ *   selection, Copy or the export), and show while the pointer is over the
+ *   row or the focus inside it; one that says something about the row as it
+ *   is — a row that IS a favourite — stays in view. Using one EMITS
+ *   `row-action` with its name, the row's key, the row and its own detail;
+ *   the table stores nothing, the reaction calls the action that does it.
  * - A click on a row EMITS `row-selected` with the row's key and the row
  *   itself, so a reaction stores either (`from: "key"`, `from: "row.name"`).
  * - A plain click on a LINK cell EMITS `link-clicked` with the address
@@ -97,15 +112,16 @@
  * SEARCH icon; a control of the filter row is `data-testid="table-filter"`
  * with its column's title as `data-column`, what is chosen as `data-values`
  * and the role searchbox or combobox, named "Filter <title>"; the column
- * menu's button is named "Column settings", each column in it a checkbox
- * named by its title, and Reset a button, disabled while nothing is
- * changed; the toolbar is a toolbar named "Table tools", each item in it
+ * menu's button reads and is named "Columns", each column in it a checkbox
+ * named by its title — disabled for a required column — with two toggle
+ * buttons, "Pin <title> to the left" and "… to the right" (`aria-pressed`),
+ * and Reset a button, disabled while nothing is changed; the toolbar is a toolbar named "Table tools", each item in it
  * `data-testid="table-toolbar-item"` with its name as `data-name`, the
  * standard ones buttons named "Reset filters" and "Reload". They emit `load` AFTER mounting — once the page has bound
  * its reactions — and only once per mount (React's StrictMode mounts twice).
  */
 import { z } from "zod";
-import { defineContract, type WidgetEvents, type WidgetIO } from "@wirework/schema";
+import { defineContract, KEBAB_NAME, type WidgetEvents, type WidgetIO } from "@wirework/schema";
 import { dateRangeSchema } from "./date-range";
 import { filterValuesSchema } from "./filter-bar";
 import { choiceOptionsSchema } from "./select";
@@ -150,6 +166,8 @@ export const tableColumnSchema = z
     sortable: z.boolean().optional(),
     /** The column's width in pixels; without it `columnWidth` decides (110, an id column 88). */
     width: z.number().int().min(20).optional(),
+    /** A column the table always shows: the column menu lists it, and cannot hide it. */
+    required: z.boolean().optional(),
   })
   .strict();
 export type TableColumn = z.infer<typeof tableColumnSchema>;
@@ -173,14 +191,21 @@ export const columnWidth = (column: Pick<TableColumn, "property" | "width">, row
 export const tableWidth = (columns: Pick<TableColumn, "property" | "width">[], rowKey: string): number =>
   columns.reduce((sum, column) => sum + columnWidth(column, rowKey), 0);
 
+/** The edge of the table a column is pinned to: it stays in view there while the others scroll sideways. */
+export const COLUMN_PINS = ["left", "right"] as const;
+export type ColumnPin = (typeof COLUMN_PINS)[number];
+
 /**
  * What the user made of the columns in the column menu, by property: the
- * order they stand in (empty = as configured) and the ones hidden.
+ * order they stand in (empty = as configured), the ones hidden, and the
+ * ones pinned to an edge (absent = none; a state without it is the state
+ * every table kept before pinning existed).
  */
 export const columnStateSchema = z
   .object({
     order: z.array(z.string()).default([]),
     hidden: z.array(z.string()).default([]),
+    pinned: z.record(z.string(), z.enum(COLUMN_PINS)).optional(),
   })
   .strict();
 export type ColumnState = z.infer<typeof columnStateSchema>;
@@ -200,8 +225,38 @@ export type ToolbarItem = z.infer<typeof toolbarItemSchema>;
 /** The toolbar items every implementation has. */
 export const TOOLBAR_ITEMS = ["reset-filters", "refresh"] as const;
 
+/**
+ * One ROW ACTION (doc/ADR/0020-row-actions.md): the name an implementation —
+ * or the host — registered it under, and `params` passed to it as they are.
+ */
+export const rowActionSchema = z
+  .object({
+    name: z.string().regex(KEBAB_NAME, "A row action's name is kebab-case"),
+    params: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
+export type RowAction = z.infer<typeof rowActionSchema>;
+
+/** The row actions every implementation has. */
+export const ROW_ACTIONS = ["favorite"] as const;
+
 export const tableRowsSchema = z.array(z.record(z.string(), z.unknown()));
 export type TableRow = z.infer<typeof tableRowsSchema>[number];
+
+/** What a ROW ACTION emits: which action, on which row, and what the action says about it (shared by every table kind). */
+export const tableRowActionEvents = {
+  "row-action": {
+    description:
+      "Fired when a row action is used (the rowActions setting); carries the action's name, the row's key, the row and the action's own detail — the standard \"favorite\" says { active: <the state asked for> }. Call the action that does it",
+    payload: z.object({
+      name: z.string(),
+      key: z.string(),
+      row: z.record(z.string(), z.unknown()),
+      detail: z.record(z.string(), z.unknown()),
+    }),
+    primary: "key",
+  },
+} satisfies WidgetEvents;
 
 /**
  * What every table kind READS — shared with `infinite-table`, which adds
@@ -403,6 +458,12 @@ export const tableSettings = {
     .string()
     .default("")
     .describe("The name of the CSV file the menu's export saves, without .csv; empty = one made from the rows path"),
+  rowActions: z
+    .array(rowActionSchema)
+    .default([])
+    .describe(
+      'Actions offered at the start of a row while the pointer is over it: [{ "name": "favorite" }] — the standard star, reading the row\'s "favorite" property (params.property for another) — or names the host registered. Each use emits row-action',
+    ),
   wrapCells: z
     .boolean()
     .default(false)
@@ -416,7 +477,14 @@ export const tableContract = defineContract({
   description:
     "Rows from the store in columns; emits the row a user clicks; filters and sorting in the headers on request",
   io: { inputs: { ...tablePorts, ...tableHeaderPorts, ...tableColumnPorts } },
-  events: { ...tableEvents, ...tableHeaderEvents, ...tableColumnEvents, ...tableToolbarEvents, ...tableCellEvents },
+  events: {
+    ...tableEvents,
+    ...tableHeaderEvents,
+    ...tableColumnEvents,
+    ...tableToolbarEvents,
+    ...tableCellEvents,
+    ...tableRowActionEvents,
+  },
   settings: z.object(tableSettings),
   preview: {
     seed: {

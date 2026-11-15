@@ -24,14 +24,20 @@ import type { AntdTableOptions } from "./antd-table";
 import { useCellTip } from "../hooks/use-cell-tip";
 import { CellMenu } from "./cell-menu";
 import { CellTip } from "./cell-tip";
+import { rowActionsOf } from "./row-actions";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 import { RowSpaceProvider } from "./row-spacers";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
 export type InfiniteTableEvents = (typeof infiniteTableContract)["events"];
 
-export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }: AntdTableOptions = {}) {
+export function createAntdInfiniteTable({
+  cells = NO_CELLS,
+  toolbar: ownItems,
+  rowActions: ownActions,
+}: AntdTableOptions = {}) {
   const items = toolbarItems(ownItems);
+  const actions = rowActionsOf(ownActions);
 
   function AntdInfiniteTable({ viewModel, store, emit }: ContractProps<typeof infiniteTableContract>) {
     const view = useInfiniteTable(
@@ -42,6 +48,7 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
         loading: viewModel.inputs.loading,
         columns: viewModel.inputs.columns,
         total: viewModel.inputs.total,
+        hasMore: viewModel.inputs.hasMore,
         offset: viewModel.inputs.offset,
         position: viewModel.inputs.position,
         filterIn: viewModel.inputs.filterIn,
@@ -59,6 +66,7 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
         columnMenu: viewModel.columnMenu,
         columnStateKey: viewModel.columnStateKey,
         toolbar: viewModel.toolbar,
+        rowActions: viewModel.rowActions,
         cellSelection: viewModel.cellSelection,
         exportName: viewModel.exportName,
         height: viewModel.height,
@@ -66,6 +74,7 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
       },
       cells,
       items,
+      actions,
     );
     const tip = useCellTip(!viewModel.wrapCells);
 
@@ -81,6 +90,7 @@ export function createAntdInfiniteTable({ cells = NO_CELLS, toolbar: ownItems }:
         data-offset={view.offset}
         data-windowed={viewModel.windowed}
         data-total={view.total}
+        data-open={view.open}
         data-window={view.window}
         data-cell-selection={viewModel.cellSelection}
         data-wrap-cells={viewModel.wrapCells}

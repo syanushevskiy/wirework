@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   NO_COLUMN_STATE,
   columnStateKey,
+  droppedColumn,
   isColumnStateChanged,
   movedColumn,
   orderedColumns,
+  pinnedColumn,
   shownColumns,
   toggledColumn,
   toggledColumns,
@@ -55,6 +57,43 @@ describe("column state — what the column menu made of a table's columns", () =
     const state = { order: ["status", "gone", "id"], hidden: ["gone"] };
     expect(names(orderedColumns(columns, state))).toEqual(["status", "id", "name", "team"]);
     expect(names(shownColumns(columns, state))).toEqual(["status", "id", "name", "team"]);
+  });
+
+  it("never hides a required column — not one by one, not all at once, not from a state that says so", () => {
+    const withRequired = [{ property: "id", required: true }, { property: "name" }, { property: "team" }];
+    expect(toggledColumns(withRequired, NO_COLUMN_STATE, false).hidden).toEqual(["name", "team"]);
+    expect(names(shownColumns(withRequired, { order: [], hidden: ["id", "team"] }))).toEqual(["id", "name"]);
+  });
+
+  it("stands pinned columns at their edges: left first, right last, each group in the state's order", () => {
+    const pinned = pinnedColumn(pinnedColumn(NO_COLUMN_STATE, "status", "left"), "id", "right");
+    expect(pinned).toEqual({ order: [], hidden: [], pinned: { status: "left", id: "right" } });
+    expect(names(orderedColumns(columns, pinned))).toEqual(["status", "name", "team", "id"]);
+    expect(isColumnStateChanged(pinned)).toBe(true);
+    // A second column pinned left stands where the order puts it among them.
+    const two = pinnedColumn(pinned, "team", "left");
+    expect(names(shownColumns(columns, two))).toEqual(["team", "status", "name", "id"]);
+    // Hidden wins over pinned.
+    expect(names(shownColumns(columns, toggledColumn(two, "status", false)))).toEqual(["team", "name", "id"]);
+  });
+
+  it("says nothing of pins once the last one is let go", () => {
+    const pinned = pinnedColumn(NO_COLUMN_STATE, "status", "left");
+    expect(pinnedColumn(pinned, "status", undefined)).toEqual(NO_COLUMN_STATE);
+    // Another edge replaces the first.
+    expect(pinnedColumn(pinned, "status", "right").pinned).toEqual({ status: "right" });
+  });
+
+  it("pins a dragged column as the one it is dropped beside, and lets go one dragged out of the pinned", () => {
+    const pinned = pinnedColumn(NO_COLUMN_STATE, "status", "left");
+    const joined = droppedColumn(columns, pinned, "team", "status", "before");
+    expect(joined.pinned).toEqual({ status: "left", team: "left" });
+    expect(names(orderedColumns(columns, joined))).toEqual(["team", "status", "id", "name"]);
+    const left = droppedColumn(columns, joined, "status", "name", "after");
+    expect(left.pinned).toEqual({ team: "left" });
+    expect(names(orderedColumns(columns, left))).toEqual(["team", "id", "name", "status"]);
+    // A drop that moves nothing changes nothing.
+    expect(droppedColumn(columns, pinned, "team", "team", "after")).toBe(pinned);
   });
 
   it("keeps the state under the configured key, or one made from the rows path", () => {

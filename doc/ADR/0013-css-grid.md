@@ -2,15 +2,15 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-11-07
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-Designed 7 November 2026 with the tiger team (doc/team_tiger.md), at the
-product owner's ask; amended the same day after the owner's question
-whether the picture can be DRAWN by drag and drop, with sizes typed (it
-can — "Drag and drop" below). Status: BUILT the same day as designed
-("Built" at the end; story WW-32 in doc/product-stories.md).
+Designed 7 November 2026 at the product owner's ask; amended the same day
+after the owner's question whether the picture can be DRAWN by drag and
+drop, with sizes typed (it can — "Drag and drop" below). Status: BUILT
+the same day as designed ("Built" at the end; story WW-32 in
+doc/product-stories.md).
 
-## The ask
+## Description
 
 A new layout engine, `engine-css-grid`, built on CSS grid's TEMPLATE AREAS:
 the page is a grid of named areas, every widget inside has an id of its
@@ -48,7 +48,7 @@ what exists.
   (`settingFields`: text, number, boolean, select, items). An engine has no
   form of its own; its edit-mode UI is whatever its renderer draws.
 
-## The question, and five answers
+## Options considered
 
 How does a page say "this widget here, spanning that", in a form a page
 builder fills rather than a string they type?
@@ -74,12 +74,12 @@ JSON a reader sees as the page. **Chosen.**
 
 **C. Tailwind's grid classes on flex-rows.** `grid grid-cols-3` on a row,
 `col-span-2 row-span-2` on a cell: the words exist and the engine is
-built. Ren's "do we need this?" — and the honest answer is that a row-grid
-cannot span ACROSS rows: a sidebar beside three rows of content needs the
-rows to be one grid, which is exactly what template areas say and
-flex-rows cannot. And the ask is a form, not a class string. Not rejected:
-the two engines keep their jobs — flex-rows for rows that wrap and grow,
-css-grid for a skeleton.
+built. So is a new engine needed at all? The honest answer is that a
+row-grid cannot span ACROSS rows: a sidebar beside three rows of content
+needs the rows to be one grid, which is exactly what template areas say
+and flex-rows cannot. And the ask is a form, not a class string. Not
+rejected: the two engines keep their jobs — flex-rows for rows that wrap
+and grow, css-grid for a skeleton.
 
 **D. Drag and drop.** Draw the picture with the mouse. Weighed twice. A
 separate CANVAS of slots (a painter beside the page) is rejected:
@@ -102,6 +102,52 @@ right for the three track fields — but `areas` is a list of strings whose
 VALUES are the page's cell ids, which no schema knows; it would come out as
 a JSON field, the opposite of typed. Rejected for this engine; noted under
 "Later" as a `LayoutEngine.form` slot should a third engine want a form.
+
+## Decision
+
+Build B with D: `@wirework/engine-css-grid` with `areas` as CSS's own
+template strings whose tokens are the cells' ids, two change kinds,
+`validate` as the picture's rules, drag and drop on the rendered grid to
+draw the picture, the slot table as the second way to it and the typed
+track fields (a number and a unit, or a keyword) to size it, the run page
+as the demo. Not built: named areas with a mapping, a painter canvas, a
+generic engine form, responsive areas, conversion from another engine.
+
+Why. B keeps one identity (`CellBase.id`) and puts the engine's knowledge
+in the engine: the picture is a template field the engine owns, the form
+and the drag are the renderer's edit mode as flex-rows' bars are, the ops
+are pure and replayed by the session untouched, and `validate` is where
+the picture's rules live — no core, schema or builder change, which is
+what "adding an engine is a package" promised. `areas` as CSS's own
+strings is the one representation a reader already knows; a nested array
+or an object per area would be a second grammar. A shorthand without `.`,
+or spans inferred from order, is refused for the same reason: the picture
+must be the JSON. The slot table is selects, not a text area, because a
+select cannot be mistyped and a tester can fill it by name, from a written
+picture. Two ways in (drag, the table) are fine exactly because they meet
+at one change payload; a third would not be. The drag is about 150 lines
+of pointer handling in one hook with no dependency — accepted because it
+removes the engine's one awkward failure (a non-rectangle) from the main
+path.
+
+When to pick which engine: a skeleton → css-grid; rows that wrap and
+grow → flex-rows.
+
+Risks to watch:
+
+- **An invalid picture is silent in CSS.** Browsers ignore an invalid
+  `grid-template-areas` whole: without the rectangle check in `validate`
+  AND the renderer refusing to set it, a builder would see a page
+  auto-flow with no word why. Keep both.
+- **A hole is more visible in a grid than in a row.** The empty slot `.`
+  renders as nothing, and a cell hidden by its condition keeps its slot,
+  as everywhere (doc/ADR/0008-conditions.md).
+- **Not responsive.** A skeleton that is right on a desk is wrong on a
+  phone, and one `areas` cannot say both. Nothing here promises
+  responsiveness; the template leaves the door open (see "Later").
+- **The slot table's size.** Rows × columns selects is fine for a page
+  skeleton (a dozen slots); a grid of forty slots is a sign the page wants
+  a different engine.
 
 ## The design
 
@@ -174,6 +220,8 @@ column 3 names "ghost", which is not a cell`), a cell placed nowhere
   (`cell "custom-4" has no slot and is placed after the grid`), rows of
   unequal length, a `columns` list whose length is not the row length, and
   a track size that is not CSS (`columns[1] "wide" is not a track size`).
+  An area is a rectangle when every row between the first and the last
+  that names the id has the same column range, and no other row names it.
   Pure data, tested in node.
 
 ### The renderer (`CssGridView`), view mode
@@ -190,6 +238,8 @@ drop it anyway) and the page's warning says why — the page stands, as it
 does for an unknown class on flex-rows. Attributes for the suite:
 `data-testid="css-grid"`, `data-columns`, `data-rows`; per item
 `data-cell` and `data-area` (the slot span as `r1-r2/c1-c2`, or absent).
+A cell hidden by its condition keeps its slot, as on every engine
+(doc/ADR/0008-conditions.md).
 
 ### Drag and drop (edit mode)
 
@@ -214,7 +264,9 @@ the page shows, on the real track sizes.
   is refused: the covered ghosts turn red with the reason in their title
   and the picture does not change. Not swap, not push — pushing is how
   react-grid-layout's layouts drift under the user's hands, and the
-  picture must only change where the user put something.
+  picture must only change where the user put something. A drop onto a
+  slot the user cannot see (a hidden widget's) refuses too: the ghosts
+  know every token, not every visible cell.
 - **Growing.** Dragging past the last row or the last column adds one — a
   row of `.`, a column of `.` with `1fr` — in the same change, so the grid
   grows as the picture needs it. Rows and columns left empty are not
@@ -258,6 +310,9 @@ Edit mode draws the picture as a FORM above the grid too, `css-grid-form`
   edit mode does; an unplaced cell's handle says "no slot — placed after
   the grid".
 
+The form's words — the units and keywords of the track fields, the slot
+table's labels — are kept in one place, for translation later.
+
 Outside edit mode nothing of this renders. A layout inside a card is the
 same engine under `NestedLayout`, edited as the page through "Edit
 content" — the form appears there with the breadcrumb, as flex-rows' bars
@@ -284,7 +339,9 @@ do.
 
 ### The demo
 
-The RUN page (`/demo/runs/:runId`) moves to css-grid: eight cells it has
+The RUN page (`/demo/runs/:runId`) moves to css-grid — the page people
+recognise as a layout, and a page switched rather than a fifth demo page
+to maintain: eight cells it has
 today, arranged as the skeleton above — the name over two columns with
 the back button in the third, a status row of three, the error line over
 two with the retry tag beside it, the route echo across the bottom. Every
@@ -296,7 +353,7 @@ the cells' conditions hide and show.
 
 ### Scenarios (`css-grid.feature`)
 
-As a non-technical QA reads them: the run page renders on the css-grid
+As a tester reads them: the run page renders on the css-grid
 engine with `label-run-name` spanning two columns and `button-back` in the
 third (`the cell "label-run-name" fills the slots "1-1/1-2"`); in the
 builder, css-grid picked while empty, two widgets added each take a row
@@ -315,90 +372,20 @@ on css-grid is edited as the page with the drag, the form and the
 breadcrumb; the layout saved with the overlay on goes to my own view and
 is gone with it off.
 
-## The tiger team's positions
+### Tests
 
-- **Morgan (product):** a form a product owner can fill in a demo — "put
-  the table here, the filters there, make this column narrow" — without a
-  class vocabulary; the run page as the showcase, because it is the page
-  people recognise as a layout. Asks that the slot table name widgets by
-  something readable beside the id (the widget type: `custom-1 ·
-antd-label`), and that "− row" says why it refuses.
-- **Alexei (architecture):** B keeps one identity (`CellBase.id`) and
-  puts the engine's knowledge in the engine: the picture is a template
-  field the engine owns, the form and the drag are the renderer's edit
-  mode as flex-rows' bars are, the ops are pure and replayed by the session
-  untouched, `validate` is where the picture's rules live — no core,
-  schema or builder change, which is what "adding an engine is a package"
-  promised. Insists the renderer never computes a layout the template did
-  not say: inline style only from `areas`, `columns`, `rows`, `gap`. On
-  the drag: the drag hook computes a PICTURE and reports it, never a
-  pixel; the operations stay what they were; placements and areas are one
-  information, so no second model appears.
-- **Dmitri (readability):** `areas` as CSS's own strings is the one
-  representation a reader already knows; a nested array or an object per
-  area would be a second grammar. The slot table over a text area because a
-  select cannot be mistyped and a tester can fill it by name. Against a
-  `.`-less shorthand or inferring spans from order: the picture must be the
-  JSON. Two ways in (drag, the table) are fine exactly because they meet
-  at one change payload; a third would not be.
-- **Katya (team lead):** one package on the flex-rows pattern (schema,
-  operations, view, hook, inputs, styles, unit tests, README), the
-  `layoutEngineProblems` conformance test first; the demo page switched
-  rather than a fifth demo page to maintain; estimate a day and a half,
-  no builder work because the form is the engine's. Wants the track
-  datalist and the slot-table words in one place for translation later.
-- **Sasha (QA):** every fact a DOM fact: `data-area` on an item for the
-  span, `data-row`/`data-column` on a slot, `aria-invalid` on a bad slot or
-  track, the warning text above the page; the slot select driven by
-  `chooseOption` like every antd select; the rectangle rule unit-tested on
-  the shapes that bite (an L, a T, two islands of one id, a hole inside);
-  the non-technical QAs can fill the slot table from a written picture.
-  The drag is tested as the grid engines' is (Playwright's drag onto a
+- Every fact is a DOM fact: `data-area` on an item for the span,
+  `data-row` / `data-column` on a slot, `aria-invalid` on a bad slot or
+  track, the warning text above the page. The slot select is driven by
+  `chooseOption` like every antd select.
+- The rectangle rule is unit-tested on the shapes that bite: an L, a T,
+  two islands of one id, a hole inside.
+- The package starts from the `layoutEngineProblems` conformance test, on
+  the flex-rows pattern (schema, operations, view, hook, inputs, styles,
+  unit tests, README).
+- The drag is tested as the grid engines' is (Playwright's drag onto a
   ghost slot, the refusal's red ghost and title), and every drag scenario
-  has its slot-table twin so a failing drag never hides a broken picture.
-- **Ren (contrarian):** first, "do we need this?" — flex-rows' rows can
-  be grids; the answer that holds is the cross-row span and the form, so
-  the design should say in one line when to pick which (a skeleton →
-  css-grid; rows that wrap and grow → flex-rows). Second, invalid
-  `grid-template-areas` is silently ignored by browsers: without the
-  rectangle check in `validate` AND the renderer refusing to set it, a
-  builder would see a page auto-flow with no word why — keep both. Third,
-  the empty slot `.` is a hole that renders as nothing; when a cell's
-  condition hides it the slot stays, as everywhere (doc/ADR/0008-conditions.md),
-  and the design should say so, because a grid makes a hole more visible
-  than a row does. Fourth, responsive: a skeleton that is right on a desk
-  is wrong on a phone; one `areas` cannot say both. Not now — but the
-  template should leave the door open (a per-breakpoint `areas` later,
-  the same tokens), and the design must not promise responsiveness it has
-  not got. Fifth, on drag: refuse on overlap, never push — a layout that
-  rearranges itself under the hand is the react-grid-layout complaint
-  this engine exists to answer; and a drop onto a slot the user cannot see
-  (a hidden widget's) must still refuse, so the ghosts know every token,
-  not every visible cell.
-- **Vlad (fluency):** the operations are a few chains over `areas` — split
-  on whitespace, map a token, join; a rectangle check is "every row
-  between the first and the last that names the id has the same column
-  range, and no other does"; `appendCell` is `[...areas, Array(columns)
-.fill(id).join(" ")]`. No class table to maintain this time.
-- **External reviewer:** the minimum is one package with a four-field
-  template, two change kinds and a validate; the form and the drag are the
-  renderer's edit mode and nothing is added to the builder, the schema or
-  the engine core. The drag is about 150 lines of pointer handling in one
-  hook with no dependency — acceptable, because it removes the engine's
-  one awkward failure (a non-rectangle) from the main path. The thing to
-  watch is the slot table's size: rows × columns selects is fine for a page
-  skeleton (a dozen slots), and a grid of forty slots is a sign the page
-  wants a different engine.
-
-## Decision
-
-Build B with D: `@wirework/engine-css-grid` with `areas` as CSS's own
-template strings whose tokens are the cells' ids, two change kinds,
-`validate` as the picture's rules, drag and drop on the rendered grid to
-draw the picture, the slot table as the second way to it and the typed
-track fields (a number and a unit, or a keyword) to size it, the run page
-as the demo. Not built: named areas with a mapping, a painter canvas, a
-generic engine form, responsive areas, conversion from another engine.
+  has its slot-table twin, so a failing drag never hides a broken picture.
 
 ## Phases
 
@@ -419,7 +406,8 @@ generic engine form, responsive areas, conversion from another engine.
   `area`; `validate` gains "an area nobody fills". A superset of B.
 - **A `LayoutEngine.form` slot** (answer E) if a third engine wants a
   typed form rendered by the builder rather than by its own renderer.
-- **Slot selects naming the widget** (Morgan): `custom-1 · antd-label`,
+- **Slot selects naming the widget** by something readable beside the id,
+  its type: `custom-1 · antd-label`,
   once the renderer is handed the resolved cells' widget types (it is:
   `cellById(id)?.widget`) — a label change, not a design change.
 - **A picture from a react-grid-layout page.** Its placements (`x, y, w,
@@ -461,7 +449,7 @@ left open:
   template has them), so one drop is one change. A row or column removed
   drops its size the same way.
 - **The slot table's "−" is disabled** with the reason in its title
-  (Morgan's ask) rather than refusing on click; `withoutRow` /
+  rather than refusing on click; `withoutRow` /
   `withoutColumn` return undefined when a cell would lose its only slots,
   and the button reads that. The refusal of a drop is a `role="status"`
   line under the table (`css-grid-refusal`) plus the covered ghosts in red
@@ -475,7 +463,7 @@ left open:
 - **A non-rectangle is not placed.** The view sets `gridTemplateAreas`
   only while the whole picture is drawable, and gives an item `gridArea`
   only while its own area is a rectangle, so a broken picture auto-flows
-  with the page's warning above it (Ren) instead of disappearing; the slot
+  with the page's warning above it instead of disappearing; the slot
   selects of that id are `aria-invalid` with the reason.
 - **The typed field** is a number input and a unit select in one span
   (`css-grid-column`, `css-grid-row-size`, `css-grid-gap`; `-number` /
@@ -507,9 +495,9 @@ left open:
 The owner's word, after using it: a drag that refuses is a drag that "is
 not implemented" — a hand that lets go over a widget expects the two to
 change places, and a corner that stops at a neighbour is "hard to
-understand". This section REPLACES "Overlap refuses" above, the refusal
-line of "Built", and Ren's "refuse on overlap, never push" — his worry (a
-layout that rearranges itself under the hand) is answered another way: the
+understand". This section REPLACES "Overlap refuses" above and the refusal
+line of "Built". The worry behind "refuse, never push" (a layout that
+rearranges itself under the hand) is answered another way: the
 drag shows the whole outcome BEFORE the drop, and only the widgets named in
 it move.
 

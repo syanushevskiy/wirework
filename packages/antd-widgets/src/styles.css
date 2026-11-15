@@ -107,6 +107,51 @@
   pointer-events: none;
 }
 
+/*
+ * ROW ACTIONS (doc/ADR/0020-row-actions.md): the tools of a row, in a cell at its start. One shows while the pointer
+ * is over its row or the KEYBOARD's focus inside it (focus-visible: a star just clicked with the mouse does not linger
+ * once the pointer left) — CSS alone, a hover never renders the table — and stays in view when it says so itself (`data-pinned`: a star on a row that IS a favourite). Hidden by opacity, not removed: the row keeps
+ * its height and the keyboard still reaches the action, which shows it. Where nothing hovers (a touch screen) every
+ * action is in view.
+ */
+.ww-table__row-actions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ww-table__row-action {
+  display: inline-flex;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.ww-table .ant-table-tbody > tr:hover .ww-table__row-action,
+.ww-table .ant-table-tbody > tr:focus-visible .ww-table__row-action,
+.ww-table .ant-table-tbody > tr:has(:focus-visible) .ww-table__row-action,
+.ww-table__row-action:has([data-pinned="true"]) {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .ww-table__row-action {
+    opacity: 1;
+  }
+}
+
+/* The header over the row actions: a name for a screen reader, nothing to see. */
+.ww-table__actions-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ww-table__favorite[data-active="true"] {
+  color: var(--ant-color-warning, #faad14);
+}
+
 /* A link cell reads as a link; the row around it stays a row. */
 .ww-table__link {
   color: var(--ant-color-link, var(--ant-color-primary, #1677ff));
@@ -195,9 +240,52 @@
 }
 
 .ww-table__column-list {
-  min-width: 12rem;
+  min-width: 16rem;
   max-height: 20rem;
   overflow-y: auto;
+}
+
+/* One column's line: its checkbox, "Always" when it cannot be hidden, and — at the line's end — the dots of its actions. */
+.ww-table__column-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ww-table__column-always {
+  margin-inline: 0;
+}
+
+.ww-table__column-actions {
+  margin-left: auto;
+  color: var(--ant-color-text-tertiary, rgba(0, 0, 0, 0.45));
+}
+
+/*
+ * The SECTIONS — pinned left, the columns, pinned right: a caption over each, in small capitals' place, and a rule
+ * above every one but the first. A caption is a line of the list like a column's, but nothing happens on it.
+ */
+.ww-table__column-section {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ant-color-text-tertiary, rgba(0, 0, 0, 0.45));
+}
+
+.ww-table__column-list .ant-tree-treenode:has(.ww-table__column-section) {
+  cursor: default;
+}
+
+.ww-table__column-list .ant-tree-treenode:has(.ww-table__column-section):not(:first-child) {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--ant-color-split, rgba(5, 5, 5, 0.06));
+}
+
+.ww-table__column-list .ant-tree-treenode:has(.ww-table__column-section) .ant-tree-node-content-wrapper:hover {
+  background: transparent;
+  cursor: default;
 }
 
 /* Upright, the scale takes the height its cell gives — beside a list, the list's own. */

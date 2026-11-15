@@ -19,19 +19,32 @@ const rows = (value: number): string => count.format(value).replaceAll(",", " ")
 export function useListPosition(
   store: ReadableStore,
   emit: Emit<ListPositionEvents>,
-  paths: { position: string; total: string; visible?: string | undefined },
-  ports: { position: PortDefinition<number>; total: PortDefinition<number>; visible: PortDefinition<number> },
+  paths: { position: string; total: string; hasMore?: string | undefined; visible?: string | undefined },
+  ports: {
+    position: PortDefinition<number>;
+    total: PortDefinition<number>;
+    hasMore: PortDefinition<boolean>;
+    visible: PortDefinition<number>;
+  },
 ) {
   // Validated by the contract's ports; a malformed value shows the default.
   const total = usePort(store, paths.total, ports.total) ?? 0;
+  /** The list goes on past `total`: its end is not known yet, and `total` is the rows known so far. */
+  const open = usePort(store, paths.hasMore, ports.hasMore) === true && total > 0;
   const visible = Math.min(total, Math.max(1, usePort(store, paths.visible, ports.visible) ?? 1));
-  /** The last position there is: the one that shows the end of the list. */
-  const last = Math.max(0, total - visible);
-  const stored = Math.min(last, usePort(store, paths.position, ports.position) ?? 0);
+  /** The last position there is: the one that shows the end of the list (of the rows known, while it goes on). */
+  const known = Math.max(0, total - visible);
+  const stored = Math.min(known, usePort(store, paths.position, ports.position) ?? 0);
 
-  // What the handle is dragged to; undefined shows what the store says.
-  const [draft, setDraft] = useState<number | undefined>(undefined);
-  const position = Math.min(last, draft ?? stored);
+  // What the handle is dragged to, and the scale's length when the drag began: rows that become known meanwhile do
+  // not pull the scale from under the handle. Undefined shows what the store says.
+  const [draft, setDraft] = useState<{ position: number; last: number } | undefined>(undefined);
+  const last = draft?.last ?? known;
+  const position = Math.min(last, draft?.position ?? stored);
+  const drag = useCallback(
+    (next: number) => setDraft((held) => ({ position: next, last: held?.last ?? known })),
+    [known],
+  );
 
   // The widget only EMITS; the default reaction writes the position back.
   const release = useCallback(
@@ -42,20 +55,29 @@ export function useListPosition(
     [stored, emit],
   );
 
-  const percent = listPercent(position, visible, total);
+  // A share of a whole nobody knows would be a guess: no percent until the end is found.
+  const percent = open ? undefined : listPercent(position, visible, total);
   const range =
-    total === 0 ? "0 rows" : `${rows(position + 1)}–${rows(Math.min(total, position + visible))} of ${rows(total)}`;
+    total === 0
+      ? "0 rows"
+      : `${rows(position + 1)}–${rows(Math.min(total, position + visible))} of ${rows(total)}${open ? "+" : ""}`;
+  /** Where a position is, in words: how far into the list, or — its end not known — which row of at least how many. */
+  const placeOf = (value: number): string =>
+    open ? `row ${rows(value + 1)} of at least ${rows(total)}` : `${listPercent(value, visible, total)}%`;
 
   return {
     position,
     total,
+    open,
     visible,
     last,
     percent,
     range,
     /** What the scale's tooltip says for a position under the handle. */
-    percentAt: (value: number | undefined): string => `${listPercent(value ?? 0, visible, total)}%`,
-    drag: setDraft,
+    percentAt: (value: number | undefined): string => placeOf(value ?? 0),
+    /** What a screen reader is told the handle stands at, while a percent would be a guess. */
+    valueText: open ? (value: number): string => placeOf(value) : undefined,
+    drag,
     release,
   };
 }

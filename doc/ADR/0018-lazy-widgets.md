@@ -2,47 +2,21 @@
 
 - **Status:** Accepted — phase 1 built
 - **Date:** 2026-11-14
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-Designed 14 November 2026 with the tiger team; phase 1 built the same day
-on the team's own choices ("Built" at the end). Phases 2 and 3 are not
+Designed 14 November 2026; phase 1 built the same day on the choices this
+record marks as built ("Built" at the end). Phases 2 and 3 are not
 built, and the three points under "For the owner to decide" stay open.
 
-## The ask
+## Description
 
 A host adds a heavy widget — a Monaco editor — to ONE page. Today its code
 would be downloaded by every visitor of every page. It should be loaded
 only when a page that shows it opens.
 
-## The answer in short
-
-- A widget is two things with very different weights: its CONTRACT (ports,
-  events, the settings schema — data, a few hundred bytes) and its
-  COMPONENT (React, and whatever library it draws with). Only the
-  component becomes lazy. The contract stays where it is, registered at
-  boot, so validation, the resolver, the builder's forms and the palette
-  work exactly as today.
-- An implementation says `load` instead of `component`:
-
-  ```ts
-  export const monacoEditor = implementContract(codeEditorContract, {
-    type: "acme-code-editor",
-    load: () => import("./code-editor"), // the module's default export is the component
-  });
-  ```
-
-  The `import()` is written in the host's code (or the widget package's),
-  so the host's bundler cuts the chunk. Nothing else changes for the page
-  author: the cell says `"widget": "acme-code-editor"` as before.
-
-- The page starts loading the code of every widget it SHOWS the moment its
-  plan is resolved — all at once, before the first render — and each cell
-  shows a placeholder of its own until its widget arrives. A page without
-  the editor never asks for it.
-- A widget hidden by its condition, in a closed dialog or in a tab not yet
-  opened is loaded when it is first shown.
-- A chunk that fails to load is that cell's problem alone, with "Load
-  again"; the rest of the page works.
+Two things the user must feel: the pages that do not use the editor open
+as fast as before it existed, and the page that does never looks broken
+while it loads.
 
 ## What there is (read from the code, 14 November 2026)
 
@@ -78,7 +52,7 @@ only when a page that shows it opens.
   widget that mounts a moment late misses nothing: what a page's `load`
   reaction wrote is in the store when it arrives.
 
-## The question, and five answers
+## Options considered
 
 - **A. Leave it to the host.** Add a `Suspense` boundary per cell and tell
   hosts to pass `React.lazy`. The least code. But the chunks load as a
@@ -101,12 +75,53 @@ only when a page that shows it opens.
   role's view, a page file imported. Pages are data; the bundler cannot
   see them.
 
-**Decision: B.** It gets E's parallel loading at run time from the plan the
-resolver already produces, keeps the registries and validation untouched,
-and A remains possible for a host that wants nothing more. C and D are
-refused: they trade the engine's two strongest properties — everything
-validated at boot, resolution pure and synchronous — for bytes that are
-not the heavy ones.
+## Decision
+
+**B: `load` on the implementation; the adapter owns the rest.** It gets E's
+parallel loading at run time from the plan the resolver already produces,
+keeps the registries and validation untouched, and A remains possible for
+a host that wants nothing more. C and D are refused: they trade the
+engine's two strongest properties — everything validated at boot,
+resolution pure and synchronous — for bytes that are not the heavy ones.
+
+- A widget is two things with very different weights: its CONTRACT (ports,
+  events, the settings schema — data, a few hundred bytes) and its
+  COMPONENT (React, and whatever library it draws with). Only the
+  component becomes lazy. The contract stays where it is, registered at
+  boot, so validation, the resolver, the builder's forms and the palette
+  work exactly as today.
+- An implementation says `load` instead of `component`:
+
+  ```ts
+  export const monacoEditor = implementContract(codeEditorContract, {
+    type: "acme-code-editor",
+    load: () => import("./code-editor"), // the module's default export is the component
+  });
+  ```
+
+  The `import()` is written in the host's code (or the widget package's),
+  so the host's bundler cuts the chunk. Nothing else changes for the page
+  author: the cell says `"widget": "acme-code-editor"` as before.
+
+- The page starts loading the code of every widget it SHOWS the moment its
+  plan is resolved — all at once, before the first render — and each cell
+  shows a placeholder of its own until its widget arrives. A page without
+  the editor never asks for it.
+- A widget hidden by its condition, in a closed dialog or in a tab not yet
+  opened is loaded when it is first shown.
+- A chunk that fails to load is that cell's problem alone, with "Load
+  again"; the rest of the page works.
+- Lazy loading belongs to the adapter alone: the schema, the engine and
+  the registries do not learn the word. It is one option on one function —
+  not a second registry, not a `registerLazy` —, with no naming convention
+  and no plugin that rewrites imports.
+- The default stays `component`: lazy is opted into per widget, by the
+  person who knows it is heavy.
+- The order of the work: the wrapper, the boundary in `CellView` and the
+  preload from the plan first — about one file and two edits — and then a
+  measurement. The entries per standard widget, the lazy engines and the
+  palette's observer are each worth doing only if the measurement says so;
+  `preload: "page"` waits for the first host that asks.
 
 ## The design
 
@@ -132,7 +147,10 @@ When a layout's plan is resolved (`usePagePlan`, and `useNestedLayout` for
 a container's content), the adapter starts the import of every lazy widget
 among its cells — except those whose condition does not hold now. The
 chunks travel in parallel while React renders; a cell whose code has
-arrived renders with no placeholder at all.
+arrived renders with no placeholder at all. Preloading is one expression
+over the plan — the cells, those that show, their definitions, each asked
+to load. There is no bookkeeping of what was requested: the wrapper
+remembers its own promise.
 
 A cell hidden by `when`, a dialog's content, a tab or a panel never opened
 is not mounted and not preloaded: its code is asked for when it is first
@@ -150,7 +168,8 @@ The cell's own element is there from the first render, with
 `aria-busy`). Two rules keep the page still:
 
 - the placeholder appears only after 200 ms, so a cached chunk never
-  flashes one;
+  flashes one — the placeholder must be calm: no spinner per cell on a
+  page of twelve widgets;
 - in an engine whose cells size to their content (flex rows, CSS grid with
   `auto` rows) the block has a least height, 4.5rem by default, and an
   implementation that knows its size says it (`placeholder: { minHeight }`)
@@ -189,9 +208,16 @@ be able to reach ONE of them. `@wirework/antd-widgets` gains an entry per
 heavy widget (`@wirework/antd-widgets/table`, `/infinite-table`,
 `/date`, `/date-range`) and `createAntdWidgets({ lazy: true })` registers
 those with `load`. The small ones — a label, a tag, a button — stay in the
-main chunk: a request per label costs more than the label.
+main chunk: a request per label costs more than the label. Every lazy
+widget is a request and a possible flash: split all thirty-two and the
+overview makes thirty-two requests.
+
+The rule is a number, not a feeling: a widget whose own dependencies are
+over about 30 kB gzipped is lazy, anything smaller is not.
 
 ### 8. What a lazy widget's author must know
+
+These three duties go into the widget README.
 
 - The component's stylesheet is imported in the component's module, so it
   travels with the chunk — not in the host's entry.
@@ -202,6 +228,11 @@ main chunk: a request per label costs more than the label.
   The bundle check below is what catches it.
 
 ## How it is tested
+
+Loading is a STATE and needs a fact a test can read: `data-loading`, the
+placeholder's test id, `load-failed` as a problem kind, and the list of
+loaded code in the console. The slow-server step must cover code as it
+covers data, or every scenario with a lazy widget races.
 
 - **Unit (`@wirework/react`):** the wrapper loads once for many cells,
   retries after a failure, preloads on request; `CellView` shows the
@@ -236,58 +267,22 @@ main chunk: a request per label costs more than the label.
 - **A bundle check in `pnpm check`:** the playground's build must not
   contain the demo editor's marker string in its entry chunk, and the
   entry chunk has a size budget. This is the test that fails when somebody
-  imports the heavy module from a contract file.
+  imports the heavy module from a contract file. It is the regression
+  test: a split can be lost by one import and no scenario would notice.
 
-## The tiger team's positions
+## Risks to watch
 
-- **Morgan (product):** two things the user must feel: the pages that do
-  not use the editor open as fast as before it existed, and the page that
-  does never looks broken while it loads. Asked for the placeholder to be
-  calm — no spinner per cell on a page of twelve widgets — hence the
-  200 ms rule.
-- **Alexei (architecture):** the line is already in the code: the contract
-  is data, the component is opaque. Lazy loading belongs to the adapter
-  alone; the schema, the engine and the registries must not learn the
-  word. One option on one function — not a second registry, not a
-  `registerLazy`.
-- **Dmitri (readability):** `load: () => import("./code-editor")` is one
-  line a junior has seen in every React project. No magic naming
-  convention, no plugin that rewrites imports. And the default stays
-  `component`: lazy is opted into per widget, by the person who knows it
-  is heavy.
-- **Katya (team lead):** the rule for the team is a number, not a feeling:
-  a widget whose own dependencies are over about 30 kB gzipped is lazy,
-  anything smaller is not. The author's three duties (section 8) go into
-  the widget README. Engines by the same option, so there is one thing to
-  learn.
-- **Sasha (QA):** loading is a STATE and needs a fact: `data-loading`, the
-  placeholder's test id, `load-failed` as a problem kind, and the loaded
-  list in the console. The slow-server step must cover code as it covers
-  data, or every scenario with a lazy widget races. The bundle check is
-  the regression test — a split can be lost by one import and no scenario
-  would notice.
-- **Ren (contrarian):** three challenges. (1) "Is the editor the problem?
-  The bundle is 2.2 MB without it." — Right, and it reorders the phases:
-  the engines and antd's table and date pickers are in every visitor's
-  download today; the mechanism pays for itself before any host adds
-  Monaco. (2) "Every lazy widget is a request and a possible flash; split
-  thirty-two widgets and the overview makes thirty-two requests." — hence
-  only the heavy ones, and the budget rule. (3) "HTTP caching makes this
-  matter once per release." — true for the download, not for parse and
-  compile time on every visit, and a host that releases weekly empties
-  the cache weekly. Ren's risk to watch: a stale chunk after a deploy is
-  the failure hosts will actually meet; the retry and `onError` must be
-  tried against a real redeploy, not only a mocked rejection.
-- **Vlad (fluency):** preloading is one expression over the plan — the
-  cells, those that show, their definitions, each asked to load. No
-  bookkeeping of what was requested: the wrapper remembers its own
-  promise.
-- **The external reviewer:** the smallest thing that keeps the promise is
-  the wrapper, the boundary in `CellView` and the preload from the plan —
-  about one file and two edits. Build that first and measure. The entries
-  per standard widget, lazy engines and the palette's observer are each
-  worth doing only if the measurement says so; `preload: "page"` waits for
-  the first host that asks.
+- **A stale chunk after a deploy** is the failure hosts will actually
+  meet. The retry and `onError` must be tried against a real redeploy, not
+  only a mocked rejection.
+- **The editor is not the whole problem.** The bundle is 2.2 MB without
+  it: the engines and antd's table and date pickers are in every visitor's
+  download today. The mechanism pays for itself before any host adds
+  Monaco — which is the case for phase 2 going first (the second point for
+  the owner).
+- **HTTP caching does not make this matter only once per release.** That
+  is true for the download, not for the parse and compile time of every
+  visit, and a host that releases weekly empties the cache weekly.
 
 ## Phases
 
@@ -304,11 +299,12 @@ main chunk: a request per label costs more than the label.
 
 ## For the owner to decide
 
-1. Lazy is opted into per widget by its author (the team's choice), or
+1. Lazy is opted into per widget by its author (the choice built), or
    every widget of a package is lazy by default.
 2. Whether phase 2 — the engines and the heavy standard widgets — goes
-   before a host's Monaco arrives, as Ren argues, or after.
-3. The placeholder: a quiet block after 200 ms (the team's choice), or
+   before a host's Monaco arrives (they are in every visitor's download
+   today), or after.
+3. The placeholder: a quiet block after 200 ms (the choice built), or
    antd's skeleton — which would put a UI library's look into
    `@wirework/react`, a package that has none.
 

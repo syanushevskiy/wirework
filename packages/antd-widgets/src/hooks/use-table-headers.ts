@@ -31,6 +31,7 @@ import {
   NO_DATES,
   tableWidth,
   type ColumnOrder,
+  type ColumnPin,
   type DateRange,
   type FilterValues,
   type PeriodValues,
@@ -74,6 +75,7 @@ const NOTHING_SEARCHED: SearchValues = {};
 const NO_PERIODS: PeriodValues = {};
 const NO_ORDER: ColumnOrder = {};
 const NONE: string[] = [];
+const NOT_PINNED: Readonly<Record<string, ColumnPin>> = {};
 
 /** Everything the headers filter by — what `filter-changed` carries. */
 export interface FilterChoice {
@@ -168,6 +170,8 @@ export function useTableHeaders(
   rowKey: string,
   /** The cell selection's attributes per cell (use-cell-selection.ts), when cells are selected. */
   selection?: CellSelectionView["cellAttributes"],
+  /** The edge each pinned column stands at (the column menu's state): it stays in view while the others scroll sideways. */
+  pinned: Readonly<Record<string, ColumnPin>> = NOT_PINNED,
 ): TableHeadersView {
   const chosen = usePort(store, paths.filterIn, ports.filterIn) ?? NOTHING_CHOSEN;
   const searched = usePort(store, paths.filterLike, ports.filterLike) ?? NOTHING_SEARCHED;
@@ -190,8 +194,13 @@ export function useTableHeaders(
       const base = antdColumnOf(column, index, cells, rowKey, selection);
       byKey.set(base.key, column);
       const { filter } = column;
+      const edge = pinned[column.property];
       return {
         ...base,
+        // Pinned: antd keeps it at that edge; its header says so for tests.
+        ...(edge === undefined
+          ? {}
+          : { fixed: edge, onHeaderCell: () => ({ "data-pinned": edge }) as Record<string, string> }),
         ...(offered ? headerOf(column, current, order) : {}),
         // The filter row: the title above the column's own control.
         ...(filterRow && filter !== undefined
@@ -210,7 +219,7 @@ export function useTableHeaders(
       };
     });
     return { tableColumns, byKey };
-  }, [filterable, cells, offered, filterRow, current, order, emit, rowKey, selection]);
+  }, [filterable, cells, offered, filterRow, current, order, emit, rowKey, selection, pinned]);
   // The least width the table needs: narrower than this its box scrolls sideways, wider and the table fills it.
   const scroll = useMemo(() => ({ x: tableWidth(columns, rowKey) }), [columns, rowKey]);
 

@@ -1,7 +1,8 @@
 # Architecture decision records
 
-One record per decision that shapes Wirework: what was asked, what there
-was, the answers weighed, the one chosen and what it costs. They are
+One record per decision that shapes Wirework. Every record says three
+things: a DESCRIPTION of what was asked and what there was, the OPTIONS
+CONSIDERED with what each costs, and the DECISION made. They are
 numbered in the order they were decided and never renumbered; a decision
 that is changed later is AMENDED in its own record (a dated section at its
 end), and one that is replaced gets a new record that says which it
@@ -27,6 +28,8 @@ supersedes.
 | [0016](0016-table-filters-and-cards.md)       | In-table filters and rows as cards   | 2026-11-09 | Accepted — partly built (the filter row; the cards not)           |
 | [0017](0017-versioning-and-upgrades.md)       | Versions and upgrades                | 2026-11-14 | Accepted — the data format built; the release tooling not         |
 | [0018](0018-lazy-widgets.md)                  | Lazy widgets                         | 2026-11-14 | Accepted — phase 1 built                                          |
+| [0019](0019-security.md)                      | Security                             | 2026-11-14 | Proposed — a review of 0001–0018; nothing fixed                   |
+| [0020](0020-row-actions.md)                   | Row actions                          | 2026-11-15 | Accepted — built                                                  |
 
 ## Status
 
@@ -44,29 +47,24 @@ dates in the name. Start from this:
 
 - **Status:** Proposed — not built
 - **Date:** YYYY-MM-DD
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-## The ask
+## Description
 
-What was asked for, in the asker's words.
+What was asked for, in the asker's words, and what the code does today —
+read from the code, with the facts measured.
 
-## The answer in short
+## Options considered
 
-The decision, readable on its own.
+Each option and what it costs.
 
-## What there is
+## Decision
 
-What the code does today, read from the code — with the facts measured.
-
-## The question, and the answers weighed
-
-Each answer, what it costs, and the decision with its reason.
+The option chosen and why, readable on its own.
 
 ## The design
 
 ## How it is tested
-
-## The tiger team's positions
 
 ## Consequences
 

@@ -13,7 +13,8 @@
       "inputs": {
         "position": "archive.position",
         "visible": "archive.visible",
-        "total": "archive.total"
+        "total": "archive.total",
+        "hasMore": "archive.hasMore"
       },
       "label": "Position in the archive"
     }
@@ -25,6 +26,7 @@
         "loading": "archive.loading",
         "columns": "archive.columns",
         "total": "archive.total",
+        "hasMore": "archive.hasMore",
         "offset": "archive.offset",
         "position": "archive.position",
         "filterIn": "archive.filterIn",
@@ -41,7 +43,11 @@
               "into": "archive",
               "metadata": true,
               "pageSize": 200,
+              "countRows": false,
               "columns": {
+                "id": {
+                  "required": true
+                },
                 "started": {
                   "hidden": false
                 },
@@ -58,6 +64,11 @@
                 }
               }
             }
+          }
+        ],
+        "row-action": [
+          {
+            "call": "archive/set-favorite"
           }
         ],
         "window": [
@@ -135,12 +146,17 @@
       },
       "height": 320,
       "windowed": true,
+      "rowActions": [
+        {
+          "name": "favorite"
+        }
+      ],
       "columnMenu": true
     }
   },
   "widgets.archive.title": {
     "default": {
-      "text": "Archive — two thousand runs, a slice of two hundred held; drag the scale to jump",
+      "text": "Archive — a long list nobody counts: two hundred runs at a time, how many there are known only at its end",
       "tone": "accent"
     }
   }

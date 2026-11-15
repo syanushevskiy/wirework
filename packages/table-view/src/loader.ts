@@ -8,6 +8,10 @@
  *   <into>.filters    [{ id, label, options }]         -> the filter bar's `filters` port
  *   <into>.data       the rows                         -> the table's `rows` port
  *   <into>.total      all rows on the server           -> the pagination's / infinite table's `total` port
+ *   <into>.hasMore    the list GOES ON past the total  -> the `hasMore` port of an infinite table and a list position;
+ *                     written for an answer WITHOUT `totalRecords` (the view said `countRows: false`, or the server
+ *                     does not count): the total is then the rows KNOWN so far, and exact once an answer comes back
+ *                     with fewer rows than asked for — the end
  *   <into>.offset     where the rows held begin in the whole list -> a windowed infinite table's `offset` port
  *   <into>.wanted     what a windowed list asked for, { offset, edge } (its `window` reaction writes it; read by `window: true`)
  *   <into>.loading    true while a request is in flight
@@ -108,6 +112,7 @@ export const tableViewArgsSchema = z
     columns: tableViewSchema.shape.columns,
     filters: tableViewSchema.shape.filters,
     request: tableViewSchema.shape.request,
+    countRows: tableViewSchema.shape.countRows,
   })
   .strict();
 export type TableViewArgs = z.infer<typeof tableViewArgsSchema>;
@@ -233,6 +238,43 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
     requests.set(into, controller);
     return { isLatest: () => requests.get(into) === controller, signal: controller.signal };
   };
+  // A view the server does not count: the filters its end was (or is being) looked for under. Other filters are
+  // another list — what was learned about this one says nothing about it.
+  const learnedUnder = new WeakMap<Store, Map<string, string>>();
+  /**
+   * An answer of a view NOBODY COUNTS (doc/ADR/0007-row-window-and-header-filters.md,
+   * "A list whose end is not known yet"): `<into>.total` is the high-water
+   * mark of the rows known to be there and `<into>.hasMore` says the list
+   * goes on past it — until an answer comes back with fewer rows than asked
+   * for: the END, from where the total is exact. A list that ends on a full
+   * batch is found out by the empty one after it. The mark starts over with
+   * `afresh` (a load that is neither `more` nor `window`) and with other
+   * filters; a batch joined BEFORE the rows held says nothing about the end.
+   */
+  const learn = (
+    store: Store,
+    into: string,
+    query: TableViewQuery,
+    rows: number,
+    join: SlicePlan["join"],
+    afresh: boolean,
+    at: (name: string) => string,
+  ): void => {
+    const lists = learnedUnder.get(store) ?? new Map<string, string>();
+    learnedUnder.set(store, lists);
+    const filters = JSON.stringify([query.filterIn, query.filterLike ?? {}, query.filterBetween ?? {}]);
+    const startsOver = afresh || lists.get(into) !== filters;
+    lists.set(into, filters);
+    // The end was found under these filters: the total is exact, and no later answer makes it a guess again.
+    if (!startsOver && store.get(at("hasMore")) === false) return;
+    if (join === "prepend" && !startsOver) return;
+    const mark = startsOver ? 0 : (store.getAs(at("total"), offsetSchema) ?? 0);
+    const end = query.offset + rows;
+    // Nothing at all from a row in the middle of the list (a slice asked for past its end) says only that it ends before.
+    const ended = rows < query.limit && (rows > 0 || query.offset === 0 || join === "append");
+    store.set(at("total"), ended ? end : Math.max(mark, end));
+    store.set(at("hasMore"), !ended);
+  };
 
   return async (store, rawArgs) => {
     const parsed = tableViewArgsSchema.safeParse(rawArgs);
@@ -324,19 +366,31 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         // array, so a list watching them knows nothing came.
         if (replaces) {
           store.set(at("data"), answer.data);
-        } else if (held !== undefined) {
-          if (answer.data.length > 0) store.set(at("data"), [...held, ...answer.data]);
-        } else if (sliceHeld !== undefined && plan !== undefined && answer.data.length > 0) {
-          // A BATCH joins the slice held; beyond KEEP_BATCHES of them the rows farthest from it are dropped.
-          const joined = joinedSlice(sliceHeld, answer.data, plan, KEEP_BATCHES * pageSize);
-          store.set(at("data"), joined.rows);
-          store.set(at("offset"), joined.offset);
+        } else if (answer.data.length > 0) {
+          // The rows are joined to the ones held NOW: no other load wrote since this one began (the latest wins), so
+          // they are the same rows — but an action may have changed one meanwhile (a row marked as a favourite), and
+          // the copy read before the request would bring the old one back.
+          const now = store.getAs(at("data"), rowsSchema) ?? [];
+          if (held !== undefined) {
+            store.set(at("data"), [...now, ...answer.data]);
+          } else if (sliceHeld !== undefined && plan !== undefined) {
+            // A BATCH joins the slice held; beyond KEEP_BATCHES of them the rows farthest from it are dropped.
+            const joined = joinedSlice({ ...sliceHeld, rows: now }, answer.data, plan, KEEP_BATCHES * pageSize);
+            store.set(at("data"), joined.rows);
+            store.set(at("offset"), joined.offset);
+          }
         }
       }
       // Where in the whole list the rows held begin: a windowed list reads it; appended rows begin where they did.
       if (replaces) store.set(at("offset"), query.offset);
-      if (answer.totalRecords !== undefined && answer.totalRecords !== null)
+      if (answer.totalRecords !== undefined && answer.totalRecords !== null) {
         store.set(at("total"), answer.totalRecords);
+        // Counted: the total is the whole list. (Said only where an uncounted answer said otherwise before.)
+        if (store.get(at("hasMore")) !== undefined) store.set(at("hasMore"), false);
+      } else if (answer.data) {
+        const join = held !== undefined ? "append" : (plan?.join ?? "replace");
+        learn(store, into, query, answer.data.length, join, held === undefined && plan === undefined, at);
+      }
       if (held === undefined && plan === undefined) store.set(at("page"), page);
       store.set(at("pageSize"), pageSize);
       store.set(at("error"), undefined);

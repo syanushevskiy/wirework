@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button, Tag, Tooltip } from "antd";
 import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { antdTable, createAntdTable } from "../widgets/antd-table";
+import type { TableRowActionProps } from "../hooks/use-row-actions";
 import type { TableCellProps } from "../hooks/use-table-cell";
 import type { TableToolbarItemProps } from "../hooks/use-table-toolbar";
 import { tableConformance } from "./conformance";
@@ -479,7 +480,7 @@ export const ColumnMenu: Story = {
   play: async ({ canvas, userEvent }) => {
     const body = within(document.body);
     await expect(headerTitles(canvas)).toEqual(["#", "Name", "Team", "Status"]);
-    await userEvent.click(canvas.getByRole("button", { name: "Column settings" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Columns" }));
     const reset = await body.findByRole("button", { name: "Reset" });
     // Nothing is changed yet: there is nothing to reset.
     await expect(reset).toBeDisabled();
@@ -524,7 +525,7 @@ export const ColumnStateKept: Story = {
   ),
   play: async ({ canvas, userEvent }) => {
     await expect(headerTitles(canvas)).toEqual(["Status", "#", "Team"]);
-    await userEvent.click(canvas.getByRole("button", { name: "Column settings" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Columns" }));
     await userEvent.click(await within(document.body).findByRole("button", { name: "Reset" }));
     await waitFor(() => expect(headerTitles(canvas)).toEqual(["#", "Name", "Team", "Status"]));
     globalThis.localStorage.removeItem(COLUMNS_KEY);
@@ -552,11 +553,96 @@ export const ColumnStateInTheStore: Story = {
   ),
   play: async ({ canvas, userEvent }) => {
     await expect(headerTitles(canvas)).toEqual(["Name", "Team", "Status"]);
-    await userEvent.click(canvas.getByRole("button", { name: "Column settings" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Columns" }));
     await userEvent.click(await within(document.body).findByRole("checkbox", { name: "Status" }));
     await waitFor(() => expect(headerTitles(canvas)).toEqual(["Name", "Team"]));
     await expect(canvas.getByTestId("story-store")).toHaveTextContent('"hidden": [ "id", "status" ]');
     await expect(globalThis.localStorage.getItem("wirework:columns:demo.rows")).toBeNull();
+  },
+};
+
+/**
+ * REQUIRED and PINNED columns. A column that says `required` is listed with
+ * its checkbox locked: neither it nor "Columns" (every column at once) can
+ * hide it — and a state that names it hidden anyway, kept before it became
+ * required, does not; its line carries an "Always" tag. A column is PINNED
+ * to the table's left or right edge from the three dots at the end of its
+ * line (Pin left, Pin right; for a pinned one Unpin and the pin to the other
+ * edge): it stands first or last, in the table and in the menu — which
+ * shows the pinned ones in sections of their own, PINNED LEFT and PINNED
+ * RIGHT, there only while a column is pinned to that edge.
+ */
+export const RequiredAndPinnedColumns: Story = {
+  render: () => (
+    <WidgetStory
+      key="required-and-pinned"
+      definition={antdTable}
+      // The state says `id` is hidden: it is required, so it shows all the same.
+      seed={{ demo: { rows, columnState: { order: [], hidden: ["id"] } } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", columnState: "demo.columnState" },
+        columns: headerColumns.map((column) => (column.property === "id" ? { ...column, required: true } : column)),
+        columnMenu: true,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const body = within(document.body);
+    const store = canvas.getByTestId("story-store");
+    const menuTitles = () => body.getAllByTestId("table-column-item").map((item) => item.dataset["title"]);
+    const sections = () => body.getAllByTestId("table-column-section").map((caption) => caption.textContent);
+    /** The three dots of a column's line: the actions they open are the ones expected, and one of them is chosen. */
+    const choose = async (title: string, action: string, offered: string[]) => {
+      await userEvent.click(body.getByRole("button", { name: `Actions of ${title}` }));
+      await expect((await body.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual(offered);
+      await userEvent.click(body.getByRole("menuitem", { name: action }));
+      await waitFor(() => expect(body.queryAllByRole("menuitem")).toHaveLength(0));
+    };
+    const BOTH = ["Pin left", "Pin right"];
+    await expect(headerTitles(canvas)).toEqual(["#", "Name", "Team", "Status"]);
+    // The button says what it is for, beside its icon.
+    await expect(canvas.getByRole("button", { name: "Columns" })).toHaveTextContent("Columns");
+    await userEvent.click(canvas.getByRole("button", { name: "Columns" }));
+    const required = await body.findByRole("checkbox", { name: "#" });
+    await expect(required).toBeChecked();
+    await expect(required).toBeDisabled();
+    // A tag with a lock says why; only the required column has one.
+    await expect(body.getAllByTestId("table-column-required").map((tag) => tag.textContent)).toEqual(["Always"]);
+    // Nothing is pinned: one section, the columns.
+    await expect(sections()).toEqual(["COLUMNS"]);
+    // Every column at once: the required one stays.
+    await userEvent.click(body.getByRole("checkbox", { name: "Columns" }));
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["#"]));
+    await userEvent.click(body.getByRole("checkbox", { name: "Columns" }));
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["#", "Name", "Team", "Status"]));
+
+    // Pinned to the left it stands first, to the right last — in the table and in the menu, each in its section.
+    await choose("Status", "Pin left", BOTH);
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["Status", "#", "Name", "Team"]));
+    await expect(sections()).toEqual(["PINNED LEFT", "COLUMNS"]);
+    await choose("Name", "Pin right", BOTH);
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["Status", "#", "Team", "Name"]));
+    await expect(menuTitles()).toEqual(["Status", "#", "Team", "Name"]);
+    await expect(sections()).toEqual(["PINNED LEFT", "COLUMNS", "PINNED RIGHT"]);
+    await expect(canvas.getByRole("columnheader", { name: "Status" })).toHaveAttribute("data-pinned", "left");
+    await expect(canvas.getByRole("columnheader", { name: "Name" })).toHaveAttribute("data-pinned", "right");
+    await expect(store).toHaveTextContent('"pinned": { "status": "left", "name": "right" }');
+    // A required column is pinned like any other.
+    await choose("#", "Pin left", BOTH);
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["#", "Status", "Team", "Name"]));
+    await expect(canvas.getByRole("columnheader", { name: "#" })).toHaveAttribute("data-pinned", "left");
+
+    // A pinned column offers the way back and the OTHER edge: there in one step. Unpin lets go; with the last pin
+    // of an edge gone its section is gone too.
+    await choose("Status", "Pin right", ["Unpin", "Pin right"]);
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["#", "Team", "Name", "Status"]));
+    await choose("Status", "Unpin", ["Unpin", "Pin left"]);
+    await choose("Name", "Unpin", ["Unpin", "Pin left"]);
+    await waitFor(() => expect(headerTitles(canvas)).toEqual(["#", "Name", "Team", "Status"]));
+    await expect(sections()).toEqual(["PINNED LEFT", "COLUMNS"]);
+    await userEvent.click(body.getByRole("button", { name: "Reset" }));
+    await waitFor(() => expect(sections()).toEqual(["COLUMNS"]));
+    await expect(store).not.toHaveTextContent("pinned");
   },
 };
 
@@ -685,7 +771,7 @@ export const Toolbar: Story = {
     await userEvent.click(tools.getByRole("button", { name: "Reload" }));
     await expect(store).toHaveTextContent('"asked": "again"');
     // The column menu's button stands in the same row, last.
-    await expect(tools.getByRole("button", { name: "Column settings" })).toBeVisible();
+    await expect(tools.getByRole("button", { name: "Columns" })).toBeVisible();
   },
 };
 
@@ -906,5 +992,130 @@ export const WrappedCells: Story = {
     const long = bodyCell(canvasElement, "1", "name");
     await expect(long.scrollWidth).toBe(long.clientWidth);
     await expect(long.offsetHeight).toBeGreaterThan(bodyCell(canvasElement, "2", "name").offsetHeight);
+  },
+};
+
+const favoriteRows = [
+  { id: "1", name: "Nightly", status: "Success", favorite: false },
+  { id: "2", name: "Smoke", status: "Failed", favorite: true },
+];
+const favoriteColumns = [
+  { title: "#", property: "id" },
+  { title: "Name", property: "name" },
+  { title: "Status", property: "status" },
+];
+const rowActionsViewModel = {
+  inputs: { rows: "demo.rows" },
+  columns: favoriteColumns,
+  on: {
+    "row-action": [{ set: "demo.acted" }],
+    "row-selected": [{ set: "demo.selected", from: "key" }],
+  },
+};
+
+/** The row actions of a row, each by the name it was listed under. */
+const rowActions = (root: HTMLElement, key: string): HTMLElement[] => [
+  ...root.querySelectorAll<HTMLElement>(`tr[data-row-key="${key}"] [data-testid="table-row-action"]`),
+];
+const rowAction = (root: HTMLElement, key: string, name: string): HTMLElement => {
+  const action = rowActions(root, key).find((candidate) => candidate.dataset["name"] === name);
+  if (action === undefined) throw new Error(`no row action ${name} in row ${key}`);
+  return action;
+};
+
+/**
+ * ROW ACTIONS (doc/ADR/0020-row-actions.md): the standard `favorite`, a star
+ * at the START of every row, in a column of its own that is no data column.
+ * It is out of sight until its row is hovered or holds the focus — a real
+ * pointer's hover is the e2e suite's (`row-actions.feature`); the focus is
+ * shown here — and stays in view on a row that IS a favourite. Pressing it
+ * emits `row-action` with the state asked for, and never selects the row.
+ */
+export const RowActions: Story = {
+  render: () => (
+    <WidgetStory
+      key="row-actions"
+      definition={antdTable}
+      seed={{ demo: { rows: favoriteRows } }}
+      viewModel={{ ...rowActionsViewModel, rowActions: [{ name: "favorite" }] }}
+    />
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const store = canvas.getByTestId("story-store");
+    // Before the first data column, and not one of them: it has no property and takes no part in the cell selection.
+    const cell = canvasElement.querySelector<HTMLElement>('tr[data-row-key="1"] td');
+    await expect(cell).toHaveAttribute("data-cell", "actions");
+    await expect(cell).not.toHaveAttribute("data-property");
+    await expect(cell).not.toHaveAttribute("data-at-column");
+    await expect(canvas.getByRole("columnheader", { name: "Row actions" })).toBeInTheDocument();
+
+    const star = rowAction(canvasElement, "1", "favorite");
+    const marked = rowAction(canvasElement, "2", "favorite");
+    await expect(getComputedStyle(star).opacity).toBe("0");
+    // A row that IS a favourite says so without a hover.
+    await expect(getComputedStyle(marked).opacity).toBe("1");
+    await expect(within(marked).getByRole("button", { name: "Favorite" })).toHaveAttribute("aria-pressed", "true");
+
+    // The keyboard reaches a row, and its actions show.
+    canvasElement.querySelector<HTMLElement>('tr[data-row-key="1"]')?.focus();
+    await waitFor(() => expect(getComputedStyle(star).opacity).toBe("1"));
+
+    await userEvent.click(within(star).getByRole("button", { name: "Favorite" }));
+    await expect(store).toHaveTextContent('"name": "favorite"');
+    await expect(store).toHaveTextContent('"key": "1"');
+    await expect(store).toHaveTextContent('"active": true');
+    // The action owns its press: the row was not selected.
+    await expect(store).not.toHaveTextContent('"selected"');
+    // Taking the mark away asks for the other state.
+    await userEvent.click(within(marked).getByRole("button", { name: "Favorite" }));
+    await expect(store).toHaveTextContent('"key": "2"');
+    await expect(store).toHaveTextContent('"active": false');
+  },
+};
+
+/** A row action of the HOST's own: it shows what it likes and says what it likes through `act`. */
+function PinAction({ params, rowKey, act }: TableRowActionProps) {
+  return (
+    <Button size="small" type="text" onClick={() => act({ pinned: rowKey })}>
+      {typeof params["label"] === "string" ? params["label"] : "Pin"}
+    </Button>
+  );
+}
+
+/** The host's own star, under the standard name. */
+function HostFavorite({ row, act }: TableRowActionProps) {
+  return (
+    <Button size="small" type="text" onClick={() => act({ active: row["favorite"] !== true })}>
+      {row["favorite"] === true ? "Starred" : "Star"}
+    </Button>
+  );
+}
+
+/**
+ * The host's own row actions, registered by name as its toolbar items are:
+ * one under the standard name `favorite` REPLACES the standard star, a new
+ * name adds an action. A name nothing is registered under is left out.
+ */
+export const CustomRowActions: Story = {
+  render: () => (
+    <WidgetStory
+      key="custom-row-actions"
+      definition={createAntdTable({ rowActions: { favorite: HostFavorite, pin: PinAction } })}
+      seed={{ demo: { rows: favoriteRows } }}
+      viewModel={{
+        ...rowActionsViewModel,
+        rowActions: [{ name: "pin", params: { label: "Pin it" } }, { name: "favorite" }, { name: "no-such-action" }],
+      }}
+    />
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const store = canvas.getByTestId("story-store");
+    await expect(rowActions(canvasElement, "1").map((action) => action.dataset["name"])).toEqual(["pin", "favorite"]);
+    await expect(canvas.queryByRole("button", { name: "Favorite" })).toBeNull();
+    await expect(within(rowAction(canvasElement, "2", "favorite")).getByText("Starred")).toBeInTheDocument();
+    await userEvent.click(within(rowAction(canvasElement, "2", "pin")).getByRole("button", { name: "Pin it" }));
+    // The action says its own name — the one it was listed under — whatever it puts in the detail.
+    await expect(store).toHaveTextContent('"name": "pin"');
+    await expect(store).toHaveTextContent('"pinned": "2"');
   },
 };

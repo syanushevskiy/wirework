@@ -2,16 +2,45 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-09-15
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 A dashboard needs free placement (drag, resize) and the layout library is a
 choice, not a constant: react-grid-layout today, gridstack or FlexLayout
-tomorrow. So the core knows NO layout: a page template declares its engine
-by name and a registered plugin owns everything else. There is no
-conversion between engines (removed by decision) — a different engine is a
-different template.
+tomorrow. This record says where a page's layout lives, how a layout
+library is plugged in, and how a page is edited and where its edits are
+written.
+
+## Options considered
+
+The record keeps two alternatives, both turned down:
+
+- **A layout the core knows** — one library as a constant of the core and
+  the adapter. It is refused by the requirement itself: the library is a
+  choice, so the template's shape and the renderer cannot belong to the
+  core.
+- **Conversion between engines** — one page moved from one engine's
+  template to another's. It existed and was removed by decision: a
+  different engine is a different template.
+
+And the one chosen:
+
+- **Engines as plugins.** A page template names its engine; a registered
+  plugin owns the template's shape, its operations and its renderer. It
+  costs a contract every engine implements and a package per library;
+  gridstack and FlexLayout were then written against it with no core,
+  schema or adapter change.
+
+## Decision
+
+The core knows NO layout: a page template declares its engine by name and
+a registered plugin owns everything else. There is no conversion between
+engines — a different engine is a different template, and a page's engine
+is a free choice only until its first widget is placed. A page is edited
+in ONE session of pure ops replayed over the store's trees, nothing
+written until Save, and every op is routed by an edit target: the user's
+overlay or the base view models.
 
 ## Plugin contract (`@wirework/schema`, `contracts/layout-engine.ts`)
 

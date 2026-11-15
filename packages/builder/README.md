@@ -159,6 +159,14 @@ models with the engine's `mergePageFiles([file], viewModels)`.
   its engine choice while it is empty, and placing a widget — a container's
   layouts started empty on the same engine, its cell appended tall, and
   `onAdded` told the id and those layouts so a host can open it at once.
+- `useLayoutNavigation` — moving between the page and the layouts INSIDE its
+  containers: given the host's `at` state and its Save page, it returns
+  `goTo` (a breadcrumb's step), `editLayout` (for `PageView`'s
+  `onEditLayout`: "Edit content" opens the layout inside in edit mode),
+  `onAdded` (for `useBuilder`: a container just placed opens at once),
+  `adding` (whether to offer the palette here) and `addAt` (`useBuilder`'s
+  `at`). Every move saves the open session first; widgets are added inside
+  a container on the shared page only.
 - `usePageToolbar` — what the toolbar above a page offers: the breadcrumb
   from the page down to the layout shown (`crumbs`, `goTo`), the engine
   choice, Edit / Save / Cancel with the pending count, the overlay switch and

@@ -36,6 +36,15 @@
  *   rows held (the farthest ones dropped beyond three batches), a slice
  *   around replaces them. `more` is never emitted. Ten thousand rows on the
  *   server are a few hundred in the store and two dozen in the DOM.
+ * - THE END NOT KNOWN YET (the `hasMore` port, true: a server that does not
+ *   count its rows; doc/ADR/0007-row-window-and-header-filters.md, "A list
+ *   whose end is not known yet"): the `total` is then the rows KNOWN so
+ *   far and the list goes on past it. `more` is emitted at the end even
+ *   with every known row held, and the line reads "<held> rows, more to
+ *   load"; a windowed list's scrollbar spans the rows known, the batch
+ *   after them is asked for the same way, and its line reads "<total>+
+ *   rows". Whoever loads the rows turns `hasMore` off when the end is
+ *   found. Exposed as `data-open`.
  * - WHERE THE LIST STANDS is the `position` port: the first row in view,
  *   0-based in the whole list. The widget emits `position-changed` as it
  *   scrolls (written back by default) and SCROLLS to the position when
@@ -60,6 +69,7 @@ import {
   tableHeaderEvents,
   tableHeaderPorts,
   tablePorts,
+  tableRowActionEvents,
   tableSettings,
   tableToolbarEvents,
 } from "./table";
@@ -80,6 +90,13 @@ export const infiniteTableContract = defineContract({
         description: "Store path holding how many rows the server has (optional; without it nothing more is asked for)",
         value: z.number().int().min(0),
         required: false,
+      },
+      hasMore: {
+        description:
+          "Store path holding whether the list GOES ON past the total — the total is then the rows known so far, not all of them (optional; a server that does not count its rows — the loader writes it)",
+        value: z.boolean(),
+        required: false,
+        default: false,
       },
       offset: {
         description:
@@ -102,6 +119,7 @@ export const infiniteTableContract = defineContract({
     ...tableColumnEvents,
     ...tableToolbarEvents,
     ...tableCellEvents,
+    ...tableRowActionEvents,
     more: {
       description:
         "Fired when the end of the list comes into view and the server has more rows; carries the offset of the next one — call table-view/load with more: true",

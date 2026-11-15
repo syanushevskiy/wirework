@@ -2,12 +2,12 @@
 
 - **Status:** Proposed — not built
 - **Date:** 2026-11-07
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-Designed 7 November 2026 with the tiger team (doc/team_tiger.md), at the
-product owner's ask. Status: designed (story WW-33), nothing built.
+Designed 7 November 2026 at the product owner's ask. Status: designed
+(story WW-33), nothing built.
 
-## The ask
+## Description
 
 "Good documentation so that anyone — especially other AI agents —
 understands how to create pages using this library." The reader is not
@@ -75,10 +75,10 @@ from "I need a page".
 - **A page builder who does not code**: the builder UI is their
   documentation; they are served by WW-1 and the Gherkin stories. Out of
   scope except that the examples below are the pages they see.
-- **The non-technical QAs**: read the Gherkin and the examples; a page
+- **Testers who do not code**: read the Gherkin and the examples; a page
   file is JSON they can read beside a scenario.
 
-## The question, and five answers
+## Options considered
 
 How does an author — a person or an agent — learn to write a page that
 boots, in a host they have never seen, without a developer? Five answers,
@@ -139,11 +139,59 @@ commands (`docs`, `pages:check`). Chosen: it is the door; without it the
 agent still opens the fixtures first. CLAUDE.md keeps its role (working
 on this repository) and gains one line pointing here.
 
-**The composition and its one rule.** E → A (short) → B and C (generated)
-→ D (tested examples) → the check. The rule: **everything an author must
-get exactly right is generated from the code or proven by a test; prose
-carries only the model and the rules no schema states.** A sentence of
-prose that restates a setting's description is a bug.
+**Also weighed: tools instead of documents.** Agents may not need
+documents at all — they need TOOLS: "describe this host" and "check this
+file" are the two functions of B and C behind an MCP server, and that may
+serve a coding agent better than a folder it must find. Not chosen FIRST:
+the folder costs a day and serves people too, and the MCP server would
+wrap the same two functions, so nothing is wasted (see "Later").
+
+## Decision
+
+A composition of the five: E → A (short) → B and C (generated) → D
+(tested examples) → the check. `AGENTS.md` is the door; a short guide
+carries the model; the catalog and the JSON Schema are generated from the
+host's registries; the six demo pages are the examples; `pnpm
+pages:check` is the gate.
+
+The one rule: **everything an author must get exactly right is generated
+from the code or proven by a test; prose carries only the model and the
+rules no schema states.** A sentence of prose that restates a setting's
+description is a bug.
+
+Why. A generated reference is chosen over a polished handbook because
+"polished" is what rots. The catalog and the JSON Schema are pure
+functions over the registries, in the engine; the I/O (the folder, the
+diff, the exit code) is a host script; no documentation generator is a
+dependency of a package. Nothing is new to the engine's model, and there
+is nothing a reader must install. The folder lives in this repository
+first; a host that needs it copies a thirty-line script, and a package
+for it comes only when a second host asks.
+
+Three guarantees, or it is not documentation: the generated files equal a
+fresh generation (a stale catalog fails CI); every example boots (parse,
+merge, validate — and the e2e suite opens the pages anyway); every claim
+the commentary makes names a cell that exists.
+
+Consequences:
+
+- Documentation stops being a chore: register a widget with its
+  `.describe()` strings, `pnpm docs` updates the catalog, and `pnpm
+check` says when it was forgotten.
+- The guide is written once and changes only when the MODEL changes (a
+  new section of a view model), which is rare.
+- A rule appears ONCE, in `AGENTS.md`; the guide links to it rather than
+  repeating it.
+
+Risks to watch:
+
+- **A green schema is not a correct page.** The JSON Schema cannot check
+  widget templates (their shape follows the cell's `widget`). The schema
+  says so itself, or an agent will trust it and ship a wrong template; the
+  check command is the real gate, and the door says so.
+- **`AGENTS.md` at the root of a library repository** is read by agents
+  working ON the library too: its first line says who it is for and sends
+  maintainers to CLAUDE.md.
 
 ## The design
 
@@ -166,14 +214,18 @@ doc/authoring/
 Everything GENERATED is committed, so a reader (and an agent cloning the
 repository) sees it without running anything, and `pnpm docs:check` fails
 `pnpm check` when a registration or a fixture changed and the folder was
-not regenerated. A host that embeds Wirework gets the same folder by
+not regenerated. The generated files are build outputs that happen to be
+committed for readers — never edited by hand, and the check makes that a
+rule. A host that embeds Wirework gets the same folder by
 running the same generator against its own registries (the generator is
 engine functions plus a thirty-line script a host copies — "Later" says
 how it may ship in a package).
 
 ### `AGENTS.md` (the door)
 
-Sixty lines at most, in this order:
+Sixty lines at most, or it will not be read. Its first line says who it
+is for — an author of pages in a host — and sends maintainers of this
+repository to CLAUDE.md. Then, in this order:
 
 1. **What Wirework is**, in five sentences: a page is configuration;
    widgets read one store and emit events; reactions write paths or call
@@ -217,14 +269,16 @@ not? }` or `{ any: [...] }`, or `{ expression }` in words); a hidden
        at `route.params.*`.
 4. **The two commands**: `pnpm docs` (regenerate the folder) and
    `pnpm pages:check doc/authoring/examples/*.page.json` (what boot would
-   say), with one line of what a failure looks like.
+   say), with one line of what a failure looks like. The door says that
+   the check, not the JSON Schema, is the gate.
 5. **Where the host's code is** for what a page cannot say: actions,
    predicates, routes, a page's initial data — two paths.
 
 ### `page-authoring.md` (the model, one page and a half)
 
 Written for a reader who has the catalog beside it; no widget is
-described here. Sections, each a few lines and one JSON fragment:
+described here, and the guide links to the ten rules in `AGENTS.md`
+rather than repeating them. Sections, each a few lines and one JSON fragment:
 
 1. **One page, read as data.** The smallest page file that boots: one
    view on `flex-rows`, one label, its template; the five keys of the
@@ -286,7 +340,10 @@ interface Catalog {
 — every entry read with what exists: `settingFields` for the settings and
 an action's parameters, `validatorKeys` for an event's payload, the
 contract's `description` and `preview.viewModel` (the example), the
-engine's template schema for its fields. `catalogMarkdown(catalog):
+engine's template schema for its fields. `describeRegistries` is five
+maps over five `list()`s, each entry a spread of what `settingFields`,
+`validatorKeys` and `argumentKind` already return — no new
+introspection, no intermediate state. `catalogMarkdown(catalog):
 string` renders it: a heading per widget, one table of settings, a line
 of inputs, a line of events, the example as a fenced JSON fragment; then
 the actions, predicates, appearances and engines as tables. No
@@ -314,7 +371,8 @@ for every file `parsePageFile` (the shape, in the schema's words), then
 `mergePageFiles(files, demoViewModels)` (a page in two files; a widget
 template two pages hold differently), then `validateViewModels` with the
 host's registries and `knownRoles` — the sentences boot prints, with the
-file name in front; exit code 1 on the first error, warnings listed. It
+file name in front; exit code 1 on the first error, warnings listed. Its
+output is for testers too: sentences and file names, no stack traces. It
 is what an agent runs after writing, and what CI runs on
 `doc/authoring/examples/` and, with pages as code phase 1, on
 `src/pages/`.
@@ -348,72 +406,13 @@ file it names, so the commentary cannot drift either.
   `examples/README.md` names exists.
 - `pages-check` has a test with a broken file (an unknown widget, a
   forbidden path) asserting the two sentences and the exit code.
-- The acceptance that matters (Morgan's): an agent given ONLY `AGENTS.md`
+- The acceptance that matters is a TRIAL, not a review of the prose — the
+  value is a page from a one-sentence ask with no developer: an agent
+  given ONLY `AGENTS.md`
   and `doc/authoring/` — no fixtures, no design documents — asked for a
   page in one sentence, produces a file `pnpm pages:check` accepts on the
   first or second try. Run once at the end of phase 2 as a trial, the
   transcript kept in the story; not automated.
-
-## The tiger team's positions
-
-- **Morgan (product):** the value is a page from a one-sentence ask with
-  no developer, by the agents this organisation already pays for. Wants
-  the acceptance to be a TRIAL, not a review of the prose: give an agent
-  the folder and the ask, watch. Accepts generated reference over a
-  polished handbook because "polished" is what rots. Asks that the check
-  command's output be readable by her QAs: sentences, file names, no
-  stack traces.
-- **Alexei (architecture):** the catalog and the JSON Schema are pure
-  functions over the registries in the engine, beside `pages-file.ts`;
-  I/O (the folder, the diff, the exit code) is a host script. The
-  generated files are build outputs that happen to be committed for
-  readers — never edited by hand, and the check makes that a rule. No
-  documentation generator as a dependency of a package.
-- **Dmitri (readability):** one entry file, one short guide, tables for
-  everything else. A rule appears ONCE, in `AGENTS.md`, and the guide
-  links to it rather than repeating it. The examples are the real pages
-  — a reader who opens `/demo/runs` and `runs.page.json` side by side
-  learns more than from any paragraph. Keep `AGENTS.md` under sixty
-  lines or it will not be read.
-- **Katya (team):** the win is that documentation stops being a chore:
-  register a widget with its `.describe()` strings and the catalog is
-  updated by `pnpm docs`, and `pnpm check` tells you when you forgot. The
-  guide is written once and changes only when the MODEL changes (a new
-  section of a view model), which is rare. Put the folder in this repo
-  first; a host that needs it copies a thirty-line script — a package for
-  it only when the second host asks.
-- **Sasha (QA):** three guarantees or it is not documentation: the
-  generated files equal a fresh generation (a stale catalog fails CI);
-  every example boots (parse, merge, validate, and the e2e suite opens
-  the pages anyway); every claim the commentary makes names a cell that
-  exists. Plus the check command's own test with a broken file. The
-  non-technical QAs can read a page file next to its Gherkin — and
-  `examples/README.md` tells them which cell is which.
-- **Ren (contrarian):** two things to be honest about. First: agents may
-  not need documents at all — they need TOOLS: "describe this host" and
-  "check this file" are the two functions above behind an MCP server,
-  and that may serve a coding agent better than a folder it must find.
-  Agrees to the folder FIRST because it costs a day, serves people too,
-  and the MCP server would wrap the same two functions (see "Later"), so
-  nothing is wasted. Second: the JSON Schema cannot check widget
-  templates (their shape follows the cell's `widget`); say so in the
-  schema itself or an agent will trust a green schema and ship a wrong
-  template — the check command is the real gate, make the door say so.
-  One more risk: `AGENTS.md` at the root of a library repository will be
-  read by agents working ON the library too; its first line must say who
-  it is for and send maintainers to CLAUDE.md.
-- **Vlad (fluency):** `describeRegistries` is five maps over five
-  `list()`s, each entry a spread of what `settingFields`, `validatorKeys`
-  and `argumentKind` already return — no new introspection, no
-  intermediate state; `catalogMarkdown` a `flatMap` into lines joined
-  once. The check command: parse, merge, validate, print — a pipeline, a
-  `process.exit` at the end.
-- **External reviewer:** the minimum is one door, one short guide, two
-  pure functions with a Markdown renderer, one script with two modes,
-  one check command, six exported files with a README, and the tests that
-  pin them. Nothing new to the engine's model; nothing a reader must
-  install. Everything beyond (MCP, publishing the guide in a package) is
-  "Later".
 
 ## Phases
 
@@ -427,7 +426,7 @@ file it names, so the commentary cannot drift either.
 
 - **The same two functions as tools**: an MCP server exposing `describe`
   (the catalog as JSON) and `check` (a page file's problems), so a coding
-  agent in a host asks rather than reads (Ren). Worth it when a second
+  agent in a host asks rather than reads. Worth it when a second
   host embeds Wirework.
 - **The guide in a package**: `page-authoring.md` and the script shipped
   in `@wirework/engine`'s `dist` (`docs/`), so a host gets them from npm

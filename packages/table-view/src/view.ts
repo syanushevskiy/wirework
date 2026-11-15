@@ -24,6 +24,8 @@ const columnOverrideSchema = z
     cell: tableCellSchema.optional(),
     /** The column's width in pixels instead of the table's default (110; 88 for an id). */
     width: z.number().int().min(20).optional(),
+    /** true: the table always shows the column — its column menu lists it and cannot hide it. */
+    required: z.boolean().optional(),
   })
   .strict();
 
@@ -51,7 +53,7 @@ export const tableViewSchema = z
       .record(z.string(), columnOverrideSchema)
       .optional()
       .describe(
-        'Per column id: { "inbound": { "hidden": true }, "state": { "title": "Result", "cell": { "kind": "tag", "tones": { "Failed": "danger" } } }, "id": { "cell": { "kind": "link", "to": "/demo/runs/{id}" } } } — a link needs the table\'s reaction link-clicked → nav/follow',
+        'Per column id: { "id": { "required": true } } keeps a column out of reach of the column menu\'s hiding; { "inbound": { "hidden": true },"state": { "title": "Result", "cell": { "kind": "tag", "tones": { "Failed": "danger" } } }, "id": { "cell": { "kind": "link", "to": "/demo/runs/{id}" } } } — a link needs the table\'s reaction link-clicked → nav/follow',
       ),
     /** Per column id: what to change about the server's filter. */
     filters: z
@@ -73,6 +75,19 @@ export const tableViewSchema = z
       .describe('Sent with every request: { "filterIn": { "state": ["RUNNING"] }, "orderBy": { "job_id": "DESC" } }'),
     /** Rows per request until `<into>.pageSize` says otherwise. */
     pageSize: z.number().int().min(1).optional().describe("Rows per request (default 50)"),
+    /**
+     * false: the server is NOT asked to count the rows (`totalRecords:
+     * false`) — counting a long list can cost more than reading a page of
+     * it. The total is then unknown until the list's end is reached (an
+     * answer with fewer rows than asked for); meanwhile `<into>.reached`
+     * says how many rows are known to be there.
+     */
+    countRows: z
+      .boolean()
+      .optional()
+      .describe(
+        "Count rows: off — the server is not asked for the total; it is unknown until the end of the list is reached (for a long list a server counts slowly). On or not set: asked with every request",
+      ),
   })
   .strict();
 export type TableView = z.infer<typeof tableViewSchema>;
@@ -161,6 +176,7 @@ export function columnsOf(metadata: TableMetadata, view: Pick<TableView, "column
         // How the cells are shown is the page's word alone: the server describes data, not looks.
         ...(override?.cell === undefined ? {} : { cell: override.cell }),
         ...(override?.width === undefined ? {} : { width: override.width }),
+        ...(override?.required === true ? { required: true } : {}),
         ...(filter === undefined ? {} : { filter }),
         ...(sortable ? { sortable } : {}),
       };
@@ -212,6 +228,6 @@ export function requestOf(view: TableView, query: TableViewQuery, withMetadata: 
       orderBy: query.orderBy ?? base.orderBy ?? {},
     },
     metadata: withMetadata,
-    totalRecords: true,
+    totalRecords: view.countRows !== false,
   };
 }

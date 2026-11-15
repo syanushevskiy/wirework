@@ -2,13 +2,12 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-11-03
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-Designed with the tiger team on 3 November 2026 (doc/team_tiger.md), built
-the same day. Status: built and tested (`flex-rows.feature`, the engine's
-unit tests, the demo's cards page).
+Designed on 3 November 2026, built the same day. Status: built and tested
+(`flex-rows.feature`, the engine's unit tests, the demo's cards page).
 
-## The ask
+## Description
 
 A page builder wants the POWER OF CSS FLEXBOX on the flex-rows engine —
 where a widget sits in its row, how it grows and shrinks, how a row
@@ -28,7 +27,7 @@ no interactive editing (`applyChange` was the identity) and no page of the
 demo on it. The grid engines had drag and resize; flex rows had a cell
 per row and that was that.
 
-## The question, and four answers
+## Options considered
 
 How does a template say "this cell grows, that one keeps a third, the row
 spaces them out"? Four ways were weighed.
@@ -65,18 +64,39 @@ builder's suggestions (a `<datalist>`), so nothing is kept in step by
 hand; it is pure data, tested in node without a browser; and inline style
 is exactly what the guidelines allow — "values computed from data at
 runtime (e.g. a width coming from a view model)". The spacing scale and
-the fractions are generated, not typed out. **Chosen.** What it gives up:
-responsive variants and pseudo-states, which inline style cannot express
-(see "Later").
+the fractions are generated, not typed out. What it gives up: responsive
+variants and pseudo-states, which inline style cannot express (see
+"Later").
 
-**D. Explicit fields instead of a class string** (Ren's challenge): give a
-cell `grow`, `basis`, `align` and `order` fields, a row `justify`, `align`
+**D. Explicit fields instead of a class string**: give a cell `grow`, `basis`, `align` and `order` fields, a row `justify`, `align`
 and `gap`, and let the form render a select each. Rejected, narrowly. The
 fields are more UI for the same power, a Tailwind-literate builder would
 translate in their head, and the ask was the words themselves. The string
 composes (`basis-1/3 shrink-0 self-end` is one field), copies between
 cells, and the datalist gives the discoverability a select would. Noted:
 should a host want selects, the table is what a select reads too.
+
+## Decision
+
+**C: one table of names and the CSS each stands for**, turned into inline
+style. It is the one answer with a single source of truth — the table's
+keys are the vocabulary, the validation and the builder's suggestions —
+it is tested without a browser, and inline style from template data is
+what the guidelines allow. A (Tailwind as a dependency) was rejected for
+the guidelines' rule, the classes its build cannot see and the open CSS
+surface; B (the engine's own stylesheet) for its two sources of truth; D
+(explicit fields) narrowly, because the ask was the words themselves.
+
+Risks to watch, none blocking:
+
+- Inline style wins over any stylesheet, so a host cannot theme a classed
+  cell with CSS — the price of one source of truth; option B is the way
+  out if it bites.
+- `order-*` reorders visually only: the DOM — and a screen reader — keep
+  template order, exactly as in Tailwind; a builder who wants the reading
+  order changed moves the cell.
+- The row default WRAPS where Tailwind's does not; documented, and
+  `flex-nowrap` is one word away.
 
 ## The design
 
@@ -362,54 +382,48 @@ needed: the drag is pointer events and rectangles, as css-grid's is.
   `I swap the cell "<a>" with the cell "<b>"`, `I drop the cell "<id>"
 into a new row above|below row N`, `the cell "<id>" has no arrows to
 move it by`; `I move the cell "<id>" up` is gone (`flex-rows.feature`,
-  and the greeting of `containers.feature`). Sasha's ask below — a
+  and the greeting of `containers.feature`). The review's ask below — a
   regression scenario should a drag ever replace the arrows — is the
   builder scenario of `flex-rows.feature`.
 
 ## Reviewed 2026-11-03 (after the build), against doc/guidelines.md and doc/react-best-practices
 
-- **Alexei:** the engine owns its template, its vocabulary and its edit
-  UI — no core, schema, adapter or builder change beyond `data-engine` on
-  the nested layout's element, which is the plugin contract holding as
-  promised. Files are named as the engine packages name theirs
-  (`FlexRowsView.tsx` with `useFlexRowsView.ts`, `ClassesInput.tsx` with
-  `useClassesInput.ts`); the pure operations sit in `operations.ts`,
-  tested without React. The one cast (`classed`) is a boundary with its
-  comment. Accepted.
-- **Dmitri:** the table reads top to bottom as the Tailwind docs do, and a
-  junior finds `gap-4` in it in ten seconds; `moved` is one function with
-  one comment that says what the row numbers mean. He asked for the
-  `removeCell` duplicate to go — it did (`removeFlexCell` serves the
-  engine and the tests). He notes the `<datalist>` is the browser's UI,
-  not ours, and likes that.
-- **Katya:** extending the vocabulary is one line in one table, and the
-  README says so; the demo page is the onboarding. She asked that
-  "classes" be the word everywhere — template, change, step sentences,
-  README — and it is.
-- **Sasha:** five scenarios a non-technical tester reads: "I set the flex
-  classes of the cell X to Y", "I move the cell X up", "the cells X, Y sit
-  side by side" (bounding boxes, settled). The unknown-class path is
-  covered both ways (the field and the page warning). Her ask: a
-  regression scenario should a drag library ever replace the arrows.
-- **Ren:** three risks to monitor, none blocking. (1) Inline style wins
-  over any stylesheet, so a host cannot theme a classed cell with CSS —
-  the price of one source of truth; option B is the way out if it bites.
-  (2) `order-*` reorders visually only: the DOM — and a screen reader —
-  keep template order, exactly as in Tailwind; a builder who wants the
-  reading order changed moves the cell. (3) The row default WRAPS where
-  Tailwind's does not; documented, and `flex-nowrap` is one word away.
-  He concedes the table beats a stylesheet for this scope.
-- **Morgan:** the cards page shows a customer what "layout" means without
-  a developer: two cards, two engines, a name typed on one page read on
-  another. The builder flow is pick-add-edit-type-save. Ship.
-- **Vlad:** `flexStyle` is a reduce, `FLEX_CLASSES` a spread of
-  generators, `flexRowsProblems` a flatMap of flatMaps, `moveTarget` a
-  lookup in a literal. He wanted `moved` as one expression; it stayed
-  three lines for Dmitri.
-- **External reviewer:** less than it replaces — the width grammar, its
-  media queries and its test are gone; one table, one view, one input
-  component, one operations file. The static datalist options are built
-  once (rendering-hoist-jsx); the draft input derives its reset from the
-  prop during render, no effect (rerender-derived-state-no-effect);
-  callbacks are memoised on what they use; no inline components; no `!`,
-  no `any`, no console. Inline `style` only from template data. Conforms.
+- **The plugin contract held.** The engine owns its template, its
+  vocabulary and its edit UI — no core, schema, adapter or builder change
+  beyond `data-engine` on the nested layout's element. Files are named as
+  the engine packages name theirs (`FlexRowsView.tsx` with
+  `useFlexRowsView.ts`, `ClassesInput.tsx` with `useClassesInput.ts`);
+  the pure operations sit in `operations.ts`, tested without React. The
+  one cast (`classed`) is a boundary with its comment.
+- **Readability.** The table reads top to bottom as the Tailwind docs do,
+  and `gap-4` is found in it in ten seconds; `moved` is one function with
+  one comment that says what the row numbers mean — it stayed three lines
+  rather than one expression, to be read. The `removeCell` duplicate went
+  (`removeFlexCell` serves the engine and the tests). The `<datalist>` is
+  the browser's UI, not ours.
+- **One word, one place to extend.** Extending the vocabulary is one line
+  in one table, and the README says so; the demo page is the onboarding.
+  "Classes" is the word everywhere — template, change, step sentences,
+  README.
+- **Scenarios.** Five scenarios a tester reads without the code: "I set
+  the flex classes of the cell X to Y", "I move the cell X up", "the
+  cells X, Y sit side by side" (bounding boxes, settled). The
+  unknown-class path is covered both ways (the field and the page
+  warning). Asked for: a regression scenario should a drag library ever
+  replace the arrows.
+- **Risks.** The three under "Decision" — inline style over any
+  stylesheet, `order-*` visual only, the wrapping row default — are to be
+  monitored; none blocks. The table beats a stylesheet for this scope.
+- **The demo.** The cards page shows what "layout" means without a
+  developer: two cards, two engines, a name typed on one page read on
+  another. The builder flow is pick, add, edit, type, save.
+- **The code's shape.** `flexStyle` is a reduce, `FLEX_CLASSES` a spread
+  of generators, `flexRowsProblems` a flatMap of flatMaps, `moveTarget` a
+  lookup in a literal.
+- **Less than it replaces.** The width grammar, its media queries and its
+  test are gone; one table, one view, one input component, one operations
+  file. The static datalist options are built once
+  (rendering-hoist-jsx); the draft input derives its reset from the prop
+  during render, no effect (rerender-derived-state-no-effect); callbacks
+  are memoised on what they use; no inline components; no `!`, no `any`,
+  no console. Inline `style` only from template data. Conforms.

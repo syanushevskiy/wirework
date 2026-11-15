@@ -98,6 +98,8 @@ export type { InfiniteTableEvents } from "./widgets/antd-infinite-table";
 export type { TableCellProps, TableCellRenderer, TableCellRenderers } from "./hooks/use-table-cell";
 export type { TableToolbarItem, TableToolbarItemProps, TableToolbarItems } from "./hooks/use-table-toolbar";
 export { RefreshItem, ResetFiltersItem, STANDARD_TOOLBAR } from "./widgets/table-toolbar";
+export type { TableRowAction, TableRowActionProps, TableRowActions } from "./hooks/use-row-actions";
+export { FavoriteAction, STANDARD_ROW_ACTIONS } from "./widgets/row-actions";
 export { validate } from "./validation";
 export type { ValidationRule, ValidationResult } from "./validation";
 export { LABEL_TONES, VALIDATION_RULES } from "@wirework/widget-contracts";
@@ -129,14 +131,21 @@ export interface AntdWidgetsOptions {
   tableCells?: AntdTableOptions["cells"];
   /** Toolbar items the host's tables offer by name, over the standard `reset-filters` and `refresh` (see createAntdTable). */
   tableToolbar?: AntdTableOptions["toolbar"];
+  /** Row actions the host's tables offer by name, over the standard `favorite` (see createAntdTable). */
+  tableRowActions?: AntdTableOptions["rowActions"];
 }
 
-/** Every production widget, for a host to register at once — with the host's own table cells and toolbar items, if any. */
-export function createAntdWidgets({ tableCells, tableToolbar }: AntdWidgetsOptions = {}): AnyWidgetDefinition[] {
-  const own = tableCells !== undefined || tableToolbar !== undefined;
+/** Every production widget, for a host to register at once — with the host's own table cells, toolbar items and row actions, if any. */
+export function createAntdWidgets({
+  tableCells,
+  tableToolbar,
+  tableRowActions,
+}: AntdWidgetsOptions = {}): AnyWidgetDefinition[] {
+  const own = tableCells !== undefined || tableToolbar !== undefined || tableRowActions !== undefined;
   const tableOptions: AntdTableOptions = {
     ...(tableCells === undefined ? {} : { cells: tableCells }),
     ...(tableToolbar === undefined ? {} : { toolbar: tableToolbar }),
+    ...(tableRowActions === undefined ? {} : { rowActions: tableRowActions }),
   };
   return [
     antdLabel,

@@ -2,9 +2,9 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-09-15
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 Widgets bind to the store through paths in their view model. Nothing
 machine-readable used to say which fields are bindings or what TYPE of
@@ -12,10 +12,42 @@ value lives at a bound path. That blocked generic tooling — a builder
 cannot ask "what does this widget need?" — and prevented boot validation
 from catching a widget wired to a path holding the wrong shape.
 
-Output ports existed briefly and were removed (team-tiger decision, see
-doc/ADR/0002-widget-events.md): a write from widget code is unenforceable
-and invisible. A widget now only READS through ports; every state change
-it causes is an emitted event plus a reaction declared in the view model.
+This record says how a widget declares what it reads from the store, how
+a view model binds those declarations to paths, and how a widget changes
+state.
+
+## Options considered
+
+- **Paths in the view model with no declaration** — what there was. It
+  costs nothing to write, and it is what blocked the builder and boot
+  validation: nothing says which fields are bindings or what a bound path
+  must hold.
+- **Input ports and output ports.** A widget declares the paths it reads
+  AND the paths it writes, and writes them itself. Output ports existed
+  briefly and were removed (doc/ADR/0002-widget-events.md, "Outputs
+  replaced by events"): they were declarative only — the write itself was
+  an unchecked `store.set` inside widget code, so it was unenforceable and
+  invisible.
+- **Typed input ports only; every write is an event.** A widget declares
+  what it reads, each port with a validator for the VALUE; a state change
+  it causes is an emitted event plus a reaction declared in the view
+  model. It costs a reaction per state change (which
+  doc/ADR/0002-widget-events.md later made a default for controlled
+  widgets) and gives a write that is declared, validated and visible.
+
+One smaller choice, for a bound path that holds nothing: an adapter-level
+"no data" placeholder for every widget, or a `default` the port declares.
+The placeholder was rejected: emptiness is widget-specific.
+
+## Decision
+
+Typed input ports only. Every `WidgetDefinition` declares its input ports,
+and a port describes the value at the bound path, not the path. The
+binding part of the view-model schema is built FROM the declarations, so
+the two cannot drift. A widget only READS through ports — it receives a
+store view without `set` —; every state change it causes is an emitted
+event plus a reaction declared in the view model. A port declares what
+the widget shows while its path holds nothing.
 
 ## Contract
 

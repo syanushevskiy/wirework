@@ -21,3 +21,4 @@ export const Stands: Story = conformance.Stands;
 export const Jumps: Story = conformance.Jumps;
 export const Vertical: Story = conformance.Vertical;
 export const Empty: Story = conformance.Empty;
+export const EndUnknown: Story = conformance.EndUnknown;

@@ -19,7 +19,12 @@ function AntdListPosition({ viewModel, store, emit }: ContractProps<typeof listP
   const view = useListPosition(
     store,
     emit,
-    { position: viewModel.inputs.position, total: viewModel.inputs.total, visible: viewModel.inputs.visible },
+    {
+      position: viewModel.inputs.position,
+      total: viewModel.inputs.total,
+      hasMore: viewModel.inputs.hasMore,
+      visible: viewModel.inputs.visible,
+    },
     listPositionContract.io.inputs,
   );
 
@@ -35,11 +40,14 @@ function AntdListPosition({ viewModel, store, emit }: ContractProps<typeof listP
       data-position={view.position}
       data-visible={view.visible}
       data-total={view.total}
+      data-open={view.open}
       data-percent={view.percent}
     >
       <Slider
         className="ww-list-position__scale"
         ariaLabelForHandle={viewModel.label}
+        // The end of the list not known: "row 401 of at least 800" — a bare number would read as a share of the whole.
+        {...(view.valueText === undefined ? {} : { ariaValueTextFormatterForHandle: view.valueText })}
         // Upright, antd puts the minimum at the bottom: reversed, the start of the list is at the top.
         vertical={viewModel.vertical}
         reverse={viewModel.vertical}
@@ -53,7 +61,7 @@ function AntdListPosition({ viewModel, store, emit }: ContractProps<typeof listP
         onChangeComplete={view.release}
       />
       {viewModel.showRange ? <Typography.Text data-testid="list-position-range">{view.range}</Typography.Text> : null}
-      {viewModel.showPercent ? (
+      {viewModel.showPercent && view.percent !== undefined ? (
         <Typography.Text type="secondary" data-testid="list-position-percent">
           {view.percent}%
         </Typography.Text>

@@ -58,6 +58,11 @@ export interface RunsServer {
   deleteRun(id: string): Promise<void>;
   /** Queue one run again, noting why (the run page's Retry dialog). Time does not move. */
   retryRun(id: string, reason: string): Promise<void>;
+  /**
+   * Mark one run as a favourite, or take the mark away (the archive's star; doc/ADR/0020-row-actions.md). The list
+   * then says so in every row's `favorite` — only with `details`. Time does not move.
+   */
+  setFavorite(id: string, favorite: boolean): Promise<void>;
   /** The overview's numbers. Time does not move. */
   fetchStats(): Promise<RunsStats>;
   /** Back to the initial runs. Requests still in flight no longer move time. */
@@ -330,11 +335,17 @@ export function createRunsServer(options: {
   let rows = buildRows(options.seed, options.total);
   /** Why each run was queued again, in order — told in its history. */
   let retries = new Map<string, string[]>();
+  /** The runs marked as favourites, by id. */
+  let favorites = new Set<string>();
   /** Bumped by `reset`: an answer from before a reset must not move the new timeline. */
   let epoch = 0;
 
   const answerView = (request: TableViewRequest, withOwner: boolean): TableViewResponse => {
-    const all = rows.map((run) => ({ ...toViewRow(run, withOwner), ...(details ? detailsOf(run) : {}) }));
+    // `favorite` is a fact of the row no column shows: the star at the row's start reads it.
+    const all = rows.map((run) => ({
+      ...toViewRow(run, withOwner),
+      ...(details ? { ...detailsOf(run), favorite: favorites.has(run.id) } : {}),
+    }));
     const selected = select(all, request.dataFilter);
     const { limit, offset } = request.dataFilter;
     const described = describeRuns(all, withOwner);
@@ -386,6 +397,12 @@ export function createRunsServer(options: {
         rows = rows.map((row) => (row.id === id ? { ...row, status: QUEUED } : row));
         retries.set(id, [...(retries.get(id) ?? []), reason]);
       }),
+    setFavorite: (id, favorite) =>
+      roundTrip(() => {
+        // The server decides by the id alone: a run it does not have is nobody's favourite.
+        if (favorite && rows.some((row) => row.id === id)) favorites.add(id);
+        else favorites.delete(id);
+      }),
     fetchStats: () =>
       roundTrip(() => {
         const count = (state: string): number => rows.filter((row) => row.status.state === state).length;
@@ -401,6 +418,7 @@ export function createRunsServer(options: {
       epoch += 1;
       rows = buildRows(options.seed, options.total);
       retries = new Map();
+      favorites = new Set();
     },
   };
 }

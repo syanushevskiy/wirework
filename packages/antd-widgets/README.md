@@ -45,8 +45,16 @@ import "@wirework/antd-widgets/styles.css";
   text, a list of values otherwise (`data-testid="table-filter"`, named
   "Filter <title>"), the same choice the header dropdowns write. With
   `columnMenu` on, a settings button above either table ("Column settings")
-  opens the COLUMN MENU — a checkbox per column to show or hide it, a drag
-  to reorder, Reset to bring the columns back as configured —; the state
+  opens the COLUMN MENU from a button reading "Columns" — a checkbox per
+  column to show or hide it (locked, with an "Always" tag, for a column
+  that says `required: true`: it cannot be hidden), a drag to reorder,
+  three dots opening its actions — Pin left and Pin right, or Unpin and the
+  pin to the other edge for a pinned one (it stays in view at the table's
+  edge while the others scroll sideways, and stands first or last in the
+  table and in the menu, which lists the pinned ones in sections of their
+  own, PINNED LEFT and PINNED RIGHT, around COLUMNS),
+  Reset to bring the columns back as configured —; the state (`{ order,
+hidden, pinned? }`)
   lives at the `columnState` port when a page binds it, and otherwise in the
   browser's local storage under `columnStateKey` (or `wirework:columns:<rows
 path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
@@ -58,7 +66,21 @@ path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
   `createAntdTable({ toolbar })` / `createAntdWidgets({ tableToolbar })`
   with components taking `TableToolbarItemProps` (`params`, `loading`,
   `filtered`, `refresh()`, `resetFilters()`); one registered under a
-  standard name — your own refresher as `refresh` — replaces it. Both
+  standard name — your own refresher as `refresh` — replaces it. The
+  `rowActions` setting lists the tools of ONE ROW
+  (doc/ADR/0020-row-actions.md) — `[{ "name": "favorite" }]` is the
+  standard star (`STANDARD_ROW_ACTIONS`: `FavoriteAction`, filled while the
+  row's `favorite` property is true) —, registered the same way:
+  `createAntdTable({ rowActions })` / `createAntdWidgets({ tableRowActions
+})` with components taking `TableRowActionProps` (`row`, `rowKey`,
+  `params`, `act(detail?)`). They stand in a column of their own at the
+  start of the row — no data column: not in the column menu, the cell
+  selection, Copy or the CSV — and show while the pointer is over the row
+  or the keyboard's focus in it; an action whose root element says
+  `data-pinned="true"` stays in view. `act` emits the table's `row-action`
+  with `{ name, key, row, detail }`: the table stores nothing, your action
+  does the work — and sends the server the row's KEY, never a field of the
+  row. Both
   tables SELECT CELLS like a spreadsheet (`cellSelection`, on by default):
   a click selects a cell, a drag, a drag of the small square at its corner
   or a Shift+click a rectangle (`data-selected="1-2/2-5"` on the widget);
@@ -74,7 +96,12 @@ path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
   it) and asks for the slice around the rows in view (`window`); with its
   `position` port bound it says where it stands and scrolls where it is
   told — `antdListPosition` beside it shows that and jumps along the list (lying, or
-  with `vertical` upright with the start of the list at its top). Its
+  with `vertical` upright with the start of the list at its top). With the
+  `hasMore` port true on both, the END OF THE LIST IS NOT KNOWN yet and the
+  total is the rows known so far: the list asks for the batch after them
+  and reads "800+ rows" ("200 rows, more to load" when not windowed), the
+  scale runs over the rows known, reads "401–425 of 800+" and shows no
+  percent (`data-open` on both). Its
   box takes the keyboard focus, so End, Home and Page Down scroll it. The
   events each widget emits are exported as types (`ButtonEvents`,
   `InputEvents`, `TableEvents`, `InfiniteTableEvents`, …). Peer:

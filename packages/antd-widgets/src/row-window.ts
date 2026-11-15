@@ -95,12 +95,17 @@ export const AHEAD_WINDOWS = 6;
  *    the batch AFTER, while the rows in view are still held — the user
  *    scrolls into rows that are already there;
  *  - the same towards the start: the batch BEFORE.
+ *
+ * A list that GOES ON past its `total` (`hasMore`: the total is the rows
+ * known so far, the end not found yet) asks for the batch after even when
+ * it holds the last row known.
  */
 export function sliceRequest(
   view: { start: number; end: number },
   offset: number,
   held: number,
   total: number,
+  hasMore = false,
 ): SliceRequest | undefined {
   if (total <= 0) return undefined;
   const end = offset + held;
@@ -109,7 +114,8 @@ export function sliceRequest(
   // past the opposite mark at once, and the two would be asked for in turn, for ever. Such a list waits until
   // the window leaves its rows.
   if (held <= AHEAD_WINDOWS * (view.end - view.start)) return undefined;
-  if (end < total && view.end >= offset + Math.ceil(held * FETCH_AHEAD)) return { offset: end, edge: "after" };
+  const goesOn = end < total || hasMore;
+  if (goesOn && view.end >= offset + Math.ceil(held * FETCH_AHEAD)) return { offset: end, edge: "after" };
   if (offset > 0 && view.start <= offset + Math.floor(held * (1 - FETCH_AHEAD))) return { offset, edge: "before" };
   return undefined;
 }

@@ -2,7 +2,69 @@
 
 - **Status:** Accepted — partly built (phase 1; phases 4–7 designed 2026-10-14)
 - **Date:** 2026-09-16
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
+
+## Description
+
+A reaction in a view model has two verbs (doc/ADR/0002-widget-events.md):
+`set` writes the store, and `call` is for everything that is not a store
+write — fetch the runs, go to a page, open a dialog. This record says what
+the thing a `call` names is: how business logic is written once by
+developers and reused by users who never write code, how it is registered
+and checked, how a server request and what follows it are expressed, and —
+designed 2026-10-14 — what an application with hundreds of actions, and a
+third party whose "user" is an AI model, needs on top.
+
+## Options considered
+
+For the model itself the record contrasts two things it does not do with
+the one it does:
+
+- **Logic in configuration** — reactions that transform, branch or
+  compute. Turned down: reactions never transform (`from` selects, `value`
+  is a literal, `with` is static), and nothing beyond sequence is
+  expressible.
+- **Actions that emit into the bus**, so that one action's end starts the
+  next. Turned down: chains stay explicit and cannot loop. A follow-up is
+  either fixed in the handler or the ORDER of the reactions on one event.
+- **Named host code with a declared contract** — a name, a description,
+  `params` and a `scope` —, invoked by name with static arguments. It
+  costs a registry and a definition per action; a user's configuration
+  then only picks names and parameters, which a schema validates.
+
+For the hundreds of actions (2026-10-14):
+
+- **Where presets live** — three places, weighed in "Presets" below:
+  virtual actions (no builder change, but the list grows by the number of
+  presets — the problem being solved), a preset registry beside the action
+  registry (explicit, validated at boot; a fifth registry), or presets as
+  DATA under a configuration root (chosen: the server's presets must be
+  merged in, and that is what makes a preset data, not code).
+- **A reaction that copies a preset's arguments or refers to the preset.**
+  A copy made at pick time would freeze server-owned values (URLs, tenant
+  windows) into every page; a reference keeps them live.
+- **The order of the work.** The grouped select alone, measured before
+  any ranking is added; or the catalogue first, the picker a view over it.
+  Both hold in what is designed: the catalogue (phase 4) comes before the
+  picker (phase 6), and the picker's layers are built cheapest first, each
+  measured before the next.
+- **A separate path for a model as the user.** None: the model reads the
+  same catalogue and gets back the same validation sentences.
+
+## Decision
+
+An action is named host code with a declared contract, registered in code
+at boot and invoked from a reaction by name (`{ call, with }`). Users
+never write code; parameters never contain code. A follow-up is order:
+the reactions of one event run in sequence, an async action awaited before
+the next. Results travel through the store; actions never emit into the
+bus.
+
+For hundreds of actions: metadata on the definition and a catalogue
+(`describeActions`) every UI derives from, built before the picker;
+presets as data under the `actionPresets` configuration root, merged with
+the server's by id and REFERRED to by a call reaction that still names its
+action; a picker built in layers; and no separate path for a model.
 
 ## The model
 
@@ -103,7 +165,7 @@ dialog state live in the store so these are ordinary state writes.
 
 ## Hundreds of actions: metadata, presets, the picker, a model as the user
 
-Designed 2026-10-14 with the tiger team. The builder's picker today is
+Designed 2026-10-14. The builder's picker today is
 one flat select labelled `name — description`; an application with
 hundreds of actions, and a third party whose "user" is an AI model, needs
 four things, in this order.
@@ -124,15 +186,15 @@ interface ActionDefinition {
 ```
 
 `category` is the only new required field (default: the namespace);
-the rest is optional — metadata nobody fills in is worse than none
-(Dmitri). `scope` alone cuts hundreds to the dozens a page can use.
+the rest is optional — metadata nobody fills in is worse than none.
+`scope` alone cuts hundreds to the dozens a page can use.
 
 `describeActions(registry)` returns the CATALOGUE as JSON: name,
 description, category, tags, `params` as JSON Schema (zod → JSON Schema),
 `accepts`, `affects`, and the presets as worked examples. The human
-picker is one view over it; a model reads it directly (Ren: build the
-catalogue before the picker, or the picker hard-codes what the catalogue
-then has to honour).
+picker is one view over it; a model reads it directly. The catalogue is
+built before the picker, or the picker hard-codes what the catalogue then
+has to honour.
 
 Two decisions phase 4 makes on the way: `ActionDefinition` becomes
 generic over its `params` (as the model at the top of this document
@@ -146,7 +208,7 @@ or one migration, decided when the catalogue is built.
 
 A preset is a named, described set of arguments for one action — "Load
 runs of the last 7 days", not `runs/load with { window: "last-7d" }`.
-Presets are what users pick (Morgan) and what a model copies.
+Presets are what users pick and what a model copies.
 
 Three places they could live, and the one chosen:
 
@@ -202,13 +264,13 @@ into every page; a reference keeps them live, and `with` overrides stay
 possible. `preset` is one optional key on a call reaction, not a third
 verb, and `call` STAYS required: the view model reads without the preset
 table, and a preset whose `call` differs from the reaction's is a cell
-problem — the redundancy is the drift check (Ren). Resolution merges the
+problem — the redundancy is the drift check. Resolution merges the
 preset's `with` under the reaction's `with` and validates the result; a
 reference to an unknown preset is a cell problem like an unknown action.
 
 ### 3. The picker
 
-Cheapest layer first, each measured before the next (Katya, Dmitri):
+Cheapest layer first, each measured before the next:
 
 1. A searchable select grouped by `category`, the LABEL being the
    description or the preset's label, the technical name secondary;
@@ -219,13 +281,13 @@ Cheapest layer first, each measured before the next (Katya, Dmitri):
    input, like everything only a host knows) on top.
 3. "Recommended for this event": the actions whose `accepts` match the
    event's payload fields, first, with the reason shown ("reads `href`,
-   which this event carries"). One explainable rule, no scores (Dmitri).
+   which this event carries"). One explainable rule, no scores.
 4. A two-level cascader (category → action → preset) only if groups still
    overflow.
 
 Every state is driveable from Gherkin by a non-technical tester: "When I
 choose the action 'Load the runs table'" — roles and labels in words, test
-ids on the groups, a story per picker state (Sasha).
+ids on the groups, a story per picker state.
 
 ### 4. A model as the user
 
@@ -237,11 +299,11 @@ read payload fields that do not exist: …") to correct itself. The same
 conformance test: every registered action yields a valid JSON Schema and
 every preset passes its action's `params`.
 
-Dissent recorded: Dmitri would ship the grouped select alone and measure
-before any ranking; Ren would build the catalogue first; Sasha wants the
-example preset file under a test today, not with phase 5 — the playground
-has no unit-test setup and the team chose not to add one for four presets
-the compiler already checks. Open to the product owner: whether presets
+Alternatives recorded: shipping the grouped select alone and measuring
+before any ranking; building the catalogue first. Putting the example
+preset file under a test today, not with phase 5, was weighed and not
+done — the playground has no unit-test setup and none was added for four
+presets the compiler already checks. Open to the product owner: whether presets
 change after pages are built (if the server owns URLs or tenant values,
 the reference form above is the only choice).
 
@@ -262,8 +324,8 @@ names and parameters, validated by schema; parameters never contain code.
 | 6     | The picker: grouped searchable select with labels in words and presets under actions; "used on this page"; "recommended for this event" with the reason; stories and scenarios for each state                                                                                                                                                                                                                                    | 1–1.5 days |
 | 7     | A model as the user: the catalogue exposed by the host; validation sentences returned to the caller; a scenario that wires a reaction from the catalogue alone                                                                                                                                                                                                                                                                   | 0.5 day    |
 
-Status: phase 1 mostly built. Phases 4–7 designed 2026-10-14 and reviewed
-by the tiger team; the playground holds an EXAMPLE of the preset file
+Status: phase 1 mostly built. Phases 4–7 designed 2026-10-14; the
+playground holds an EXAMPLE of the preset file
 (`src/demo/action-config.ts`, the proposed contract in
 `src/actions/action-presets.ts`) that typechecks and nothing loads yet. Built: namespaced names (`table-view/load`),
 reactions running in declaration order with async actions awaited and a

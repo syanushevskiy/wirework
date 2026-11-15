@@ -2,12 +2,30 @@
 
 - **Status:** Accepted — partly built (the filter row; the cards not)
 - **Date:** 2026-11-09
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
+
+## Description
 
 Written 9 November 2026 (story WW-35; phase 1, the filter row, built the
 same day — "Built" at the end; the cards not built). The ask: "design
 in-table filters with search icon for text filters, and also a switch for
 small screens so every row becomes a card".
+
+Read against what the tables already do ("What there is", below), that is
+two asks:
+
+1. **Filters you can see** — a FILTER ROW inside the table, under the
+   headers: one control per filterable column, a text field with a search
+   icon for a text filter, a list of values for a values filter, always
+   visible, so the table says what it is showing.
+2. **Rows as cards** — on a narrow screen (or on request) every row renders
+   as a card of labelled fields, in the same cell kinds the columns name,
+   and the table's behaviour (a row click selects, a link follows, more
+   rows load at the end) stays.
+
+The question: where do the filter row and the cards live — new widgets,
+new settings on the two tables, or CSS — and how much of what exists do
+they reuse?
 
 ## What there is
 
@@ -30,23 +48,7 @@ cell is a horizontal scroll nobody reads: the cells the page configured
 (a tag, a link, a Copy button) are all there, but a row is no longer a
 row.
 
-Two asks, then:
-
-1. **Filters you can see** — a FILTER ROW inside the table, under the
-   headers: one control per filterable column, a text field with a search
-   icon for a text filter, a list of values for a values filter, always
-   visible, so the table says what it is showing.
-2. **Rows as cards** — on a narrow screen (or on request) every row renders
-   as a card of labelled fields, in the same cell kinds the columns name,
-   and the table's behaviour (a row click selects, a link follows, more
-   rows load at the end) stays.
-
-## The question
-
-Where do the filter row and the cards live — new widgets, new settings on
-the two tables, or CSS — and how much of what exists do they reuse?
-
-## The answers weighed
+## Options considered
 
 ### Filters
 
@@ -68,14 +70,18 @@ Implementation: antd's Table has no floating-filter row, so the control
 sits INSIDE the header cell under the title (a header cell is "title above
 control", the control stops `click` propagation so a sort is not
 triggered); the header is sticky in the infinite table, so the row stays
-in view while the rows scroll.
+in view while the rows scroll. A second header row faked with antd's
+summary row was refused: it is the kind of trick that breaks on the next
+antd.
 
 **C. The filter bar widget alone.** Exists; it is a separate widget the
 page places, and it offers values only (a text filter "has no place in a
 bar", said the row-window design). Kept as it is: a page with a bar and a
-filter row would show its filters twice, so a page picks one — the runs
-page keeps its bar; the history page, which has no bar, is the one that
-gains the filter row in the demo.
+filter row would show its filters twice — with the header dropdowns three
+times, and a user would not know which one is on. So the rule is ONE
+filter UI per page: the page author chooses, the design does not stack
+them. The runs page keeps its bar; the history page, which has no bar, is
+the one that gains the filter row in the demo.
 
 **D. The header title itself as the field.** Crowded, and the sort click
 and the typing fight for the same pixels. Rejected.
@@ -108,8 +114,10 @@ layout per row — the REPEATER the previous design named as the real gap.
 Not this story: it is the general case (any layout per record) and
 deserves its own design; the cards here are the table's own rows in one
 fixed shape, so the table's filters, paging and `more` keep working with
-no new wiring. Ren's condition: name the card's fields from the columns,
-so a repeater later can take the same `rows` and the same cell kinds.
+no new wiring. A condition on the cards built here, so that there are not
+two card lists later: the card's fields are named from the columns and the
+row props are shared, so a repeater can take the same `rows` and the same
+cell kinds and replace them.
 
 ### When the cards show
 
@@ -122,7 +130,9 @@ widget's root (the row window already has one for the scroll box) gives
 the width; below `cardsBelow` pixels the cards renderer takes over. Setting
 `cards: "auto" | "always" | "never"` (default `auto`) with `cardsBelow`
 (default 560 px): `always` is the explicit switch a page author flips for
-a list that should never be a grid; `never` keeps a dense table dense. The
+a list that should never be a grid; `never` keeps a dense table dense.
+`cardsBelow` is a number of pixels, which anyone understands; there are no
+breakpoint names. The
 root exposes `data-view="table" | "cards"` so a scenario asserts which is
 showing, and the page author sees the switch happen in the builder by
 narrowing the window.
@@ -131,6 +141,31 @@ narrowing the window.
 table". Later: it is a user preference, and the user overlay stores
 settings per cell already, so it is a `cards` setting written by a
 toolbar button when somebody asks. Not in this story.
+
+## Decision
+
+Both asks are answered by SETTINGS on the two tables — no new widget, no
+new port, no new event, no CSS on antd's DOM.
+
+- **Filters: B, a filter row under the headers** (`filterRow`). Its
+  controls are a third view of the state the header dropdowns and the
+  filter bar already share. The header dropdowns (A) and the bar (C) stay
+  as they are; a page shows one filter UI, not all of them.
+- **Cards: B, a second renderer in the same widget**, over the same hooks
+  and with the `descriptions` widget's field as the card's field. CSS
+  alone (A) cannot carry React cells or the row window; a separate
+  card-list widget (C) is the repeater, a design of its own.
+- **When the cards show: B, the widget's own measured width**
+  (`cards: "auto" | "always" | "never"`, `cardsBelow`). A media query on
+  the window (A) is wrong for a table in a narrow cell of a wide page; a
+  toggle the user flips (C) is later.
+
+The filter row is built first: which filters are on is a support question
+today ("why is the list short?"). The cards come second.
+
+After the filter row was built the product owner decided that a filter is
+not to be seen in the header, only when its icon is clicked ("Built",
+below): the setting stays, off by default, and no demo page turns it on.
 
 ## The design
 
@@ -159,8 +194,12 @@ the cards are a look, not a behaviour.
   committing); the column's `title` becomes title above control when
   `filterRow` is on. The controls carry `data-testid="table-filter"`,
   `data-property` and `role` (combobox / searchbox: the input is
-  `type="search"`), and the header click handler ignores clicks from
-  inside the control.
+  `type="search"`) and are named by their column ("Filter Name"), so a
+  test finds them by role and name, never by antd's class names; the
+  header click handler ignores clicks from inside the control.
+- Both tables share the two hooks already: the filter row and the width
+  hook go into them once and both tables get them. The two renderers are
+  chosen by one boolean in one place.
 - A `useWidgetWidth(rootRef)` hook (ResizeObserver, the row window's
   pattern) decides `view` from `cards` and `cardsBelow`.
 - `TableCards` (render-only) renders `renderedRows` as antd `Card`s (size
@@ -184,8 +223,10 @@ the cards are a look, not a behaviour.
   field under its title, Status and Inbound a values select; the header
   dropdowns stay on (the infinite table's default).
 - **Runs page**: nothing changes; it keeps its bar and its header filters
-  (one filter UI per page).
-- **Cards**: both tables are `auto`; the e2e narrows the window
+  (one filter UI per page) — and every runs scenario stays as it is.
+- **Cards**: both tables are `auto` — the runs page is the one people open
+  on a phone, so the main list gets the phone look without its filters
+  being touched; the e2e narrows the window
   (`the browser window is 480 pixels wide`, the step exists) and asserts
   the runs table shows cards, a card shows "Status" "Failed", a click on a
   card selects the run (Open run appears), a link in a card opens the run
@@ -195,7 +236,7 @@ the cards are a look, not a behaviour.
   card is `always` (three sessions as three cards, a tiny list that reads
   better as cards).
 
-### Steps (for the non-technical QAs)
+### Steps
 
 `I type "<text>" into the "<column>" filter of the table` (the filter
 row's search field; Enter), `I pick "<value>" in the "<column>" filter of
@@ -204,69 +245,23 @@ the table` (the row's select), `the "<column>" filter of the table holds
 (`data-view`), `the card for row "<key>" shows "<title>" "<text>"`
 (`table-card` by `data-row-key`, `description-field` by `data-item`), `I
 click the card for row "<key>"`, `I sort the cards by "<title>"`. The
-existing `the table has N rows` counts cards too (`data-row-key`).
+existing `the table has N rows` counts cards too (`data-row-key`), and
+`the first table row is` works unchanged.
 
-## Tiger team's positions
+## Risks to watch
 
-**Alexei (architecture).** Three settings on the contract and zero new
-events: the cards are a RENDERING of the same intents, which is the test
-that the table's contract was right. The card's field must be
-`DescriptionField`, not a copy — the fact sheet proved the cell is a
-contract-level thing last week; a second field component is where drift
-begins. Measure the widget, never the window.
-
-**Dmitri (readability).** No CSS tricks: two renderers, chosen by one
-boolean in one place, each readable on its own. The filter row's control
-is the header's child, not a second header row — antd has no such row and
-faking one with a summary is the kind of clever that breaks on the next
-antd. `cardsBelow` in pixels, a number anyone understands; no breakpoint
-names.
-
-**Katya (team).** Both tables share the two hooks already; the filter row
-and the width hook go into them once and both tables get them. The
-history page is the right demo for the filter row — it is the page with no
-bar — and the runs page must not change, or every runs scenario moves.
-Two days: a day for the filter row with its scenarios, a day for the cards
-with the window.
-
-**Sasha (QA).** The filter row's fields by role — `searchbox` for text,
-`combobox` for values — named by the column ("Filter Name"), never by
-antd's class names; the cards keep `data-row-key`, so `the table has N
-rows` and `the first table row is` work unchanged, and the window-width
-step exists. One regression to pin from the start: a click inside a filter
-control must not sort the column. The infinite list's `more` as cards is
-the scenario most likely to flake — the window's row height changes with
-the first card measured; wait for the fact (`data-held`), as always.
-
-**Ren (contrarian).** First: the search icon for text filters EXISTS — is
-the ask really the icon, or that nobody found it? If the latter, the
-filter row answers it; if the team only adds a second place to filter, the
-runs page will have three (bar, header, row) and a user will not know
-which one is on. Rule: one filter UI per page — the page author chooses,
-the design does not stack them. Second: the cards are the repeater in
-disguise; build them so the repeater can replace them — the card's fields
-from the columns, the row props shared — and say so in the doc, or in six
-months there are two card lists. Third: `auto` on the widget's width is
-right, but the builder's palette preview is 200 pixels wide — every table
-preview becomes cards; set the previews' `cards: "never"` or accept that
-the preview shows the phone look.
-
-**Morgan (product).** In the user's words: "I can see what I filtered by",
-and "the runs list works on my phone". The filter row first — it is a
-support question today ("why is the list short?") — the cards second. The
-history page as the demo is fine, but the runs page is the one people open
-on the phone: `auto` there, so the phone look is on the main list without
-touching its filters.
-
-**Vlad (fluency).** The card is `columns.map(column => <DescriptionField
-item={column} record={row} cells={cells} />)`; the filter row is
-`columns.filter(has a filter).map(filterRowOf)`. Two maps, no new state.
-
-**External reviewer (minimum code).** Three settings, two hooks touched,
-one new render-only component and a bar. No contract events, no new
-widget, no CSS on antd's DOM. The sort select in the cards bar is the one
-piece that could wait — a phone user sorts rarely — build it last and
-drop it if the day runs out.
+- **A click inside a filter control must not sort the column.** A
+  regression test pins it from the start.
+- **The infinite list's `more` as cards** is the scenario most likely to
+  flake: the window's row height changes with the first card measured. It
+  waits for the fact (`data-held`), never for time.
+- **The builder's palette preview is 200 pixels wide**, so with `auto`
+  every table preview becomes cards: the previews set `cards: "never"`,
+  or the preview is accepted as showing the phone look. Open until the
+  cards are built.
+- **The sort select in the cards bar** is the one piece that can wait — a
+  phone user sorts rarely. It is built last and dropped if the day runs
+  out.
 
 ## Phases
 
@@ -321,6 +316,6 @@ built, and where it departs from the design above:
 - A user-flipped toggle (cards / table) as a per-cell setting the overlay
   stores.
 - The repeater: a layout per record, which these cards hand their fields
-  to (doc/ADR/0015-more-widgets.md, answer E).
+  to (doc/ADR/0015-more-widgets.md, option E).
 - A filter row on the `descriptions` widget's items? No: a fact sheet is
   one record.

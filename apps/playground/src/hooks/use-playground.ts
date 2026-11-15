@@ -23,7 +23,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UserViewModels, ViewModels } from "@wirework/schema";
-import { layoutChain, stampProblem, validateViewModels } from "@wirework/engine";
+import { stampProblem, validateViewModels } from "@wirework/engine";
 import { useStorePath } from "@wirework/react";
 import {
   DEFAULT_BUILDER_NAMING,
@@ -31,6 +31,7 @@ import {
   roleOf,
   useBuilder,
   useCommit,
+  useLayoutNavigation,
   usePageEditing,
   usePageExport,
   usePageToolbar,
@@ -39,7 +40,6 @@ import {
   type EditLock,
   type EditTarget,
   type OverlayLock,
-  type PlacedWidget,
   type SaveTrees,
 } from "@wirework/builder";
 import { DEMO_ROLES, samplePeople, type DemoRole } from "@wirework/view-data-models-examples";
@@ -294,57 +294,24 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   }, [saveSession, loadAgain]);
 
   /**
-   * Changing the layout shown — a breadcrumb, "Edit content" on a container,
-   * a container just placed — SAVES the page first, as Save page does: a
-   * session is one layout's. (Left open, the session would have locked Add
-   * on every layout until someone found Save or Cancel.)
+   * Moving between the page and the layouts inside its containers is the
+   * builder's (`useLayoutNavigation`, doc/ADR/0009-containers.md): "Edit
+   * content" opens the layout inside in edit mode, a breadcrumb leads back,
+   * a container just placed opens at once — each saving the page first, as
+   * Save page does — and widgets are added inside a container on the shared
+   * page only. This host says what only it knows: where `at` is kept, what
+   * Save page does here, that the page loads again after an Add, and that
+   * the builder page's own layout takes widgets.
    */
-  const goTo = useCallback(
-    (next: string | undefined) => {
-      savePage();
-      setAt(next);
-    },
-    [savePage],
-  );
-  /** The chain to the layout inside a container shown now: one level further down. */
-  const layoutIn = useCallback(
-    (cellId: string, layoutPath: string) => [at, layoutChain(cellId, layoutPath)].filter(Boolean).join("/"),
-    [at],
-  );
-  /**
-   * "Edit content" on a container — pressed in edit mode, to edit: the layout
-   * inside opens with a session of its own, its cells with their handles at
-   * once; Add waits for Save page there as on any page being edited.
-   */
-  const editLayout = useCallback(
-    (cellId: string, layoutPath: string) => {
-      goTo(layoutIn(cellId, layoutPath));
-      startEditing();
-    },
-    [goTo, layoutIn, startEditing],
-  );
-
-  /**
-   * A widget was ADDED: the page loads again by the new configuration — and
-   * a CONTAINER opens at once, its first layout shown as the page in view
-   * mode, so the widgets meant for inside it are added next, with no trip
-   * through Edit page and "Edit content"; the breadcrumb leads back.
-   */
-  const onAdded = useCallback(
-    (placed: PlacedWidget) => {
-      loadAgain();
-      const inside = placed.layouts[0];
-      if (inside !== undefined) goTo(layoutIn(placed.id, inside));
-    },
-    [loadAgain, goTo, layoutIn],
-  );
-
-  /**
-   * Where widgets are ADDED: the builder page — or, inside a container, the
-   * layout shown, on whichever page (the palette appears with it) — on the
-   * SHARED page only: a user's own copy of a layout takes no new widget.
-   */
-  const adding = page === BUILDER_PAGE || (at !== undefined && target === "base");
+  const { goTo, editLayout, onAdded, adding, addAt } = useLayoutNavigation({
+    at,
+    onAt: setAt,
+    save: savePage,
+    startEditing,
+    target,
+    addsToPage: page === BUILDER_PAGE,
+    onChanged: loadAgain,
+  });
   const { engineLock, setEngine, addWidget } = useBuilder({
     store,
     commit,
@@ -352,7 +319,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     registry,
     layoutEngines,
     page,
-    at: target === "base" ? at : undefined,
+    at: addAt,
     naming: DEFAULT_BUILDER_NAMING,
     // Editing for a role: the placed widget's cell lands in the role's own view, through the session's ops.
     context: editing.context,

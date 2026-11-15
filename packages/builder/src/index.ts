@@ -49,6 +49,8 @@ export type { EditContext, EditLocation, EditTarget, Op, OverlayTarget } from ".
 export { usePageEditing } from "./use-page-editing";
 export type { PageEditingInput, SaveOutcome, TemplateChoice } from "./use-page-editing";
 
+export { useLayoutNavigation } from "./use-layout-navigation";
+export type { LayoutNavigation, LayoutNavigationInput } from "./use-layout-navigation";
 export { roleNameProblem, usePageToolbar } from "./use-page-toolbar";
 export type { LayoutCrumb, PageToolbarInput, PageToolbarState } from "./use-page-toolbar";
 

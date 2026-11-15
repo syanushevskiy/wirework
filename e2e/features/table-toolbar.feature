@@ -42,7 +42,7 @@ Feature: The toolbar of a table
     And the "Suite" filter holds ""
     And the state JSON contains '"filterIn": {}'
 
-  Scenario: A table that lists no tools has none
+  Scenario: A table that lists no tools has none beside its column menu
     Given I open the "archive" page
-    Then the table has no column menu
+    Then the list holds the rows 1 to 200
     And the table toolbar offers ""

@@ -121,6 +121,15 @@ describe("sliceRequest — what a windowed list asks for, ahead of time", () => 
     expect(sliceRequest({ start: 140, end: 176 }, 100, 60, 2000)).toEqual({ offset: 140, edge: "around" });
   });
 
+  it("a list that goes on past its total asks for the batch after the last row known", () => {
+    // Two hundred rows known and held, the end not found: at the total, where a counted list asks for nothing.
+    expect(sliceRequest({ start: 180, end: 200 }, 0, 200, 200)).toBeUndefined();
+    expect(sliceRequest({ start: 180, end: 200 }, 0, 200, 200, true)).toEqual({ offset: 200, edge: "after" });
+    expect(sliceRequest({ start: 100, end: 120 }, 0, 200, 200, true)).toBeUndefined();
+    // Out of the rows held (back along the rows known, the far batches dropped): the slice there, as ever.
+    expect(sliceRequest({ start: 100, end: 120 }, 400, 400, 800, true)).toEqual({ offset: 100, edge: "around" });
+  });
+
   it("does not go back and forth once three batches are held", () => {
     // Rows 200–800 after the batch 600–800 joined: the window that asked for it, at row 450, asks for nothing now.
     expect(sliceRequest({ start: 430, end: 450 }, 200, 600, 2000)).toBeUndefined();

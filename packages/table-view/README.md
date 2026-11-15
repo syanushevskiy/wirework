@@ -42,7 +42,19 @@ what its header can `filter` by — a period of dates for a column whose `type`
 is a date or a timestamp (by default; `isDateType`), the server's values, or
 free text where it calls the column filterable without values — and whether
 it is `sortable`),
-`filters` (the filter bar's), `data`, `total`, `offset`, `loading`, `error`.
+`filters` (the filter bar's), `data`, `total`, `hasMore`, `offset`,
+`loading`, `error`.
+
+A LIST NOBODY COUNTS: `countRows: false` in the declaration sends
+`totalRecords: false` — for a long list a server counts more slowly than it
+reads a page. For every answer without `totalRecords` (asked so, or a server
+that does not count anyway) `<into>.total` is the rows KNOWN to be there so
+far — a high-water mark, kept when a windowed list drops far rows — and
+`<into>.hasMore` is true until an answer brings fewer rows than were asked
+for: the end, from where the total is exact (a list ending on a full batch
+is found out by the empty one after it). Other filters, and a load that is
+neither `more` nor `window`, start over. Bind the `hasMore` port of the
+infinite table and the list position to it.
 What it reads there, written by the widgets' reactions: `page`, `pageSize`,
 `wanted`, `filterIn`, `filterLike`, `filterBetween`, `orderBy`.
 

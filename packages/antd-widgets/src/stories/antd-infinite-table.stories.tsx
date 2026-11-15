@@ -318,6 +318,77 @@ export const Windowed: Story = {
 };
 
 /**
+ * THE END NOT KNOWN (`hasMore`): two hundred rows are known and held, and
+ * the list goes on past them. The line says so instead of a count; scrolled
+ * to the end of the rows known, the windowed list asks for the batch after
+ * them — where a counted list of two hundred would ask for nothing —, and
+ * once the end is found it is the list it always was.
+ */
+export const EndUnknown: Story = {
+  render: () => (
+    <WidgetStory
+      key="end-unknown"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows.slice(0, 200), total: 200, offset: 0, hasMore: true } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total", offset: "demo.offset", hasMore: "demo.hasMore" },
+        on: { window: [{ set: "demo.wanted" }] },
+        columns: headerColumns,
+        height: 240,
+        windowed: true,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    const store = canvas.getByTestId("story-store");
+    await expect(canvas.getByTestId("infinite-table-status")).toHaveTextContent("200+ rows");
+    await expect(canvas.getByTestId("antd-infinite-table")).toHaveAttribute("data-open", "true");
+    await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
+    await expect(store).not.toHaveTextContent("wanted");
+    box.scrollTop = box.scrollHeight;
+    await waitFor(() => expect(store).toHaveTextContent('"wanted": { "offset": 200, "edge": "after" }'));
+  },
+};
+
+/**
+ * ROW ACTIONS, as the table has them (doc/ADR/0020-row-actions.md): the
+ * star stands before the first column of every rendered row of the virtual
+ * list — the blank rows around the window span it too — and pressing it
+ * emits `row-action`.
+ */
+export const RowActions: Story = {
+  render: () => (
+    <WidgetStory
+      key="row-actions"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows, total: 200 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        on: { "row-action": [{ set: "demo.acted" }] },
+        columns: headerColumns,
+        height: 240,
+        rowActions: [{ name: "favorite" }],
+      }}
+    />
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
+    const rendered = canvas.getAllByTestId("table-row");
+    await expect(rendered.length).toBeLessThan(60);
+    // Every rendered row has its star, in its first cell.
+    await expect(canvas.getAllByTestId("table-row-action")).toHaveLength(rendered.length);
+    await expect(rendered[0]?.querySelector("td")).toHaveAttribute("data-cell", "actions");
+    // The blank space under the window spans the actions' column as well.
+    const columns = rendered[0]?.querySelectorAll("td").length ?? 0;
+    const spacer = canvasElement.querySelector<HTMLTableCellElement>(".ww-infinite-table__spacer > td");
+    await expect(spacer?.colSpan).toBe(columns);
+    await userEvent.click(within(rendered[0] as HTMLElement).getByRole("button", { name: "Favorite" }));
+    await expect(canvas.getByTestId("story-store")).toHaveTextContent('"name": "favorite"');
+  },
+};
+
+/**
  * SIDEWAYS SCROLL, as the table has it: eight plain columns need 8 × 110 =
  * 880 px; in a box of 600 the list keeps that width and scrolls sideways —
  * its header with it —, and still scrolls down inside its own box.

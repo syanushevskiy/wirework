@@ -416,11 +416,14 @@ Then("the table has a column {string}", async ({ page }, title: string) => {
 
 Then("the table has the columns {string}", async ({ page }, titles: string) => {
   // A header with a filter under its title holds more than the title: the title has a name of its own there.
+  // The DATA columns: the header over a table's row actions (doc/ADR/0020-row-actions.md) is not one of them.
   const headers = tableWidget(page).getByRole("columnheader");
   await expect
     .poll(() =>
       headers.evaluateAll((cells) =>
-        cells.map((cell) => (cell.querySelector('[data-testid="table-column-title"]') ?? cell).textContent.trim()),
+        cells
+          .filter((cell) => !cell.classList.contains("ww-table__actions"))
+          .map((cell) => (cell.querySelector('[data-testid="table-column-title"]') ?? cell).textContent.trim()),
       ),
     )
     .toEqual(titles.split(", "));
@@ -437,17 +440,96 @@ const columnItem = (page: Page, title: string) =>
     .filter({ has: page.getByRole("checkbox", { name: title, exact: true }) });
 const columnReset = (page: Page) => page.getByTestId("table-column-reset");
 
+/** The button above the table that opens the menu: a settings icon with the word "Columns". */
+const columnMenuButton = (page: Page) => tableWidget(page).getByRole("button", { name: "Columns", exact: true });
+
 When("I open the column menu of the table", async ({ page }) => {
-  await tableWidget(page).getByRole("button", { name: "Column settings" }).click();
+  await expect(columnMenuButton(page)).toHaveText("Columns");
+  await columnMenuButton(page).click();
   await expect(columnList(page)).toBeVisible();
 });
 
 Then("the table has no column menu", async ({ page }) => {
-  await expect(tableWidget(page).getByRole("button", { name: "Column settings" })).toHaveCount(0);
+  await expect(columnMenuButton(page)).toHaveCount(0);
 });
 
+/** A required column: listed, shown, its checkbox locked, and tagged "Always". */
+Then("the column {string} cannot be hidden", async ({ page }, title: string) => {
+  await expect(columnItem(page, title)).toHaveAttribute("data-required", "true");
+  await expect(columnItem(page, title).getByTestId("table-column-required")).toHaveText("Always");
+  await expect(columnItem(page, title).getByRole("checkbox")).toBeChecked();
+  await expect(columnItem(page, title).getByRole("checkbox")).toBeDisabled();
+});
+
+/** "Columns" above the list: every column at once — hiding leaves the required ones. */
+When("I hide every column of the table", async ({ page }) => {
+  await page.getByRole("checkbox", { name: "Columns", exact: true }).uncheck();
+});
+
+/** The three dots of a column's line: the pointer over them opens its actions (a menu outside the page). */
+const chooseColumnAction = async (page: Page, title: string, action: string) => {
+  await columnItem(page, title).scrollIntoViewIfNeeded();
+  await columnItem(page, title)
+    .getByRole("button", { name: `Actions of ${title}` })
+    .hover();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+};
+
+Then("the actions of the column {string} are {string}", async ({ page }, title: string, actions: string) => {
+  await columnItem(page, title).scrollIntoViewIfNeeded();
+  await columnItem(page, title)
+    .getByRole("button", { name: `Actions of ${title}` })
+    .hover();
+  await expect(page.getByRole("menuitem")).toHaveText(actions.split(", "));
+  // The pointer away again: the actions close, and the next line's are not mistaken for these.
+  await columnReset(page).hover();
+  await expect(page.getByRole("menuitem")).toHaveCount(0);
+});
+
+When(/^I pin the column "([^"]*)" to the (left|right)$/, async ({ page }, title: string, edge: string) => {
+  await chooseColumnAction(page, title, `Pin ${edge}`);
+  await expect(columnItem(page, title)).toHaveAttribute("data-pinned", edge);
+});
+
+When("I unpin the column {string}", async ({ page }, title: string) => {
+  await chooseColumnAction(page, title, "Unpin");
+  await expect(columnItem(page, title)).toHaveAttribute("data-pinned", "none");
+});
+
+/** As the TABLE has it: the column's header stands at that edge. */
+Then(/^the column "([^"]*)" is pinned to the (left|right)$/, async ({ page }, title: string, edge: string) => {
+  await expect(tableWidget(page).getByRole("columnheader", { name: title, exact: true })).toHaveAttribute(
+    "data-pinned",
+    edge,
+  );
+});
+
+Then("the column {string} is not pinned", async ({ page }, title: string) => {
+  await expect(tableWidget(page).getByRole("columnheader", { name: title, exact: true })).not.toHaveAttribute(
+    "data-pinned",
+  );
+});
+
+/** As the MENU shows it: which columns stand in the group pinned to that edge, in order. */
+Then(/^the column menu shows "([^"]*)" pinned to the (left|right)$/, async ({ page }, titles: string, edge: string) => {
+  await expect
+    .poll(() => columnTitles(page, `[data-testid="table-column-item"][data-pinned="${edge}"]`))
+    .toEqual(titles.split(", "));
+});
+
+/** The titles of some lines of the menu, in order — a line holds more than its title (a tag, its actions). */
+const columnTitles = (page: Page, selector = '[data-testid="table-column-item"]') =>
+  columnList(page)
+    .locator(selector)
+    .evaluateAll((items) => items.map((item) => item.getAttribute("data-title")));
+
 Then("the column menu lists {string}", async ({ page }, titles: string) => {
-  await expect(columnList(page).getByTestId("table-column-item")).toHaveText(titles.split(", "));
+  await expect.poll(() => columnTitles(page)).toEqual(titles.split(", "));
+});
+
+/** The captions over the menu's sections, in order: PINNED LEFT and PINNED RIGHT only while a column is pinned there. */
+Then("the column menu has the sections {string}", async ({ page }, captions: string) => {
+  await expect(columnList(page).getByTestId("table-column-section")).toHaveText(captions.split(", "));
 });
 
 When("I hide the column {string}", async ({ page }, title: string) => {
@@ -598,6 +680,42 @@ Then("the {string} filter of the table holds {string}", async ({ page }, title: 
   await expect(rowFilter(page, title)).toHaveAttribute("data-values", values.split(", ").join(","));
 });
 
+/* ----------------------------- row actions ----------------------------- */
+
+/** One action of a row (doc/ADR/0020-row-actions.md), by the name the page listed it under. */
+const rowAction = (page: Page, key: string, name: string) =>
+  tableRow(page, key).locator(`[data-testid="table-row-action"][data-name="${name}"]`);
+
+/** A real pointer over the row — on its last cell, away from the actions at its start. */
+When("I hover the table row {string}", async ({ page }, key: string) => {
+  await tableRow(page, key).locator("td").last().hover();
+});
+
+/**
+ * An action out of sight is still in the page (hidden by opacity, so the row
+ * keeps its height and the keyboard reaches it): what shows is its style.
+ */
+Then("the table row {string} shows the action {string}", async ({ page }, key: string, name: string) => {
+  await expect(rowAction(page, key, name)).toHaveCSS("opacity", "1");
+});
+
+Then("the table row {string} hides the action {string}", async ({ page }, key: string, name: string) => {
+  await expect(rowAction(page, key, name)).toHaveCSS("opacity", "0");
+});
+
+When("I use the action {string} on the table row {string}", async ({ page }, name: string, key: string) => {
+  await tableRow(page, key).locator("td").last().hover();
+  await rowAction(page, key, name).getByRole("button").click();
+});
+
+Then("the table row {string} is a favorite", async ({ page }, key: string) => {
+  await expect(rowAction(page, key, "favorite").getByRole("button")).toHaveAttribute("aria-pressed", "true");
+});
+
+Then("the table row {string} is not a favorite", async ({ page }, key: string) => {
+  await expect(rowAction(page, key, "favorite").getByRole("button")).toHaveAttribute("aria-pressed", "false");
+});
+
 /* ------------------- windowed list and list position ------------------- */
 
 const listPosition = (page: Page) => live(page).getByTestId("antd-list-position");
@@ -623,6 +741,47 @@ Then("the list holds a slice around row {int}", async ({ page }, row: number) =>
 Then("the list stands at row {int} of {int}", async ({ page }, row: number, total: number) => {
   await expect(listPosition(page)).toHaveAttribute("data-position", String(row - 1));
   await expect(listPosition(page)).toHaveAttribute("data-total", String(total));
+});
+
+/** A list whose end is not known yet: its first row in view (from 1) of the rows known to be there so far. */
+Then("the list stands at row {int} of at least {int}", async ({ page }, row: number, known: number) => {
+  await expect(listPosition(page)).toHaveAttribute("data-position", String(row - 1));
+  await expect(listPosition(page)).toHaveAttribute("data-total", String(known));
+  await expect(listPosition(page)).toHaveAttribute("data-open", "true");
+});
+
+/** The list goes on past the rows it knows of (`data-open`): the table and the scale both say so, and no percent is shown. */
+Then("the list's end is not known", async ({ page }) => {
+  await expect(infiniteTable(page)).toHaveAttribute("data-open", "true");
+  await expect(listPosition(page)).toHaveAttribute("data-open", "true");
+  await expect(listPosition(page).getByTestId("list-position-percent")).toHaveCount(0);
+});
+
+Then("the list's end is known", async ({ page }) => {
+  await expect(infiniteTable(page)).toHaveAttribute("data-open", "false");
+  await expect(listPosition(page)).toHaveAttribute("data-open", "false");
+  await expect(listPosition(page).getByTestId("list-position-percent")).toHaveCount(1);
+});
+
+/**
+ * Scrolls to the end of the rows known, again and again, until the list's
+ * end is found (`data-open` false): every arrival at the end asks for the
+ * batch after it, and the batch that comes back empty is the end.
+ */
+When("I scroll the infinite table until the list's end is found", async ({ page }) => {
+  const table = infiniteTable(page);
+  await expect
+    .poll(
+      async () => {
+        if ((await table.getAttribute("data-open")) === "false") return true;
+        await table.getByTestId("infinite-table-scroll").evaluate((box) => {
+          box.scrollTop = box.scrollHeight;
+        });
+        return false;
+      },
+      { timeout: 30_000, intervals: [150] },
+    )
+    .toBe(true);
 });
 
 /** How far into the list its rows in view are — a jump along a scale lands within a percent of where it aimed. */

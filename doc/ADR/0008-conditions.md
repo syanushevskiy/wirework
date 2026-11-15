@@ -2,9 +2,9 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-11-01
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 A page cannot say "show this only when…". The run page keeps an error
 label on screen with an empty text until the server says there is no such
@@ -20,92 +20,121 @@ predefined checks — equal, contains for text, true/false for booleans,
 greater and less for numbers — and a way for an application to add and
 register checks of its own.
 
-Designed 2026-11-01 with the tiger team and built the same day. Status:
-**built** (see "Built and tested" at the end; story WW-25 in
-doc/product-stories.md).
+Three things a page builder asks for again and again are behind it: hide
+a control from users who may not use it, show an error or a "nothing here"
+line only when there is something to say, and show the details of a record
+only once it has loaded. All three are "show this widget when a value is
+…".
 
-## The tiger team's positions
+Two earlier decisions stood against it: "reactions never transform" and
+"no conditionals or formats ever enter a cell's configuration". A
+condition is a conditional in configuration, so either that line moves and
+the record says so, or the ask is refused.
 
-- **Morgan (product):** three things a page builder asks for every week:
-  hide a control from users who may not use it, show an error or a
-  "nothing here" line only when there is something to say, and show the
-  details of a record only once it has loaded. All three are "show this
-  widget when a value is …". Ship that; nothing else in this story. A
-  builder must be able to set it from the form in words — "show when
-  `run.error` is not empty" — without touching JSON.
-- **Ren (contrarian):** the team drew a line twice — "reactions never
-  transform" and "no conditionals or formats ever enter a cell's
-  configuration" — and this is a conditional in configuration. Either the
-  line moves and we say so, or we refuse. Ren's position after the
-  debate: the line was against EXPRESSIONS (arithmetic, two paths
-  compared, nested logic nobody can validate), not against a closed set of
-  named comparisons the engine owns. So: one path, one named check, one
-  literal; AND of ORs and nothing deeper; no comparison of two paths — a
-  value that needs computing is computed by an action into the store
-  ("derive in code, test in configuration"); and the first thing to build
-  is the REGISTRY, because the moment a check is missing somebody will
-  propose an expression language, and the answer must already be "write a
-  predicate with a name". Also: a hidden widget leaves a hole in a grid —
-  accepted, say it in the doc, and do not start reflowing layouts on store
-  changes.
-- **Dmitri (readability):** `{ path, is, to }` reads as a sentence and so
-  must the list: a list of tests is AND, `{ any: [...] }` inside it is OR,
-  one level, no `all` key (the list already is one), no `not` block — a
-  `not: true` flag on a test, shown as "unless" in words. Comparisons must
-  have ONE rule each, written in the predicate's description: `equal`,
-  `one-of` and `contains` compare the value AS TEXT, exactly as the tag
-  cell's tones already do (the settings page stores a page size as the
-  text "5"; a page builder must not have to know that); `greater` and
-  `less` take the value as a number when it is one, or text that is a
-  number, and do not hold otherwise. No regex predicate in the standard
-  set: a host that wants one registers one.
-- **Alexei (architecture):** the condition is WIRING, so it lives beside
-  `inputs` and `on` in the widget's view model under a third reserved key,
-  `when`: derived into every view-model schema by `widgetBindingsSchema`,
-  refused as a setting name by `defineContract`, refused in the user
-  overlay like the other two, checked by the same `checkTemplate` resolve
-  and boot validation run, read by the builder like the other two. Not on
-  the layout cell: a cell belongs to its engine, a user's own template is a
-  copy of the layout, and a condition in a layout would be shared by
-  Share/Import. Predicates are the fifth `NamedRegistry` — the extension
-  point the keep-it-simple review withdrew "until a host wants one": a
-  host wants one. Evaluation is a pure function in the engine,
-  `holds(when, read, predicates)`, so the React adapter only subscribes and
-  the same function can later test a row (`read` = the row's property)
+Designed 2026-11-01 and built the same day. Status: **built** (see "Built
+and tested" at the end; story WW-25 in doc/product-stories.md).
+
+## Options considered
+
+What a condition may say:
+
+- **Refuse it** and keep the earlier line whole. Every widget goes on
+  deciding its own emptiness, and the three asks above stay unanswered.
+- **An expression language over VALUES** — arithmetic, `{ "$gt": … }`
+  operator trees, two paths compared, nested logic. Nobody can validate
+  it, and it is exactly what the earlier line was drawn against.
+- **A closed set of named checks the engine owns** — one path, one named
+  check, one literal; AND of ORs and nothing deeper — with a registry for
+  the application's own checks. A value that needs computing is computed
+  by an action into the store. Its cost: a fifth registry, and a check
+  that is missing has to be written in code and named.
+
+Where it is written:
+
+- **On the widget's view model**, beside `inputs` and `on`.
+- **On the layout cell.** A cell belongs to its engine, a user's own
+  template is a copy of the layout, and a condition in a layout would be
+  shared by Share/Import.
+- **On reactions** (`when` on a reaction). A conditional reaction is the
+  first step of a workflow engine — an action decides what it does.
+
+Smaller choices weighed on the way:
+
+- **`all` and `not` blocks in the JSON**, against a list that already is
+  the AND and a `not: true` flag on a test.
+- **Reflowing the layout around a hidden cell**, against leaving a hole.
+  A layout that moved on every store change would be unusable.
+- **A regex predicate in the standard set**, against leaving it to a host
+  that wants one.
+- **The standard checks registered by the host**, against built in. A host
+  could then forget to register `equal` and break every page.
+
+## Decision
+
+A widget's view model may carry `when`: a closed set of named checks, each
+over one store path, joined as AND of ORs. The earlier line moves and this
+record says how far: it was against EXPRESSIONS (arithmetic, two paths
+compared, nested logic nobody can validate), not against a closed set of
+named comparisons the engine owns.
+
+- **One path, one named check, one literal.** AND of ORs and nothing
+  deeper. No comparison of two paths: a value that needs computing is
+  computed by an action into the store — derive in code, test in
+  configuration.
+- **The registry is built first.** The moment a check is missing somebody
+  will propose an expression language, and the answer must already be
+  "write a predicate with a name". Predicates are the fifth
+  `NamedRegistry` — the extension point an earlier review withdrew "until
+  a host wants one": a host wants one.
+- **The grammar reads as a sentence.** `{ path, is, to }` is one, and so is
+  the list: a list of tests is AND, `{ any: [...] }` inside it is OR, one
+  level, no `all` key (the list already is one), no `not` block — a
+  `not: true` flag on a test, shown as "unless" in words.
+- **Each comparison has ONE rule**, written in the predicate's
+  description. `equal`, `one-of` and `contains` compare the value AS TEXT,
+  exactly as the tag cell's tones already do (the settings page stores a
+  page size as the text "5"; a page builder must not have to know that);
+  `greater` and `less` take the value as a number when it is one, or text
+  that is a number, and do not hold otherwise. No regex predicate in the
+  standard set: a host that wants one registers one.
+- **The condition is WIRING**, so it lives beside `inputs` and `on` in the
+  widget's view model under a third reserved key, `when`: derived into
+  every view-model schema by `widgetBindingsSchema`, refused as a setting
+  name by `defineContract`, refused in the user overlay like the other
+  two, checked by the same `checkTemplate` resolve and boot validation
+  run, read by the builder like the other two. Not on the layout cell and
+  not on reactions.
+- **Evaluation is a pure function in the engine**,
+  `holds(when, read, predicates)`, so the React adapter only subscribes
+  and the same function can later test a row (`read` = the row's property)
   for row actions (WW-17).
-- **Katya (team lead):** the standard checks are BUILT IN to
-  `createPredicates()` — a host cannot forget to register `equal` and
-  break every page; a host adds its own, namespaced like actions
-  (`runs/retryable`). The builder's first version offers AND rows only
-  (path, check, value, "unless"); `any` is written in the inspector until
-  somebody asks for it in the form. Everything the user sees is one
-  function's sentence (`whenText`): the form's summary, the edit-mode note
-  on a hidden cell, the problem messages — one wording, no drift.
-- **Sasha (QA):** a hidden cell must be a FACT on the page: the cell
-  element stays, with `data-when="false"`, its content gone, so a scenario
-  says `the cell "button-open-run" is hidden` and then `is shown` after a
-  click. In edit mode the widget must stay visible (dimmed, with the note),
-  or a tester cannot find it to edit. Every built-in predicate gets a table
+- **The standard checks are BUILT IN** to `createPredicates()`; a host adds
+  its own, namespaced like actions (`runs/retryable`).
+- **A builder sets it from the form in words** — "show when `run.error` is
+  not empty" — without touching JSON. The builder's first version offers
+  AND rows only (path, check, value, "unless"); `any` is written in the
+  inspector until somebody asks for it in the form. Everything the user
+  sees is one function's sentence (`whenText`): the form's summary, the
+  edit-mode note on a hidden cell, the problem messages — one wording, no
+  drift.
+- **A hidden cell is a FACT on the page:** the cell element stays, with
+  `data-when="false"`, its content gone, so a scenario says
+  `the cell "button-open-run" is hidden` and then `is shown` after a
+  click. In edit mode the widget stays visible (dimmed, with the note), or
+  it could not be found to edit. A hidden widget leaves a hole in a grid —
+  accepted; no layout reflows on store changes.
+- **A host predicate that throws is isolated** and reported like a
+  crashing widget; it never takes the page down.
+- **Tests asked for by the design:** every built-in predicate gets a table
   test over the awkward values (undefined, null, "", 0, false, "5" against
   5, NaN, an object); a story shows a cell appearing on a store write; the
   Gherkin steps read as sentences: "When I show the widget only when
-  "runs.total" is greater than "10"". A host predicate that throws must be
-  isolated and reported like a crashing widget, never take the page down.
-- **Vlad (fluency):** `holds` is one `every` over `some`; the paths a
-  condition reads are one `flatMap`; the adapter's hook is one
-  `useSyncExternalStore` whose snapshot is the boolean itself; the built-in
-  predicates are one table of `{ name, phrase, argument?, test }`.
+  "runs.total" is greater than "10"".
 
-Decision: build the above. Rejected: an expression language over VALUES
-(arithmetic, `{ "$gt": … }` operator trees, two paths compared);
-conditions on the layout cell; `all`/`not` blocks in the JSON; reflowing
-the layout around a hidden cell; a regex predicate in the standard set;
-`when` on reactions (a conditional reaction is the first step of a
-workflow engine — an action decides what it does). Added after the build,
-at the product owner's ask: the CONSTRUCTOR ("The constructor" below) —
-boolean composition of the same named checks, in words, with `and`, `or`,
-`not` and parentheses. It moves Ren's line exactly as far as Ren drew it:
-no expression over values, only over checks.
+Added after the build, at the product owner's ask: the CONSTRUCTOR ("The
+constructor" below) — boolean composition of the same named checks, in
+words, with `and`, `or`, `not` and parentheses. It moves the line exactly
+as far as it was drawn: no expression over values, only over checks.
 
 ## The shape
 
@@ -328,7 +357,7 @@ sealed after boot, so a predicate is never added under a running page.
 function below evaluates against when no registry is given, so a host
 that never registers a predicate of its own passes nothing.
 
-The line Ren drew for input validators holds here and is the same line:
+The line drawn for input validators holds here and is the same line:
 a predicate is a pure function of the value and the literal. Anything
 that needs the store, the bus, the clock or a request is an ACTION that
 writes a value the condition then reads (`runs.canRetry`, computed when
@@ -541,66 +570,64 @@ a page builder hides them with one `when` per cell).
 
 ## Reviewed 2026-11-02 (the constructor as an editor, the appearance, the six widgets)
 
-- **Morgan:** the constructor is now something a page builder COMPOSES —
-  the condition reads left to right as it will run, every element in its
-  own colour. The "and …" button says what adding does. Ship.
-- **Dmitri:** the saved form is still the words, and the tree is only the
-  form's; nothing new in the engine. `Appearing` renders no element when
-  there is nothing to appear with: an extra `div` around every widget on
-  every page would have been the kind of cost nobody notices until a
-  stylesheet does.
-- **Alexei:** `appear` is a binding like `when`, derived into the schema,
-  refused as a setting, kept out of the overlay — the same seam, no new
-  one. The six kinds follow the contract pattern to the letter: a contract,
-  an implementation with its hook, a conformance set another
+- **The constructor** is now something a page builder COMPOSES — the
+  condition reads left to right as it will run, every element in its own
+  colour. The "and …" button says what adding does. The saved form is
+  still the words, and the tree is only the form's; nothing new in the
+  engine. The `( … )` button nests without limit; a page builder who nests
+  five deep gets what they asked for, and the words still read.
+- **The appearance:** `appear` is a binding like `when`, derived into the
+  schema, refused as a setting, kept out of the overlay — the same seam,
+  no new one. `Appearing` renders no element when there is nothing to
+  appear with (it is one ternary; `templateOf` grew one spread): an extra
+  `div` around every widget on every page would have been the kind of cost
+  nobody notices until a stylesheet does. A mount animation is the
+  appearance, so a widget that flips often animates often — the page
+  builder's choice, and `prefers-reduced-motion` turns it off.
+- **The six widgets** follow the contract pattern to the letter: a
+  contract, an implementation with its hook, a conformance set another
   implementation runs.
-- **Sasha:** the e2e helper that picks from an antd Select now goes by the
+- **Tests:** the e2e helper that picks from an antd Select now goes by the
   keyboard (Down until the highlighted option is the one wanted, Enter):
   the mouse path lost a race with antd's popup alignment on long forms,
   three times, with the trace to prove it. The new widgets are driven by
   role (`switch`, `radiogroup`, `radio`, `slider`, `separator`), never by
   antd's DOM; the slider's story presses the key as antd reads it (the key
   code), the suite presses the real key in Edge.
-- **Ren:** two cautions, no objection. A mount animation is the appearance,
-  so a widget that flips often animates often — the page builder's choice,
-  and `prefers-reduced-motion` turns it off. The `( … )` button nests
-  without limit; a page builder who nests five deep gets what they asked
-  for, and the words still read.
-- **Vlad:** `Appearing` is one ternary; `templateOf` grew one spread.
 
 ## Reviewed 2026-11-02, later (the disappearance, the appearance registry)
 
-- **Morgan:** a widget that fades out instead of blinking away, and the
-  application's own animation in the list beside the standard ones — what
-  a page builder expects from "appearance". The button variants
+- **What it gives:** a widget that fades out instead of blinking away, and
+  the application's own animation in the list beside the standard ones —
+  what a page builder expects from "appearance". The button variants
   (primary, secondary, dashed, danger) are the other half of looking
   finished.
-- **Alexei:** the registry is the predicates' pattern to the letter —
-  schema definitions, engine registry with invariants, `STANDARD_*` sealed
+- **The registry** is the predicates' pattern to the letter — schema
+  definitions, engine registry with invariants, `STANDARD_*` sealed
   default, a `*Problems` function folded into `contractProblems`, one
   optional registry on `ResolveInput`. One concern raised and answered: the
   name grammar is in the schema (`APPEARANCE_NAME`) so the schema can parse
   a template without the registry, and the registry says which names exist.
-- **Dmitri:** `useShowing` is two effects and a boolean, and its header
+- **The code:** `useShowing` is two effects and a boolean, and its header
   says why reduced motion unmounts at once. The inline `animationName` is
   the one place the guidelines allow a style: the value comes from the
   view model, and it replaced five classes that said the same thing.
-- **Ren:** reverse playback is the cheap and honest choice — one set of
+  `appearChoicesOf` is one map; the two selects are one map over a tuple.
+  In all: less than before in the stylesheet (five classes gone), one hook
+  added, one registry added by the pattern that already existed.
+  `Appearing` still renders no element without an animation.
+- **Reverse playback** is the cheap and honest choice — one set of
   keyframes, no second stylesheet to keep in step — but a host that wants
   a different way out than in must register two names (`drop` in,
-  `fade` out), which the two keys allow. The other caution: a leaving
-  widget keeps reading the store for 320 ms; a `load` fired in that window
-  would be a bug, and nothing fires on unmount, so it is not one.
-- **Sasha:** the suite asserts `data-disappear`, the state JSON and — the
+  `fade` out), which the two keys allow.
+- **A caution:** a leaving widget keeps reading the store for 320 ms; a
+  `load` fired in that window would be a bug, and nothing fires on
+  unmount, so it is not one.
+- **Tests:** the suite asserts `data-disappear`, the state JSON and — the
   real proof — that a hidden cell is EMPTY once the animation has ended
   (Playwright retries the assertion through the 320 ms). The application's
   `drop` is asserted on the run page, so a renamed registration breaks a
   scenario. The adapter's test fires `animationend` itself.
-- **Vlad:** `appearChoicesOf` is one map; the two selects are one map over
-  a tuple.
-- **External reviewer:** less than before in the stylesheet (five classes
-  gone), one hook added, one registry added by the pattern that already
-  existed. `Appearing` still renders no element without an animation.
 
 ## Built and tested
 

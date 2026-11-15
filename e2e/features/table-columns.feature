@@ -1,7 +1,10 @@
 Feature: The column menu of a table
-  A table with the column menu on has a settings button above it: the
-  user hides columns and drags them into another order, the browser keeps
-  that across a reload, and Reset brings the columns back as configured.
+  A table with the column menu on has a "Columns" button above it: the
+  user hides columns, drags them into another order and pins them to the
+  table's left or right edge, the browser keeps that across a reload, and
+  Reset brings the columns back as configured. A column the page calls
+  required is listed and cannot be hidden. (A table with the setting off has
+  no such button: the `NoToolbar` story.)
 
   Scenario: Hidden columns and their order are kept across a reload
     Given I open the "runs" page
@@ -56,6 +59,62 @@ Feature: The column menu of a table
     When I open the "runs" page
     Then the table has the columns "#, Reference, Status"
 
-  Scenario: A table without the setting has no menu
+  Scenario: A required column is listed and cannot be hidden
     Given I open the "archive" page
-    Then the table has no column menu
+    Then the table has the columns "#, Name, Reference, Inbound, Status, Started, Runner, Branch, Duration"
+    When I open the column menu of the table
+    Then the column "#" cannot be hidden
+    # Every column at once: the required one stays.
+    When I hide every column of the table
+    Then the table has the columns "#"
+    And the columns of the table can be reset
+    When I reset the columns of the table
+    Then the table has the columns "#, Name, Reference, Inbound, Status, Started, Runner, Branch, Duration"
+
+  Scenario: Columns are pinned to the left and to the right, and the menu shows them in sections
+    Given I open the "archive" page
+    When I open the column menu of the table
+    # Nothing is pinned: the menu is one section.
+    Then the column menu has the sections "COLUMNS"
+    And the actions of the column "Status" are "Pin left, Pin right"
+    When I pin the column "Status" to the left
+    Then the column menu has the sections "PINNED LEFT, COLUMNS"
+    # A pinned column offers the way back, and the other edge.
+    And the actions of the column "Status" are "Unpin, Pin right"
+    When I pin the column "Name" to the right
+    Then the column menu has the sections "PINNED LEFT, COLUMNS, PINNED RIGHT"
+    And the actions of the column "Name" are "Unpin, Pin left"
+    # Pinned left stands first, pinned right last — in the table and in the menu.
+    Then the table has the columns "Status, #, Reference, Inbound, Started, Runner, Branch, Duration, Name"
+    And the column "Status" is pinned to the left
+    And the column "Name" is pinned to the right
+    And the column "#" is not pinned
+    And the column menu lists "Status, #, Reference, Inbound, Started, Runner, Branch, Duration, Name"
+    And the column menu shows "Status" pinned to the left
+    And the column menu shows "Name" pinned to the right
+    # Kept like the rest of the column state: a reload opens the table the same way.
+    When I open the "archive" page
+    Then the table has the columns "Status, #, Reference, Inbound, Started, Runner, Branch, Duration, Name"
+    And the column "Status" is pinned to the left
+    When I open the column menu of the table
+    And I unpin the column "Status"
+    Then the table has the columns "#, Reference, Inbound, Status, Started, Runner, Branch, Duration, Name"
+    And the column "Status" is not pinned
+    # The last column pinned left was let go: its section is gone.
+    And the column menu has the sections "COLUMNS, PINNED RIGHT"
+    # From one edge to the other in one step.
+    When I pin the column "Name" to the left
+    Then the column menu has the sections "PINNED LEFT, COLUMNS"
+    And the column "Name" is pinned to the left
+    When I reset the columns of the table
+    Then the table has the columns "#, Name, Reference, Inbound, Status, Started, Runner, Branch, Duration"
+    And the column "Name" is not pinned
+
+  Scenario: A column dragged beside a pinned one is pinned with it
+    Given I open the "archive" page
+    When I open the column menu of the table
+    And I pin the column "Status" to the left
+    And I drag the column "Runner" above the column "Status"
+    Then the column menu shows "Runner, Status" pinned to the left
+    And the column "Runner" is pinned to the left
+    And the table has the columns "Runner, Status, #, Name, Reference, Inbound, Started, Branch, Duration"

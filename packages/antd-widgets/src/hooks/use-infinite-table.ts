@@ -39,7 +39,15 @@ import { useTableToolbar, type TableToolbarItems } from "./use-table-toolbar";
 import { rowPosition, sliceRequest, sliceWindow, type SliceRequest } from "../row-window";
 import { useRowWindow } from "./use-row-window";
 import type { TableCellRenderers } from "./use-table-cell";
-import { useMenuColumns, type TablePaths, type TablePorts, type TableSettings, type TableView } from "./use-table";
+import { useRowActions, type TableRowActions } from "./use-row-actions";
+import {
+  useColumnsWithActions,
+  useMenuColumns,
+  type TablePaths,
+  type TablePorts,
+  type TableSettings,
+  type TableView,
+} from "./use-table";
 import { useTableHeaders } from "./use-table-headers";
 import { NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
@@ -58,6 +66,8 @@ export interface InfiniteTableView extends TableView {
   /** Where in the whole list the rows held begin (a windowed list's slice; 0 otherwise). */
   offset: number;
   total: number | undefined;
+  /** The list goes on past the total: its end is not known yet. */
+  open: boolean;
   status: string;
   /** The rows rendered, as "<start>-<end>" of the rows held — a fact for tests. */
   window: string;
@@ -71,22 +81,37 @@ function inView(box: HTMLElement | null, end: HTMLElement | null): boolean {
   return endRect.top < boxRect.bottom && endRect.bottom > boxRect.top;
 }
 
+/**
+ * The line under the rows. A list that goes on past its total (`open`: the
+ * end not found yet) never claims a count it does not have: "800+ rows"
+ * for a slice of the rows known, "200 rows, more to load" for a list that
+ * holds them all.
+ */
+function statusOf(held: number, total: number | undefined, windowed: boolean, open: boolean): string {
+  if (total === undefined) return `${held} rows`;
+  if (windowed) return open && total > 0 ? `${total}+ rows` : `${total} rows`;
+  return open ? `${held} rows, more to load` : `${held} of ${total}`;
+}
+
 export function useInfiniteTable(
   store: ReadableStore,
   emit: Emit<InfiniteTableEvents>,
   paths: TablePaths & {
     total?: string | undefined;
+    hasMore?: string | undefined;
     offset?: string | undefined;
     position?: string | undefined;
   },
   ports: TablePorts & {
     total: PortDefinition<number>;
+    hasMore: PortDefinition<boolean>;
     offset: PortDefinition<number>;
     position: PortDefinition<number>;
   },
   settings: TableSettings & { height: number; windowed: boolean },
   cells: TableCellRenderers,
   toolbarItems: TableToolbarItems,
+  rowActions: TableRowActions,
 ): InfiniteTableView {
   // The table appeared: `load`, once — the reaction calls whatever fetches its
   // data. After the mount, so the page has bound its reactions (useAfterMount).
@@ -123,6 +148,7 @@ export function useInfiniteTable(
     settings.filterRow,
     settings.rowKey,
     selection.cellAttributes,
+    menu.pinned,
   );
   const rowProps = useRowProps(emit);
   const toolbar = useTableToolbar(emit, settings.toolbar, toolbarItems, {
@@ -130,6 +156,8 @@ export function useInfiniteTable(
     filtered: headers.filtered,
     resetFilters: headers.resetFilters,
   });
+  const actions = useRowActions(emit, settings.rowActions, rowActions);
+  const withActions = useColumnsWithActions(headers, actions);
 
   // The scroll box of the widget's own; the header sticks to its top.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -154,6 +182,8 @@ export function useInfiniteTable(
     return () => observer.disconnect();
   }, []);
 
+  // The list GOES ON past the total (a server that does not count): the total is the rows known so far.
+  const open = usePort(store, paths.hasMore, ports.hasMore) === true;
   const count = windowed ? Math.max(total ?? 0, offset + rows.length) : renderedRows.length;
 
   // The window: which rows of the list render — of the ones held —, and the blank space around them.
@@ -174,7 +204,7 @@ export function useInfiniteTable(
   const told = useRef<{ position: number; rowHeight: number; top: number } | undefined>(undefined);
   useEffect(() => {
     if (looks === 0 || !windowed || loading || total === undefined) return;
-    const request = sliceRequest({ start: whole.start, end: whole.end }, offset, rows.length, total);
+    const request = sliceRequest({ start: whole.start, end: whole.end }, offset, rows.length, total, open);
     if (request?.edge !== "around") around.current = undefined;
     if (request === undefined) return;
     // Told where to stand, the list is not there yet (its rows were not measured, or it was not as tall as it will
@@ -191,7 +221,7 @@ export function useInfiniteTable(
     }
     wanted.current = { rows, request };
     emit("window", request);
-  }, [looks, windowed, loading, total, whole.start, whole.end, offset, rows, emit]);
+  }, [looks, windowed, loading, total, open, whole.start, whole.end, offset, rows, emit]);
 
   // WHERE THE LIST STANDS (the `position` port, when bound): the first row in view is emitted as the box scrolls —
   // a frame after the scroll, and a frame after the mount, when the page has bound its reactions — and the box
@@ -254,12 +284,12 @@ export function useInfiniteTable(
     return store.subscribe(positionPath, stand);
   }, [store, positionPath, positionPort]);
   const space = useMemo<RowSpace>(
-    () => ({ above: shown.above, below: shown.below, columns: Math.max(1, columns.length) }),
-    [shown.above, shown.below, columns.length],
+    () => ({ above: shown.above, below: shown.below, columns: Math.max(1, withActions.columns.length) }),
+    [shown.above, shown.below, withActions.columns.length],
   );
 
   // A windowed list never appends: its slice is replaced.
-  const hasMore = !windowed && total !== undefined && rows.length < total;
+  const hasMore = !windowed && total !== undefined && (rows.length < total || open);
   // The rows a `more` was emitted for: the same rows never ask twice.
   const asked = useRef<TableRow[] | undefined>(undefined);
   useEffect(() => {
@@ -269,18 +299,17 @@ export function useInfiniteTable(
     emit("more", { offset: rows.length });
   }, [looks, loading, hasMore, rows, emit]);
 
-  const status =
-    total === undefined ? `${rows.length} rows` : windowed ? `${total} rows` : `${rows.length} of ${total}`;
+  const status = statusOf(rows.length, total, windowed, open);
 
   return {
-    columns: headers.columns,
+    columns: withActions.columns,
     rows: windowRows,
     loading,
     rowProps,
     change: headers.change,
     columnMenu: menu.menu,
     cells: selection,
-    scroll: headers.scroll,
+    scroll: withActions.scroll,
     toolbar,
     sticky,
     components: SPACED_BODY,
@@ -290,6 +319,7 @@ export function useInfiniteTable(
     held: rows.length,
     offset,
     total,
+    open,
     status,
     window: `${shown.start}-${shown.end}`,
   };

@@ -292,8 +292,9 @@ describe("the loader", () => {
         .every((column) => column.filter === undefined && column.sortable === undefined),
     ).toBe(true);
     expect(store.get<{ job_id: number }[]>("runs.data")?.map((row) => row.job_id)).toEqual([900341, 900340, 900298]);
-    // This answer does not count the rows: no total, so nothing claims to know how many there are.
-    expect(store.get("runs.total")).toBeUndefined();
+    // This answer does not count the rows — and brings fewer than were asked for: that is all of them.
+    expect(store.get("runs.total")).toBe(3);
+    expect(store.get("runs.hasMore")).toBe(false);
     expect(store.get("runs.error")).toBeUndefined();
     expect(store.get("runs.loading")).toBe(false);
   });
@@ -496,6 +497,90 @@ describe("the loader", () => {
     await load(store, { into: "t", more: true });
     expect(store.get("t.offset")).toBe(0);
     expect(store.get<unknown[]>("t.data")).toHaveLength(40);
+  });
+
+  it("countRows: false — the server is not asked for the total: it is the rows known so far, and exact once the end is found", async () => {
+    const all = Array.from({ length: 50 }, (_, index) => ({ id: String(index + 1), odd: index % 2 === 0 }));
+    const requests: TableViewRequest[] = [];
+    // A server that does not count: it answers with rows only.
+    const transport: TableViewTransport = async (_url, request) => {
+      requests.push(request);
+      const { offset, limit, filterIn } = request.dataFilter;
+      const chosen = filterIn.odd === undefined ? all : all.filter((row) => row.odd);
+      return { data: chosen.slice(offset, offset + limit) };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    const ask = async (offset: number, edge: string) => {
+      store.set("t.wanted", { offset, edge });
+      await load(store, { into: "t", window: true });
+    };
+    /** "40+": forty rows are known and the list goes on; "50": fifty, and that is all. */
+    const known = () => `${store.get("t.total")}${store.get("t.hasMore") === true ? "+" : ""}`;
+
+    await load(store, { url: "/x", into: "t", pageSize: 20, countRows: false });
+    expect(requests[0]?.totalRecords).toBe(false);
+    // A full batch: the list may go on.
+    expect(known()).toBe("20+");
+    await ask(20, "after");
+    expect(known()).toBe("40+");
+    // Back along the rows known, the far ones no longer held: the mark does not shrink with them.
+    await ask(5, "around");
+    expect(store.get("t.offset")).toBe(0);
+    expect(store.get<unknown[]>("t.data")).toHaveLength(20);
+    expect(known()).toBe("40+");
+    await ask(20, "after");
+    // A batch that comes back short is the end: the total is exact from here on…
+    await ask(40, "after");
+    expect(known()).toBe("50");
+    // …whatever is asked for next.
+    await ask(5, "around");
+    expect(known()).toBe("50");
+    // Other filters are another list: nothing is known about it but what this answer says.
+    store.set("t.filterIn", { odd: ["true"] });
+    store.set("t.wanted", 0);
+    await load(store, { into: "t", window: true });
+    expect(known()).toBe("20+");
+    await ask(20, "after");
+    expect(known()).toBe("25");
+    // A load that is neither `more` nor `window` (a refresh) starts over too.
+    await load(store, { into: "t" });
+    expect(known()).toBe("20+");
+  });
+
+  it("countRows: false — an infinite list's `more` raises the mark and finds the end the same way", async () => {
+    const all = Array.from({ length: 25 }, (_, index) => ({ id: String(index + 1) }));
+    const transport: TableViewTransport = async (_url, request) => {
+      const { offset, limit } = request.dataFilter;
+      return { data: all.slice(offset, offset + limit) };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    await load(store, { url: "/x", into: "t", pageSize: 10, countRows: false });
+    await load(store, { into: "t", more: true });
+    expect([store.get("t.total"), store.get("t.hasMore")]).toEqual([20, true]);
+    await load(store, { into: "t", more: true });
+    expect([store.get("t.total"), store.get("t.hasMore")]).toEqual([25, false]);
+  });
+
+  it("countRows: false — a list that ends on a full batch is known to end when the next one comes back empty", async () => {
+    const all = Array.from({ length: 40 }, (_, index) => ({ id: String(index + 1) }));
+    const transport: TableViewTransport = async (_url, request) => {
+      const { offset, limit } = request.dataFilter;
+      return { data: all.slice(offset, offset + limit) };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    await load(store, { url: "/x", into: "t", pageSize: 20, countRows: false });
+    store.set("t.wanted", { offset: 20, edge: "after" });
+    await load(store, { into: "t", window: true });
+    expect([store.get("t.total"), store.get("t.hasMore")]).toEqual([40, true]);
+    const held = store.get("t.data");
+    store.set("t.wanted", { offset: 40, edge: "after" });
+    await load(store, { into: "t", window: true });
+    expect([store.get("t.total"), store.get("t.hasMore")]).toEqual([40, false]);
+    // Nothing came: the rows are the very same array.
+    expect(store.get("t.data")).toBe(held);
   });
 
   it("with window: a batch after or before the rows held joins them, at most three batches kept; a slice around a row replaces them", async () => {

@@ -43,20 +43,26 @@ export {
   tableToolbarEvents,
   tableCellEvents,
   COLUMN_WIDTH,
+  COLUMN_PINS,
   columnWidth,
   isIdColumn,
   tableWidth,
   toolbarItemSchema,
   TOOLBAR_ITEMS,
+  rowActionSchema,
+  ROW_ACTIONS,
+  tableRowActionEvents,
 } from "./table";
 export type {
   ToolbarItem,
+  RowAction,
   TableColumn,
   ColumnFilter,
   TableRow,
   SearchValues,
   ColumnOrder,
   ColumnState,
+  ColumnPin,
   PeriodValues,
 } from "./table";
 export { tableCellSchema, appPathSchema, cellText, cellTone, cellHref } from "./table-cell";

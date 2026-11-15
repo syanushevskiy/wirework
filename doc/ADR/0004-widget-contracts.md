@@ -2,24 +2,43 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-09-16
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 A widget is a declaration (input ports, events, settings) plus a component.
 The declaration is what pages, the builder, reactions and tests depend on;
-the component is one rendering of it. A CONTRACT is the declaration alone,
-so several implementations — antd (@wirework/antd-widgets), another design
-system, plain HTML — share ports, events, settings, builder forms and
-conformance tests.
+the component is one rendering of it. This record says how the declaration
+is kept apart from the component, so several implementations — antd
+(@wirework/antd-widgets), another design system, plain HTML — share ports,
+events, settings, builder forms and conformance tests.
 
-What swapping costs today: a cell names the IMPLEMENTATION (`widget:
-"antd-button"`), not the kind, so moving a page to another design system
-means changing `widget` in its cells (base and user templates); every
-template, reaction and setting stays valid because the contract is the
-same. Cells referencing a kind that the host maps to an implementation is
-the step that would make it free — not built (team-tiger review: Alexei
-wants it, Ren wants a second real implementation first).
+## Options considered
+
+- **One definition per widget, declaration and component together**
+  (`defineWidget`). Nothing to add, and nothing to share: a second
+  implementation repeats the ports, events and settings, and nothing
+  checks that the two agree. It stays the way for widgets no second
+  implementation needs ("Not contracts" below).
+- **A contract as the declaration alone, implemented by name.** The
+  declaration is written once; an implementation adds a registry name and
+  a component, and the registry checks it against the contract. A cell
+  still names the IMPLEMENTATION (`widget: "antd-button"`), so moving a
+  page to another design system means changing `widget` in its cells (base
+  and user templates); every template, reaction and setting stays valid
+  because the contract is the same.
+- **Cells that name the kind, the host mapping a kind to an
+  implementation.** The step that would make swapping free. Not built: it
+  waits for a second real implementation.
+
+## Decision
+
+A CONTRACT is the declaration alone: `defineContract` for the kind,
+`implementContract` for each implementation, and a widget registry that
+refuses an implementation whose ports or events differ from its
+contract's. Cells name the implementation; cells naming a kind are left
+until a second real implementation exists. A kind is extracted into a
+contract when a second implementation or a concrete consumer needs it.
 
 ## Shape (`@wirework/schema`, `contracts/widget-contract.ts`)
 
@@ -274,4 +293,4 @@ belong next to the contracts.
 
 `echo`, `counter` and `crash` are demo/test widgets; they
 stay plain `defineWidget` definitions. A kind is extracted when a second
-implementation or a concrete consumer needs it (Ren's rule).
+implementation or a concrete consumer needs it.

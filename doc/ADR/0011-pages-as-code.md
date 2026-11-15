@@ -2,14 +2,14 @@
 
 - **Status:** Accepted — partly built (the file, Export page, the page folders)
 - **Date:** 2026-11-04
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-Designed 4 November 2026 with the tiger team (doc/team_tiger.md), at the
-product owner's ask. Status: designed (story WW-29); its first step —
-the page file format, the pure functions and "Export page" (answer A) —
-built 5 November 2026 (story WW-30), see "Built" at the end.
+Designed 4 November 2026, at the product owner's ask. Status: designed
+(story WW-29); its first step — the page file format, the pure functions
+and "Export page" (answer A) — built 5 November 2026 (story WW-30), see
+"Built" at the end.
 
-## The ask
+## Description
 
 "An admin user creates a page using the builder and saves it in the app
 code. How should the process look?" The page a builder makes today lives
@@ -49,7 +49,7 @@ in.
   session grants it. There is no notion of an authoring environment versus
   production yet.
 
-## The question, and five answers
+## Options considered
 
 How does a page built in a browser become a file in the repository, and
 how does a developer-free admin get it there?
@@ -72,10 +72,9 @@ dev server, and a small Vite plugin writes it as a file under `src/pages/`.
 Every Save page is a file change in the working tree; the app reloads the
 file through HMR; the admin sees the page as users will. From there the
 change takes the road every change takes: a branch, a pull request, CI,
-review, merge, release. **Chosen** for the mechanism: it reuses the one
-write path, the dev server that already exists, the validation that
-already runs, and git as the history. What it leaves open is the admin
-who cannot use git — see E.
+review, merge, release. It reuses the one write path, the dev server that
+already exists, the validation that already runs, and git as the history.
+What it leaves open is the admin who cannot use git — see E.
 
 **C. A page store on a server, pulled into the repo for release.** Pages
 live in a database behind an API; the builder saves there in every
@@ -95,9 +94,28 @@ machine writes and a human reviews is best kept as data.
 **E. A pull request from the browser.** The authoring server commits the
 page file on a branch and opens the pull request through the forge's API;
 the admin presses "Propose" and gets a link. This is B's hand-off for an
-admin without git, and it needs B's file first. Chosen as the THIRD phase,
-after B has proven the file and the review loop with a developer in the
-middle.
+admin without git, and it needs B's file first.
+
+## Decision
+
+**B for the mechanism**: the write-through from the dev server, one JSON
+file per page, handed to the code as a branch and a pull request. It is
+the smallest thing that gives git the page. The pull request is
+acceptable as the hand-off because that is how this organisation ships
+everything, and it gives the admin something today's save does not: a
+reviewer and a rollback.
+
+**A is kept as the fallback** for a host without the dev-server plugin
+and, at the product owner's ask on 5 November 2026, was built first (see
+"Built"). **E is the THIRD phase**, after B has proven the file and the
+review loop with a developer in the middle — and soon after phase 2,
+because admins who do not use git are the admins there are. C is rejected
+for now and kept under "Later"; D is rejected.
+
+The minimum is one format, three pure functions, one plugin with two
+routes, one loader change and one toolbar line. Everything else ("New
+page", "Propose") is UI on top and waits its phase. The toolbar must
+always say WHERE a save went.
 
 ## The design
 
@@ -136,7 +154,8 @@ configuration — the bundle doc/ADR/0009-containers.md asked for:
   A `shared.page.json` for templates meant to be shared is a follow-up.
 - `route` is what `routes.ts` says per page today. It is in the file
   because the builder must be able to make a NEW page without a developer,
-  and a page without a route is not a page. The host's code keeps what
+  and a page without a route is not a page. It is data the host loads,
+  not routing logic: the host's router reads it. The host's code keeps what
   only code can say — `onOpen`, the initial data — by page name, optional:
   a page file without a code counterpart gets the defaults (no own data,
   overlay on).
@@ -158,7 +177,9 @@ tests.
 `import.meta.glob("../pages/*.page.json", { eager: true })` in Vite — and
 merges the files with `mergePageFiles`; `routes.ts` becomes the merged
 `route` entries plus the builder's own. The per-page code (`onOpen` of
-runs and history, the page-size seeding) stays as a map by page name.
+runs and history, the page-size seeding) stays as a plain map by page
+name next to the loader, so a reader finds in one place what a page's
+file cannot say. No glob magic beyond Vite's own `import.meta.glob`.
 The fixtures package keeps the builder's empty page, the failure-path
 page and the user overlay fixtures; the six demo pages move into six
 files, which is also the first test of the format: cut the fixtures into
@@ -179,6 +200,11 @@ routes to the dev server:
   loader module.
 - `GET /__wirework/pages/<name>` — the file as written, for the e2e suite
   and for a "what is saved" check in the builder.
+
+The plugin is I/O and belongs to the host; it stays in the app until a
+second host needs it — a package too early is surface to maintain. The
+builder never knows about files: it calls `commit` as today and the
+host's `SaveTrees` does the rest.
 
 The host's `SaveTrees` in authoring mode becomes: for every page whose
 templates or referenced widgets changed in this commit, `pageFile(...)`
@@ -211,11 +237,13 @@ and two pages' never collide.
 
 ### The process, step by step (what the admin does)
 
+The README is to document these six steps for the admin.
+
 1. **Open the application in authoring mode.** On a developer's machine
    that is `pnpm dev`; for admins, a shared AUTHORING deployment runs the
    same dev server on a checkout of the main branch, behind the
-   application's login, with `editPages` for admins. Production never runs
-   it.
+   application's login, with `editPages` for admins — a checkout running
+   `pnpm dev`, nothing new to operate. Production never runs it.
 2. **Build the page.** `/builder` → "New page…" → name, title, path, menu
    → the empty page opens. Add widgets from the catalog, wire them to
    data and actions in the form, arrange them with the engine, put cards
@@ -257,61 +285,34 @@ and two pages' never collide.
   the saved one in the store, so the admin loses nothing and tries again.
 - The e2e suite writes into its own folder, never into `src/pages/`.
 
-## The tiger team's positions
+### Tests
 
-- **Morgan (product):** this is the missing half of "pages from
-  configuration, not code": a page is built without a developer AND
-  reaches the users without a developer typing it in. The pull request is
-  acceptable as the hand-off because that is how this organisation ships
-  everything, and it gives the admin something today's save does not: a
-  reviewer and a rollback. Wants phase 3 ("Propose") soon after phase 2,
-  because admins who do not use git are the admins we have. Asks that the
-  toolbar always says WHERE a save went.
-- **Alexei (architecture):** the file format and its merge/split belong
-  in the engine beside `trees.ts`, pure and tested; the Vite plugin is
-  I/O and belongs to the host; the builder never knows about files, it
-  calls `commit` as today and the host's `SaveTrees` does the rest — the
-  same seam the design always had. Insists `route` in the file is data
-  the host loads, not routing logic; the host's router reads it.
-- **Dmitri (readability):** JSON, one file per page, pretty-printed,
-  fixed key order — a reviewer must read the diff in thirty seconds. No
-  TypeScript generation (D), no clever glob magic beyond Vite's own
-  `import.meta.glob`. The per-page CODE that remains (`onOpen`) stays a
-  plain map by page name next to the loader, so a reader finds in one
-  place what a page's file cannot say.
-- **Katya (team):** the first phase must be the fixtures cut into files
-  with the suite green — that proves the format and the loader before any
-  UI. Keep the plugin in the app until a second host needs it; a package
-  too early is surface area to maintain. The authoring deployment is a
-  checkout running `pnpm dev`: nothing new to operate. Documents the
-  process in README for the admin in six steps.
-- **Sasha (QA):** three layers. Unit: `pageFile` / `mergePageFiles` /
-  `parsePageFile` round-trip on every demo page, conflicts reported, the
-  name pattern, the plugin's handler as a plain function with a temp
-  folder. E2E: `pages-as-code.feature` — New page, add, save, "the page
-  file "inventory" holds the cell "custom-1"" through the GET endpoint,
-  reload and find it in the menu; a failing save shows its error. CI: the
-  configuration check as a test every pull request runs, so a hand-edited
-  page file cannot break the boot. The non-technical QAs can read a page
-  file and the Gherkin equally.
-- **Ren (contrarian):** two risks, named. First: pages in the repository
-  means a page FIX needs a release — the product owner should decide that
-  knowingly, because C (a server store) is the opposite trade and some
-  teams want it for dashboards; keep C in "Later", not off the table.
-  Second: the authoring deployment runs a DEV server for admins; it needs
-  the application's login in front of it and nothing else exposed, and the
-  plugin must be the only writable thing. Also warns that `widgets` copied
-  into two files WILL drift the day someone edits one — hence the
-  identical-or-problem rule now and a shared file later. Agrees B is the
-  right first step: it is the smallest thing that gives git the page.
-- **Vlad (fluency):** `pageFile` is a chain — the page's cells, flat-mapped
-  through containers, mapped to model paths, de-duplicated, picked from
-  the widgets tree; `mergePageFiles` a reduce with conflicts collected.
-  No intermediate state in the plugin handler either: parse, check,
-  write, answer.
-- **External reviewer:** the minimum is one format, three pure functions,
-  one plugin with two routes, one loader change and one toolbar line.
-  Everything else (New page, Propose) is UI on top and can wait its phase.
+Three layers.
+
+- **Unit:** `pageFile` / `mergePageFiles` / `parsePageFile` round-trip on
+  every demo page, conflicts reported, the name pattern, the plugin's
+  handler as a plain function with a temp folder.
+- **E2E:** `pages-as-code.feature` — New page, add, save, `the page file
+"inventory" holds the cell "custom-1"` through the GET endpoint, reload
+  and find it in the menu; a failing save shows its error.
+- **CI:** the configuration check as a test every pull request runs, so a
+  hand-edited page file cannot break the boot.
+
+The first phase is the fixtures cut into files with the suite green: that
+proves the format and the loader before any UI.
+
+## Risks to watch
+
+- **A page fix needs a release.** Pages in the repository means exactly
+  that, and it should be decided knowingly: C (a server store) is the
+  opposite trade, and some teams want it for dashboards. C stays in
+  "Later", not off the table.
+- **The authoring deployment runs a DEV server for admins.** It needs the
+  application's login in front of it and nothing else exposed, and the
+  plugin must be the only writable thing.
+- **A widget template copied into two page files will drift** the day
+  someone edits one — hence the identical-or-problem rule now and a
+  shared file later.
 
 ## Phases
 
@@ -324,7 +325,7 @@ and two pages' never collide.
 
 ## Later
 
-- **A page fix without a release** (Ren): a server page store (C) with
+- **A page fix without a release**: a server page store (C) with
   the same file format as its exchange unit, pulled into the repository
   for release. Not before the product owner asks for it.
 - **Shared widget templates** in a file of their own, referenced by
@@ -441,7 +442,7 @@ layout INSIDE the card — the input, the button, the echo, the note — in
 `widgets.json`, because a container's layout lives in its widget template
 (doc/ADR/0009-containers.md: `content: { engine, cells }`). "This is not
 convenient. Combine in one, or somehow split so that all layout and views
-are in viewModel." The tiger team weighed five answers.
+are in viewModel." Five answers were weighed.
 
 ### The question, and five answers
 
@@ -449,7 +450,12 @@ are in viewModel." The tiger team weighed five answers.
 produces it. Nothing to explain; the reader scrolls. Three files were
 asked for a week ago for the reader's sake, and the reader now has to know
 the rule that splits them — if the rule is not obvious, one file beats
-three.
+three. Every split needs a rule, and the next question is why a label's
+text — visible on the page — is in `widgets.json` while a card's title is
+in `viewModel.json`. A is also the least code: it DELETES the folder
+functions. Not taken because the owner wants the folder of parts; kept as
+the honest fallback — if the next complaint is about which file holds a
+widget's settings, go to one file and stop splitting.
 
 **B. The containers' templates go with the layout.** A widget whose
 definition `contains` a layout — a card, tabs, a collapse, a dialog — IS
@@ -459,6 +465,19 @@ templates, by model path, next to `templates`; `widgets.json` keeps the
 other widgets'. The model does not change: the folder is a serialisation,
 the split a partition of the widget map by one predicate the registry
 already answers. The join is a union, a model in both files a problem.
+For it: the rule follows from the model instead of fighting it, it can be
+told in one breath, and it is the smallest change that keeps the parts —
+one optional key in a schema, one predicate, one partition, one union
+with one problem. `page.json` stays tiny and separate: the route is what
+the author of a new page writes first and what a reviewer checks first.
+Its costs: the partition is by widget TYPE, which a reader must know; the
+key must say what it holds (`containers`, not `layouts`); a widget that
+gains `contains` later moves files on the next save — a diff to expect,
+not a bug; and, measured on the demo, the containers are a third to a
+half of every page's widget map, so B moves most of the file anyway. The
+invariant would have to be tested, not hoped: a model path in exactly one
+of the two widget maps, the join refusing one in both, the split-then-join
+round trip with a container.
 
 **C. The layouts cut out of the templates.** `viewModel.json` gets a
 `layouts` map by chain (`card-roles`, `tabs-1/tabs.0.content`) holding each
@@ -466,7 +485,9 @@ container's inner layout; the container's template in `widgets.json` keeps
 its other settings with the layout removed; the join puts every layout
 back where `layoutsOf` says it was. Every layout in one flat list — but a
 second representation of the same tree, surgery on both ends, and a
-two-way invariant between two files that a hand edit breaks silently.
+two-way invariant between two files that a hand edit breaks silently. The
+reader must reassemble the card in their head from two files, and it is
+about five times the code of B for the same page.
 
 **D. The layout inline in the cell.** The page template's card cell
 carries its inner layout itself. Changes the model: a cell is identity and
@@ -478,22 +499,25 @@ Rejected on the model, not the file.
 **E. Leave it and document.** Rejected: the owner read the folder and
 could not find the page in it.
 
-### The team's decision: B — and the owner's: D, in the file
+### Decision: D — the layouts nested in their cells, in the file
 
-The team's rule was one sentence: `viewModel.json` holds everything that
-is layout — the page's and its containers' — and `widgets.json` the
-widgets that show or edit a value. Shown the two shapes side by side, the
+B was the first recommendation, its rule one sentence: `viewModel.json`
+holds everything that is layout — the page's and its containers' — and
+`widgets.json` the widgets that show or edit a value. Shown the two
+shapes side by side, the
 product owner asked why the card's inside was not nested in the card's
 cell "like a file structure or HTML", heard what is lost (nothing at run
 time; in the FILE, a second shape for a card with two templates or a
 template placed twice) and decided: **nest, in the folder and in Export
 alike, and put the roles in a file of their own.**
 
-So D is the FILE's shape, not the model's. In a page file a cell of a
+So D is the FILE's shape, not the model's. The model is right and stays —
+a container's layout is its template's, so a role or a user can pick
+another template of the card. In a page file a cell of a
 widget whose definition `contains` a layout carries the widget's template
 map as `templates`, the layouts inside it with their own cells, nested in
-turn — a card inside a card nests inside it. The two cases the team worried
-about have one rule: a container's templates are written ONCE, in the first
+turn — a card inside a card nests inside it. The two cases that were the
+worry have one rule: a container's templates are written ONCE, in the first
 cell (document order: the page's templates, then the roles') that points at
 its model; a later cell of the same model only names it, as an HTML
 reference would; a model with two templates nests both, and the cell's
@@ -510,52 +534,6 @@ where no role does, so the file is there to be found and filled; the roles
 page's picks the card's `admin` template for the admin, both templates
 nested in the card's cell in `viewModel.json`) and `widgets.json`. Export
 page downloads the same nested shape as one file.
-
-### The tiger team's positions
-
-- **Morgan (product):** opening the roles page's view model must show the
-  card and what is inside it — that is what "the page" means to the
-  people who build pages. Where a label's text lives is secondary. One
-  file would have done too; three files only if each has a reason she
-  can repeat.
-- **Alexei (architecture):** the model is right and stays — a container's
-  layout is its template's, so a role or a user can pick another template
-  of the card. The file rule must follow from the model, not fight it:
-  "a container's template is layout" is such a rule (B); C invents a
-  second shape of the same tree and an invariant between two files.
-- **Dmitri (readability):** B, because a junior can be told the rule in
-  one breath; C needs the reader to reassemble the card in their head
-  from two files. Keeps A as the honest fallback: if the next complaint is
-  about which file holds a widget's settings, go to one file and stop
-  splitting.
-- **Katya (team):** B is the smallest change — the registry already says
-  which widgets hold layouts (`contains`), the split is a partition, the
-  join a union. `page.json` stays tiny and separate: the route is what the
-  author of a new page writes first and what a reviewer checks first.
-- **Sasha (QA):** the invariant must be tested, not hoped: a model path in
-  exactly one of the two widget maps, the join refusing one in both, the
-  split-then-join round trip with a container. The non-technical QAs read
-  `viewModel.json` to find where a widget sits on the page; with B they
-  find the card's inside there.
-- **Ren (contrarian):** argues A seriously. The three files were a
-  sentence of the owner's and now cost a review; every split needs a
-  rule, and the next question is why a label's text — visible on the
-  page — is in `widgets.json` while a card's title is in `viewModel.json`.
-  Measured on the demo: the containers are a third to a half of every
-  page's widget map, so B moves most of the file anyway. Concedes B
-  because the owner wants the folder of parts, with the risk named: the
-  partition is by widget TYPE, which a reader must know; the key must say
-  what it holds (`containers`, not `layouts`), and a widget that gains
-  `contains` later moves files on the next save — a diff to expect, not a
-  bug.
-- **Vlad (fluency):** the split is one chain — the page's cells through
-  the containers, filtered by `contains`, mapped to model paths, the widget
-  map partitioned by that set; the join a spread with a duplicate check.
-  No new state.
-- **External reviewer:** the minimum would be A — it DELETES the folder
-  functions. Given the owner wants the parts, B is the minimum that keeps
-  them: one optional key in a schema, one predicate, one partition, one
-  union with one problem. C is five times the code for the same page.
 
 ### What changed
 

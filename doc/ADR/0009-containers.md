@@ -2,9 +2,9 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-11-02
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 Every widget so far is a LEAF: it reads ports, emits events, shows one
 thing. A page is leaves placed by a layout engine. What a page builder
@@ -13,10 +13,10 @@ a title around a table and its filter, `Tabs` with a layout per tab,
 `Collapse` panels, a `Drawer` or `Modal` that opens a form — and asks to
 add it in the builder like any widget, then put widgets inside it.
 
-The question put to the tiger team: what are the ways a container can be
-built so the builder can add one, and which one do we take?
+The question: what are the ways a container can be built so the builder
+can add one, and which one do we take?
 
-Designed 2026-11-02 with the tiger team. Status: **built** the same day
+Designed 2026-11-02. Status: **built** the same day
 (story WW-27 in doc/product-stories.md) — the three phases below, with
 the differences the build found listed under "Built".
 
@@ -36,7 +36,7 @@ the differences the build found listed under "Built".
   reactions, `load` events, the user overlay, the condition `when` — must
   keep working for the children.
 
-## The approaches
+## Options considered
 
 ### A. Cells with a parent (nesting in the layout template)
 
@@ -111,6 +111,52 @@ layout, a user's own view copies one layout — and the answer was that it
 would not: the cards would ship without their content. Inside the card's
 template, the content goes wherever the card's template goes.
 
+## Decision
+
+D, with the content inline: a container is a widget whose template holds
+a layout. Rejected: A (every package for one widget). Deferred: B (regions
+for designers, if asked — if someone wants regions dragged as a whole, B
+is the answer, not more of D). Folded: C (a builder action on D, "Wrap in
+a card"; there is no frame concept — a card with one widget IS the frame).
+
+Why D:
+
+- The asks are "a card with a title holding a table and its filter",
+  "tabs", "a panel that folds" and "a form that opens over the page". D
+  answers all four with one thing to learn: a container holds a small
+  layout of its own, edited where layouts are edited — and a page with
+  three cards is still one page, shared as one.
+- D adds nothing to the core. The cell stays a cell, the engine stays the
+  owner of its template, `resolveTemplate` and `resolveCells` are called
+  for the inner layout as they are for the screen's. The one new seam is
+  `PageContext` in the adapter: `PageView` provides what it was given,
+  `NestedLayout` consumes it — a widget still imports only the adapter.
+- Inner cell ids are unique within their layout, and a path into a layout
+  is the chain of ids (`card-1/button-start`), the same way a template
+  name is one segment of a path.
+
+The rules adopted with it:
+
+- **No nested edit sessions.** Containers are where page builders get
+  into trouble — nesting without end, drag between containers, who
+  resolves first. D avoids the worst of it by refusing in-place nested
+  editing: a card's content is edited as a layout, one session at a time.
+  In edit mode a card shows its own chrome: Edit (its settings, as any
+  widget) and "Edit content", which opens the builder ON that layout —
+  the same palette, the same form, the same Add, the same session — with
+  a breadcrumb back to the screen. The builder learns to edit a template
+  AT A PATH (`widgets.overview.card1.default.content`) and nothing else
+  changes.
+- **A depth limit.** With the content INLINE a cycle cannot even be
+  written (a tree is finite), so the one guard left is depth: a layout
+  nested deeper than four is refused at boot and at render, for the
+  builder's sake more than the engine's.
+- **The Card first**, with "Wrap in a card" on an existing widget, so
+  nobody rebuilds a page to get a title around a table. Three phases,
+  each shippable: the mechanism with the Card, the builder's part, then
+  Tabs and Collapse on the same mechanism and the drawer the actions
+  design wants.
+
 ## Sharing a page with cards
 
 - **A view** (doc/ADR/0006-page-views.md) is the screen's layout: it names
@@ -134,65 +180,6 @@ template, the content goes wherever the card's template goes.
   today for any page; when it is, a card's content travels because it is
   a field of a template, and the inner cells' templates are references
   like any other. Nothing in this design is in its way.
-
-## The tiger team's positions
-
-- **Morgan (product):** the asks are "a card with a title holding a table
-  and its filter", "tabs", "a panel that folds", "a form that opens over
-  the page". D answers all four with one thing to learn: a container holds
-  a small layout of its own, edited where layouts are edited — and a page
-  with three cards is still one page, shared as one. Ship the Card first,
-  with "Wrap in a card" on an existing widget so nobody rebuilds a page to
-  get a title around a table.
-- **Ren (contrarian):** containers are where page builders die — nesting
-  without end, drag between containers, who resolves first. D dodges the
-  worst of it by refusing in-place nested editing: a card's content is
-  edited as a layout, one session at a time. With the content INLINE a
-  cycle cannot even be written (a tree is finite), so the one guard left
-  is depth: refuse a layout nested deeper than four at boot and at render,
-  for the builder's sake more than the engine's. Count the events: a
-  nested layout fires its own `page · load`, so an overview with three
-  cards fires four — say it in CLAUDE.md before a scenario counts log
-  entries. And B is not dead: if someone wants regions dragged as a whole,
-  B is the answer, not more of D.
-- **Alexei (architecture):** D adds nothing to the core. The cell stays a
-  cell, the engine stays the owner of its template, `resolveTemplate` and
-  `resolveCells` are called for the inner layout as they are for the
-  screen's. The one new seam is `PageContext` in the adapter: `PageView`
-  provides what it was given, `NestedLayout` consumes it — a widget still
-  imports only the adapter. Inner cell ids are unique within their layout,
-  and a path into a layout is the chain of ids (`card-1/button-start`),
-  the same way a template name is one segment of a path.
-- **Dmitri (readability):** no nested edit sessions. In edit mode a card
-  shows its own chrome: Edit (its settings, as any widget) and "Edit
-  content", which opens the builder ON that layout — the same palette, the
-  same form, the same Add, the same session, on a layout that happens to
-  sit inside a card — with a breadcrumb back to the screen. The builder
-  today edits `pages.<page>.<view>`; it learns to edit a template AT A
-  PATH (`widgets.overview.card1.default.content`) and nothing else
-  changes. "Wrap in a card" is one op: a card cell where the cell was, the
-  cell moved into the card's new content.
-- **Katya (team lead):** three phases, each shippable: the mechanism with
-  the Card, the builder's part, then Tabs and Collapse on the same
-  mechanism and the drawer the actions design wants. No frame concept: a
-  card with one widget IS the frame.
-- **Sasha (QA):** nested layouts are `data-testid="page"` inside a page:
-  the live-page locator (`support/page.ts`) must take the OUTERMOST, and a
-  `the card "<id>" shows the cells "<ids>"` step reads the inner one; `the
-page has N cells` counts the outer page's own cells. Scenarios: a fixture
-  card on the overview holding the counter and its echo (the existing
-  counter scenarios keep passing inside it, proving reactions and the
-  store work nested); the builder adds a card, follows "Edit content", adds
-  a widget inside, comes back; "Wrap in a card"; a view shared with a card
-  in it imports whole; a card nested five deep shows the problem and the
-  page stands. A story per container.
-- **Vlad (fluency):** `NestedLayout` is `useContext` and a `PageView`
-  spread; the card component is two lines; the depth check is one number
-  in the context.
-
-Decision: D, with the content inline. Rejected: A (every package for one
-widget). Deferred: B (regions for designers, if asked). Folded: C (a
-builder action on D).
 
 ## The design, in detail
 
@@ -236,7 +223,7 @@ function AntdCard({ viewModel }: ContractProps<typeof cardContract>) {
   renders it through the engine's renderer with the same `renderCell`,
   the same store and bus (its reactions bind on the same bus; its cells'
   `load` fire as they do on a screen), its own overlay entries under the
-  chain key, `editable: false` always (Dmitri's rule), `reloadKey` passed
+  chain key, `editable: false` always (no nested edit sessions), `reloadKey` passed
   through. Depth over four renders a problem placeholder, never recurses.
   Exposed as `data-testid="page"` with `data-nested="<depth>"` and
   `data-at="card-1"`.
@@ -281,15 +268,22 @@ function AntdCard({ viewModel }: ContractProps<typeof cardContract>) {
 - Overview: the counter and its echo move into a fixture card "Counter";
   `layout.feature`'s cell counts of the overview change by one (two cells
   become one card), noted where they are asserted. Events: `page · load`
-  counts gain one per card on the page — CLAUDE.md's load-events note is
-  updated with it.
+  counts gain one per card on the page (a nested layout fires its own
+  `page · load`, so a page with three cards fires four) — CLAUDE.md's
+  load-events note is updated with it, before a scenario counts log
+  entries. The existing counter scenarios keep passing inside the card,
+  which proves reactions and the store work nested.
+- Locators: nested layouts are `data-testid="page"` inside a page, so the
+  live-page locator (`support/page.ts`) must take the OUTERMOST; a
+  `the card "<id>" shows the cells "<ids>"` step reads the inner one, and
+  `the page has N cells` counts the outer page's own cells.
 - `containers.feature`: the fixture card shows its cells and the counter
   counts inside it; the builder adds a card, follows "Edit content", adds
   a label inside, comes back and sees it in the card; "Wrap in a card" on a
   placed widget; a view with a card is shared and imported whole; a card
   five deep shows the problem and the page stands; the user overlay hides
   a card like any cell.
-- Stories: `antd-card` with a layout in its template; `NestedLayout` jsdom
+- Stories: one per container — `antd-card` with a layout in its template; `NestedLayout` jsdom
   tests for the depth limit and the overlay chain key.
 
 ## Phases
@@ -427,7 +421,8 @@ What stands, where it differs from the design above, and why.
 ## Open to the product owner
 
 - Whether a card's content should be editable IN PLACE some day (a nested
-  session, Ren's warning) or stays "a layout edited as a layout".
+  session, the risk named under "Decision") or stays "a layout edited as
+  a layout".
 - Whether regions dragged as a whole (approach B) are wanted for
   dashboards — a layout engine of its own, independent of D.
 - Whether a BUNDLE export (a layout with every template it references) is

@@ -2,14 +2,13 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-11-05
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-Designed 5 November 2026 with the tiger team (doc/team_tiger.md), at the
-product owner's ask. Status: BUILT 6 November 2026, both phases (story
-WW-31 in doc/product-stories.md) — see "Built" at the end for what the
-build changed about the design.
+Designed 5 November 2026 at the product owner's ask. Status: BUILT
+6 November 2026, both phases (story WW-31 in doc/product-stories.md) —
+see "Built" at the end for what the build changed about the design.
 
-## The ask
+## Description
 
 "Roles for widgets and functionality. On one page an admin has additional
 filters for the table, fires a separate action with additional filter
@@ -60,14 +59,14 @@ Three things hide in that sentence, and they are not the same thing:
 - **Actions**: `{ call, with }`; the handler gets the event, the store and
   the parsed `with`. The table's `load` declares the view
   (`table-view/load` with `url`, `into`, `filters`, `columns`); the
-  request carries `filterIn` and `filterLike` from the store. The team
-  rejected `when` on reactions in the conditions review: "an action
-  decides what it does".
+  request carries `filterIn` and `filterLike` from the store. `when` on
+  reactions was rejected in the conditions review: "an action decides
+  what it does".
 - **Permissions already gate the builder**: `editPages` fails closed
   (`use-playground.ts`); the e2e suite sets it with
   `the store holds at "app.permissions"`.
 
-## The question, and five answers
+## Options considered
 
 How does one page differ by role, without a second page and without an
 expression language?
@@ -112,6 +111,44 @@ session, change without a release, and the names in `viewModels.roles`
 are validated the way page names are — by what the configuration itself
 declares. The HOST tells the builder which roles there are to edit for,
 as it tells it which pages there are.
+
+## Decision
+
+Build C with A kept: the role layer for layouts and wiring, `when` for a
+single widget, the server for data. Phases below. Not built: `when` on
+reactions, a page per role, a roles registry, any `role:` field on cells
+or templates.
+
+Why C. Base, role and user are three instances of ONE overlay schema
+applied by ONE fold, so there is no new resolution code path and no new
+validation walker — the existing ones take a list. A reader opening
+`viewModels.roles.admin` sees the user overlay they already know, keyed
+by role. The role layer picks templates and never carries wiring, so
+`inputs` / `on` / `when` have exactly one home as before. A `role:` field
+on cells, reactions or templates would scatter the answer through the
+tree; with the layer, one place says what admins get.
+
+What it costs: one optional key in the schema, one list on
+`ResolveInput`, the three merge sites taking a list instead of one
+overlay, and the validation walker called once more per role. No new
+registry, no new grammar, no new widget. Everything in the builder is
+phase 2 and reuses the user target's code paths, or it is not built.
+
+What the decision rests on:
+
+- **Roles in the browser are not security.** The layer decides what the
+  page SHOWS and ASKS; the server decides what it ANSWERS from the
+  session, every time. If the admin's extra filter works by sending a
+  parameter a plain user could also send, the role layer is theatre (see
+  "Different data: the server's job").
+- **The fold's order is one sentence**, in the code and here: base, then
+  the roles in the order given, then the user. The host orders the list;
+  the configuration has no inheritance.
+- **A user's saved personal view survives a role change.** Nobody loses
+  their layout on promotion.
+- **The builder says which mechanism to use**, so a page builder does not
+  learn three: a help line under "Show when" (to hide one widget; for a
+  different page use a role).
 
 ## The design
 
@@ -192,6 +229,11 @@ hold roles the pages do not care about; a role in the configuration nobody
 holds is a boot WARNING (dead configuration, like an overlay for a cell
 that is not there), never an error.
 
+The layer is keyed by NAME and does not care whether the name is a role
+or a permission. Roles are coarse and applications outgrow them ("admin,
+but not for billing"), so a host may hand `roles: ["can-see-all-runs"]`.
+The input is called `roles`; it is a list of names the host chooses.
+
 ### Several roles at once
 
 A user with several roles gets ONE page, so the layers must combine by a
@@ -203,7 +245,8 @@ else — no inheritance, no priorities in configuration:
   host hands them on as they came. The server knows that a Wirework admin is
   also an admin; the configuration does not have to say it twice and the
   engine never has to know it at all. A role entry has no `extends`: a
-  hierarchy belongs where the roles are granted.
+  hierarchy belongs where the roles are granted, and the moment a role
+  entry inherits another, somebody builds a diamond.
 - **Later wins, per thing.** For every fact the fold reads — a page's
   view, a cell's template, one setting — the LAST role that sets it wins,
   then the user's own choice over all of them. The admin's entry sets the
@@ -295,7 +338,9 @@ the table, picked by the role layer; the request it sends is the same
 server's decision from the session it sees: a role layer is a USER
 INTERFACE arrangement, not access control. A plain user who types the
 admin's URL into the inspector gets what the server allows a plain user —
-nothing else, or this design is wrong (Ren's point, below).
+nothing else, or this design is wrong. The demo must show it: its
+`/runs/all` refuses a non-admin session (the fake server checks a header
+the host sets), or the demo teaches the wrong lesson.
 
 ### The builder
 
@@ -364,93 +409,33 @@ me (overlay on, target `user`). It gets the third: for a ROLE.
   state JSON shows it; validation reports a role's view that names a
   missing template.
 
-## The tiger team's positions
+### Tests
 
-- **Morgan (product):** the three asks are one feature to the user — "my
-  page looks like my job" — and the answer must not make the page builder
-  learn three mechanisms. Accepts the split as long as the builder says
-  which to use: a help line under "Show when" ("to hide one widget; for a
-  different page use a role"). Wants "Sign in as" in the demo, because a
-  product owner demos roles by switching, not by editing JSON. Asks that
-  a user's saved personal view survive a role change — nobody should lose
-  their layout on promotion.
-- **Alexei (architecture):** C is the design the layers already imply:
-  base, role, user are three instances of ONE overlay schema applied by
-  ONE fold, so no new resolution code paths, no new validation walker — the
-  existing ones take a list. Insists the role layer picks templates and
-  never carries wiring, so `inputs`/`on`/`when` have exactly one home as
-  before. `roles` on `ResolveInput`, not the role name read from the store
-  by the engine: the engine does not know where a host keeps its session.
-- **Dmitri (readability):** a reader opening `viewModels.roles.admin`
-  sees the user overlay they already know, keyed by role — nothing to
-  learn. Against any `role:` field on cells, reactions or templates
-  scattered through the tree: one place says what admins get. The fold's
-  order must be written in one sentence in the code and the doc ("base,
-  then the roles in the order given, then the user") and tested with
-  three layers that all set the same thing.
-- **Katya (team lead):** phase 1 is the schema key, the fold, the
-  validation and the demo — no builder — so the team can configure a role
-  in the inspector and prove the model before UI is spent on it. The
-  builder's third target reuses the user-target code paths or it is not
-  built. The host predicate `user/has-role` is four lines in
-  `demo/install.ts`; the standard set stays eight.
-- **Sasha (QA):** every role fact must be a fact on the page: the cell
-  is there or not (`the page has N cells`), the request URL is the fake
-  server's log (`the server was asked for "/api/v1/view/runs/all"` — a new
-  step over `wirework.requests()`), the shown view is `data-view`. The
-  non-technical QAs test roles by "Sign in as" and a written matrix: role ×
-  page × expected cells; the Gherkin reads the same. Validation of a
-  broken role entry is a unit test with the sentence asserted. The fold
-  gets a table test over the combinations of (base has it, a first role
-  sets it, a second role sets it, the user sets it) for the view, the
-  cell's template and a setting — and the conflict warning its own test
-  with both role names in the sentence.
-- **Ren (contrarian):** first, the obvious objection — "roles in the
-  browser are not security" — and the answer the design must state: the
-  layer decides what the page SHOWS and ASKS; the server decides what it
-  ANSWERS from the session, every time. If the admin's extra filter works
-  by sending a parameter a plain user could also send, the role layer is
-  theatre; the demo's `/runs/all` must refuse a non-admin session (the
-  fake server checks a header the host sets) or the demo teaches the wrong
-  lesson. Second: roles versus permissions. Roles are coarse and
-  applications outgrow them ("admin, but not for billing"); the layer
-  keyed by NAME does not care whether the name is a role or a permission —
-  a host may hand `roles: ["can-see-all-runs"]` — so call the input
-  `roles` for the product owner but say in the doc it is a list of names
-  the host chooses. Third: several roles with conflicting entries — "last
-  wins" is a rule, but the host must be the one ordering the list, and a
-  warning when two held roles set the same cell's view differently would
-  save an afternoon ("Several roles at once" is that answer). Fourth, on
-  Wirework admin: resist `extends` in configuration; the moment a role entry
-  inherits another, somebody builds a diamond. The server already knows
-  who is also an admin; let it say so in the list. Agrees C beats B: a
-  second page is the drift machine every team has built once.
-- **Vlad (fluency):** `roleOverlays` is one `flatMap`; the fold is one
-  `reduce` over `[...roleOverlays, user]` with the function that merges one
-  overlay today; `pickTemplate` takes the candidates as
-  `[user?.view, ...roles.map(r => r?.view).reverse(), cell.template]`; the
-  predicate is one `includes`.
-- **External reviewer:** the minimum is one optional key in the schema,
-  one list on `ResolveInput`, the three merge sites taking a list instead
-  of one overlay, and the validation walker called once more per role.
-  Everything in the builder is phase 2 and reuses the user target. No new
-  registry, no new grammar, no new widget.
-
-## Decision
-
-Build C with A kept: the role layer for layouts and wiring, `when` for a
-single widget, the server for data. Phases below. Not built: `when` on
-reactions, a page per role, a roles registry, any `role:` field on cells
-or templates.
+- Every role fact is a fact on the page: the cell is there or not
+  (`the page has N cells`), the request URL is in the fake server's log
+  (`the server was asked for "/api/v1/view/runs/all"` — a new step over
+  `wirework.requests()`), the shown view is `data-view`.
+- By hand, roles are tested with "Sign in as" and a written matrix: role ×
+  page × expected cells; the Gherkin reads the same.
+- Validation of a broken role entry is a unit test with the sentence
+  asserted.
+- The fold gets a table test over the combinations of (base has it, a
+  first role sets it, a second role sets it, the user sets it) for the
+  view, the cell's template and a setting — three layers that all set the
+  same thing among them — and the conflict warning its own test with both
+  role names in the sentence.
 
 ## Phases
+
+Phase 1 has no builder: a role is configured in the inspector and the
+model is proven before UI is spent on it.
 
 | Phase | Work                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Estimate |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | 1     | Schema: `roles` on `ViewModels` (`userViewModelsSchema` per role, `ROLE_NAME`); engine: `roles` on `ResolveInput`, the fold at the three merge sites, `locateLayoutAt` / inner overlays over the list, validation of every role entry (errors and the dead-role warning), the conflict warning; host: `app.user.roles` from the session, `user/has-role`; demo: the admin runs view with the Owner filter and the admin table template, the fake server's `/runs/all` refusing a non-admin, the settings card, the retry tag's role; "Sign in as"; `roles.feature`; unit tests of the fold and the validation | 1.5 days |
 | 2     | Builder: the edit target as a choice of everyone / a role / me, the page shown as the role sees it, the editor offering the cell's templates as the role's view, the ops routed to `viewModels.roles.<role>`; the page file's `roles` section; scenarios                                                                                                                                                                                                                                                                                                                                                      | 1.5 days |
 
-## Built (6 November 2026; reviewed by the tiger team and amended 7 November 2026)
+## Built (6 November 2026; reviewed and amended 7 November 2026)
 
 Both phases, as designed, with these differences:
 

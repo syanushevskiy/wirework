@@ -2,9 +2,9 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-10-24
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 A page has one layout the team built, and every user may have rearranged it
 for themselves — today into exactly one copy, named "my-own", with no way to
@@ -14,7 +14,12 @@ number of prebuilt alternatives; any number of user views; one list to
 choose from that says which is which; and a view as a JSON file a user can
 save, send and import, with the application deciding where the files go.
 
-Designed 2026-10-24 with the tiger team. Status: **built** (see "Tested").
+What is asked of the product: a user picks a view in one click, sees at a
+glance whether it is prebuilt or their own, and shares one by pasting text
+to a colleague. Keeping views across reloads is another story (WW-19), and
+the sharing must not wait for it.
+
+Designed 2026-10-24. Status: **built** (see "Tested").
 
 ## What a view is
 
@@ -31,52 +36,76 @@ The page shows the one named by `userViewModels.pages.<page>.view`, else
 stored: the data model (`templates` + `view`) already held several named
 templates and a selection; what was missing was the controls and a file.
 
-## The tiger team's positions
+## Options considered
 
-- **Morgan (product):** a user picks a view in one click, sees at a glance
-  whether it is the team's or their own, and shares one by pasting text to
-  a colleague. Persistence across reloads is WW-19, not this story; the
-  sharing must not wait for it.
-- **Alexei (architecture):** no `kind` field in data — a kind derived from
-  the tree cannot lie, and a file cannot claim to be prebuilt. One hook per
-  component (`usePageViews` → `PageViews`), problems and locks as codes,
-  words in the antd package. A versioned file with a kind marker, so a
-  pasted recipe or a widget template is refused by shape, not by accident.
-- **Dmitri (readability):** do not invent a `views` structure beside
-  `templates`; use what resolve already reads. Keep "my-own" as the name of
-  the first copy (the scenarios and the doc say it), number the next
-  ("my-own-2"). No clipboard magic as the only path: the JSON is shown in a
-  text box the user can read and paste from; Copy is a convenience.
-- **Katya (team lead):** writes follow the EDIT TARGET the toolbar already
-  shows — overlay on: Save as / Import make a user view; overlay off: a
-  prebuilt one. One rule the team already knows. Choosing a view needs no
-  permission (it is a preference); creating, renaming, deleting and
-  importing need `editPages`, like Edit page. The host's `save` is the one
-  persistence seam, unchanged.
-- **Sasha (QA):** every control is a Gherkin step; the list's options carry
-  the view's NAME as their title so a step picks by name; the shown view's
-  kind is a `data-kind` fact; every refusal is text under one test id;
-  import takes the JSON as a doc string. Pure tree functions and the file
-  format are unit-tested; the hook with `renderHook`; the component has a
-  story and a jsdom test.
-- **Ren (contrarian):** three challenges, two accepted as limits, one
-  turned into a rule. (1) A view carries the LAYOUT only: the per-cell
-  settings overlay is keyed by page, not by view, so a shared view loses
-  the author's widget tweaks — accepted for now, named below as the
-  follow-up. (2) A shared file names the page's widgets and models; a page
-  changed since shows those cells as problems — accepted: resolve already
-  reports them loudly, nothing is dropped. (3) A user template with a base
-  template's name SHADOWS it (`pageTemplates`: same name, user wins) — so
-  a name a prebuilt view has is refused for a user view, and the other way
-  round. Ren also asked for the admin side: without it "default (admin)
-  template" is a fixture nobody can create — hence the target rule.
-- **Vlad (fluency):** the list is one `flatMap` over the two trees; the
-  checks of a name are one function returning the first problem.
+The data model was not in question — `templates` and `view` were there.
+The choices were about what is added around them.
 
-Decision: build the above. Rejected: a per-view `cells` overlay (a schema
-change through resolve, validation, the editor and every scenario, for a
-secondary need); a `kind` field in the file; a modal dialog (the widget
-editor set the precedent: a panel above the page, nothing floats over it).
+- **Where the views are kept.** A new `views` structure beside
+  `templates`, or the templates resolve already reads. Nothing new was
+  invented: the existing structure was kept.
+- **How a view's kind is known.** A `kind` field stored in the data and
+  in the file, or the kind derived from where the view lives. A field was
+  rejected: a kind derived from the tree cannot lie, and a file cannot
+  claim to be prebuilt.
+- **What a view carries.** The layout alone, or also a per-view `cells`
+  overlay with the author's widget settings. The per-view overlay was
+  rejected: a schema change through resolve, validation, the editor and
+  every scenario, for a secondary need. Its cost is the first limit under
+  "Consequences". (For the layouts inside containers it was built later:
+  "A view holds the layouts inside its containers" below.)
+- **How a view is shared.** The clipboard as the only path, or the JSON
+  shown in a text box the user can read and paste from, with Copy as a
+  convenience. The text box was chosen.
+- **Where the controls open.** A modal dialog, or a panel. The dialog was
+  rejected: the widget editor set the precedent — a panel above the page,
+  nothing floats over it.
+- **Who may create a prebuilt view.** Users' views only, the prebuilt
+  ones left to configuration; or the same controls writing a prebuilt
+  view. Without the admin side, "default (admin) template" is a fixture
+  nobody can create — hence the target rule in the decision.
+
+## Decision
+
+Build the controls and the file over the data model as it is.
+
+- A view's kind is WHERE it lives ("What a view is" above); no `kind`
+  field in the data.
+- The file is versioned and carries a kind marker of its own
+  (`wirework-page-view`), so a pasted recipe or a widget template is
+  refused by shape, not by accident ("The file" below).
+- Writes follow the EDIT TARGET the toolbar already shows: with the
+  overlay on, Save as and Import make a user view; with it off, a prebuilt
+  one.
+- Choosing a view needs no permission — it is a preference. Creating,
+  renaming, deleting and importing need `editPages`, like Edit page.
+- The host's `save` is the one persistence seam, unchanged.
+- The first copy of a prebuilt view is named "my-own", the next ones are
+  numbered ("my-own-2").
+- A user template with a base template's name SHADOWS it
+  (`pageTemplates`: same name, user wins). So a name a prebuilt view has
+  is refused for a user view, and the other way round.
+- One hook per component (`usePageViews` → `PageViews`); problems and
+  locks are codes, their words live in the antd package. The list is one
+  `flatMap` over the two trees; the checks of a name are one function
+  returning the first problem.
+- Every control is a Gherkin step: the list's options carry the view's
+  NAME as their title, so a step picks by name; the shown view's kind is
+  a `data-kind` fact; every refusal is text under one test id; import
+  takes the JSON as a doc string. The pure tree functions and the file
+  format are unit-tested, the hook with `renderHook`, and the component
+  has a story and a jsdom test ("Tested" below).
+
+## Consequences
+
+Two limits were accepted:
+
+- A view carries the LAYOUT only. The per-cell settings overlay is keyed
+  by page, not by view, so a shared view loses the author's widget tweaks
+  — named under "Follow-up" below.
+- A shared file names the page's widgets and models. A page changed since
+  shows those cells as problems: resolve already reports them loudly, and
+  nothing is dropped.
 
 ## Where edits go (amends doc/ADR/0003-layout-engines.md)
 

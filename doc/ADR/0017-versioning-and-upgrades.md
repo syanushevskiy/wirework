@@ -2,15 +2,15 @@
 
 - **Status:** Accepted — the data format built (the stamp, the door, the chain); the release tooling not
 - **Date:** 2026-11-14
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-An architecture decision record. Designed 14 November 2026 with the tiger
-team; the data-format half — phase 2 and the chain of phase 3 — built the
-same day on the team's own choices ("Built" at the end). The release
-tooling of phase 1 is not built, and the five points under "For the owner
-to decide" stay open.
+An architecture decision record. Designed 14 November 2026; the
+data-format half — phase 2 and the chain of phase 3 — built the same day
+on the choices of this record ("Built" at the end). The release tooling of
+phase 1 is not built, and the five points under "For the owner to decide"
+stay open.
 
-## The ask
+## Description
 
 Wirework is published as packages, sits on third-party libraries (antd,
 FlexLayout, gridstack, react-grid-layout, zod, React) and — unlike most
@@ -23,34 +23,6 @@ data was written by whatever version was installed that day. So:
    what people stored?
 3. A template made **two years ago**, **a year ago**, **a week ago**: what
    happens to each when the application is upgraded?
-
-## The answer in short
-
-- Every stored document says which DATA FORMAT it was written in. A
-  document without the mark is format 1 — everything stored up to today.
-- The packages carry an ordered chain of small pure MIGRATIONS, one per
-  format change. Data is brought to the current format WHEN IT IS READ, in
-  memory, before anything else sees it, and is written back in the current
-  format the next time it is saved. Nobody runs anything by hand; a host
-  that wants its database current runs the same function as a batch.
-- The chain is kept for at least 24 months of formats, so the template of
-  two years ago takes the same road as the one of last week — only longer.
-- Data from a NEWER format than the code (a rollback, a file from a
-  colleague on a newer build) is never guessed at and never overwritten:
-  the page shows the shared layout and editing is locked with the reason.
-- Most changes need none of this: adding an optional setting with a
-  default is already compatible. The rule until the chain exists is
-  "additive only".
-- The packages are versioned together (one number for all of them), by
-  semantic versioning, where the stored data, the DOM facts tests read and
-  the names pages use are part of the public API beside the TypeScript one.
-
-| The template was saved | What it holds today                | On the first visit after an upgrade                                                                                        | What the user notices                                |
-| ---------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| a week ago             | the current format, or one behind  | nothing, or one step                                                                                                       | nothing                                              |
-| a year ago             | several formats behind             | every step since, in order, in memory; saved back current with the next save                                               | nothing                                              |
-| two years ago          | at the edge of the chain           | the same, more steps                                                                                                       | nothing                                              |
-| longer ago than that   | older than the oldest step shipped | not read: the page shows the team's layout, the old document is KEPT as it is, a notice says so; a batch brings it forward | a notice — never a silent reset, never a broken page |
 
 ## What there is (read from the code, 14 November 2026)
 
@@ -111,7 +83,7 @@ part of what a host writes contracts against.
 changelog, no record of what a release changed, and no rule for what a
 version number promises.
 
-## The question, and five answers
+## Options considered
 
 How does data written by an old version stay good under a new one?
 
@@ -140,10 +112,48 @@ How does data written by an old version stay good under a new one?
   kind gets a new name beside the old one (`table`, `table-2`). Nothing is
   ever migrated — and every version ever shipped is shipped forever.
 
-**Decision: C is the mechanism; A is the daily discipline; D is offered as
+## Decision
+
+**C is the mechanism; A is the daily discipline; D is offered as
 a tool made of C's own function; E's "a new kind beside the old one" is the
 way out for a redesign no function can carry data across. B is refused for
 anything a person built, and accepted for browser conveniences only.**
+
+The answer in short:
+
+- Every stored document says which DATA FORMAT it was written in. A
+  document without the mark is format 1 — everything stored up to today.
+- The packages carry an ordered chain of small pure MIGRATIONS, one per
+  format change. Data is brought to the current format WHEN IT IS READ, in
+  memory, before anything else sees it, and is written back in the current
+  format the next time it is saved. Nobody runs anything by hand; a host
+  that wants its database current runs the same function as a batch.
+- The chain is kept for at least 24 months of formats, so the template of
+  two years ago takes the same road as the one of last week — only longer.
+- Data from a NEWER format than the code (a rollback, a file from a
+  colleague on a newer build) is never guessed at and never overwritten:
+  the page shows the shared layout and editing is locked with the reason.
+- Most changes need none of this: adding an optional setting with a
+  default is already compatible. The rule until the chain exists is
+  "additive only". The daily rule fits in a pull-request template —
+  "additive, with a default; anything else carries a changeset and a
+  migration" — and the guard on the contracts ("How it is tested")
+  enforces it, so nobody has to remember.
+- The packages are versioned together (one number for all of them), by
+  semantic versioning, where the stored data, the DOM facts tests read and
+  the names pages use are part of the public API beside the TypeScript one.
+
+Three promises to a user follow, in this order: my page never breaks
+because the application was updated; what I built is never thrown away
+without telling me; I do nothing to be upgraded. The table below is the
+acceptance.
+
+| The template was saved | What it holds today                | On the first visit after an upgrade                                                                                        | What the user notices                                |
+| ---------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| a week ago             | the current format, or one behind  | nothing, or one step                                                                                                       | nothing                                              |
+| a year ago             | several formats behind             | every step since, in order, in memory; saved back current with the next save                                               | nothing                                              |
+| two years ago          | at the edge of the chain           | the same, more steps                                                                                                       | nothing                                              |
+| longer ago than that   | older than the oldest step shipped | not read: the page shows the team's layout, the old document is KEPT as it is, a notice says so; a batch brings it forward | a notice — never a silent reset, never a broken page |
 
 ## The design
 
@@ -169,8 +179,17 @@ One optional key at the root of each stored document — `viewModels`,
 - The files keep `version: 1` for their envelope (kind, page, name) and
   gain the same `versions` for what they carry.
 
-Why per owner and not per widget kind, or one number: see Alexei, Dmitri
-and Ren below.
+Why per owner, and not per widget kind or one number:
+
+- **A number per contract** was weighed — each contract owns its shape, so
+  it could own its number. Refused for the stamp: it is a map of
+  thirty-two numbers in every user's document, for packages that are
+  released together anyway. The ownership is kept: the steps live with the
+  contract and the engine they change.
+- **One number** was weighed — "format 8" is something a support engineer
+  can say on the phone. Refused: a host's own contracts change on the
+  host's calendar and cannot share a line with the library's. Hence two,
+  `wirework` and `app`.
 
 ### 2. A migration
 
@@ -186,7 +205,14 @@ defineMigration({ owner: "app", to: 4, action: rename("runs/overview", "runs/sum
 Five places a step can apply, no more: a kind's SETTINGS, an engine's
 TEMPLATE, a CELL (a widget type renamed), an ACTION call (its name, its
 parameters), a PREDICATE. A change to the trees' own shape is a sixth, for
-`@wirework/schema` alone.
+`@wirework/schema` alone. The five places are the ceiling, not a list to
+implement on day one.
+
+The chain is one fold: the steps after the stamp, in order, reduced over
+the document. A step is one expression made of the verbs below — a
+migration is read in thirty seconds as `rename("a", "b")`, not as a
+function walking a tree. If a migration needs a loop, the shape it
+migrates was wrong.
 
 Four rules every step keeps, each checked by a shared test helper:
 
@@ -215,7 +241,8 @@ engine its own, a host registers the `app` chain beside its actions.
   changed and a report — called by the host where it loads its trees,
   before they reach the store. After the door, everything is current: the
   resolver, validation, the builder and every widget never see an old
-  shape and contain no version checks.
+  shape and contain no version checks. Old shapes exist in exactly one
+  function and in the corpus; a version check anywhere else is a defect.
 - **On import.** A view file and a page file are upgraded by their own
   stamp before they are merged (`parsePageViewFile`, `mergePageFiles`).
 - **Written back with the next save.** The commit path stamps what it
@@ -256,7 +283,10 @@ key, ignores the whole overlay, and the user's next save overwrites it.
   which: a BEHAVIOUR CHANGE meant for everyone (one-line cells), or a new
   default for new templates only — then it ships with `pinDefault`, which
   writes the old value into the shared templates that never said
-  otherwise. A user's sparse settings are left alone; they inherit.
+  otherwise. A user's sparse settings are left alone; they inherit. When
+  a default changes what every table looks like, the release notes say it
+  in a sentence a customer can read — this week's three would each have
+  earned one.
 - **A new setting without a default** is a breaking change and needs a
   step that gives old templates a value.
 - **Removing or renaming** a setting, a kind, an action, a predicate goes
@@ -332,7 +362,9 @@ on an upgrade and must never crash; what a person BUILT may not reset.
   change a script copies today's documents — the demo pages' trees, a user
   overlay with views and cell settings, a view file, a page file, a
   FlexLayout model — into `fixtures/formats/<n>/`. They are never edited
-  again. Format 1 is frozen NOW, before the first change.
+  again. Format 1 is frozen NOW, before the first change: after the first
+  breaking change it cannot be recreated honestly. Without the corpus a
+  migration is tested against data its author imagined.
 - **One test over the corpus:** every document of every past format goes
   through the chain and then through the boot validation with no error.
   A step that breaks last year's data fails here, not at a customer.
@@ -360,66 +392,30 @@ on an upgrade and must never crash; what a person BUILT may not reset.
   one fails until it carries a changeset; a change that is not additive
   fails until it carries a migration.
 
-## The tiger team's positions
+- **A staging run of the batch** over a copy of production before every
+  release that changes the format. The two scenarios are in plain
+  language so that a manual tester can check an upgrade on a staging copy
+  of real data.
 
-- **Morgan (product):** three promises to a user, in this order: my page
-  never breaks because the application was updated; what I built is never
-  thrown away without telling me; I do nothing to be upgraded. The table
-  at the top is the acceptance. One request: when a default changes what
-  every table looks like, the release notes say it in a sentence a
-  customer can read — this week's three would each have earned one.
-- **Alexei (architecture):** one door. Old shapes exist in exactly one
-  function and the corpus; a version check anywhere else is a defect.
-  Argued for a version per CONTRACT — each contract owns its shape, so it
-  should own its number. Gave way on the stamp (a map of thirty-two
-  numbers in every user's document, for packages that are released
-  together anyway), kept the ownership: the steps live with the contract
-  and the engine they change.
-- **Dmitri (readability):** wanted ONE number — "format 8" is something a
-  support engineer can say on the phone. Accepted two (`wirework`, `app`)
-  because a host's own contracts change on the host's calendar and cannot
-  share a line with the library's. Insisted on the ready verbs: a
-  migration a junior reads in thirty seconds is `rename("a", "b")`, not a
-  function walking a tree. And no "smart" tolerant parsing — a strict
-  schema and a visible step.
-- **Katya (team lead):** the daily rule is the product: "additive, with a
-  default; anything else carries a changeset and a migration" fits in a
-  pull-request template, and the contracts guard enforces it so nobody
-  has to remember. Lockstep versions: one number to tell a host. The
-  batch is a function, not a service — hosts own their databases.
-- **Sasha (QA):** the frozen corpus is the feature; without it a migration
-  is tested against data its author imagined. Format 1 must be frozen this
-  week — after the first breaking change it cannot be recreated honestly.
-  The test ids and `data-*` facts are API: the suite of every host is
-  written against them. Two scenarios in plain language so the manual
-  testers can check an upgrade on a staging copy of real data — and a
-  staging run of the batch over a copy of production before every release
-  that changes the format.
-- **Ren (contrarian):** three challenges. (1) "Do we need this at all?
-  Nothing has broken." — Nothing has been removed yet, and the day
-  something is, the strict schemas turn it into broken cells for one user
-  at a time, which is the worst kind of bug to hear about. But the
-  challenge is half right: see the phases — the chain is built when the
-  first non-additive change is wanted, not before. (2) "Migrate-on-read
-  means the code carries every past forever." — hence the floor, and the
-  batch that lets a host move it. (3) "The rollback story is weak." —
-  conceded: after a format change is saved, the older build is locked out
-  of that data. Down-migrations were weighed and refused; the patch rule
-  is what is offered, and the risk is named: a MINOR that changes the
-  format should sit a week on staging before production. Ren also named
-  what to watch: the `app` chain is written by hosts, and a host's bad
-  step corrupts that host's data — the helper and the corpus must be as
-  easy for a host to use as for us.
-- **Vlad (fluency):** the chain is one fold — the steps after the stamp,
-  in order, reduced over the document — and a step is one expression made
-  of the verbs. If a migration needs a loop, the shape it migrates was
-  wrong.
-- **The external reviewer:** the least code that keeps the promise. The
-  reader of the stamp and the lock for the future are small and cannot be
-  added later — build them. The chain, the verbs and the command for page
-  folders wait for the first change that needs them; until then the
-  contracts guard holds the line at "additive only". Five places a step
-  may apply is the ceiling, not a list to implement on day one.
+## Risks to watch
+
+- **"Nothing has broken, so nothing is needed."** Nothing has been removed
+  yet. The day something is, the strict schemas turn it into broken cells
+  for one user at a time — the worst kind of bug to hear about. The
+  objection is half right all the same: the chain is built when the first
+  non-additive change is wanted, not before (phase 3). The reader of the
+  stamp and the lock for data from the future are small and cannot be
+  added later, so they are built first (phase 2); until the chain exists
+  the contracts guard holds the line at "additive only".
+- **Migrate-on-read means the code carries its past.** Hence the floor
+  (section 6) and the batch that lets a host move it.
+- **Rollback is the weak point.** After a format change is saved, the
+  older build is locked out of that data. Down-migrations were weighed and
+  refused (section 4); the patch rule is what is offered. A MINOR that
+  changes the format should sit a week on staging before production.
+- **The `app` chain is written by hosts.** A host's bad step corrupts that
+  host's data: the shared test helper and the corpus must be as easy for a
+  host to use as for the packages themselves.
 
 ## Consequences
 
@@ -452,15 +448,16 @@ on an upgrade and must never crash; what a person BUILT may not reset.
 
 ## For the owner to decide
 
-1. The stamp per owner (`wirework`, `app`) — the team's choice — or per
-   widget kind (Alexei's first position).
+1. The stamp per owner (`wirework`, `app`) — the choice built — or per
+   widget kind (weighed in section 1).
 2. The floor: 24 months of steps kept. Longer costs little; shorter saves
    almost nothing.
 3. Whether a host persists an upgraded user overlay at once or with the
-   user's next save (the team: next save; at once for the shared trees).
+   user's next save (this record: next save; at once for the shared
+   trees).
 4. No down-migrations, and the patch rule in their place.
-5. When 1.0 is cut — the team: with the first host in production outside
-   the team.
+5. When 1.0 is cut — this record: with the first host in production
+   outside the team.
 
 ## Built (14 November 2026): the stamp, the door and the chain
 

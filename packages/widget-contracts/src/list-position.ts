@@ -11,6 +11,12 @@
  * the scale is moved and the list scrolls there — and, windowed, asks for
  * the slice of rows at that place. The widget itself knows no list.
  *
+ * A list whose END IS NOT KNOWN yet (`hasMore` true: `total` is the rows
+ * known so far) is shown as "401–425 of 800+": the scale runs over the
+ * rows known and grows with them — but keeps its length while its handle
+ * is held —, and no percent is shown: a share of an unknown whole would be
+ * a guess. Exposed as `data-open`.
+ *
  * Implementations render the scale as a role=slider named by the `label`
  * setting, over the positions 0 … total − visible, moving in whole rows,
  * and show the percent as how far the LAST row in view is into the list
@@ -41,6 +47,13 @@ export const listPositionContract = defineContract({
         description: "Store path holding how many rows the list has",
         value: z.number().int().min(0),
         default: 0,
+      },
+      hasMore: {
+        description:
+          'Store path holding whether the list GOES ON past the total — the total is then the rows known so far (optional; shown as "of 800+", no percent)',
+        value: z.boolean(),
+        required: false,
+        default: false,
       },
       visible: {
         description: "Store path holding how many rows are in view (optional; one without it)",

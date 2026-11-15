@@ -2,9 +2,9 @@
 
 - **Status:** Accepted — built
 - **Date:** 2026-10-24
-- **Deciders:** the tiger team (doc/team_tiger.md)
+- **Deciders:** the product owner
 
-## Motivation
+## Description
 
 The infinite table (WW-21) appends rows as the user scrolls and KEEPS them
 all in the DOM: a list that grew to a few thousand rows renders a few
@@ -18,67 +18,90 @@ Two asks: (1) render only a WINDOW of rows twice the box's height, so the
 infinite table works as a virtual list however many rows it holds; (2) move
 the header filters where the paged table can use them too.
 
-Designed 2026-10-24 with the tiger team. Status: **built** (see "Tested").
+Designed 2026-10-24. Status: **built** (see "Tested").
 
-## The tiger team's positions
+## Options considered
 
-- **Morgan (product):** nothing the user sees changes — the list still
-  scrolls, grows at its end and filters from its headers — it only stays
-  smooth at thousands of rows. On the runs page, filtering from a header
-  must behave exactly as from the bar: one choice, shown in both. Ship
-  both as one story.
-- **Dmitri (readability):** antd's own `virtual` Table was the first
-  candidate and is rejected: it OWNS the scroll box, so the sticky header,
-  the end line and the `more` observer — all of which work today — would
-  be rewritten around it; it needs `scroll.x`/`scroll.y` and fixed column
-  widths; its overscan is not ours. A window is forty lines of arithmetic
-  over scrollTop, box height and row height. Spacer rows above and below
-  the rendered ones keep the scrollbar honest — no transforms, no absolute
-  positioning. Measure the row height, never assume it.
-- **Alexei (architecture):** the window is a PURE function —
+For the row window:
+
+- **antd's own `virtual` Table.** The first candidate. It OWNS the scroll
+  box, so the sticky header, the end line and the `more` observer — all of
+  which worked already — would be rewritten around it; it needs
+  `scroll.x` / `scroll.y` and fixed column widths; and its overscan is not
+  ours to set.
+- **A window of our own over the existing table.** About forty lines of
+  arithmetic over scrollTop, the box's height and the row height, with
+  spacer rows above and below the rendered ones to keep the scrollbar
+  honest — no transforms, no absolute positioning. Its cost: the row
+  height has to be measured, and rows of different heights make the
+  spacers a few pixels off (see "Consequences").
+- **How large the window is: a count of rows, or a part of the box.**
+  react-window's overscan counts rows. A window measured in box heights
+  works for any row height; its cost is that a fast scroll shows blank
+  space beyond one box height.
+
+For the header filters:
+
+- **Leave them in the infinite table.** A paged table then filters only
+  through a filter bar beside it — the state this record starts from.
+- **One hook both tables call**, with the ports and events declared once
+  and shared by both contracts.
+- **How a table says it offers its headers: a setting, or deduced from
+  which ports are bound.** A setting says it in the table's template and
+  lets each kind have its own default; a flag deduced from the bindings
+  was refused, and so was a new widget kind.
+
+## Decision
+
+Both asks are built as one story.
+
+- **The window is our own**, not antd's `virtual` prop: a PURE function —
   `rowWindow({ scrollTop, boxHeight, rowHeight, count })` → `{ start, end,
-above, below }` — in its own file with its own tests; `useRowWindow`
-  only measures and listens. The header filters become ONE hook both
-  tables call (`useTableHeaders`), the contracts share the ports and
-  events (`tableHeaderPorts`, `tableHeaderEvents`) instead of the infinite
-  table owning them, and the search box's class is the tables', not the
-  infinite table's.
-- **Katya (team lead):** whether a table offers its headers is a SETTING,
-  `headerFilters`, on both kinds — off for the table (every page built so
-  far keeps its look), on for the infinite table (that is what it is for).
-  The runs page turns it on, so the demo shows the bar and the headers
-  writing one `filterIn`. No new widget kind, no flag deduced from which
-  ports are bound.
-- **Sasha (QA):** a rendered-row count is now a PIXEL fact, so the
-  scenarios stop asserting it where the window is smaller than the list:
-  "the list holds N rows" reads `data-held`, "the infinite table renders
-  only a window of its rows" asserts fewer rows in the DOM than held, "I
-  scroll the infinite table to its top" brings the first row back before
-  "the first table row is …". The runs page reuses the header steps
-  unchanged. A story seeds two hundred rows and asserts the window moves
-  with the scroll; the pure function has unit tests for the edges (fewer
-  rows than the window, the end, an empty list).
-- **Ren (contrarian):** four challenges. (1) Rows of different heights —
-  the window uses the AVERAGE height of the rendered rows, so a wrapped
-  cell makes the spacers a few pixels off and the scroll drifts by that
-  much; accepted: the tables are `size="small"` single-line lists, and the
-  drift corrects itself as the rows it measured scroll into the window.
-  (2) "Twice the box" means a fast scroll shows blanks beyond one box
-  height; accepted — react-window's overscan counts rows, ours counts a
-  fraction of the box, which works for any row height. (3) Does `more`
-  still fire? The end line stays AFTER the bottom spacer, so the end comes
-  into view exactly when it did before — nothing changes. (4) Two controls
-  for one filter on the runs page — the bar and the header; kept
-  consistent because both are CONTROLLED from `runs.filterIn`, and the bar
-  stays for the Suite filter whose values are the page's own (a header
-  shows those same values as a list, since the page overrides them).
-- **Vlad (fluency):** the window is one expression per number; the antd
-  props of a header one function of the column and what is chosen; the
-  spacer rows one `components.body.wrapper`.
+above, below }` — in its own file with its own tests; `useRowWindow` only
+  measures and listens. The window is twice the box's height, measured in
+  box heights, not in rows. The row height is measured, never assumed.
+  Spacer rows above and below the rendered ones stand in for the rest.
+- **The header filters are ONE hook both tables call** (`useTableHeaders`).
+  The contracts share the ports and events (`tableHeaderPorts`,
+  `tableHeaderEvents`) instead of the infinite table owning them, and the
+  search box's class is the tables', not the infinite table's.
+- **Whether a table offers its headers is a SETTING**, `headerFilters`, on
+  both kinds — off for the table (every page built so far keeps its look),
+  on for the infinite table (that is what it is for). It is not deduced
+  from the bound ports, and there is no new widget kind. The runs page
+  turns it on, so the demo shows the bar and the headers writing one
+  `filterIn`.
 
-Decision: build the above. Rejected: antd's `virtual` prop (see Dmitri);
-a window measured in rows rather than box heights; deducing `headerFilters`
-from the bound ports.
+Nothing the user sees changes: the list still scrolls, grows at its end
+and filters from its headers — it only stays smooth at thousands of rows.
+On the runs page, filtering from a header behaves exactly as from the bar:
+one choice, shown in both.
+
+## Consequences
+
+- **Rows of different heights.** The window uses the AVERAGE height of the
+  rendered rows, so a wrapped cell makes the spacers a few pixels off and
+  the scroll drifts by that much. Accepted: the tables are `size="small"`
+  single-line lists, and the drift corrects itself as the rows it measured
+  scroll into the window.
+- **A fast scroll shows blanks** beyond one box height: the price of a
+  window that is twice the box. Accepted.
+- **`more` still fires as before.** The end line stays AFTER the bottom
+  spacer, so the end comes into view exactly when it did.
+- **Two controls for one filter on the runs page** — the bar and the
+  header. They stay consistent because both are CONTROLLED from
+  `runs.filterIn`. The bar stays for the Suite filter, whose values are
+  the page's own (a header shows those same values as a list, since the
+  page overrides them).
+- **A rendered-row count is now a PIXEL fact**, so the scenarios stop
+  asserting it where the window is smaller than the list: "the list holds
+  N rows" reads `data-held`, "the infinite table renders only a window of
+  its rows" asserts fewer rows in the DOM than held, and "I scroll the
+  infinite table to its top" brings the first row back before "the first
+  table row is …". The runs page reuses the header steps unchanged. A
+  story seeds two hundred rows and asserts the window moves with the
+  scroll; the pure function has unit tests for the edges (fewer rows than
+  the window, the end, an empty list).
 
 ## The window
 
@@ -263,6 +286,77 @@ it off. Tested by
 `column-state.test.ts`, the `antd-table` stories `ColumnMenu`,
 `ColumnStateKept` and `ColumnStateInTheStore`, and `table-columns.feature`.
 
+### Amended: the button's label, required columns, pinning (15 November 2026)
+
+The owner: "Settings icon to configure column state should have label
+Columns also there should show and have functionality of required columns
+so you cannot hide them and also ability to pin columns to right or left
+and menu should show it accordingly."
+
+- **The button reads "Columns"** beside its settings icon, and that is its
+  accessible name ("Column settings" before): what is seen is what it is
+  called.
+- **A REQUIRED column** is a fact of the COLUMN (`required: true`; with the
+  table-view loader the page's `columns.<id>.required`), not of the user's
+  state: the menu lists it with its checkbox checked and locked and a lock
+  icon; "Columns" above the list hides every column but the required ones;
+  and `shownColumns` shows it whatever the state says — a state kept before
+  the column became required, or written by hand, cannot hide it. It is
+  moved and pinned like any other.
+- **PINNING** — the "not built" above, now that the tables scroll sideways.
+  The state gains `pinned`, `{ <property>: "left" | "right" }`, OPTIONAL
+  and absent while nothing is pinned: a state kept before pinning existed
+  parses and compares as it did, so nothing stored changes and no
+  migration is needed (ADR-0017: additive). A pinned column is antd's
+  `fixed` column, and — since antd lays fixed columns out sensibly only at
+  the table's edges — pinned columns STAND at their edge: the ones pinned
+  left first, the ones pinned right last, each group in the state's order.
+  `orderedColumns` does it once, so the table, the menu, the cell selection
+  and the export agree.
+- **The menu shows it**: the list is in the table's order, a rule between
+  the three groups, and every line ends in two toggles — to the left, to
+  the right — the pressed one saying where the column stands; pressing it
+  again lets the column go. A column DRAGGED beside a pinned one is pinned
+  with it, and one dragged out of the pinned is let go (`droppedColumn`):
+  otherwise a drop would not stay where it was made.
+- Weighed and left out: a pin a PAGE configures (`pin` on the column) —
+  the user's own pin would then need a third value, "not pinned", to undo
+  it; nobody asked for it. Captions over the groups ("Pinned left") inside
+  antd's Tree, where a caption would be a node that can be dropped on.
+
+**Amended again the same day**, on the owner's word after seeing it: "if
+it is required column in menu should have tag like label 'always' with
+icon in the tag. Also instead of icons for pinning I want three dots as
+actions for every column with menu on hover with menu items Pin Left and
+Pin right. If columns that are pinned they should be visually split with
+other columns. So there be three sections in Columns Menu. PINNED LEFT,
+COLUMNS and PINNED RIGHT. PINNED LEFT AND RIGHT should appear only if
+there are pinned columns" — and: "when column is pinned it should have
+following action: Unpin and Pin with other direction."
+
+- The lock icon is a TAG, "Always", with the lock in it.
+- The two toggles are THREE DOTS at the end of every line, opening the
+  column's actions on hover (and on a press, where nothing hovers): "Pin
+  left" and "Pin right" for a column that is not pinned; for a pinned one
+  "Unpin" and the pin to the OTHER edge. The menu a choice was made in does
+  not stay open over the line as it moves to its new place.
+- The SECTIONS and their captions are built after all — "weighed and left
+  out" below no longer holds for them: a caption is a line of antd's Tree
+  that cannot be dragged, and a drop UNDER it is the head of its section
+  (antd names the place above a section's first column "after the line
+  before it", which is the caption — refusing it made the top of the list
+  unreachable, as the first e2e run showed); a drop above a caption is no
+  place. COLUMNS is always there; the pinned sections only while they hold
+  a column.
+
+The archive's `#` is required. The archive has the menu since the owner
+turned it on (`"columnMenu": true`), so the two scenarios that asserted it
+has none were stale and are replaced: `table-columns.feature` gains the
+required and pinning scenarios there, `table-toolbar.feature`'s last one
+asserts only that the archive lists no tools; a table with the setting off
+is the `NoToolbar` story. Tested by `column-state.test.ts` (four more),
+the story `RequiredAndPinnedColumns`, and three scenarios.
+
 ## A date column is filtered by a period (12 November 2026)
 
 The owner: "date columns by default should support in header filter
@@ -397,7 +491,7 @@ Tested by the `antd-table` story `HeaderFilters` (search by label, two
 tags, Reset, Done) and the scenarios that use the header steps
 (`infinite-table.feature`, `table-view.feature`, `table-toolbar.feature`).
 
-## The tiger team's review of the above (12 November 2026)
+## Review of the above (12 November 2026)
 
 A review of the column menu, the period filter, the toolbar, the
 ahead-of-time window and the sideways scroll before they were committed.
@@ -439,7 +533,7 @@ Tested by `table-view.test.ts` (no `loading` for a joining batch),
 `FiltersOfHiddenColumnsStay`, `PeriodNeedsItsPort` and `FilterRowPeriod`,
 and `table-width.feature`.
 
-## A list whose end is not known yet (12 November 2026, designed — not built)
+## A list whose end is not known yet (12 November 2026, designed — built 14 November 2026)
 
 The owner: "I need [the list position] also work when total is unknown and
 work with only how many rows were fetched. So if the end was found, it
@@ -474,60 +568,51 @@ beyond the first batch, a scale of zero length.
   Simple, and it refuses exactly what was asked: scrolling back and ahead
   along what is known.
 
-### The tiger team's positions
-
-- **Morgan (product):** the user must never be told a number that is not
-  true. "401–425 of 800+" is true; "of 800" is not, and neither is "53%".
-  While the end is unknown show the rows in view and the count so far with
-  a plus, and NO percent — a percent that goes backwards as the list grows
-  reads as a bug. The moment the end is found it becomes the list it always
-  was. The handle may move by itself when more rows arrive: that is the
-  list telling the truth.
-- **Alexei (architecture):** C, with the rule in one pure place. A total
-  that is "at least" is still one fact with a qualifier — not two facts.
-  `hasMore` is the server's knowledge, so the LOADER writes it, beside
-  `total`; no widget deduces it from which ports are bound or from a batch
-  size it does not know. `listPercent` stays as it is and is simply not
-  shown while `hasMore`.
-- **Dmitri (readability):** one boolean a junior reads in a second:
-  `total` rows are known, `hasMore` says whether that is all. Reject D —
-  an estimate is magic with a correction step. In the table it is one
-  changed condition per mode: "more to ask for" was `held < total`, it
-  becomes `held < total || hasMore`.
-- **Katya (team lead):** nothing changes for a page that binds no
-  `hasMore`: the runs, history and archive pages are untouched. One new
-  port on two contracts, one new place under `<into>`, no new setting. The
-  view declaration says whether to count at all (`countRows: false` sends
-  the request's `totalRecords: false`); a server that sends no
-  `totalRecords` anyway gets the same treatment without it.
-- **Sasha (QA):** the facts go on the DOM so the scenarios read them:
-  `data-total` and `data-open` on the position widget and the table. Steps
-  in the testers' words: `the list stands at row 1 of at least 200`, `the
-list's end is not known`, `the list's end is known`. The fake archive
-  server gets an uncounted address with a length that is an exact multiple
-  of the batch — the nasty case: a full last batch, so the end is found
-  only by the empty one after it.
-- **Ren (contrarian):** four challenges. (1) "Why not B — a total that is
-  not a total will be misread." Kept C: every reader of `total` today
-  already treats it as an upper edge of what it can show, which is exactly
-  what it still is; the one consumer that must not trust it, the "ask for
-  more" test, is the one being changed. (2) The handle at the very end is
-  a moving target: the user drags to the end, more rows arrive, the handle
-  slides back to 75% — accepted and intended, it is how they scroll ahead;
-  but a drag IN PROGRESS must not be yanked: the scale's length is held
-  while the handle is down. (3) A windowed list drops far batches; "known"
-  must not shrink with them — the loader keeps the high-water mark, so the
-  user scrolls back over rows that are no longer held and they are fetched
-  again (`before` / `around`, as today). (4) A filter changes everything:
-  the mark starts over with any load that is not `more` or `window`.
-- **Vlad (fluency):** the loader's rule is two expressions — the mark is
-  `max(mark, offset + rows.length)`, `hasMore` is `rows.length === limit`
-  — and the widget's range text one template with a suffix.
-- **External reviewer:** the least code is C: no new widget, no new event,
-  no estimate to correct. The list-position hook gains one port read and
-  one flag; the table one condition in `sliceRequest` and one in `more`.
-
 ### Decision: C — `total` is the rows known, `hasMore` says the list goes on
+
+Why C. A total that is "at least" is still one fact with a qualifier, not
+two facts. B was weighed against it for the worry that a total which is
+not a total will be misread; C was kept because every reader of `total`
+already treats it as an upper edge of what it can show, which is exactly
+what it still is — the one consumer that must not trust it, the "ask for
+more" test, is the one being changed. C is also the least code: no new
+widget, no new event, no estimate to correct. The list-position hook gains
+one port read and one flag; the table one condition in `sliceRequest` and
+one in `more` ("more to ask for" was `held < total`, it becomes `held <
+total || hasMore`).
+
+The rules the design rests on:
+
+- **The user is never told a number that is not true.** "401–425 of 800+"
+  is true; "of 800" is not, and neither is "53%". While the end is unknown
+  the widget shows the rows in view and the count so far with a plus, and
+  NO percent — a percent that goes backwards as the list grows reads as a
+  bug. `listPercent` stays as it is and is simply not shown while
+  `hasMore`. The moment the end is found the list is the one it always
+  was.
+- **`hasMore` is the server's knowledge, so the LOADER writes it**, beside
+  `total`. No widget deduces it from which ports are bound or from a batch
+  size it does not know.
+- **Nothing changes for a page that binds no `hasMore`.** One new port on
+  two contracts, one new place under `<into>`, no new setting. The view
+  declaration says whether to count at all (`countRows: false` sends the
+  request's `totalRecords: false`); a server that sends no `totalRecords`
+  anyway gets the same treatment without it.
+- **The handle may move by itself.** The user drags to the end, more rows
+  arrive, the handle slides back to 75% — accepted and intended: it is how
+  they scroll ahead. But a drag IN PROGRESS must not be yanked: the
+  scale's length is held while the handle is down.
+- **"Known" does not shrink.** A windowed list drops far batches; the
+  loader keeps the high-water mark, so the user scrolls back over rows
+  that are no longer held and they are fetched again (`before` / `around`,
+  as before).
+- **The facts go on the DOM so the scenarios read them:** `data-total` and
+  `data-open` on the position widget and the table. The steps:
+  `the list stands at row 1 of at least 200`, `the list's end is not
+known`, `the list's end is known`. The fake archive server gets an
+  uncounted address with a length that is an exact multiple of the batch —
+  the hard case: a full last batch, so the end is found only by the empty
+  one after it.
 
 **The loader** (`table-view/load`), when the answer carries no
 `totalRecords` (the server does not count, or the view said
@@ -564,7 +649,8 @@ total || hasMore`. The user cannot scroll past what is known; reaching
 - The scale runs over `0 … total − visible` as today; `total` is now the
   rows known, so the handle is where the view stands AMONG THE ROWS KNOWN
   and moves by itself when more become known. While the handle is held
-  down the scale keeps the length it had (Ren's second point).
+  down the scale keeps the length it had (a drag in progress is not
+  yanked).
 - The range reads "401–425 of 800+" while `hasMore`; the percent is not
   shown (`showPercent` is ignored until the end is found). Exposed as
   `data-open="true"`; the slider's `aria-valuetext` says "row 401 of at
@@ -591,16 +677,61 @@ the three-batch limit of a windowed list.
    `list-position.feature` scenarios for scrolling ahead until the end is
    found, scrolling back over dropped rows, and a filter starting over.
 
+### Built (14 November 2026)
+
+Both phases, on the owner's word: "make for archive page. Amount of rows
+unknown until it reaches 2000". The ARCHIVE page itself is the uncounted
+list — its declaration says `countRows: false`, the request goes out with
+`totalRecords: false`, and the fake server, which always honoured that
+flag, answers with rows only; no second address and no switch. Two
+thousand is ten full batches, the hard case named above: the end is found
+by the eleventh, empty one.
+
+What the build does differently from the text above:
+
+- **The mark starts over by the FILTERS, not only by the kind of load.**
+  The design said "a load that is not `more` or `window` starts the mark
+  over" — but the archive's own filter and sort reactions ARE `window`
+  loads (they ask for the slice at row 0), and so is a jump to the top. The
+  loader therefore remembers, per store and view, the filters the list was
+  being learned under: other filters are another list and start over; the
+  same filters keep the mark and a found end, whatever the load. A plain
+  load (the first one, a refresh) still starts over, as designed. A sort
+  does not: it does not change how many rows there are.
+- **Once the end is found it stays found** under those filters: a later
+  full batch from the middle of the list (a jump back) does not turn
+  `hasMore` on again.
+- **`hasMore: false` is written for a counted answer only where the store
+  already holds a `hasMore`** — the runs and history pages' state gains no
+  new key.
+- **The status line of a WINDOWED list** (the design named only the plain
+  one): "800+ rows" while the end is unknown, "2000 rows" after. The plain
+  list reads "200 rows, more to load".
+- **The scale's tooltip** says "row 401 of at least 800" while a percent
+  would be a guess — the same words as the handle's `aria-valuetext`.
+
+Steps: `the list stands at row <n> of at least <known>`, `the list's end
+is not known` / `is known` (`data-open` on the table and the scale, and
+the percent absent or present), `I scroll the infinite table until the
+list's end is found`. Every archive scenario that read "2000 rows" on
+opening reads "200+ rows" (`table-periods.feature`); the jump along the
+scale is tested after the end is found, and a click at the scale's end
+before that is the "scroll ahead" scenario.
+
+Not built: the plain (not windowed) list's `more` with `hasMore` has unit
+coverage in the loader and the one changed condition in the hook, but no
+demo page and no scenario; `pagination` is unchanged, as decided.
+
 ## Cells are selected and copied (13 November 2026)
 
-The owner asked the tiger team whether several cells could be selected and
+The owner asked whether several cells could be selected and
 their values copied, then chose: a rectangle of cells as AG Grid selects
 them — a click selects a cell, shown selected with a small square at its
 bottom-right corner "so you know it's draggable" —, and a right-click menu
 with Copy, Copy with Headers and Export current data as CSV; a tag copies
 its text, a link cell its link.
 
-**What the team found.** antd's Table selects whole rows only, so the
+**What was found.** antd's Table selects whole rows only, so the
 rectangle is our own code — pointer events and numbers, as the layout
 engines' drag is. The browser's own text selection cannot take a column
 rectangle, copies a custom cell's button text with its value, and loses the

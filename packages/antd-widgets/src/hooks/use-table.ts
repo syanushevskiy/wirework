@@ -7,6 +7,7 @@
  * `headerFilters` setting on — each column's filter and sorting in its
  * header.
  */
+import { useMemo } from "react";
 import type { TableColumnsType, TableProps } from "antd";
 import type { Emit, PortDefinition, ReadableStore } from "@wirework/schema";
 import { useAfterMount, usePort } from "@wirework/react";
@@ -17,6 +18,7 @@ import type {
   PeriodValues,
   SearchValues,
   TableColumn,
+  RowAction,
   TableRow,
   ToolbarItem,
 } from "@wirework/widget-contracts";
@@ -26,7 +28,8 @@ import { useCellSelection, type CellSelectionView } from "./use-cell-selection";
 import { useTableToolbar, type TableToolbarItems, type ToolbarEntry } from "./use-table-toolbar";
 import { useColumnState, type ColumnEvents, type ColumnMenuView, type ColumnStateView } from "./use-column-state";
 import type { TableCellRenderers } from "./use-table-cell";
-import { useTableHeaders } from "./use-table-headers";
+import { useRowActions, type RowActionsView, type TableRowActions } from "./use-row-actions";
+import { useTableHeaders, type TableHeadersView } from "./use-table-headers";
 import { NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
 export type { RenderedRow } from "./use-table-rows";
@@ -87,6 +90,7 @@ export interface TableSettings {
   columnMenu: boolean;
   columnStateKey: string;
   toolbar: ToolbarItem[];
+  rowActions: RowAction[];
   cellSelection: boolean;
   exportName: string;
 }
@@ -111,6 +115,24 @@ export function useMenuColumns(
   );
 }
 
+/**
+ * The table's columns with the row actions' column before them
+ * (use-row-actions.ts), and the least width the table then needs — what
+ * both table kinds do with their row actions.
+ */
+export function useColumnsWithActions(
+  { columns, scroll }: Pick<TableHeadersView, "columns" | "scroll">,
+  actions: RowActionsView,
+): Pick<TableHeadersView, "columns" | "scroll"> {
+  return useMemo(
+    () =>
+      actions.column === undefined
+        ? { columns, scroll }
+        : { columns: [actions.column, ...columns], scroll: { x: scroll.x + actions.width } },
+    [columns, scroll, actions],
+  );
+}
+
 export function useTable(
   store: ReadableStore,
   emit: Emit<TableEvents>,
@@ -119,6 +141,7 @@ export function useTable(
   settings: TableSettings,
   cells: TableCellRenderers,
   toolbarItems: TableToolbarItems,
+  rowActions: TableRowActions,
 ): TableView {
   // The table appeared: `load`, once — the reaction calls whatever fetches its
   // data. After the mount, so the page has bound its reactions (useAfterMount).
@@ -150,6 +173,7 @@ export function useTable(
     settings.filterRow,
     settings.rowKey,
     selection.cellAttributes,
+    menu.pinned,
   );
   const rowProps = useRowProps(emit);
   const toolbar = useTableToolbar(emit, settings.toolbar, toolbarItems, {
@@ -158,10 +182,13 @@ export function useTable(
     resetFilters: headers.resetFilters,
   });
 
+  const actions = useRowActions(emit, settings.rowActions, rowActions);
+  const withActions = useColumnsWithActions(headers, actions);
+
   return {
-    scroll: headers.scroll,
+    scroll: withActions.scroll,
     toolbar,
-    columns: headers.columns,
+    columns: withActions.columns,
     rows: renderedRows,
     loading,
     rowProps,

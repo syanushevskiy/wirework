@@ -1,11 +1,20 @@
-# ADR-0015: More widgets on Ant Design — which to build next, as the tiger team weighed them
+# ADR-0015: More widgets on Ant Design — which to build next
 
 - **Status:** Accepted — built (the repeater still to be designed)
 - **Date:** 2026-11-09
-- **Deciders:** the tiger team (doc/team_tiger.md) and the product owner
+- **Deciders:** the product owner
 
-Written 9 November 2026 (story WW-34, not built). The ask: "consult with
-team tiger of what widgets to create based on AntD components more".
+## Description
+
+Written 9 November 2026 (story WW-34; built the same day — "Built" at the
+end). The ask: which widgets to create next, based on more of Ant Design's
+components.
+
+Ant Design 6 has about sixty components; Wirework has twenty-three
+standard kinds, and most of the components left are not widgets ("What
+there is", below). The question: which of the remaining components deserve
+a contract, in which order, and which are better as a setting on a widget
+that exists?
 
 ## What there is
 
@@ -42,17 +51,12 @@ dates, a long text), display the pages fake with labels (a record as a
 fact sheet, a pipeline, a history, an outcome), and feedback a page places
 (a dialog, a confirmation before a destructive click).
 
-## The question
-
-Which of the remaining components deserve a contract, in which order, and
-which are better as a setting on a widget that exists?
-
-## The answers weighed
+## Options considered
 
 **A. Everything antd has, one contract each.** Rejected. A palette of sixty
 cards is a worse builder than a palette of thirty; half the components are
 primitives whose job the engines and settings already do; every contract
-is a conformance set and a story to maintain forever. Ren's rule from the
+is a conformance set and a story to maintain forever. The rule from the
 contracts design stands: a kind is extracted when a concrete consumer
 needs it.
 
@@ -81,13 +85,41 @@ confirms. Segmented is a `radio-group` with `buttons: true`, which exists.
 A time picker is a `date` with time. Chosen wherever it applies: two
 settings instead of four kinds.
 
-**E. A repeater.** Ren's objection to the whole list: the hard half of a
+**E. A repeater.** The objection to the whole list: the hard half of a
 dashboard is a LAYOUT PER RECORD — a card per run, a row of widgets per
 alert — and no component on the list does that; antd's List and Card grid
 are exactly that need, and in Wirework a cell is not data-driven. Not a
 widget: a design of its own, in the shape of containers (a template
 repeated over the rows at a port, each copy's paths scoped to its record).
-Noted as the condition before phase 2 (below), not folded into this story.
+Noted as a design to be held between the two builds (phase 2, below), not
+folded into this story: without it the run page is the only page that
+improves.
+
+**F. One generic "field" widget that renders by a `type` switch.**
+Rejected: one kind per thing, each file readable in thirty seconds.
+
+## Decision
+
+B, C and D together, as one set: **eight kinds and two settings**.
+
+- Data entry the pages lack (B): `number`, `date`, `date-range`.
+- Display that replaces hand-laid labels (C): `descriptions`, `result`,
+  `steps`, `timeline`.
+- Feedback a page places: `dialog` — one kind for a drawer and a modal.
+- Settings where the ports do not change (D): `input.rows` for a long
+  text, `button.confirm` for a confirmation before a destructive click.
+  The ports did not change, so the kind did not.
+
+A is rejected: nothing from the "skipped" list below is built until a page
+asks. E, the repeater, is not part of this set; it is a design of its own,
+still to be held. F is rejected.
+
+The order follows what a user gets: filter the runs by when they started;
+see a run as a fact sheet instead of scattered labels; a failure that says
+what failed and offers a way back; Delete asks before it acts; a form in a
+dialog. `descriptions` goes first — it deletes more demo configuration
+than it adds. `steps`, `timeline` and `dialog` are built only with the
+demo page that needs them, which the run page does.
 
 ## The design
 
@@ -100,7 +132,8 @@ render-only component in `packages/antd-widgets`, a conformance set in
 the engine's standard-contracts test extended, a place on a demo page and a
 scenario. Store values stay JSON — a date is a string, never a `Date` —
 because the store, the page file, the overlay and the event log are all
-JSON, and the server decides what a date means.
+JSON, and the server decides what a date means. No new abstraction is
+needed: `implementContract` and `usePort` already compose.
 
 | Kind           | antd                   | Ports                                                                                  | Events                                              | Settings                                                                                                                     | Role                                                  |
 | -------------- | ---------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -115,9 +148,13 @@ JSON, and the server decides what a date means.
 
 Notes on the table:
 
+- `number`: the contract's description names `null` as "empty", because
+  `0` and "nothing" are different answers to a form.
 - `descriptions` is "one row of a table shown as fields": its `items` are
-  `tableColumnSchema` without `filter` and `sortable`, the cell kinds and
-  the helpers `cellText` / `cellTone` / `cellHref` shared, and the antd
+  `tableColumnSchema` without `filter` and `sortable` — literally that
+  schema, or two configurations for one record drift apart —, the cell
+  kinds and the helpers `cellText` / `cellTone` / `cellHref` shared (kept
+  in `table-cell.ts` and imported, never copied), and the antd
   implementation a factory `createAntdDescriptions({ cells })` taking the
   same host renderers as `createAntdTable` — the playground's "copy"
   button then works on the run page's reference for nothing.
@@ -130,10 +167,13 @@ Notes on the table:
   back by the default reaction. One kind for drawer and modal because the
   ports, the events and the content are the same; `as` is a look.
 - `date` converts at the edge only — two one-liners, `toDayjs(value)` and
-  `toIso(dayjs, withTime)`; dayjs is already in the bundle as antd's peer
+  `toIso(dayjs, withTime)`, in the hook, so the component stays
+  render-only; dayjs is already in the bundle as antd's peer
   (the lockfile holds it through `@rc-component/picker`), so it becomes a
   declared peer of the antd package and nothing else changes. `format` is
-  what the user SEES; the stored string never varies with it.
+  what the user SEES; the stored string never varies with it — or two
+  pages store two strings for one day. The contract says so and a test
+  proves it.
 - `result` carries an optional action so WW-18's "Retry" is one widget
   wired to one reaction, and is placed under a `when` like any widget; it
   does not know about requests. `not-found`, `forbidden` and `failed` are
@@ -160,11 +200,11 @@ Notes on the table:
 - `autocomplete`, `cascader`, `tree-select`, `transfer`, `mentions`,
   `color-picker`, `tree`, `calendar` — controlled contracts in the same
   shape, each a few hours, each waiting for a page that needs one; adding
-  them before that is answer A.
+  them before that is option A.
 - `upload` — a file is not JSON; the store and the actions carry values,
   not blobs. A design of its own (the host's upload endpoint, the store
   holding the server's receipt).
-- `list`, a card per record, antd's Card grid — the repeater (answer E).
+- `list`, a card per record, antd's Card grid — the repeater (option E).
 - `badge`, `avatar`, `tooltip`, `image` — a badge is a tabs setting (a
   count per tab from a path) and a tooltip a `hint` setting any widget
   could carry; an avatar is a `descriptions` cell kind; an image widget
@@ -180,8 +220,9 @@ Notes on the table:
 
 ### The demo
 
-The palette is not a feature (Morgan): every new widget lands on a demo
-page with a scenario.
+The palette is not a feature: every new widget lands on a demo page with a
+scenario from day one — otherwise the conformance set is its only proof
+and a tester has nothing to test.
 
 - Runs page: a `date-range` "Started between" above the table writing
   `runs.between`, sent by the table's `load` as a `between` group of the
@@ -203,83 +244,36 @@ page with a scenario.
   (seconds)" on `app.settings.refreshSeconds`, a `date` "Report day" on
   `app.settings.reportDay`, both echoed by `echo-settings`.
 
-The conformance sets stay by role: `spinbutton`, `combobox` with a typed
+The conformance sets stay by role, never by antd's class names:
+`spinbutton`, `combobox` with a typed
 date (the scenario types `2026-11-09` and presses Enter — never clicks a
-calendar cell, which moves with the month), `dialog`, `status` / `alert`,
-`listitem`, and the th / td text of a description. New steps for the
-non-technical QAs: `I enter the number <n> in "<label>"`, `I pick the date
+calendar cell, which moves with the month), `dialog`, `status` / `alert`
+(the alert role on the failing statuses, so a failing page is announced),
+`listitem`, and the th / td text of a description. `I confirm` and
+`I cancel` serve every Popconfirm and dialog alike. New steps:
+`I enter the number <n> in "<label>"`, `I pick the date
 "<date>" in "<label>"`, `I pick the dates "<from>" to "<to>" in "<label>"`,
 `the field "<label>" of the descriptions reads "<text>"`, `the result says
 "<title>"`, `the dialog "<title>" is open / closed`, `I confirm`,
 `I cancel`, `the current step is "<title>"`, `the timeline has N entries`.
 
-## Tiger team's positions
+## Risks to watch
 
-**Alexei (architecture).** The table's cell kinds becoming the
-`descriptions` vocabulary is the proof that `table-cell.ts` was a
-contract-level module, not a table detail; keep the helpers there and
-import them, never copy. One `dialog` kind, not two: the ports and the
-events are the identity of a kind, the look is a setting. Dates as
-strings in the store is non-negotiable — the store is JSON end to end —
-and the conversion lives in the hook, so the component stays render-only.
-Wants the `number` port's `null` for "empty" named in the contract's
-description, because `0` and "nothing" are different answers to a form.
+The pattern is routine; the risks are not the widgets but their edges.
 
-**Dmitri (readability).** No generic "field" widget that renders by a
-`type` switch — one kind per thing, each file readable in thirty seconds.
-A textarea and a confirmation are settings, and that is the right smell:
-the ports did not change, so the kind did not. The `date` widget's
-`format` must be display only, or two pages store two strings for one
-day; say it in the contract and test it. Would drop `presets` from
-`date-range` until a page asks ("Last 7 days" is a button with a `set`).
-
-**Katya (team).** The pattern is routine; the six took a day, these eight
-and two settings fit three. The risks are not the widgets but their edges:
-dayjs locale and timezone (pin "local day, ISO string, no timezone
-arithmetic in the widget" in the contract), the dialog in edit mode (shown
-inline, never a portal while editing), and the run page's grid picture
-changing under the css-grid scenarios — do that in one commit with the
-scenarios. Wants `descriptions` first: it deletes more demo config than it
-adds.
-
-**Sasha (QA).** Every kind by role, never by antd's class names, and the
-date picker by TYPING — a click on a calendar cell is the flakiest step a
-suite can have. Each new widget on a demo page from day one, or the
-conformance set is the only proof and the non-technical QAs have nothing
-to test. The steps above read as sentences; "I confirm" and "I cancel"
-serve every Popconfirm and dialog alike. Asks for the `result`'s alert
-role on the error statuses so a failing page is announced.
-
-**Ren (contrarian).** Do we need more widgets, or a repeater? Dashboards
-are lists of things — a card per run, a row per alert — and none of these
-eight repeats a layout per record; antd's List and Card grid are exactly
-that, and we cannot build them because a cell is not data-driven. The
-eight are real and cheap, so build phase 1, but design the repeater before
-phase 2 or the run page will be the only page that improves. Second
-warning: date pickers are a timezone sink — the server owns the meaning,
-the widget stores what the user typed, the fake server compares strings.
-Third: `descriptions` must literally reuse the table's column schema minus
-filter and sort, or two configurations for one record will drift apart
-within a month.
-
-**Morgan (product).** In the user's words: filter runs by when they
-started; see a run as a fact sheet instead of scattered labels; a failure
-that says what failed and offers a way back; Delete asks before it acts;
-a form in a drawer. That order is the priority. The palette is not a
-feature — a widget nobody sees on a demo page was not delivered. Asks
-that WW-18's Retry be the `result`'s action so the two stories meet.
-
-**Vlad (fluency).** The date edge as two one-liners, `descriptions` items
-as one `map` over `cellText`, the timeline's items straight from the port.
-No new abstraction: `implementContract` and `usePort` already compose.
-
-**External reviewer (minimum code).** Phase 1 is the minimum that changes
-a page: five kinds and two settings, the run page rebuilt on two of them.
-`steps`, `timeline` and `dialog` only with the demo page that needs them,
-which the run page does; nothing from the "skipped" list until a page
-asks. Confirm before building the dialog that `contains` and a port on
-one contract behave in `NestedLayout` and the builder's "Edit content" —
-the first container with a port.
+- **Dates and timezones.** The server owns what a date means; the widget
+  stores what the user typed, and the fake server compares the texts. The
+  contract pins it: a local day, an ISO string, no timezone arithmetic in
+  the widget.
+- **The dialog in edit mode** is shown inline, never as a portal while
+  editing.
+- **The first container with a port.** Before the dialog is built, confirm
+  that `contains` and a port on one contract behave in `NestedLayout` and
+  in the builder's "Edit content".
+- **The run page's grid picture** changes under the css-grid scenarios:
+  the page and the scenarios change in one commit.
+- **A calendar click** is the flakiest step a suite can have: a date is
+  picked by typing.
 
 ## Phases
 
@@ -290,8 +284,8 @@ the first container with a port.
    date, Delete run confirming; conformance sets, playgrounds, the
    standard-contracts test, `more-widgets.feature` extended and a
    `run-page.feature`.
-2. **The repeater design — ½ day, tiger team.** A layout repeated over
-   the rows at a port (Ren's condition), in the shape of containers.
+2. **The repeater design — ½ day.** A layout repeated over the rows at a
+   port (option E), in the shape of containers.
 3. **The shell set — 1½ days.** `dialog`, `steps`, `timeline`; Retry as a
    dialog with a textarea, the pipeline and the history on the run page
    from the fake server's new fields; conformance and scenarios.
@@ -313,14 +307,14 @@ departed from the table above:
   builder's named-list form adds and names them like tabs; `steps` takes
   its items as a setting only (a port waits for a page that needs one),
   and `failed` is a second port instead of a `status` setting — the
-  server's state decides. `date-range` has no `presets` (Dmitri). `dialog`
+  server's state decides. `date-range` has no `presets` (no page asks; "Last 7 days" is a button with a `set`). `dialog`
   gained an `inline` setting: a dialog has nothing to show while closed,
   so the palette preview and the stories render it in place
   (`getContainer={false}` inside a positioned box); on a page it is a
   cell like any other and takes a slot. `timeline` entries have `title`
   (a heading) beside `text`, and antd 6's `start` / `end` names are
   mapped from the contract's `left` / `right`. `result` is role=status,
-  role=alert for the failing outcomes (Sasha). `descriptions` reuses the
+  role=alert for the failing outcomes. `descriptions` reuses the
   table's `clicked` decision and `TableCell` renderer — one place decides
   what a click landed on, one component shows a cell.
 - **The loader** (`@wirework/table-view`) reads `<into>.filterBetween`
