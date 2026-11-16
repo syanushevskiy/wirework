@@ -13,7 +13,7 @@ Feature: Pages as code — the whole page as a file
     # widgets.json — and the store gets that page's view models when it opens: nothing of another page's.
     Given I open the "roles" page
     And the server has had time to answer
-    Then the page has 1 cells
+    Then the page has 3 cells
     And the state editor "views" contains '"card-roles"'
     And the state editor "views" contains '"card": {'
     And the state editor "views" does not contain '"table-main"'

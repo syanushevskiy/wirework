@@ -94,6 +94,25 @@
               }
             }
           ]
+        },
+        {
+          "classes": "items-center gap-4",
+          "cells": [
+            {
+              "id": "switch-admin-mode",
+              "widget": "antd-switch",
+              "model": "widgets.roles.adminMode",
+              "template": "default",
+              "classes": "flex-none"
+            },
+            {
+              "id": "button-clear-note",
+              "widget": "antd-button",
+              "model": "widgets.roles.clearNote",
+              "template": "default",
+              "classes": "flex-none"
+            }
+          ]
         }
       ]
     }

@@ -94,7 +94,7 @@ Feature: Roles — one page, different for an admin and for everybody else
   Scenario: The roles page is one card — everyone's template with the note, the admin's with a button and its echo as well
     Given I open the "roles" page
     And the server has had time to answer
-    Then the page has 1 cell
+    Then the page has 3 cells
     # A QA sees the card as everyone does: the note and how it works.
     And the container "card-roles" holds the cells "input-note, label-how"
     When I type "hello" into the input
@@ -110,6 +110,33 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the server has had time to answer
     Then the container "card-roles" holds the cells "input-note, label-how"
     And the state JSON contains '"note": "hello"'
+
+  Scenario: On the shared page an admin turns the admin's tools on with a switch — conditions, no view of the admin's own
+    Given I open the "roles" page
+    And the server has had time to answer
+    # A QA has neither the switch nor what it shows: both wait for the role.
+    Then the cell "switch-admin-mode" is hidden
+    And the cell "button-clear-note" is hidden
+    When I type "hello" into the input
+    And I sign in as "admin"
+    And the server has had time to answer
+    # The admin has the switch, off: the tool waits for it too.
+    Then the cell "switch-admin-mode" is shown
+    And the switch is off
+    And the cell "button-clear-note" is hidden
+    When I flip the switch
+    Then the cell "button-clear-note" is shown
+    When I click the button "Clear the note — admin mode"
+    Then the state JSON contains '"note": ""'
+    When I flip the switch
+    Then the cell "button-clear-note" is hidden
+    # The mode is a setting, not a right: left on, it shows a QA nothing.
+    When I flip the switch
+    And I sign in as "qa"
+    And the server has had time to answer
+    Then the state JSON contains '"adminMode": true'
+    And the cell "switch-admin-mode" is hidden
+    And the cell "button-clear-note" is hidden
 
   Scenario: In the builder, a widget for the admin alone can also be a condition on the roles — no template of its own
     Given I open the "builder" page

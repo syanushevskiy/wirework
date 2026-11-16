@@ -1,4 +1,46 @@
 {
+  "widgets.roles.adminMode": {
+    "default": {
+      "inputs": {
+        "checked": "app.settings.adminMode"
+      },
+      "label": "Admin mode",
+      "when": [
+        {
+          "path": "app.user.roles",
+          "is": "user/has-role",
+          "to": "admin"
+        }
+      ]
+    }
+  },
+  "widgets.roles.clearNote": {
+    "default": {
+      "label": "Clear the note — admin mode",
+      "variant": "danger",
+      "on": {
+        "clicked": [
+          {
+            "set": "app.settings.note",
+            "value": ""
+          }
+        ]
+      },
+      "when": [
+        {
+          "path": "app.settings.adminMode",
+          "is": "true"
+        },
+        {
+          "path": "app.user.roles",
+          "is": "user/has-role",
+          "to": "admin"
+        }
+      ],
+      "appear": "fade",
+      "disappear": "fade"
+    }
+  },
   "widgets.roles.approval": {
     "default": {
       "inputs": {
