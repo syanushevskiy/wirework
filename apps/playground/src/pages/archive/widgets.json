@@ -145,6 +145,8 @@
         ]
       },
       "height": 320,
+      "heightMode": "fill",
+      "bottomGap": 96,
       "windowed": true,
       "rowActions": [
         {

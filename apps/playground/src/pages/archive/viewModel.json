@@ -1,47 +1,51 @@
 {
   "templates": {
     "default": {
-      "engine": "react-grid-layout",
-      "cells": [
+      "engine": "flex-rows",
+      "rows": [
         {
-          "id": "label-archive",
-          "widget": "antd-label",
-          "model": "widgets.archive.title",
-          "template": "default",
-          "x": 0,
-          "y": 0,
-          "w": 12,
-          "h": 1
+          "cells": [
+            {
+              "id": "label-archive",
+              "widget": "antd-label",
+              "model": "widgets.archive.title",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
         },
         {
-          "id": "table-archive",
-          "widget": "antd-infinite-table",
-          "model": "widgets.archive.table",
-          "template": "default",
-          "x": 0,
-          "y": 1,
-          "w": 12,
-          "h": 10
+          "cells": [
+            {
+              "id": "table-archive",
+              "widget": "antd-infinite-table",
+              "model": "widgets.archive.table",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
         },
         {
-          "id": "position-archive",
-          "widget": "antd-list-position",
-          "model": "widgets.archive.position",
-          "template": "default",
-          "x": 0,
-          "y": 11,
-          "w": 12,
-          "h": 1
+          "cells": [
+            {
+              "id": "position-archive",
+              "widget": "antd-list-position",
+              "model": "widgets.archive.position",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
         },
         {
-          "id": "label-archive-error",
-          "widget": "antd-label",
-          "model": "widgets.archive.error",
-          "template": "default",
-          "x": 0,
-          "y": 12,
-          "w": 12,
-          "h": 1
+          "cells": [
+            {
+              "id": "label-archive-error",
+              "widget": "antd-label",
+              "model": "widgets.archive.error",
+              "template": "default",
+              "classes": "w-full"
+            }
+          ]
         }
       ]
     }

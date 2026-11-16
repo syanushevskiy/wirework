@@ -137,6 +137,26 @@ When("the browser window is {int} pixels wide", async ({ page }, width: number) 
   await page.setViewportSize({ width, height: page.viewportSize()?.height ?? 720 });
 });
 
+/** The window's height, its width kept: a list that fills the window follows it. */
+When("the browser window is {int} pixels tall", async ({ page }, height: number) => {
+  await page.setViewportSize({ width: page.viewportSize()?.width ?? 1280, height });
+});
+
+/**
+ * What a HOST does that lays its pages out on one screen (an application shell whose content area ends at the
+ * window's bottom): the page is given a height — here what the window leaves under where the page starts, less
+ * `gap` pixels. The page itself never asks for one.
+ */
+When("the host makes the page end {int} pixels above the bottom of the window", async ({ page }, gap: number) => {
+  await page
+    .getByTestId("page")
+    .first()
+    .evaluate((element, below) => {
+      const host = element as HTMLElement;
+      host.style.height = `${window.innerHeight - host.getBoundingClientRect().top - window.scrollY - below}px`;
+    }, gap);
+});
+
 /** The layout inside a container names its engine: a card may run another engine than its page. */
 Then("the container {string} runs on the {string} engine", async ({ page }, id: string, engine: string) => {
   await expect(cell(page, id).locator('[data-testid="layout"]').first()).toHaveAttribute("data-engine", engine);

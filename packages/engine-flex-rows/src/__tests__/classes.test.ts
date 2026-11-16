@@ -1,6 +1,33 @@
 /** The vocabulary: Tailwind's layout names, the CSS each stands for, and what a `classes` value becomes. */
 import { describe, expect, it } from "vitest";
-import { LAYOUT_CLASSES, LAYOUT_CLASS_NAMES, classTokens, layoutStyle, styleOf, unknownClasses } from "../classes";
+import {
+  LAYOUT_CLASSES,
+  LAYOUT_CLASS_NAMES,
+  classTokens,
+  growsTall,
+  layoutStyle,
+  styleOf,
+  unknownClasses,
+} from "../classes";
+
+describe("a row that takes its page's spare room", () => {
+  it("is one whose classes make it grow", () => {
+    expect(growsTall("flex-1")).toBe(true);
+    expect(growsTall("gap-4 flex-2")).toBe(true);
+    expect(growsTall("flex-auto")).toBe(true);
+    expect(growsTall("grow")).toBe(true);
+  });
+
+  it("is no other row", () => {
+    expect(growsTall(undefined)).toBe(false);
+    expect(growsTall("gap-4 items-center")).toBe(false);
+    expect(growsTall("flex-none")).toBe(false);
+    expect(growsTall("flex-initial")).toBe(false);
+    expect(growsTall("grow-0")).toBe(false);
+    // A later class wins, as in the style itself.
+    expect(growsTall("flex-1 flex-none")).toBe(false);
+  });
+});
 
 describe("the layout vocabulary", () => {
   it("has Tailwind's flexbox names with Tailwind's values", () => {

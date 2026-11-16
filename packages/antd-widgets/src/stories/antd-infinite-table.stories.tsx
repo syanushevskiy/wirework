@@ -273,6 +273,63 @@ export const AsksForMore: Story = {
   },
 };
 
+/**
+ * HEIGHT (`heightMode`, doc/ADR/0021-table-height.md) — `fixed`: the box is
+ * exactly `height`, whatever it holds; three rows leave it blank under them.
+ * (By default — `max` — it would be as tall as the three rows.)
+ */
+export const FixedHeight: Story = {
+  render: () => (
+    <WidgetStory
+      key="fixed-height"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows, total: 3 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        columns: headerColumns,
+        height: 300,
+        heightMode: "fixed",
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    await expect(canvas.getByTestId("antd-infinite-table")).toHaveAttribute("data-height-mode", "fixed");
+    await waitFor(() => expect(box.offsetHeight).toBe(300));
+    await expect(canvas.getAllByTestId("table-row")).toHaveLength(3);
+  },
+};
+
+/**
+ * HEIGHT — `fill`: the box takes the room from where it starts down to the
+ * bottom of the window, less `bottomGap`; never less than `height`. Two
+ * hundred rows are held: the taller the window, the more of them render.
+ */
+export const FillsTheWindow: Story = {
+  render: () => (
+    <WidgetStory
+      key="fills-the-window"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows, total: 200 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        columns: headerColumns,
+        height: 100,
+        heightMode: "fill",
+        bottomGap: 40,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    // Where the window ends, less the gap — or the least height where the window is too short for that.
+    const expected = () => Math.max(100, Math.floor(window.innerHeight - box.getBoundingClientRect().top - 40));
+    await waitFor(() => expect(box.offsetHeight).toBe(expected()));
+    await waitFor(() => expect(box.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
+    await expect(canvas.getAllByTestId("table-row").length).toBeLessThan(200);
+  },
+};
+
 /** Two hundred rows a loader might have appended by now. */
 const manyRows = Array.from({ length: 200 }, (_, index) => ({
   id: String(index + 1),

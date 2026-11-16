@@ -98,7 +98,16 @@ path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
   inside its own box, asks for more rows at its end, and renders only a
   WINDOW of the rows it holds — twice the box's height, the rest blank space
   of the right height (doc/ADR/0007-row-window-and-header-filters.md) — so it is a virtual list;
-  `data-held` says how many rows it holds, `data-window` which render. With
+  `data-held` says how many rows it holds, `data-window` which render. Its
+  box is as tall as its rows and at most `height` pixels; `heightMode:
+"fixed"` makes it exactly that tall, and `heightMode: "fill"` gives it
+  the room from where it starts down to the bottom of the window, less
+  `bottomGap` — never less than `height` — and keeps it as the window is
+  resized; `heightMode: "fill-cell"` makes it as tall as its layout cell,
+  the box taking what the bar leaves — where the cell has a height: a
+  grid cell, or a flex row with `flex-1` on a page the host gave a height
+  (`.ww-page { height: 100% }` in a content area one screen tall)
+  (doc/ADR/0021-table-height.md). With
   `windowed` on it holds only a SLICE of the list (`data-offset` rows into
   it) and asks for the slice around the rows in view (`window`); with its
   `position` port bound it says where it stands and scrolls where it is

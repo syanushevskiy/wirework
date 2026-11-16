@@ -37,6 +37,36 @@
   min-width: 0;
 }
 
+/*
+ * A PAGE WITH A HEIGHT OF ITS OWN (the host made it as tall as the screen): the rows take it, and a row whose
+ * classes ask for the spare room (`flex-1`, `grow` — `data-grows` on its rowset) gets what the other rows leave,
+ * top to bottom, its cells as tall as the row. A widget that fills its cell then has a height to fill
+ * (doc/ADR/0021-table-height.md). On a page as tall as its content nothing of this shows.
+ */
+.ww-page > .ww-flex-rows {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ww-flex-rows .ww-flex-rowset[data-grows="true"] {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.ww-flex-rows .ww-flex-rowset[data-grows="true"] > .ww-flex-row,
+.ww-flex-rows .ww-flex-rowset[data-grows="true"] .ww-flex-item > .ww-cell {
+  min-height: 0;
+}
+
+/*
+ * A row WRAPS, and a wrapping row's line is as tall as its tallest cell, whatever the row's own height: a cell is
+ * held to the row's height, so the line is — and what is inside the cell scrolls, where it can, instead of the page.
+ */
+.ww-flex-rows .ww-flex-rowset[data-grows="true"] > .ww-flex-row > .ww-flex-item {
+  min-height: 0;
+  max-height: 100%;
+}
+
 /* ---- edit mode: a bar per row, a handle per cell ---- */
 
 .ww-flex-rows .ww-flex-row-bar,

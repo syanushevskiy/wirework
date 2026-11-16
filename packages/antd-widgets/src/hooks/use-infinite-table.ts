@@ -31,12 +31,13 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { TableProps } from "antd";
 import type { Emit, PortDefinition, ReadableStore } from "@wirework/schema";
 import { useAfterMount, usePort } from "@wirework/react";
-import type { TableRow } from "@wirework/widget-contracts";
+import type { HeightMode, TableRow } from "@wirework/widget-contracts";
 import type { InfiniteTableEvents } from "../widgets/antd-infinite-table";
 import { SPACED_BODY, type RowSpace } from "../widgets/row-spacers";
 import { useCellSelection } from "./use-cell-selection";
 import { useTableToolbar, type TableToolbarItems } from "./use-table-toolbar";
 import { rowPosition, sliceRequest, sliceWindow, type SliceRequest } from "../row-window";
+import { useFillHeight } from "./use-fill-height";
 import { useRowWindow } from "./use-row-window";
 import type { TableCellRenderers } from "./use-table-cell";
 import { useRowActions, type TableRowActions } from "./use-row-actions";
@@ -52,6 +53,9 @@ import { useTableHeaders } from "./use-table-headers";
 import { useToolbarFilters } from "./use-toolbar-filters";
 import { NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
+/** The scroll box's height, one of the three ways a `heightMode` states it. */
+export type BoxStyle = { maxHeight: number } | { height: number } | { minHeight: number };
+
 /** What the antd Table and the box around it are given (see use-table.ts on naming antd's public types). */
 export interface InfiniteTableView extends TableView {
   /** The header stays in view inside the widget's own scroll box. */
@@ -59,6 +63,8 @@ export interface InfiniteTableView extends TableView {
   /** The table body that leaves blank space around the window, and how much (for RowSpaceProvider). */
   components: NonNullable<TableProps<RenderedRow>["components"]>;
   space: RowSpace;
+  /** How tall the scroll box is, as `heightMode` reads the height: at most, exactly, what fills the window, or at least (its cell decides). */
+  boxStyle: BoxStyle;
   /** The scroll box, and the end of the list inside it. */
   scrollRef: RefObject<HTMLDivElement | null>;
   endRef: RefObject<HTMLDivElement | null>;
@@ -109,7 +115,7 @@ export function useInfiniteTable(
     offset: PortDefinition<number>;
     position: PortDefinition<number>;
   },
-  settings: TableSettings & { height: number; windowed: boolean },
+  settings: TableSettings & { height: number; heightMode: HeightMode; bottomGap: number; windowed: boolean },
   cells: TableCellRenderers,
   toolbarItems: TableToolbarItems,
   rowActions: TableRowActions,
@@ -188,6 +194,17 @@ export function useInfiniteTable(
   const open = usePort(store, paths.hasMore, ports.hasMore) === true;
   const count = windowed ? Math.max(total ?? 0, offset + rows.length) : renderedRows.length;
 
+  // How tall the box is (doc/ADR/0021-table-height.md): at most the height, exactly it, — measured — the room down
+  // to the bottom of the window, or — by CSS alone (styles.css) — what its layout cell leaves under the bar; the
+  // height is then the least.
+  const { height, heightMode } = settings;
+  const filled = useFillHeight(scrollRef, heightMode === "fill", height, settings.bottomGap);
+  const boxStyle = useMemo<BoxStyle>(() => {
+    if (heightMode === "max") return { maxHeight: height };
+    if (heightMode === "fill-cell") return { minHeight: height };
+    return { height: filled ?? height };
+  }, [heightMode, height, filled]);
+
   // The window: which rows of the list render — of the ones held —, and the blank space around them.
   const whole = useRowWindow(scrollRef, count, settings.height);
   const shown = useMemo(
@@ -263,8 +280,12 @@ export function useInfiniteTable(
     }
     look();
     box.addEventListener("scroll", look, { passive: true });
+    // A box that became taller or shorter (it fills the window, its cell was resized) has other rows in view.
+    const resized = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(look);
+    resized?.observe(box);
     return () => {
       box.removeEventListener("scroll", look);
+      resized?.disconnect();
       if (frame !== undefined) cancelAnimationFrame(frame);
     };
     // The list got its rows, or their height was measured: look again.
@@ -317,6 +338,7 @@ export function useInfiniteTable(
     sticky,
     components: SPACED_BODY,
     space,
+    boxStyle,
     scrollRef,
     endRef,
     held: rows.length,

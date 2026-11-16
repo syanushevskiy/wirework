@@ -72,8 +72,8 @@ export { tableCellSchema, appPathSchema, cellText, cellTone, cellHref } from "./
 export type { TableCell, TableCellKind } from "./table-cell";
 export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from "./filter-bar";
 export type { FilterDefinition, FilterValues } from "./filter-bar";
-export { infiniteTableContract, SLICE_EDGES } from "./infinite-table";
-export type { SliceEdge } from "./infinite-table";
+export { infiniteTableContract, SLICE_EDGES, HEIGHT_MODES } from "./infinite-table";
+export type { SliceEdge, HeightMode } from "./infinite-table";
 export { listPercent, listPositionContract } from "./list-position";
 // More of what every UI library has.
 export { switchContract } from "./switch";

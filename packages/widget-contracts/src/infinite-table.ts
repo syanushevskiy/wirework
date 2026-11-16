@@ -51,8 +51,19 @@
  *   something else changes it — a `list-position` widget bound to the same
  *   path shows where the list is and jumps anywhere in it.
  *
+ * - HOW TALL THE LIST IS (`heightMode`, doc/ADR/0021-table-height.md): by
+ *   default its box is as tall as its rows and at most `height` pixels
+ *   (`max`); `fixed` makes it exactly `height`; `fill` gives it the room
+ *   from where it starts down to the bottom of the WINDOW, less `bottomGap`
+ *   — never more, and never less than `height` — and keeps that as the
+ *   window is resized or what stands above it changes height; `fill-cell`
+ *   makes the widget as tall as its LAYOUT CELL, the box taking what the
+ *   bar leaves — where the cell has a height (a grid cell, a pane, a flex
+ *   row that takes its page's spare room); where it has none the box is
+ *   `height` tall.
+ *
  * Implementations render the table inside a scrolling box of `height`
- * pixels with its header staying in view, expose what `table` exposes plus
+ * pixels (as `heightMode` reads it, `data-height-mode` on the widget) with its header staying in view, expose what `table` exposes plus
  * the box as `data-testid="infinite-table-scroll"`, the rows held as
  * `data-held` and a line under the rows reading "<held> of <total>". The
  * box itself takes the keyboard focus (a region named by that line), so End,
@@ -78,6 +89,15 @@ import {
 /** What a windowed list asks for: the batch after the rows held, the one before them, or a slice around a row. */
 export const SLICE_EDGES = ["after", "before", "around"] as const;
 export type SliceEdge = (typeof SLICE_EDGES)[number];
+
+/**
+ * What the list's `height` means (doc/ADR/0021-table-height.md): the MOST
+ * its box takes, exactly what it takes, or the LEAST of a box that fills —
+ * the room down to the bottom of the window (`fill`, measured), or the
+ * height its layout cell has (`fill-cell`, by CSS alone: the layout decides).
+ */
+export const HEIGHT_MODES = ["max", "fixed", "fill", "fill-cell"] as const;
+export type HeightMode = (typeof HEIGHT_MODES)[number];
 
 export const infiniteTableContract = defineContract({
   kind: "infinite-table",
@@ -150,7 +170,28 @@ export const infiniteTableContract = defineContract({
       .boolean()
       .default(true)
       .describe("Offer each column's filter and sorting in its header (what the column's filter and sortable say)"),
-    height: z.number().int().min(100).default(400).describe("Height of the scrolling list, in pixels"),
+    height: z
+      .number()
+      .int()
+      .min(100)
+      .default(400)
+      .describe(
+        "Height of the scrolling list, in pixels: the most it takes (heightMode max), exactly this (fixed), or the least (fill)",
+      ),
+    heightMode: z
+      .enum(HEIGHT_MODES)
+      .default("max")
+      .describe(
+        "What the height means: max — the list is as tall as its rows, at most the height; fixed — exactly the height; fill — from where the list starts down to the bottom of the window, never more, never less than the height; fill-cell — the height its layout cell has, under the table's bar (a grid cell, a flex row that takes the page's spare room), never less than the height",
+      ),
+    bottomGap: z
+      .number()
+      .int()
+      .min(0)
+      .default(16)
+      .describe(
+        "With heightMode fill: the room left under the list, in pixels — the page's padding and whatever stands under the table",
+      ),
     windowed: z
       .boolean()
       .default(false)

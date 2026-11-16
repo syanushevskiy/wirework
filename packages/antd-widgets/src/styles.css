@@ -167,6 +167,33 @@
   overflow: auto;
 }
 
+/*
+ * A list that FILLS ITS CELL (`heightMode: "fill-cell"`, doc/ADR/0021-table-height.md): the widget is as tall as
+ * the cell its layout gives it — a column of the bar, then the box taking what is left. No measuring: where the
+ * cell has a height the box follows it, where it has none (`100%` of nothing) the box is its least height, which
+ * the widget writes on it.
+ */
+.ww-infinite-table[data-height-mode="fill-cell"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.ww-infinite-table[data-height-mode="fill-cell"] > .ww-table__bar {
+  flex: 0 0 auto;
+}
+
+/* A basis in pixels, not percent: a percent of a height that is not there would be the rows' own height. */
+.ww-infinite-table[data-height-mode="fill-cell"] > .ww-infinite-table__scroll {
+  flex: 1 1 0px;
+}
+
+/* The element a widget appears on stands between the cell and the widget: it passes the cell's height on. */
+.ww-cell > .ww-appear:has(> .ww-infinite-table[data-height-mode="fill-cell"]) {
+  height: 100%;
+}
+
 /* The end of the list: what is held of what there is, and the place a scroll reaches. */
 .ww-infinite-table__end {
   padding: 0.5rem;

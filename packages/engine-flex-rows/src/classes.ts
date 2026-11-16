@@ -418,6 +418,18 @@ export const classTokens = (classes: string | undefined): string[] => classes?.s
 export const layoutStyle = (classes: string | undefined): CSSProperties =>
   classTokens(classes).reduce<CSSProperties>((style, token) => ({ ...style, ...styleOf(token) }), {});
 
+/**
+ * Whether a ROW's classes ask for the room its page has left over (`flex-1`,
+ * `flex-auto`, `grow`): on a page that has a height of its own such a row
+ * takes it, top to bottom, and its cells are as tall as the row — so a
+ * widget that fills its cell (a table, doc/ADR/0021-table-height.md) has a
+ * height to fill. On a page as tall as its content it changes nothing.
+ */
+export function growsTall(classes: string | undefined): boolean {
+  const { flex, flexGrow } = layoutStyle(classes);
+  return Number(flexGrow ?? 0) > 0 || Number.parseFloat(String(flex ?? "0")) > 0;
+}
+
 /** The names in a `classes` value the vocabulary does not have. */
 export const unknownClasses = (classes: string | undefined): string[] =>
   classTokens(classes).filter((token) => styleOf(token) === undefined);

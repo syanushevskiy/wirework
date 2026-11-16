@@ -10,7 +10,7 @@
 import { useRef } from "react";
 import type { LayoutRendererProps } from "@wirework/react";
 import { ClassesInput } from "./ClassesInput";
-import { LAYOUT_CLASS_NAMES, layoutStyle } from "./classes";
+import { LAYOUT_CLASS_NAMES, growsTall, layoutStyle } from "./classes";
 import type { FlexRowsChange, FlexRowsPage } from "./schema";
 import { useFlexRowsView } from "./useFlexRowsView";
 
@@ -52,7 +52,8 @@ export function FlexRowsView({
       {template.rows.map((row, rowIndex) => (
         // Positional row key is deliberate: rows have no identity of their
         // own; cells inside carry stable ids and survive row re-keying.
-        <section className="ww-flex-rowset" key={rowIndex}>
+        // A row that asks for the page's spare room (`flex-1`) takes it top to bottom: its rowset grows with it.
+        <section className="ww-flex-rowset" key={rowIndex} data-grows={growsTall(row.classes) ? "true" : undefined}>
           {strip(rowIndex)}
           {editable ? (
             <div className="ww-flex-row-bar" data-testid="flex-row-bar" data-row={rowIndex}>

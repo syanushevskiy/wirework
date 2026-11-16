@@ -642,6 +642,67 @@ When("I reload the table", async ({ page }) => {
   await toolbar(page).getByRole("button", { name: "Reload" }).click();
 });
 
+/* ------------------------------- height -------------------------------- */
+
+/** The box the infinite table's rows scroll in, settled: its edges in the window. */
+const listBox = async (page: Page) => {
+  const box = await tableWidget(page).getByTestId("infinite-table-scroll").boundingBox();
+  if (box === null) throw new Error("the infinite table has no scroll box");
+  return box;
+};
+
+/**
+ * A list that fills the window (doc/ADR/0021-table-height.md) ends where the window does, less the gap its page
+ * leaves under it — within two pixels (a height is whole pixels, an edge need not be).
+ */
+Then("the infinite table ends {int} pixels above the bottom of the window", async ({ page }, gap: number) => {
+  await expect
+    .poll(async () => {
+      const box = await listBox(page);
+      return Math.abs((page.viewportSize()?.height ?? 0) - gap - (box.y + box.height));
+    })
+    .toBeLessThanOrEqual(2);
+});
+
+Then("the infinite table's list is {int} pixels tall", async ({ page }, height: number) => {
+  await expect.poll(async () => Math.round((await listBox(page)).height)).toBe(height);
+});
+
+Then("the infinite table's list is more than {int} pixels tall", async ({ page }, height: number) => {
+  await expect.poll(async () => (await listBox(page)).height).toBeGreaterThan(height);
+});
+
+/**
+ * A list that fills its CELL ends where the cell does: the layout decides the height, the list takes it — within
+ * two pixels.
+ */
+Then("the infinite table's list ends where the cell {string} ends", async ({ page }, id: string) => {
+  await expect
+    .poll(async () => {
+      const cell = await live(page).locator(`[data-testid="cell"][data-cell="${id}"]`).boundingBox();
+      const box = await listBox(page);
+      return cell === null ? Number.NaN : Math.abs(cell.y + cell.height - (box.y + box.height));
+    })
+    .toBeLessThanOrEqual(2);
+});
+
+/** What stands under the table is in view without scrolling the page: its bottom edge is above the window's. */
+Then("the list position is in view under the table", async ({ page }) => {
+  await expect
+    .poll(async () => {
+      const scale = await listPosition(page).boundingBox();
+      const list = await listBox(page);
+      const windowHeight = page.viewportSize()?.height ?? 0;
+      const under = scale !== null && scale.y >= list.y + list.height - 1;
+      const inView = scale !== null && scale.y + scale.height <= windowHeight;
+      // What was seen, when it is not so: the edges, for whoever reads the failure.
+      return under && inView
+        ? "under the table, in view"
+        : `list ${Math.round(list.y)}–${Math.round(list.y + list.height)}, scale ${Math.round(scale?.y ?? -1)}–${Math.round((scale?.y ?? 0) + (scale?.height ?? 0))}, window ${windowHeight}`;
+    })
+    .toBe("under the table, in view");
+});
+
 /* ------------------------ title and own filters ------------------------ */
 
 /** The table's own filters, in the bar above it — found by their label. */
@@ -805,6 +866,11 @@ Then("the list stands at row {int} of at least {int}", async ({ page }, row: num
   await expect(listPosition(page)).toHaveAttribute("data-position", String(row - 1));
   await expect(listPosition(page)).toHaveAttribute("data-total", String(known));
   await expect(listPosition(page)).toHaveAttribute("data-open", "true");
+});
+
+/** How many rows the list says are in view (`data-visible`): a taller box shows more. */
+Then("the list shows more than {int} rows in view", async ({ page }, rows: number) => {
+  await expect.poll(async () => Number(await listPosition(page).getAttribute("data-visible"))).toBeGreaterThan(rows);
 });
 
 /** The list goes on past the rows it knows of (`data-open`): the table and the scale both say so, and no percent is shown. */

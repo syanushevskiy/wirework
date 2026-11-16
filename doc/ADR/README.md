@@ -30,6 +30,8 @@ supersedes.
 | [0018](0018-lazy-widgets.md)                  | Lazy widgets                         | 2026-11-14 | Accepted — phase 1 built                                          |
 | [0019](0019-security.md)                      | Security                             | 2026-11-14 | Proposed — a review of 0001–0018; nothing fixed                   |
 | [0020](0020-row-actions.md)                   | Row actions                          | 2026-11-15 | Accepted — built                                                  |
+| [0021](0021-table-height.md)                  | Table height                         | 2026-11-16 | Accepted — built for the infinite table (the plain table not)     |
+| [0022](0022-filters-menu.md)                  | The table's filters behind a button  | 2026-11-16 | Proposed — not built                                              |
 
 ## Status
 

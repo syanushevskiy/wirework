@@ -112,7 +112,8 @@
           }
         ]
       },
-      "height": 320,
+      "height": 200,
+      "heightMode": "fill-cell",
       "title": "Runs",
       "filters": [
         {
