@@ -262,7 +262,7 @@ export const HeaderFilters: Story = {
 
 /**
  * A DATE column is filtered by a PERIOD: its header's calendar icon opens a
- * start and an end date — typed here, never clicked in a calendar —, Filter
+ * start and an end, each a date and a time — typed here, never clicked in a calendar —, Filter
  * sends both under the request's `filterBetween`, and Reset takes the
  * period away again.
  */
@@ -291,12 +291,12 @@ export const HeaderPeriod: Story = {
     await userEvent.click(within(started).getByRole("button"));
     const period = await body.findByRole("group", { name: "Period of Started" });
     const [from, to] = within(period).getAllByRole("textbox");
-    await userEvent.type(from as HTMLElement, "2026-11-01{Enter}");
-    await userEvent.type(to as HTMLElement, "2026-11-03{Enter}");
+    // Each end is a date AND a time, typed whole and kept as ISO with the machine's offset.
+    await userEvent.type(from as HTMLElement, "2026-11-01 00:00{Enter}");
+    await userEvent.type(to as HTMLElement, "2026-11-03 23:59{Enter}");
     await userEvent.click(within(period).getByRole("button", { name: "Filter" }));
-    await waitFor(() =>
-      expect(store).toHaveTextContent('"filterBetween": { "started": [ "2026-11-01", "2026-11-03" ] }'),
-    );
+    await waitFor(() => expect(store).toHaveTextContent('"filterBetween": { "started": [ "2026-11-01T00:00:00'));
+    await expect(store).toHaveTextContent('"2026-11-03T23:59:00');
     // Reset clears the period and says so at once.
     await userEvent.click(within(started).getByRole("button"));
     await userEvent.click(
@@ -306,9 +306,10 @@ export const HeaderPeriod: Story = {
   },
 };
 
+/** `time: false`: the period is of WHOLE DAYS, kept as `YYYY-MM-DD` — a date and a time is the default. */
 const periodColumns = [
   { title: "Name", property: "name" },
-  { title: "Started", property: "started", filter: { kind: "dates" } },
+  { title: "Started", property: "started", filter: { kind: "dates", time: false } },
 ];
 
 /**

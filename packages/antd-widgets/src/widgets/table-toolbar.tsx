@@ -1,7 +1,8 @@
 /**
- * The TOOLBAR above the two antd tables: the items the page listed
- * (`toolbar`), then the column menu's button — one row, at the table's
- * right edge. And the two STANDARD items, which a host replaces by
+ * The BAR above the two antd tables: the table's TITLE at its left, then —
+ * at its right — the table's own FILTERS (`filters`: always in view, by a
+ * property no column needs to show) and the TOOLBAR: the items the page
+ * listed (`toolbar`), then the column menu's button. And the two STANDARD items, which a host replaces by
  * registering its own under the same name (`createAntdTable({ toolbar })`).
  * Render-only: logic in useTableToolbar.
  */
@@ -9,7 +10,9 @@ import { ClearOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import type { ColumnMenuView } from "../hooks/use-column-state";
 import type { TableToolbarItemProps, TableToolbarItems, ToolbarEntry } from "../hooks/use-table-toolbar";
+import type { ToolbarFilterEntry } from "../hooks/use-toolbar-filters";
 import { ColumnMenu } from "./column-menu";
+import { FilterControl } from "./header-filter";
 
 /** `reset-filters`: filter by nothing — disabled while nothing is filtered by. */
 export function ResetFiltersItem({ filtered, resetFilters }: TableToolbarItemProps) {
@@ -57,20 +60,44 @@ export function toolbarItems(own: TableToolbarItems | undefined): TableToolbarIt
 }
 
 export interface TableToolbarProps {
+  /** The table's title, at the bar's left; "" for none. */
+  title: string;
+  /** The table's own filters, before the tools. */
+  filters: ToolbarFilterEntry[];
   items: ToolbarEntry[];
   columnMenu: ColumnMenuView | undefined;
 }
 
-export function TableToolbar({ items, columnMenu }: TableToolbarProps) {
-  if (items.length === 0 && columnMenu === undefined) return null;
+export function TableToolbar({ title, filters, items, columnMenu }: TableToolbarProps) {
+  const tools = items.length > 0 || columnMenu !== undefined;
+  if (title === "" && filters.length === 0 && !tools) return null;
   return (
-    <div className="ww-table__toolbar" data-testid="table-toolbar" role="toolbar" aria-label="Table tools">
-      {items.map(({ key, name, Item, props }) => (
-        <span key={key} className="ww-table__tool" data-testid="table-toolbar-item" data-name={name}>
-          <Item {...props} />
-        </span>
-      ))}
-      {columnMenu ? <ColumnMenu menu={columnMenu} /> : null}
+    <div className="ww-table__bar" data-testid="table-bar">
+      {title === "" ? null : (
+        <div className="ww-table__title" data-testid="table-title" role="heading" aria-level={3}>
+          {title}
+        </div>
+      )}
+      {filters.length === 0 ? null : (
+        <div className="ww-table__filters" data-testid="table-filters" role="group" aria-label="Table filters">
+          {filters.map(({ id, ...filter }) => (
+            <span key={id} className="ww-table__bar-filter">
+              <span className="ww-table__bar-label">{filter.title}</span>
+              <FilterControl {...filter} property={id} testId="table-bar-filter" />
+            </span>
+          ))}
+        </div>
+      )}
+      {tools ? (
+        <div className="ww-table__toolbar" data-testid="table-toolbar" role="toolbar" aria-label="Table tools">
+          {items.map(({ key, name, Item, props }) => (
+            <span key={key} className="ww-table__tool" data-testid="table-toolbar-item" data-name={name}>
+              <Item {...props} />
+            </span>
+          ))}
+          {columnMenu ? <ColumnMenu menu={columnMenu} /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

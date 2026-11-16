@@ -66,6 +66,7 @@ import {
   tableColumnEvents,
   tableColumnPorts,
   tableEvents,
+  tableFilterPorts,
   tableHeaderEvents,
   tableHeaderPorts,
   tablePorts,
@@ -85,6 +86,7 @@ export const infiniteTableContract = defineContract({
     inputs: {
       ...tablePorts,
       ...tableHeaderPorts,
+      ...tableFilterPorts,
       ...tableColumnPorts,
       total: {
         description: "Store path holding how many rows the server has (optional; without it nothing more is asked for)",

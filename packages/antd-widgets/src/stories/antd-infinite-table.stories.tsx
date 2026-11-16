@@ -195,6 +195,61 @@ export const FilterRow: Story = {
 };
 
 /**
+ * The BAR above the table: a TITLE at its left, and the table's own FILTERS
+ * before the tools — always in view, by a property that need not be a
+ * column's filter (Team) or a column at all (Branch). They are one choice
+ * with the headers: the same ports, the same `filter-changed`.
+ */
+export const TitleAndFilters: Story = {
+  render: () => (
+    <WidgetStory
+      key="title-and-filters"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows, total: 3 } }}
+      viewModel={{
+        inputs: {
+          rows: "demo.rows",
+          total: "demo.total",
+          filterIn: "demo.filterIn",
+          filterLike: "demo.filterLike",
+          orderBy: "demo.orderBy",
+        },
+        on: reactions,
+        columns: headerColumns,
+        height: 240,
+        title: "Runs",
+        filters: [
+          { id: "owner.team", label: "Team", options: [{ value: "Core" }, { value: "Web" }] },
+          { id: "branch", label: "Branch", kind: "text" },
+          // A period needs the filterBetween port, which this table does not bind: it is not offered.
+          { id: "started", label: "Started", kind: "dates" },
+        ],
+        toolbar: [{ name: "reset-filters" }],
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const store = canvas.getByTestId("story-store");
+    await expect(canvas.getByRole("heading", { name: "Runs" })).toBeVisible();
+    const filters = within(canvas.getByRole("group", { name: "Table filters" }));
+    await expect(canvas.getAllByTestId("table-bar-filter")).toHaveLength(2);
+    await userEvent.click(filters.getByRole("combobox", { name: "Filter Team" }));
+    await userEvent.click(await page().findByTitle("Core"));
+    await expect(store).toHaveTextContent('"filterIn": { "owner.team": [ "Core" ] }');
+    const branch = filters.getByRole("searchbox", { name: "Filter Branch" });
+    await userEvent.type(branch, "main{Enter}");
+    await expect(store).toHaveTextContent('"filterLike": { "branch": "main" }');
+    // The values stay: every change carries the whole choice.
+    await expect(store).toHaveTextContent('"filterIn": { "owner.team": [ "Core" ] }');
+    // The toolbar's reset is theirs too.
+    await userEvent.click(canvas.getByRole("button", { name: "Reset Filters" }));
+    await expect(store).toHaveTextContent('"filterIn": {}');
+    await expect(store).toHaveTextContent('"filterLike": {}');
+    await waitFor(() => expect(branch).toHaveValue(""));
+  },
+};
+
+/**
  * MORE: the server has 10 rows, 3 are held, and the end of the list is in
  * view from the start — so `more` is emitted at once with the offset of the
  * next row, and only once for these rows.

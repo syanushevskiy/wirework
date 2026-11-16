@@ -18,6 +18,7 @@ import type {
   PeriodValues,
   SearchValues,
   TableColumn,
+  TableFilter,
   RowAction,
   TableRow,
   ToolbarItem,
@@ -30,6 +31,7 @@ import { useColumnState, type ColumnEvents, type ColumnMenuView, type ColumnStat
 import type { TableCellRenderers } from "./use-table-cell";
 import { useRowActions, type RowActionsView, type TableRowActions } from "./use-row-actions";
 import { useTableHeaders, type TableHeadersView } from "./use-table-headers";
+import { useToolbarFilters, type ToolbarFilterEntry } from "./use-toolbar-filters";
 import { NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
 export type { RenderedRow } from "./use-table-rows";
@@ -53,6 +55,8 @@ export interface TableView {
   scroll: { x: number };
   /** The toolbar's items, as the `toolbar` setting lists them. */
   toolbar: ToolbarEntry[];
+  /** The table's own filters, in the bar above it (the `filters` setting or port). */
+  filters: ToolbarFilterEntry[];
   /** The cell selection: the root's handlers, the menu, what is selected. */
   cells: CellSelectionView;
 }
@@ -66,6 +70,7 @@ export interface TablePaths {
   filterLike?: string | undefined;
   filterBetween?: string | undefined;
   orderBy?: string | undefined;
+  filters?: string | undefined;
   columnState?: string | undefined;
 }
 
@@ -78,6 +83,7 @@ export interface TablePorts {
   filterLike: PortDefinition<SearchValues>;
   filterBetween: PortDefinition<PeriodValues>;
   orderBy: PortDefinition<ColumnOrder>;
+  filters: PortDefinition<TableFilter[]>;
   columnState: PortDefinition<ColumnState>;
 }
 
@@ -90,6 +96,7 @@ export interface TableSettings {
   columnMenu: boolean;
   columnStateKey: string;
   toolbar: ToolbarItem[];
+  filters: TableFilter[];
   rowActions: RowAction[];
   cellSelection: boolean;
   exportName: string;
@@ -181,6 +188,7 @@ export function useTable(
     filtered: headers.filtered,
     resetFilters: headers.resetFilters,
   });
+  const filters = useToolbarFilters(store, paths.filters, ports.filters, settings.filters, headers);
 
   const actions = useRowActions(emit, settings.rowActions, rowActions);
   const withActions = useColumnsWithActions(headers, actions);
@@ -188,6 +196,7 @@ export function useTable(
   return {
     scroll: withActions.scroll,
     toolbar,
+    filters,
     columns: withActions.columns,
     rows: renderedRows,
     loading,

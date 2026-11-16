@@ -17,6 +17,7 @@
         "total": "history.total",
         "filterIn": "history.filterIn",
         "filterLike": "history.filterLike",
+        "filterBetween": "history.filterBetween",
         "orderBy": "history.orderBy"
       },
       "on": {
@@ -75,6 +76,10 @@
             "from": "filterLike"
           },
           {
+            "set": "history.filterBetween",
+            "from": "filterBetween"
+          },
+          {
             "call": "table-view/load",
             "with": {
               "into": "history"
@@ -108,6 +113,19 @@
         ]
       },
       "height": 320,
+      "title": "Runs",
+      "filters": [
+        {
+          "id": "reference",
+          "label": "Reference",
+          "kind": "text"
+        },
+        {
+          "id": "started",
+          "label": "Started",
+          "kind": "dates"
+        }
+      ],
       "toolbar": [
         {
           "name": "reset-filters"

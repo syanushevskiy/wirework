@@ -23,6 +23,17 @@ export const toText = (date: Dayjs | null | undefined, withTime: boolean): strin
   date === null || date === undefined ? "" : date.format(withTime ? DATE_TIME_FORMAT : DATE_FORMAT);
 
 /**
+ * What a PERIOD's two pickers are given (a table's date filter): with a time
+ * — the default — a date and a time to the minute, applied as it is picked
+ * or typed (no OK button: the filter's own Filter button, or the change
+ * itself, applies it). ONE format, typed whole (`2026-11-03 23:59`): with a
+ * second one for a day alone, antd takes the day the moment it is complete
+ * and the time typed after it is lost.
+ */
+export const periodPicker = (withTime: boolean) =>
+  withTime ? { showTime: { format: "HH:mm" }, format: "YYYY-MM-DD HH:mm", needConfirm: false } : {};
+
+/**
  * What the user SEES, and types: the page's format when it gives one, else
  * the stored day's form (a date-time without its offset) — antd's own for a
  * week, a month or a year.

@@ -25,6 +25,7 @@ import { useCellTip } from "../hooks/use-cell-tip";
 import { CellMenu } from "./cell-menu";
 import { CellTip } from "./cell-tip";
 import { rowActionsOf } from "./row-actions";
+import { TableTheme } from "./table-theme";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 import { RowSpaceProvider } from "./row-spacers";
 
@@ -55,6 +56,7 @@ export function createAntdInfiniteTable({
         filterLike: viewModel.inputs.filterLike,
         filterBetween: viewModel.inputs.filterBetween,
         orderBy: viewModel.inputs.orderBy,
+        filters: viewModel.inputs.filters,
         columnState: viewModel.inputs.columnState,
       },
       infiniteTableContract.io.inputs,
@@ -66,6 +68,7 @@ export function createAntdInfiniteTable({
         columnMenu: viewModel.columnMenu,
         columnStateKey: viewModel.columnStateKey,
         toolbar: viewModel.toolbar,
+        filters: viewModel.filters,
         rowActions: viewModel.rowActions,
         cellSelection: viewModel.cellSelection,
         exportName: viewModel.exportName,
@@ -98,45 +101,52 @@ export function createAntdInfiniteTable({
         {...view.cells.root}
         {...tip.root}
       >
-        <CellMenu view={view.cells} />
-        <CellTip tip={tip.tip} />
-        <TableToolbar items={view.toolbar} columnMenu={view.columnMenu} />
-        {/*
+        <TableTheme>
+          <CellMenu view={view.cells} />
+          <CellTip tip={tip.tip} />
+          <TableToolbar
+            title={viewModel.title}
+            filters={view.filters}
+            items={view.toolbar}
+            columnMenu={view.columnMenu}
+          />
+          {/*
           The box the rows scroll in: as tall as the setting says, at most. It is the element that HOLDS the focus for
           keyboard scrolling (Page Down, End, Home), named by the line under the rows: a row is focusable too, but a
           row leaves the DOM when the window moves past it, and the focus would fall to the page with it.
         */}
-        <div
-          ref={view.scrollRef}
-          className="ww-infinite-table__scroll"
-          data-testid="infinite-table-scroll"
-          style={{ maxHeight: viewModel.height }}
-          tabIndex={0}
-          role="region"
-          aria-label={view.status}
-        >
-          <RowSpaceProvider value={view.space}>
-            <Table
-              size="small"
-              pagination={false}
-              loading={view.loading}
-              columns={view.columns}
-              dataSource={view.rows}
-              rowKey="key"
-              locale={{ emptyText: viewModel.emptyText }}
-              onRow={view.rowProps}
-              onChange={view.change}
-              sticky={view.sticky}
-              scroll={view.scroll}
-              // One line a cell: the columns keep their widths whatever the text (styles.css).
-              tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
-              components={view.components}
-            />
-          </RowSpaceProvider>
-          <div ref={view.endRef} className="ww-infinite-table__end" data-testid="infinite-table-status">
-            <Typography.Text type="secondary">{view.status}</Typography.Text>
+          <div
+            ref={view.scrollRef}
+            className="ww-infinite-table__scroll"
+            data-testid="infinite-table-scroll"
+            style={{ maxHeight: viewModel.height }}
+            tabIndex={0}
+            role="region"
+            aria-label={view.status}
+          >
+            <RowSpaceProvider value={view.space}>
+              <Table
+                size="small"
+                pagination={false}
+                loading={view.loading}
+                columns={view.columns}
+                dataSource={view.rows}
+                rowKey="key"
+                locale={{ emptyText: viewModel.emptyText }}
+                onRow={view.rowProps}
+                onChange={view.change}
+                sticky={view.sticky}
+                scroll={view.scroll}
+                // One line a cell: the columns keep their widths whatever the text (styles.css).
+                tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
+                components={view.components}
+              />
+            </RowSpaceProvider>
+            <div ref={view.endRef} className="ww-infinite-table__end" data-testid="infinite-table-status">
+              <Typography.Text type="secondary">{view.status}</Typography.Text>
+            </div>
           </div>
-        </div>
+        </TableTheme>
       </div>
     );
   }

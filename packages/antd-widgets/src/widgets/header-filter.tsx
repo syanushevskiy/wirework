@@ -25,67 +25,88 @@ export interface HeaderFilterProps {
   change: (next: ColumnChoice) => void;
 }
 
-export function HeaderFilter({ title, property, filter, values, text, period, change }: HeaderFilterProps) {
-  const view = useHeaderFilter(filter, values, text, period, change);
+export function HeaderFilter(props: HeaderFilterProps) {
   return (
     <div className="ww-table__header">
-      <span data-testid="table-column-title">{title}</span>
-      <div
-        className="ww-table__filter"
-        data-testid="table-filter"
-        data-column={title}
-        data-property={property}
-        data-kind={filter.kind}
-        data-values={view.chosenAttribute}
-        {...view.own}
-      >
-        {filter.kind === "values" ? (
-          <Select
-            mode="multiple"
+      <span data-testid="table-column-title">{props.title}</span>
+      <FilterControl {...props} testId="table-filter" />
+    </div>
+  );
+}
+
+/**
+ * The control itself, by what is filtered by — under a column's title in the
+ * filter row, and beside its label in the bar above the table (TableToolbar).
+ */
+export function FilterControl({
+  title,
+  property,
+  filter,
+  values,
+  text,
+  period,
+  change,
+  testId,
+}: HeaderFilterProps & { testId: string }) {
+  const view = useHeaderFilter(filter, values, text, period, change);
+  return (
+    <div
+      className="ww-table__filter"
+      data-testid={testId}
+      data-column={title}
+      data-property={property}
+      data-kind={filter.kind}
+      data-values={view.chosenAttribute}
+      {...view.own}
+    >
+      {filter.kind === "values" ? (
+        <Select
+          mode="multiple"
+          size="small"
+          className="ww-select"
+          aria-label={`Filter ${title}`}
+          placeholder="All"
+          allowClear
+          maxTagCount="responsive"
+          popupMatchSelectWidth={false}
+          value={values}
+          options={view.options}
+          onChange={view.pickValues}
+        />
+      ) : filter.kind === "dates" ? (
+        <div className="ww-table__period" role="group" aria-label={`Filter ${title}`}>
+          <DatePicker
+            {...view.picker}
             size="small"
-            className="ww-select"
-            aria-label={`Filter ${title}`}
-            placeholder="All"
-            allowClear
-            maxTagCount="responsive"
-            popupMatchSelectWidth={false}
-            value={values}
-            options={view.options}
-            onChange={view.pickValues}
+            aria-label={`${title} from`}
+            placeholder="From"
+            value={view.start}
+            onChange={view.pickStart}
           />
-        ) : filter.kind === "dates" ? (
-          <div className="ww-table__period" role="group" aria-label={`Filter ${title}`}>
-            <DatePicker
-              size="small"
-              aria-label={`${title} from`}
-              placeholder="From"
-              value={view.start}
-              onChange={view.pickStart}
-            />
-            <DatePicker
-              size="small"
-              aria-label={`${title} to`}
-              placeholder="To"
-              value={view.end}
-              onChange={view.pickEnd}
-            />
-          </div>
-        ) : (
-          <Input
+          <DatePicker
+            {...view.picker}
             size="small"
-            role="searchbox"
-            aria-label={`Filter ${title}`}
-            placeholder="Search"
-            prefix={<SearchOutlined />}
-            allowClear
-            value={view.shown}
-            onChange={(event) => view.type(event.target.value)}
-            onPressEnter={view.apply}
-            onBlur={view.apply}
-            onClear={view.clear}
+            aria-label={`${title} to`}
+            placeholder="To"
+            value={view.end}
+            onChange={view.pickEnd}
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        <Input
+          size="small"
+          role="searchbox"
+          aria-label={`Filter ${title}`}
+          placeholder="Search"
+          prefix={<SearchOutlined />}
+          allowClear
+          value={view.shown}
+          onChange={(event) => view.type(event.target.value)}
+          onPressEnter={view.apply}
+          onBlur={view.apply}
+          onClear={view.clear}
+        />
+      )}
     </div>
   );
 }

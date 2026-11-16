@@ -10,9 +10,13 @@
 import { useCallback, useMemo } from "react";
 import type { Dayjs } from "dayjs";
 import type { FilterDropdownProps } from "antd/es/table/interface";
-import { toDayjs, toText } from "./dates";
+import { periodPicker, toDayjs, toText } from "./dates";
 
-export function useHeaderPeriod({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) {
+export function useHeaderPeriod(
+  { selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps,
+  /** Each end is a date and a time; false: a whole day. */
+  withTime: boolean,
+) {
   const from = String(selectedKeys[0] ?? "");
   const to = String(selectedKeys[1] ?? "");
   const start = useMemo(() => toDayjs(from), [from]);
@@ -22,10 +26,11 @@ export function useHeaderPeriod({ selectedKeys, setSelectedKeys, confirm, clearF
     (nextFrom: string, nextTo: string) => setSelectedKeys(nextFrom === "" && nextTo === "" ? [] : [nextFrom, nextTo]),
     [setSelectedKeys],
   );
-  const pickStart = useCallback((date: Dayjs | null) => keep(toText(date, false), to), [keep, to]);
-  const pickEnd = useCallback((date: Dayjs | null) => keep(from, toText(date, false)), [keep, from]);
+  const pickStart = useCallback((date: Dayjs | null) => keep(toText(date, withTime), to), [keep, to, withTime]);
+  const pickEnd = useCallback((date: Dayjs | null) => keep(from, toText(date, withTime)), [keep, from, withTime]);
+  const picker = useMemo(() => periodPicker(withTime), [withTime]);
   const apply = useCallback(() => confirm({ closeDropdown: true }), [confirm]);
   const reset = useCallback(() => clearFilters?.({ confirm: true, closeDropdown: true }), [clearFilters]);
 
-  return { start, end, from, to, pickStart, pickEnd, apply, reset };
+  return { start, end, from, to, picker, pickStart, pickEnd, apply, reset };
 }

@@ -86,6 +86,8 @@ describe("columnsOf", () => {
     expect(filterOf(dated({ isFilterable: false }))).toBeUndefined();
     expect(filterOf(dated({}, { enableFilter: false }))).toBeUndefined();
     expect(filterOf(dated(), { filters: { at: false } })).toBeUndefined();
+    // A date and a time at each end by default; the page asks for whole days.
+    expect(filterOf(dated(), { filters: { at: { time: false } } })).toEqual({ kind: "dates", time: false });
     expect(filterOf(dated(), { filters: { at: { values: ["today"] } } })).toEqual({
       kind: "values",
       options: [{ value: "today" }],

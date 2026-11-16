@@ -58,6 +58,11 @@ export interface TableHeadersView {
   /** Whether anything is filtered by, and the way to filter by nothing — what the toolbar's "Reset filters" needs. */
   filtered: boolean;
   resetFilters: () => void;
+  /** Everything filtered by now, and the way to change ONE property's choice — what the bar's own filters need. */
+  choice: FilterChoice;
+  choose: (property: string, next: ColumnChoice) => void;
+  /** Whether a period has somewhere to live: the `filterBetween` port is bound. */
+  keepsPeriods: boolean;
   /** antd's `scroll`: `x` the sum of the columns' widths — the table scrolls sideways in a narrower box. */
   scroll: { x: number };
 }
@@ -134,7 +139,8 @@ export function headerOf(
     header.filteredValue = text === "" ? null : [text];
   } else if (column.filter?.kind === "dates") {
     const [from, to] = periods[column.property] ?? NO_DATES;
-    header.filterDropdown = (props) => createElement(HeaderPeriod, { ...props, title: column.title });
+    const time = column.filter.time !== false;
+    header.filterDropdown = (props) => createElement(HeaderPeriod, { ...props, title: column.title, time });
     // The calendar icon: what tells a period from a search and from a list of values.
     header.filterIcon = createElement(CalendarOutlined);
     header.filteredValue = from === "" && to === "" ? null : [from, to];
@@ -266,5 +272,10 @@ export function useTableHeaders(
   const filtered = useMemo(() => isFiltered(current), [current]);
   const resetFilters = useCallback(() => emit("filter-changed", NO_FILTERS), [emit]);
 
-  return { columns: tableColumns, change, filtered, resetFilters, scroll };
+  const choose = useCallback(
+    (property: string, next: ColumnChoice) => emit("filter-changed", filterChoice(current, property, next)),
+    [emit, current],
+  );
+
+  return { columns: tableColumns, change, filtered, resetFilters, choice: current, choose, keepsPeriods, scroll };
 }

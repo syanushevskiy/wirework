@@ -394,6 +394,36 @@ stores the period. Tested by `table-periods.feature`, the `antd-table`
 story `HeaderPeriod`, `table-view.test.ts` ("filters a date column by a
 period by default").
 
+### Amended: each end is a date and a time (15 November 2026)
+
+The owner asked for a date column's default filter to be a date-time.
+Two options: a `time: true` flag a page turns on per filter, or date-time
+as the default with `time: false` for whole days. **Decided: the default**
+— a `timestamp` column is the common case, and a filter by days cannot
+tell the morning's runs from the evening's.
+
+- Each end is shown and typed as `YYYY-MM-DD HH:mm` and KEPT as ISO with
+  the offset (`2026-11-03T23:59:00+01:00`), the `date` widget's own text
+  for a moment. No OK button in the picker: the header's Filter button
+  applies it, the filter row and the bar apply the change itself.
+- An end is typed WHOLE, a day and a time; a day alone is not taken.
+  (Accepting both forms was tried: antd takes the day the moment it is
+  complete, and the time typed after it is lost.) The end is the moment
+  shown, so "to 2026-10-10 00:00" does not include that day's rows — a
+  day's last minute is typed as such.
+- `time: false` gives the period of whole days as before (`YYYY-MM-DD`):
+  on a column's `filter`, on a filter above the table, and with the
+  table-view loader as the page's `filters.<id>: { "time": false }`.
+- A period a `date-range` widget wrote as days still reads and filters;
+  the two shapes may meet in one `filterBetween`. What either means is
+  the server's to decide; the fake server compares an end with a time as
+  a moment and a day as text.
+
+NOT ADDITIVE for a host's server: the text of a period's ends changes
+from days to moments wherever a date column kept the default. No stored
+document changes shape (a period is page data, not a template), so there
+is no migration step.
+
 ## The toolbar, its items registered by name (12 November 2026)
 
 The owner asked for ProTable's toolbar on both tables, "but elements
@@ -851,6 +881,61 @@ under 1 s in a production build (before the State panel's last change,
 which a production host does not have). What is left in development is
 React's own development-mode cost of rendering antd's table, twice under
 StrictMode.
+
+## A title and the table's own filters (15 November 2026)
+
+**Description.** The owner asked for two things Ant Design's ProTable has:
+a title over the table, and filters that are not a column's — "external"
+filters — in the bar above it. Until now a filter was offered only where a
+column showed it (its header, or the filter row), so a list could not be
+filtered by a property it does not show, and the one thing always in view
+was the separate `filter-bar` widget, which knows lists of values only.
+
+**Options considered.**
+
+- **A. Keep it outside the table:** teach the `filter-bar` widget text and
+  dates, and put a label widget above. No table change — but the page
+  wires two more cells and their reactions for every table, the filters do
+  not sit in the table's bar, and "Reset Filters" stays the only link
+  between them.
+- **B. Toolbar items:** register each filter as a toolbar item by name. A
+  tool gets `refresh()` and `resetFilters()` only; giving items the filter
+  choice makes every host write a filter control of its own.
+- **C. Two settings on the table:** `title`, and `filters` — a list of
+  definitions rendered with the control the filter row already has.
+  Chosen.
+- **D. ProTable's query form:** a form above the table with Search and
+  Reset buttons. A second way to apply a filter (a button) beside the
+  first (at once), and a form's height above every table.
+
+**Decision: C.** Both table kinds get
+
+- `title` — text at the LEFT of the bar above the table (a heading);
+- `filters` — `[{ id, label?, kind?, options? }]`: `id` the row property
+  filtered by, `kind` `values` (the default, with `options`), `text` or
+  `dates`. The shape is the filter bar's definition plus a kind, so what a
+  server describes for a filter bar fits. The optional `filters` PORT
+  holds the same list in the store and wins over the setting, as the
+  `columns` port does.
+
+The filters stand at the bar's right, before the tools. They are NOT a
+second state: they read `filterIn` / `filterLike` / `filterBetween` and
+emit `filter-changed` with the whole choice, exactly as a header does — so
+a filter above the table, a header's dropdown on the same property and
+"Reset Filters" show one choice, and the page's reactions are unchanged.
+A header's own choice already kept what other properties are filtered by.
+A `dates` filter is offered only while `filterBetween` is bound, the rule
+a date column's header follows. Values and periods filter at once; a text
+on Enter or on leaving the field.
+
+Built as `use-toolbar-filters.ts` and `FilterControl` (the filter row's
+control, now shared) in `table-toolbar.tsx`. The history list has the
+title "Runs" and two filters, "Reference" (text) and "Started" (a period,
+by the column that page does not show). Tested by `table-bar.feature` and
+the `TitleAndFilters` story.
+
+Not built: the filters collapsing into one "Filters" popover in a narrow
+box (they wrap onto a second line instead), and a count of active filters.
 
 ## Follow-up (not built)
 

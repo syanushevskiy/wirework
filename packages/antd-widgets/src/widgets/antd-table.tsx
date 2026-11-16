@@ -28,6 +28,7 @@ import { CellMenu } from "./cell-menu";
 import { CellTip } from "./cell-tip";
 import type { TableRowActions } from "../hooks/use-row-actions";
 import { rowActionsOf } from "./row-actions";
+import { TableTheme } from "./table-theme";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
@@ -65,6 +66,7 @@ export function createAntdTable({
       change,
       columnMenu,
       toolbar,
+      filters,
       scroll,
       cells: selection,
     } = useTable(
@@ -78,6 +80,7 @@ export function createAntdTable({
         filterLike: viewModel.inputs.filterLike,
         filterBetween: viewModel.inputs.filterBetween,
         orderBy: viewModel.inputs.orderBy,
+        filters: viewModel.inputs.filters,
         columnState: viewModel.inputs.columnState,
       },
       tableContract.io.inputs,
@@ -89,6 +92,7 @@ export function createAntdTable({
         columnMenu: viewModel.columnMenu,
         columnStateKey: viewModel.columnStateKey,
         toolbar: viewModel.toolbar,
+        filters: viewModel.filters,
         rowActions: viewModel.rowActions,
         cellSelection: viewModel.cellSelection,
         exportName: viewModel.exportName,
@@ -114,23 +118,25 @@ export function createAntdTable({
         {...selection.root}
         {...tip.root}
       >
-        <CellMenu view={selection} />
-        <CellTip tip={tip.tip} />
-        <TableToolbar items={toolbar} columnMenu={columnMenu} />
-        <Table
-          size="small"
-          pagination={false}
-          loading={loading}
-          columns={columns}
-          dataSource={rows}
-          rowKey="key"
-          locale={{ emptyText: viewModel.emptyText }}
-          onRow={rowProps}
-          onChange={change}
-          scroll={scroll}
-          // One line a cell: the columns keep their widths whatever the text (styles.css).
-          tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
-        />
+        <TableTheme>
+          <CellMenu view={selection} />
+          <CellTip tip={tip.tip} />
+          <TableToolbar title={viewModel.title} filters={filters} items={toolbar} columnMenu={columnMenu} />
+          <Table
+            size="small"
+            pagination={false}
+            loading={loading}
+            columns={columns}
+            dataSource={rows}
+            rowKey="key"
+            locale={{ emptyText: viewModel.emptyText }}
+            onRow={rowProps}
+            onChange={change}
+            scroll={scroll}
+            // One line a cell: the columns keep their widths whatever the text (styles.css).
+            tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
+          />
+        </TableTheme>
       </div>
     );
   }

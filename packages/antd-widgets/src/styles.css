@@ -231,12 +231,67 @@
   min-width: 6rem;
 }
 
-/* The column menu's button, above the table at its right edge; its list no wider than it needs. */
+/* The table's text is 12px: antd's own parts by the theme (table-theme.tsx), the plain text of the bar by this. */
+.ww-table {
+  font-size: 12px;
+}
+
+/*
+ * The bar above the table: the title at its left, the table's own filters and the tools at its right — on one line
+ * while they fit, the filters and the tools wrapping under the title in a narrow box.
+ *
+ * The spacing is Ant Design ProTable's list toolbar: 16px above and below the bar (antd's `padding`), 8px between its
+ * elements (`marginXS`), 16px between the filters and the tools (`margin`), the title at 16px (`fontSizeLG`), medium.
+ */
+.ww-table__bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 16px;
+  padding-block: 16px;
+}
+
+.ww-table__title {
+  margin-right: auto;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.ww-table__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+/* One filter of the bar: its label, then the control the filter row has — a fixed width here, where no column gives one. */
+.ww-table__bar-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ww-table__bar-label {
+  white-space: nowrap;
+  opacity: 0.65;
+}
+
+.ww-table__bar-filter .ww-table__filter[data-kind="values"],
+.ww-table__bar-filter .ww-table__filter[data-kind="text"] {
+  width: 10rem;
+}
+
+.ww-table__bar-filter .ww-select {
+  width: 100%;
+}
+
+/* The tools: the items the page listed, then the column menu's button; its list no wider than it needs. */
 .ww-table__toolbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.25rem;
+  gap: 8px;
 }
 
 .ww-table__column-list {

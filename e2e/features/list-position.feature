@@ -73,7 +73,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
   Scenario: A filter that leaves a few rows is counted at once, and the unfiltered list is open again
     Given I open the "archive" page
     Then the infinite table shows "200+ rows"
-    When I filter the "Started" column from "2026-10-01" to "2026-10-10"
+    When I filter the "Started" column from "2026-10-01 00:00" to "2026-10-10 23:59"
     # Fewer rows than a batch came back: that is all of them.
     Then the infinite table shows "10 rows"
     And the list stands at row 1 of 10

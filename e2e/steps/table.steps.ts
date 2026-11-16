@@ -143,7 +143,17 @@ Then("the {string} column is filtered by a period", async ({ page }, title: stri
   await page.keyboard.press("Escape");
 });
 
-/** The dates are TYPED, each confirmed with Enter — never clicked in a calendar; "" leaves an end open. */
+/**
+ * What a typed end is kept as: "" for an open end; else ISO text that begins with what was typed — a day and a
+ * time ("2026-10-10 23:59"), or a day —, whatever the machine's offset.
+ */
+const storedAs = (typed: string): RegExp =>
+  typed === "" ? /^$/ : new RegExp(`^${typed.replace(" ", "T").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+
+/**
+ * The ends are TYPED, each confirmed with Enter — never clicked in a calendar; "" leaves an end open. An end is a day
+ * AND a time, typed whole ("2026-10-10 23:59") — a day alone only where the filter is of whole days (`time: false`).
+ */
 When(
   "I filter the {string} column from {string} to {string}",
   async ({ page }, title: string, from: string, to: string) => {
@@ -152,11 +162,13 @@ When(
     const fields = period.getByRole("textbox");
     for (const [index, date] of [from, to].entries()) {
       if (date === "") continue;
-      await fields.nth(index).fill(date);
+      // Key by key, as a person types — not `fill`: the field must take the time typed after the day.
+      await fields.nth(index).click();
+      await fields.nth(index).pressSequentially(date);
       await fields.nth(index).press("Enter");
     }
-    await expect(period).toHaveAttribute("data-from", from);
-    await expect(period).toHaveAttribute("data-to", to);
+    await expect(period).toHaveAttribute("data-from", storedAs(from));
+    await expect(period).toHaveAttribute("data-to", storedAs(to));
     await period.getByRole("button", { name: "Filter" }).click();
   },
 );
@@ -628,6 +640,51 @@ Then("the filters of the table cannot be reset", async ({ page }) => {
 
 When("I reload the table", async ({ page }) => {
   await toolbar(page).getByRole("button", { name: "Reload" }).click();
+});
+
+/* ------------------------ title and own filters ------------------------ */
+
+/** The table's own filters, in the bar above it — found by their label. */
+const ownFilters = (page: Page) => tableWidget(page).getByTestId("table-bar-filter");
+const ownFilter = (page: Page, title: string) => ownFilters(page).and(page.locator(`[data-column="${title}"]`));
+
+Then("the table is titled {string}", async ({ page }, title: string) => {
+  await expect(tableWidget(page).getByTestId("table-title")).toHaveText(title);
+});
+
+/** The filters above the table, in order, by their labels: "Reference, Started" ("" = none). */
+Then("the table has the filters {string} above it", async ({ page }, titles: string) => {
+  const filters = ownFilters(page);
+  await expect(filters).toHaveCount(titles === "" ? 0 : titles.split(", ").length);
+  for (const [index, title] of (titles === "" ? [] : titles.split(", ")).entries()) {
+    await expect(filters.nth(index)).toHaveAttribute("data-column", title);
+  }
+});
+
+/** Typing alone filters nothing: Enter applies the text. An empty text takes the filter away. */
+When("I type {string} into the {string} filter above the table", async ({ page }, text: string, title: string) => {
+  const field = ownFilter(page, title).getByRole("searchbox");
+  await field.fill(text);
+  await field.press("Enter");
+});
+
+/** The ends are TYPED key by key, a day and a time ("2026-11-03 23:59"), each confirmed with Enter; "" leaves an end open. */
+When(
+  "I filter from {string} to {string} in the {string} filter above the table",
+  async ({ page }, from: string, to: string, title: string) => {
+    const fields = ownFilter(page, title).getByRole("textbox");
+    for (const [index, date] of [from, to].entries()) {
+      if (date === "") continue;
+      await fields.nth(index).click();
+      await fields.nth(index).pressSequentially(date);
+      await fields.nth(index).press("Enter");
+    }
+  },
+);
+
+/** What the filter is APPLYING: the text, the values ("Failed, Queued") or the period ("2026-11-01, 2026-11-03"); "" = nothing. */
+Then("the {string} filter above the table holds {string}", async ({ page }, title: string, values: string) => {
+  await expect(ownFilter(page, title)).toHaveAttribute("data-values", values.split(", ").join(","));
 });
 
 /* ----------------------------- filter row ----------------------------- */

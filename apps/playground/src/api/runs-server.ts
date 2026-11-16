@@ -282,11 +282,17 @@ const rangeOf = (value: unknown): [string, string] | undefined =>
       (value as [string, string])
     : undefined;
 
+/** Whether an end of a period carries a time (ISO with the offset), and a text — an end, or a row's "YYYY-MM-DD HH:mm", local — as a moment. */
+const hasTime = (end: string): boolean => end.length > 10;
+const momentOf = (text: string): number => Date.parse(text.replace(" ", "T"));
+
 /**
  * The rows a request's `dataFilter` selects, in its order — before paging.
  * `filterLike` is a case-blind "contains"; `filterBetween` compares the
  * column's text with the ends as text (ISO dates sort as text), the `to`
  * end over the column's first characters so a day includes its whole day.
+ * An end that carries a TIME (a table's date filter sends one) is compared
+ * as a moment instead.
  */
 function select(
   rows: readonly ViewRow[],
@@ -297,7 +303,9 @@ function select(
   const between = (row: ViewRow, column: string, range: [string, string]): boolean => {
     const [from, to] = range;
     const value = field(row, column) ?? "";
-    return (from === "" || value >= from) && (to === "" || value.slice(0, to.length) <= to);
+    const after = from === "" || (hasTime(from) ? momentOf(value) >= momentOf(from) : value >= from);
+    const before = to === "" || (hasTime(to) ? momentOf(value) <= momentOf(to) : value.slice(0, to.length) <= to);
+    return after && before;
   };
   const selected = rows.filter(
     (row) =>

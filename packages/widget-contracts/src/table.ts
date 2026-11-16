@@ -36,7 +36,9 @@
  *   the header dropdowns, a filter bar and the row are views of one choice.
  * - A column whose `filter` is `{ kind: "dates" }` — a DATE column — is
  *   filtered by a PERIOD: its header's icon (a calendar) opens a start and
- *   an end date, either of which may stay open. What is chosen is read from
+ *   an end, either of which may stay open — each a date AND a time by
+ *   default (the text ISO with the offset), a whole day (`YYYY-MM-DD`) when
+ *   the filter says `time: false`. What is chosen is read from
  *   the `filterBetween` port (`{ <property>: [from, to] }`, the dates as
  *   the date widgets' text) and travels in the same `filter-changed`, so a
  *   page stores it like the other two: `{ set: "<into>.filterBetween",
@@ -67,6 +69,15 @@
  *   "table-view/load", with: { into } }`). A HOST registers items of its
  *   own by name, and one registered under a standard name REPLACES it — its
  *   own refresher under `refresh`.
+ * - The bar above the table has a TITLE at its left (the `title` setting)
+ *   and FILTERS OF THE TABLE'S OWN before the tools (the `filters` setting,
+ *   or the `filters` port when a server describes them): a list of `{ id,
+ *   label?, kind?, options? }` — the filter bar's definitions, plus a kind:
+ *   a list of `values` (the default), free `text`, or a period of `dates`.
+ *   They are filters of the LIST, not of a column — the id may be a
+ *   property no column shows —, always in view, and one choice with the
+ *   headers: they read the same `filterIn` / `filterLike` / `filterBetween`
+ *   ports and emit the same `filter-changed`.
  * - A table SCROLLS SIDEWAYS when its box is narrower than its columns need:
  *   a column is `COLUMN_WIDTH.default` (110) px wide, an id column
  *   (`isIdColumn`: the rows' key, or a property named like one) 88, unless
@@ -148,7 +159,8 @@ export type PeriodValues = z.infer<typeof periodValuesSchema>;
 export const columnFilterSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("values"), options: choiceOptionsSchema }).strict(),
   z.object({ kind: z.literal("text") }).strict(),
-  z.object({ kind: z.literal("dates") }).strict(),
+  /** A period: each end a date AND a time (ISO with the offset) — or, with `time: false`, a whole day (`YYYY-MM-DD`). */
+  z.object({ kind: z.literal("dates"), time: z.boolean().optional() }).strict(),
 ]);
 export type ColumnFilter = z.infer<typeof columnFilterSchema>;
 
@@ -221,6 +233,25 @@ export const toolbarItemSchema = z
   })
   .strict();
 export type ToolbarItem = z.infer<typeof toolbarItemSchema>;
+
+/**
+ * One FILTER of the bar above a table: what it filters by (`id`, a property
+ * of the rows — a column's, or one no column shows), its label (else the
+ * id), and what it offers — a list of `values` (the default; the filter
+ * bar's definition is one), free `text`, or a period of `dates`.
+ */
+export const tableFilterSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().optional(),
+    kind: z.enum(["values", "text", "dates"]).default("values"),
+    /** What a list of values offers; nothing for the other kinds. */
+    options: choiceOptionsSchema.default([]),
+    /** A period of `dates`: false for whole days; otherwise each end is a date and a time. */
+    time: z.boolean().optional(),
+  })
+  .strict();
+export type TableFilter = z.infer<typeof tableFilterSchema>;
 
 /** The toolbar items every implementation has. */
 export const TOOLBAR_ITEMS = ["reset-filters", "refresh"] as const;
@@ -312,6 +343,16 @@ export const tableHeaderPorts = {
     value: columnOrderSchema,
     required: false,
     default: {},
+  },
+} satisfies WidgetIO["inputs"];
+
+/** The FILTERS of the bar above a table, when the store holds them — a server describes them (shared by every table kind). */
+export const tableFilterPorts = {
+  filters: {
+    description:
+      "Store path holding the filters shown above the table, [{ id, label?, kind?, options? }] (optional; falls back to the setting)",
+    value: z.array(tableFilterSchema),
+    required: false,
   },
 } satisfies WidgetIO["inputs"];
 
@@ -436,6 +477,13 @@ export const tableSettings = {
     .describe(
       "Offer the column menu above the table: show, hide and reorder the columns, and Reset to bring them back as configured",
     ),
+  title: z.string().default("").describe("The table's title, shown above it at the left; empty = none"),
+  filters: z
+    .array(tableFilterSchema)
+    .default([])
+    .describe(
+      'Filters of the table\'s own, shown above it and always in view: [{ "id": "reference", "label": "Reference", "kind": "text" }] — kind "values" (with options: [{ value, label? }]), "text" or "dates". They filter by the same filterIn / filterLike / filterBetween the headers do',
+    ),
   toolbar: z
     .array(toolbarItemSchema)
     .default([])
@@ -476,7 +524,7 @@ export const tableContract = defineContract({
   kind: "table",
   description:
     "Rows from the store in columns; emits the row a user clicks; filters and sorting in the headers on request",
-  io: { inputs: { ...tablePorts, ...tableHeaderPorts, ...tableColumnPorts } },
+  io: { inputs: { ...tablePorts, ...tableHeaderPorts, ...tableFilterPorts, ...tableColumnPorts } },
   events: {
     ...tableEvents,
     ...tableHeaderEvents,

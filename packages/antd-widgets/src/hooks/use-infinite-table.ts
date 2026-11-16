@@ -49,6 +49,7 @@ import {
   type TableView,
 } from "./use-table";
 import { useTableHeaders } from "./use-table-headers";
+import { useToolbarFilters } from "./use-toolbar-filters";
 import { NO_ROWS, useRenderedRows, useRowProps, useTableColumns, type RenderedRow } from "./use-table-rows";
 
 /** What the antd Table and the box around it are given (see use-table.ts on naming antd's public types). */
@@ -156,6 +157,7 @@ export function useInfiniteTable(
     filtered: headers.filtered,
     resetFilters: headers.resetFilters,
   });
+  const filters = useToolbarFilters(store, paths.filters, ports.filters, settings.filters, headers);
   const actions = useRowActions(emit, settings.rowActions, rowActions);
   const withActions = useColumnsWithActions(headers, actions);
 
@@ -311,6 +313,7 @@ export function useInfiniteTable(
     cells: selection,
     scroll: withActions.scroll,
     toolbar,
+    filters,
     sticky,
     components: SPACED_BODY,
     space,

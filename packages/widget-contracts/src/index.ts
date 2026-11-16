@@ -48,6 +48,8 @@ export {
   isIdColumn,
   tableWidth,
   toolbarItemSchema,
+  tableFilterSchema,
+  tableFilterPorts,
   TOOLBAR_ITEMS,
   rowActionSchema,
   ROW_ACTIONS,
@@ -55,6 +57,7 @@ export {
 } from "./table";
 export type {
   ToolbarItem,
+  TableFilter,
   RowAction,
   TableColumn,
   ColumnFilter,

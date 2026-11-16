@@ -9,8 +9,8 @@ import { Button, DatePicker, Space } from "antd";
 import type { FilterDropdownProps } from "antd/es/table/interface";
 import { useHeaderPeriod } from "../hooks/use-header-period";
 
-export function HeaderPeriod({ title, ...dropdown }: FilterDropdownProps & { title: string }) {
-  const { start, end, from, to, pickStart, pickEnd, apply, reset } = useHeaderPeriod(dropdown);
+export function HeaderPeriod({ title, time, ...dropdown }: FilterDropdownProps & { title: string; time: boolean }) {
+  const { start, end, from, to, picker, pickStart, pickEnd, apply, reset } = useHeaderPeriod(dropdown, time);
   return (
     <div
       className="ww-table__dropdown"
@@ -22,8 +22,14 @@ export function HeaderPeriod({ title, ...dropdown }: FilterDropdownProps & { tit
       aria-label={`Period of ${title}`}
     >
       <Space>
-        <DatePicker aria-label={`${title} from`} placeholder="Start date" value={start} onChange={pickStart} />
-        <DatePicker aria-label={`${title} to`} placeholder="End date" value={end} onChange={pickEnd} />
+        <DatePicker
+          {...picker}
+          aria-label={`${title} from`}
+          placeholder="Start date"
+          value={start}
+          onChange={pickStart}
+        />
+        <DatePicker {...picker} aria-label={`${title} to`} placeholder="End date" value={end} onChange={pickEnd} />
       </Space>
       <Space>
         <Button type="primary" size="small" onClick={apply}>

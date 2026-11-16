@@ -66,7 +66,14 @@ path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
   `createAntdTable({ toolbar })` / `createAntdWidgets({ tableToolbar })`
   with components taking `TableToolbarItemProps` (`params`, `loading`,
   `filtered`, `refresh()`, `resetFilters()`); one registered under a
-  standard name — your own refresher as `refresh` — replaces it. The
+  standard name — your own refresher as `refresh` — replaces it. The same
+  bar shows the table's `title` at its left and, before the tools, the
+  table's OWN FILTERS (`filters`: `[{ "id": "reference", "label":
+"Reference", "kind": "text" }]` — kind `values` with `options`, `text` or
+  `dates`; or the `filters` port when the store holds them): always in
+  view, by a property no column needs to show, and one choice with the
+  headers — the same `filterIn` / `filterLike` / `filterBetween` ports, the
+  same `filter-changed`. The
   `rowActions` setting lists the tools of ONE ROW
   (doc/ADR/0020-row-actions.md) — `[{ "name": "favorite" }]` is the
   standard star (`STANDARD_ROW_ACTIONS`: `FavoriteAction`, filled while the

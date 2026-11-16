@@ -37,6 +37,8 @@ const filterOverrideSchema = z.union([
       label: z.string().optional(),
       /** Offer THESE values instead of the server's — also for a column the server offers none for. */
       values: z.array(z.string()).optional(),
+      /** A date column's period: false for whole days instead of a date and a time. */
+      time: z.boolean().optional(),
     })
     .strict(),
 ]);
@@ -59,7 +61,9 @@ export const tableViewSchema = z
     filters: z
       .record(z.string(), filterOverrideSchema)
       .optional()
-      .describe('Per column id: false for no filter, or { "label": "Suite", "values": ["a", "b"] }'),
+      .describe(
+        'Per column id: false for no filter, or { "label": "Suite", "values": ["a", "b"] }; for a date column { "time": false } filters by whole days instead of a date and a time',
+      ),
     /** Sent with EVERY request: the rows this table is about, and their order until the user sorts. */
     request: z
       .object({
@@ -152,7 +156,10 @@ function headerFilterOf(
   const values = valuesOf(metadata, definition, view);
   const own = override !== false && override?.values !== undefined;
   const allowed = override !== false && metadata.enableFilter !== false && definition.isFilterable !== false;
-  if (!own && allowed && isDateType(definition.type)) return { kind: "dates" };
+  if (!own && allowed && isDateType(definition.type)) {
+    // A date and a time at each end unless the page asks for whole days.
+    return override?.time === false ? { kind: "dates", time: false } : { kind: "dates" };
+  }
   if (values.length > 0) return { kind: "values", options: values.map((value) => ({ value })) };
   return allowed && definition.isFilterable === true ? { kind: "text" } : undefined;
 }

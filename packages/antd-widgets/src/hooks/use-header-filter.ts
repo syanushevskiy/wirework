@@ -11,7 +11,7 @@
 import { useCallback, useMemo, useState, type SyntheticEvent } from "react";
 import type { Dayjs } from "dayjs";
 import type { ColumnFilter, DateRange } from "@wirework/widget-contracts";
-import { toDayjs, toText } from "./dates";
+import { periodPicker, toDayjs, toText } from "./dates";
 import type { ColumnChoice } from "./use-table-headers";
 
 const stop = (event: SyntheticEvent): void => event.stopPropagation();
@@ -44,14 +44,17 @@ export function useHeaderFilter(
   const pickValues = useCallback((next: string[]) => change({ kind: "values", values: next }), [change]);
   // A period is two fields, each its own (as in the header's dropdown): one end may be given without the other.
   const [from, to] = period;
+  // Each end a date and a time, unless the filter says whole days.
+  const withTime = filter.kind === "dates" && filter.time !== false;
   const pickStart = useCallback(
-    (date: Dayjs | null) => change({ kind: "dates", period: [toText(date, false), to] }),
-    [change, to],
+    (date: Dayjs | null) => change({ kind: "dates", period: [toText(date, withTime), to] }),
+    [change, to, withTime],
   );
   const pickEnd = useCallback(
-    (date: Dayjs | null) => change({ kind: "dates", period: [from, toText(date, false)] }),
-    [change, from],
+    (date: Dayjs | null) => change({ kind: "dates", period: [from, toText(date, withTime)] }),
+    [change, from, withTime],
   );
+  const picker = useMemo(() => periodPicker(withTime), [withTime]);
   const start = useMemo(() => toDayjs(from), [from]);
   const end = useMemo(() => toDayjs(to), [to]);
 
@@ -77,6 +80,7 @@ export function useHeaderFilter(
     pickValues,
     start,
     end,
+    picker,
     pickStart,
     pickEnd,
     /** For tests and inspection: what is applied, never the draft. */
