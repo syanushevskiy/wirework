@@ -130,6 +130,20 @@ export function pageFile(
   };
 }
 
+/**
+ * Every model path a file WRITES when merged: the keys of `widgets` and the
+ * models of the cells that carry a nested template map — the page's and the
+ * roles'. What an import checks before it lets the file near a tree.
+ */
+export function pageFileModels(file: PageFile): readonly string[] {
+  const models = new Set(Object.keys(file.widgets));
+  mapCells([file.templates, Object.values(file.roles ?? {}).map((held) => held.templates)], (cell) => {
+    if (isPlainObject(cell[NESTED]) && typeof cell["model"] === "string") models.add(cell["model"]);
+    return cell;
+  });
+  return [...models];
+}
+
 /** The file as text: pretty-printed, so a change of one setting is a one-line diff. */
 export const exportPageFile = (file: PageFile): string => JSON.stringify(file, null, 2);
 

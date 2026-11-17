@@ -32,6 +32,13 @@ import { PageToolbar, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder
   `texts` (`DEFAULT_PAGE_EXPORT_TEXTS`): the button "Export page…" and a
   panel with the whole shared page as JSON, read-only, Close and "Download
   `<page>.page.json`" (doc/ADR/0011-pages-as-code.md).
+- `PageImport` takes what `usePageImport` returns (`import`) and,
+  optionally, `texts` (`DEFAULT_PAGE_IMPORT_TEXTS`): the button "Import
+  page…" and a panel with a field for the page file (pasted, or read from
+  "Choose a file…"), what the file holds or why it is refused, Close and
+  Import. Wrap `PageExport` and `PageImport` in an element with the class
+  `ww-builder-files` to have the two buttons on one row, the open panel
+  across under them.
 - `WidgetBuilder` takes the registries, the store, the actions, the
   predicates a condition may pick (optional: the standard ones alone), the
   page name, `addLock` (why adding is not offered right now, or
@@ -56,7 +63,11 @@ through: `layout-toolbar`, `engine-select`, `engine`, `page-edit`,
 `view-share`, `view-import`, `page-view-panel` (with `data-panel`),
 `view-name`, `view-json`, `view-problem`, `view-apply`, `view-cancel`,
 `page-export`, `page-export-open`, `page-export-panel`, `page-export-json`,
-`page-export-download`, `page-export-close`, `widget-builder`, `add-widget`,
+`page-export-download`, `page-export-close`, `page-import`,
+`page-import-open`, `page-import-panel`, `page-import-json`,
+`page-import-summary`, `page-import-problem`, `page-import-warnings`,
+`page-import-choose`, `page-import-apply`, `page-import-close`,
+`widget-builder`, `add-widget`,
 `add-widget-locked`, `widget-selected`, `widget-palette`, `widget-search`,
 `widget-browse`, `widget-card`, `widget-editor`, `cell-template`, `widget-save`,
 `widget-cancel`, `bindings-locked`, `widget-conditions`,

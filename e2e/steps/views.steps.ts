@@ -194,6 +194,52 @@ Then("the export panel is closed", async ({ page }) => {
   await expect(page.getByTestId("page-export-panel")).toHaveCount(0);
 });
 
+/* ------------------------------- import ------------------------------- */
+
+/** The exported file as text, kept through the scenario: a fresh opening of a page is another admin's browser. */
+const kept = new WeakMap<Page, string>();
+
+When("I keep the exported page", async ({ page }) => {
+  kept.set(page, await page.getByTestId("page-export-json").inputValue());
+});
+
+/** Paste a page file into the import panel; what the panel makes of it is for the next step to say. */
+async function pasteToImport(page: Page, text: string) {
+  await page.getByTestId("page-import-open").click();
+  await expect(page.getByTestId("page-import-panel")).toBeVisible();
+  await page.getByTestId("page-import-json").fill(text);
+}
+
+When("I try to import the kept page", async ({ page }) => {
+  await pasteToImport(page, kept.get(page) ?? "");
+});
+
+When("I try to import the page:", async ({ page }, json: string) => {
+  await pasteToImport(page, json);
+});
+
+/** The panel says what a file that would go in holds: its views, its roles, how many widget templates. */
+Then("the import panel says the file holds {string}", async ({ page }, text: string) => {
+  await expect(page.getByTestId("page-import-summary")).toContainText(text);
+});
+
+/** Refused with the reason, and Import not on offer. */
+Then("the import is refused: {string}", async ({ page }, reason: string) => {
+  await expect(page.getByTestId("page-import-problem")).toContainText(reason);
+  await expect(page.getByTestId("page-import-apply")).toBeDisabled();
+});
+
+/** Import: the panel closes once the page is replaced. */
+When("I import the page", async ({ page }) => {
+  await page.getByTestId("page-import-apply").click();
+  await expect(page.getByTestId("page-import-panel")).toHaveCount(0);
+});
+
+Then("the page cannot be imported", async ({ page }) => {
+  await expect(page.getByTestId("page-import-open")).toBeDisabled();
+  await expect(page.getByTestId("page-import-open").locator("xpath=..")).toHaveAttribute("title", /permissions/);
+});
+
 /** Locked, and saying why on hover (the title on the button's wrapper, as the toolbar's locks do). */
 Then("the page cannot be exported", async ({ page }) => {
   await expect(page.getByTestId("page-export-open")).toBeDisabled();

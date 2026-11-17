@@ -1,6 +1,6 @@
 # ADR-0011: Pages as code — an admin builds a page in the builder and lands it in the application's source
 
-- **Status:** Accepted — partly built (the file, Export page, the page folders)
+- **Status:** Accepted — partly built (the file, Export page, Import page, the page folders)
 - **Date:** 2026-11-04
 - **Deciders:** the product owner
 
@@ -549,3 +549,91 @@ join of keys again, no registry needed — the nesting happened in the file.
 The seven folders were re-cut. Tests: the box nested in its cell, a box
 inside a box, the same box twice written once, the round trip back to the
 tree, the folder with and without roles, the problem named after its file.
+
+## Import page (17 November 2026): the exported file read back in the application
+
+### Description
+
+The owner asked: an administrator builds a page in one browser — a view of
+a role's own with more widgets among it —, exports it, and another
+administrator in another browser imports the file and has the same. Export
+page made the file; nothing in the application read one. The only way in
+was a developer's `mergePageFiles` in the source.
+
+### Options considered
+
+- **A. The developer's route only** (as it was): the file goes into the
+  source and ships with the next release. Safe, and useless between two
+  administrators.
+- **B. Paste into the State panel.** It works today for whoever knows the
+  trees' shape; it checks nothing a file from somebody else needs checked,
+  and the file's nested layouts are not the tree's shape.
+- **C. Import of a VIEW, widened to carry widgets.** A view is a layout
+  only (ADR-0006) and is the user's own; a view that brings widget
+  templates is a page file by another name, with the user as its author.
+  It would make the gap ADR-0019 names as its first finding wider.
+- **D. Import page: the page file read back, in place of the shared page,
+  by an administrator** — the same permission, the same file, the same
+  panel as the export, and every check a file from somebody else needs.
+
+### Decision
+
+D. "Import page…" stands under "Export page…". The file takes the WHOLE
+shared page's place — its prebuilt views, what every role says about it,
+the widget templates its cells reference —, as `mergePageFiles` always did:
+an import is a replacement, not a merge of two people's edits. The user's
+own views are not touched. It waits for the editing permission, like Edit
+page and Export page, and is one commit through the builder's one write
+path, after which the page loads again.
+
+The file is somebody else's (ADR-0019, finding 5), so the engine's
+`importPageFile` refuses it unless it is exactly one page — this one:
+
+1. a page file by its shape (`parsePageFile`);
+2. naming the page that is open;
+3. of a data format this version reads — a newer one is refused with
+   `stampProblem`'s reason, an older one is brought forward through the
+   door (`upgradeTrees`, the file merged alone and cut again) before it
+   meets the tree;
+4. writing widget templates only: every model path the file writes —
+   the keys of `widgets` and the cells with a nested template map
+   (`pageFileModels`) — is under `widgets.`;
+5. replacing no template the page did not hold before: a path that
+   exists in the tree and that no cell of this page pointed at is another
+   page's;
+6. leaving the tree with no validation ERROR it did not have
+   (`validateViewModels` before and after; new warnings are shown, not
+   refused — a role nobody holds here, for one).
+
+The panel runs these on every change of the text and says the first
+refusal, or what the file holds (its views, its roles, how many widget
+templates); Import is offered only for a file that would go in.
+
+### What it is not
+
+- Not a merge: a view the importing page had and the file has not is
+  gone. Export first to keep it.
+- Not persistence: the demo keeps nothing across a reload, an imported
+  page like every other edit. A host's `save` is where it is kept.
+- Not the route: the file's `route` is ignored — routes are the host's
+  code.
+- Not a fix of ADR-0019's finding 5 in `mergePageFiles` itself: a
+  developer's merge is as it was. The door a user can reach is guarded.
+- A template left in the tree by a cell since removed is not the page's
+  own any more: a file that writes its path is refused under rule 5.
+
+### Built
+
+`packages/engine/src/page-import.ts` (`importPageFile`, pure),
+`pageFileModels` beside the file's other functions; `usePageImport` in the
+builder (the panel's state, the check, the commit); `PageImport` in
+antd-builder (`page-import`, `page-import-open`, `page-import-panel`,
+`page-import-json`, `page-import-summary`, `page-import-problem`,
+`page-import-warnings`, `page-import-choose` — a file from the disk, read
+into the same field —, `page-import-apply`, `page-import-close`); the
+playground under its export button. Tests: the engine's refusals one by
+one and the upgrade of an older file; the hook; two scenarios in
+`pages-as-code.feature` — a page built for everyone and for the admin in
+the builder, exported, imported into a fresh builder; a file of another
+page, one that writes `roles.admin`, and text that is no JSON, each
+refused with its reason.

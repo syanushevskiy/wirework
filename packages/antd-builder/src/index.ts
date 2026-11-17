@@ -32,6 +32,9 @@ export type { PageViewsProps, PageViewTexts } from "./page-views";
 export { DEFAULT_PAGE_EXPORT_TEXTS, PageExport } from "./page-export";
 export type { PageExportProps, PageExportTexts } from "./page-export";
 
+export { DEFAULT_PAGE_IMPORT_TEXTS, PageImport } from "./page-import";
+export type { PageImportProps, PageImportTexts } from "./page-import";
+
 export { WidgetPalette } from "./widget-palette";
 export type { WidgetPaletteProps } from "./widget-palette";
 

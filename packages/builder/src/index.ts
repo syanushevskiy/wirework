@@ -71,6 +71,9 @@ export type { PageViewPanel, PageViewPanelKind, PageViewsInput, PageViewsState }
 export { downloadTextFile, usePageExport } from "./use-page-export";
 export type { PageExportInput, PageExportPanel, PageExportState } from "./use-page-export";
 
+export { usePageImport } from "./use-page-import";
+export type { PageImportHookInput, PageImportPanel, PageImportState, PageImportSummary } from "./use-page-import";
+
 export { useWidgetForm } from "./use-widget-form";
 export type { WidgetFormInput, WidgetFormState } from "./use-widget-form";
 export { EMPTY_FORM, templateOf, valuesFromViewModel } from "./form-drafts";

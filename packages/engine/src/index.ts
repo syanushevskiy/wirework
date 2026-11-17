@@ -46,12 +46,15 @@ export {
   exportPageFile,
   mergePageFiles,
   pageFile,
+  pageFileModels,
   pageFileName,
   pageFolder,
   pageFromFolder,
   parsePageFile,
 } from "./pages-file";
 export type { MergedPages, PageFileInput } from "./pages-file";
+export { importPageFile } from "./page-import";
+export type { PageImport, PageImportInput } from "./page-import";
 export {
   createMigrations,
   defineMigration,
