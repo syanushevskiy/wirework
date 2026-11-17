@@ -187,6 +187,11 @@ When("I add the widget", async ({ page }) => {
   await page.getByTestId("add-widget").click();
 });
 
+/** No palette at all: this layout takes no new widgets (a demo page's own, edited for everyone). */
+Then("widgets cannot be added to the page", async ({ page }) => {
+  await expect(page.getByTestId("widget-builder")).toHaveCount(0);
+});
+
 Then("the add widget button is disabled", async ({ page }) => {
   await expect(page.getByTestId("add-widget")).toBeDisabled();
 });

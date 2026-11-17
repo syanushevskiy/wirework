@@ -107,6 +107,14 @@ export interface PageEditingInput {
    * touched.
    */
   naming: BuilderNaming;
+  /**
+   * Whether the widget editor may save WIRING from an overlay's session —
+   * an administrator's: the ports, reactions and condition go into the
+   * shared template, for everyone; the settings stay the target's. Absent:
+   * an overlay's session saves settings only (the host locks the wiring
+   * fields: `bindingsLocked`).
+   */
+  rewires?: boolean | undefined;
 }
 
 export function usePageEditing({
@@ -124,6 +132,7 @@ export function usePageEditing({
   roles,
   trees,
   naming,
+  rewires = false,
 }: PageEditingInput) {
   /** null = view mode; [] = an open session with nothing changed yet. */
   const [ops, setOps] = useState<Op[] | null>(null);
@@ -248,10 +257,10 @@ export function usePageEditing({
   const saveWidget = useCallback(
     (cell: EditableCell, bindings: WidgetBindings, settings: WidgetSettings) => {
       if (!mayEdit || cell.template === undefined) return;
-      push(saveWidgetOp(ctx, { ...cell, template: cell.template }, bindings, settings));
+      push(saveWidgetOp(ctx, { ...cell, template: cell.template }, bindings, settings, rewires));
       setSelected(null);
     },
-    [mayEdit, ctx, push],
+    [mayEdit, ctx, push, rewires],
   );
 
   const setCellView = useCallback(

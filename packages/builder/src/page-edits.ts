@@ -404,12 +404,19 @@ export function wrapCellOp(ctx: EditContext, cellId: string, widget: string): Op
  * On the shared page a container's edit may have ADDED a tab (its layout
  * starts empty, on the engine of the layout the cell is in) or REMOVED one
  * (the templates of the cells inside it go, as with a removed cell).
+ *
+ * `rewires` — an ADMINISTRATOR's edit from an overlay's session
+ * (doc/ADR/0012-roles.md, "Amended (17 November 2026)"): the overlay still
+ * gets the settings and nothing else, and the form's WIRING — the ports,
+ * the reactions, the condition, the appearance — is written into the
+ * SHARED template, for everyone who uses it. Wiring is never an overlay's.
  */
 export function saveWidgetOp(
   ctx: EditContext,
   cell: EditableCell & { template: string },
   bindings: WidgetBindings,
   settings: WidgetSettings,
+  rewires = false,
 ): Op {
   const overlay = overlayTargetOf(ctx.target);
   const { model, template, key, definition } = cell;
@@ -419,9 +426,17 @@ export function saveWidgetOp(
     if (overlay !== undefined) {
       const kept = overlay.read(source).pages?.[ctx.page]?.cells?.[overlayKey]?.settings?.[template] ?? {};
       const layouts = Object.fromEntries(Object.entries(kept).filter(([held]) => definition.contains?.includes(held)));
-      return overlay.write(source, (entry) =>
+      const written = overlay.write(source, (entry) =>
         updateUserCellSettings(entry, ctx.page, overlayKey, template, { ...layouts, ...settings }),
       );
+      if (!rewires) return written;
+      return {
+        ...written,
+        viewModels: updateWidgetTemplate(written.viewModels, model, template, (current) => ({
+          ...withoutFormKeys(current, []),
+          ...templateOf(bindings, {}),
+        })),
+      };
     }
     const engine = locateShown(ctx, source)?.engine;
     const viewModels = updateWidgetTemplate(source.viewModels, model, template, (current) => {

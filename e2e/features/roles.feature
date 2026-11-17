@@ -168,7 +168,10 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the server has had time to answer
     When I save the view as "my-settings"
     Then the page uses the "my-settings" view, which is "mine"
+    # An admin starts with the overlay off — their edits are their role's — and has their own views with it on.
     When I sign in as "admin"
+    Then the page uses the "admin" view, which is "role: admin"
+    When I enable the user overlay
     Then the page uses the "my-settings" view, which is "mine"
     And the view list offers "admin" as "role: admin"
     When I delete the view
@@ -210,6 +213,45 @@ Feature: Roles — one page, different for an admin and for everybody else
     When I edit for everyone
     Then the page has 1 cell
     And the page uses the "default" view, which is "prebuilt"
+
+  Scenario: On a demo page an admin adds a widget for a role, in edit mode — the role's page has it, everyone else's is as it was
+    Given I open the "overview" page
+    And the server has had time to answer
+    Then the page has 8 cells
+    # A QA may edit the page, and gets no palette: widgets are an admin's to add.
+    When I edit for the role "admin"
+    And I edit the page
+    Then widgets cannot be added to the page
+    When I cancel the page edit
+    And I sign in as "admin"
+    And the server has had time to answer
+    And I edit for the role "admin"
+    # The admin has the palette in edit mode only.
+    Then widgets cannot be added to the page
+    When I edit the page
+    And I drag the cell "counter-main" onto the cell "label-main"
+    And I choose the "antd-label" widget
+    And I set the setting "text" to "Admins only"
+    And I add the widget
+    # Add saved what was pending, placed the widget and left the admin in edit mode.
+    Then the page has 9 cells
+    And the page mode is "editing"
+    And the cell "custom-1" reads "Admins only"
+    And the cell "counter-main" is placed at x 0 y 0 w 6 h 2
+    When I cancel the page edit
+    Then the page has 9 cells
+    And the page uses the "admin" view, which is "role: admin"
+    And widgets cannot be added to the page
+    # The file another admin imports carries it: the role's view and the widget's template.
+    When I export the page
+    Then the exported page JSON contains '"widgets.custom.custom-1": {'
+    And the exported page JSON contains '"admin": {'
+    When I close the export panel
+    # For everyone, a page's own layout is its configuration: no palette, edit mode or not.
+    And I edit for everyone
+    Then the page has 8 cells
+    When I edit the page
+    Then widgets cannot be added to the page
 
   Scenario: In the builder, editing for a role writes the role's configuration and shows the page as the role sees it
     Given I open the "builder" page
@@ -255,12 +297,33 @@ Feature: Roles — one page, different for an admin and for everybody else
     When I edit for everyone
     Then the cell "label-main" reads "Wirework playground"
 
-  Scenario: An admin seeing the admin's view edits it as their own copy — the shared page and the role's view untouched
+  Scenario: An admin's edits are their role's from the start — the layout, and a widget's wiring for everyone
+    Given I open the "overview" page
+    And the server has had time to answer
+    When I sign in as "admin"
+    And the server has had time to answer
+    Then the edit target is "role: admin"
+    And the user overlay is available and off
+    When I edit the page
+    And I edit the cell "echo-counter"
+    # The wiring is not locked for an admin: it goes into the shared template, the settings stay the role's.
+    And I set the "input" port "value" to "app.settings.note"
+    And I save the widget
+    And I save the page
+    Then the state editor "views" contains '"value": "app.settings.note"'
+    # A QA, whose edits are their own view, sees the rewired widget too: the template is everyone's.
+    When I sign in as "qa"
+    And the server has had time to answer
+    Then the edit target is "me"
+    And the state editor "views" contains '"value": "app.settings.note"'
+
+  Scenario: An admin seeing the admin's view with the overlay on edits it as their own copy — the shared page and the role's view untouched
     Given I open the "settings" page
     And the server has had time to answer
     When I sign in as "admin"
     Then the page uses the "admin" view, which is "role: admin"
-    When I edit the page
+    When I enable the user overlay
+    And I edit the page
     And I remove the cell "echo-permissions"
     And I save the page
     Then the page uses the "my-own" view, which is "mine"

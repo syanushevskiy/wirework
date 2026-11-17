@@ -8,7 +8,7 @@
  */
 import { Flex, Select, Typography } from "antd";
 import { PageView } from "@wirework/react";
-import { PageExport, PageToolbar, PageViews, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
+import { PageExport, PageImport, PageToolbar, PageViews, WidgetBuilder, WidgetEditor } from "@wirework/antd-builder";
 import type { PageVisit, Playground } from "../boot";
 import { BUILDER_PAGE, usePlayground } from "../hooks/use-playground";
 import { CollapsibleCard } from "./collapsible-card";
@@ -49,6 +49,8 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
     toolbar,
     views,
     exporting,
+    importing,
+    bindingsLocked,
     shownViewModels,
     shownUserViewModels,
     editing,
@@ -132,8 +134,12 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
         <PageToolbar toolbar={toolbar} />
         {/* The page's views: prebuilt and the user's own, chosen, saved, shared as JSON. */}
         <PageViews views={views} />
-        {/* The whole shared page as a file, for an admin to hand to a developer (doc/ADR/0011-pages-as-code.md). */}
-        <PageExport export={exporting} />
+        {/* The whole shared page as a file (doc/ADR/0011-pages-as-code.md): exported for a developer or another admin,
+            and imported — what another admin exported takes the shared page's place. One row for the two. */}
+        <div className="ww-builder-files">
+          <PageExport export={exporting} />
+          <PageImport import={importing} />
+        </div>
         <Typography.Paragraph type="secondary" data-testid="visit-note" className="pg-note">
           {page === BUILDER_PAGE
             ? "Opening this page starts it from its initial state: no data at all."
@@ -164,7 +170,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
             predicates={predicates}
             appearances={appearances}
             /* An overlay — the user's own view, a role's — carries settings (and, for a role, a template choice), never wiring. */
-            bindingsLocked={target !== "base"}
+            bindingsLocked={bindingsLocked}
             templates={templateChoice}
             onSave={saveWidget}
             onCancel={clearCell}

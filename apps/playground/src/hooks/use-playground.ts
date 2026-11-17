@@ -34,6 +34,7 @@ import {
   useLayoutNavigation,
   usePageEditing,
   usePageExport,
+  usePageImport,
   usePageToolbar,
   usePageViews,
   type AddLock,
@@ -52,6 +53,8 @@ import { useDemoBridge } from "./use-demo-bridge";
 export const BUILDER_PAGE = "builder";
 /** The container "Wrap in a card" wraps a cell in. */
 const CARD_WIDGET = "antd-card";
+/** The role whose holders add widgets to the application's pages. */
+const ADMIN_ROLE = "admin";
 
 /** What a store without the trees means (the inspector can remove them): no pages, loudly. */
 const NO_VIEW_MODELS: ViewModels = { pages: {}, widgets: {} };
@@ -189,6 +192,23 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * up to it — what a person holding it sees; for everyone, none.
    */
   const [roleTarget, setRoleTarget] = useState<string | undefined>(undefined);
+  /**
+   * An ADMIN's edits are their role's (the owner's rule, 17 November 2026,
+   * doc/ADR/0012-roles.md): when the session says who is signed in — on
+   * opening, and again after "Sign in as" — an admin starts with the overlay
+   * off and their most specific role as the edit target, so Edit page, a
+   * placed widget and a rewired one go to that role's view with no choice to
+   * make first; anybody else starts as the page says, with their own view.
+   * Both are still the toolbar's to change.
+   */
+  const isAdmin = page !== BUILDER_PAGE && roles?.includes(ADMIN_ROLE) === true;
+  const ownRole = isAdmin ? roles?.at(-1) : undefined;
+  const [startedAs, setStartedAs] = useState<string | undefined>(undefined);
+  if (page !== BUILDER_PAGE && person !== undefined && person !== startedAs) {
+    setStartedAs(person);
+    setRoleTarget(ownRole);
+    setOverlayWanted(ownRole === undefined && visit.userOverlayOnOpen);
+  }
   const target = useMemo<EditTarget>(
     () => (withUserOverlay ? "user" : roleTarget === undefined ? "base" : { role: roleTarget }),
     [withUserOverlay, roleTarget],
@@ -214,6 +234,8 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     roles: viewerRoles,
     trees,
     naming: DEFAULT_BUILDER_NAMING,
+    // An admin rewires a widget from any session: the wiring goes to the shared template, the settings to the target.
+    rewires: isAdmin,
   });
 
   // The session's stable functions: the callbacks below depend on what they
@@ -264,15 +286,18 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
 
   /**
    * Why the builder's Add is not offered right now, if it is not: not
-   * without the permission, not under an open edit session (it would be
-   * silently dropped), not in a user's own view (the overlay carries
-   * settings, view and layout only). For a ROLE it is offered: the widget's
-   * template is everyone's and its cell goes into the role's own view
-   * (doc/ADR/0012-roles.md), so the role sees one widget more.
+   * without the permission, not in a user's own view (the overlay carries
+   * settings, view and layout only) and — on the BUILDER's page — not under
+   * an open edit session (it would be silently dropped). For a ROLE it is
+   * offered: the widget's template is everyone's and its cell goes into the
+   * role's own view (doc/ADR/0012-roles.md), so the role sees one widget
+   * more. On the application's pages it is the other way about: widgets are
+   * added IN an edit session only (`adding` below), which Add saves first.
    */
+  const inApplication = page !== BUILDER_PAGE;
   const addLock: AddLock | undefined = !canEditPages
     ? "permission"
-    : editing.editing
+    : editing.editing && !inApplication
       ? "editing"
       : target === "user"
         ? "user-view"
@@ -303,16 +328,28 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
    * Save page does here, that the page loads again after an Add, and that
    * the builder page's own layout takes widgets.
    */
-  const { goTo, editLayout, onAdded, adding, addAt } = useLayoutNavigation({
+  const {
+    goTo,
+    editLayout,
+    onAdded,
+    adding: takesWidgets,
+    addAt,
+  } = useLayoutNavigation({
     at,
     onAt: setAt,
     save: savePage,
     startEditing,
     target,
-    addsToPage: page === BUILDER_PAGE,
+    // The builder's page takes widgets — and so does any page while it is edited FOR A ROLE: the widget's cell goes
+    // into the role's own view (doc/ADR/0012-roles.md), everyone else's page as it was.
+    addsToPage: page === BUILDER_PAGE || (roleOf(target) !== undefined && at === undefined),
     onChanged: loadAgain,
   });
-  const { engineLock, setEngine, addWidget } = useBuilder({
+  const {
+    engineLock,
+    setEngine: chooseEngine,
+    addWidget: placeWidget,
+  } = useBuilder({
     store,
     commit,
     canEdit: canEditPages,
@@ -327,6 +364,37 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     onAdded,
   });
 
+  /**
+   * On the APPLICATION's pages widgets are added by an ADMIN, IN EDIT MODE
+   * only (the owner's rule, 17 November 2026): the palette shows while a
+   * layout that takes widgets is being edited by somebody holding the admin
+   * role. The builder's page is as it was — it has no session, so nobody
+   * there holds a role, and its palette is the page itself.
+   *
+   * A placed widget is a commit of its own, and an open session would be
+   * stale after it: so Add (and choosing the engine of an empty layout)
+   * saves what is pending first, like Save page, and opens the session
+   * again — the admin stays in edit mode. Cancel after it drops only what
+   * was changed since.
+   */
+  const adding = takesWidgets && (!inApplication || (editing.editing && isAdmin));
+  const addWidget = useCallback<typeof placeWidget>(
+    (...placed) => {
+      if (!inApplication) return placeWidget(...placed);
+      saveSession();
+      placeWidget(...placed);
+      startEditing();
+    },
+    [inApplication, placeWidget, saveSession, startEditing],
+  );
+  const setEngine = useCallback<typeof chooseEngine>(
+    (name) => {
+      chooseEngine(name);
+      if (inApplication) startEditing();
+    },
+    [inApplication, chooseEngine, startEditing],
+  );
+
   const toolbar = usePageToolbar({
     page,
     at,
@@ -334,7 +402,7 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     engines: layoutEngines.keys(),
     engine: editing.engine,
     // A demo page's engine is its configuration; the builder's — and an empty layout inside a container — is a choice.
-    engineLock: adding ? engineLock : "configured",
+    engineLock: takesWidgets ? engineLock : "configured",
     onSelectEngine: setEngine,
     editing: editing.editing,
     pendingChanges: editing.pendingChanges,
@@ -384,6 +452,31 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
   }, [page]);
   const exporting = usePageExport({ registry, layoutEngines, viewModels, page, route, editLock });
 
+  /**
+   * The same file IMPORTED (doc/ADR/0011-pages-as-code.md, "Import page"):
+   * what another admin exported takes the shared page's place — checked as a
+   * file from somebody else — and the page loads again by it, from its top.
+   */
+  const onImported = useCallback(() => {
+    setAt(undefined);
+    loadAgain();
+  }, [loadAgain]);
+  const importing = usePageImport({
+    commit,
+    editLock,
+    cancelEditing,
+    onImported,
+    page,
+    viewModels,
+    registry,
+    layoutEngines,
+    actions,
+    predicates,
+    appearances,
+    migrations,
+    knownRoles,
+  });
+
   // The State panel's editors (state-sections.ts): a demo page's own data and views, the global settings and
   // session; the builder's store whole.
   const stateSections = useMemo(
@@ -419,6 +512,9 @@ export function usePlayground(playground: Playground, visit: PageVisit) {
     toolbar,
     views,
     exporting,
+    importing,
+    /** The editor's wiring fields are locked in an overlay's session — a user's own view, a role's — except for an admin. */
+    bindingsLocked: target !== "base" && !isAdmin,
     ...editing,
     reloadKey,
   };

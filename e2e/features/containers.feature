@@ -86,6 +86,32 @@ Feature: Containers — a card that holds other widgets
     And the page mode is "view"
     And the page has 4 cells
 
+  Scenario: On a demo page an admin adds a widget inside a card, in edit mode — a QA editing the same card has no palette
+    Given I open the "settings" page
+    And the server has had time to answer
+    When I disable the user overlay
+    And I edit the page
+    And I edit the content of the cell "card-preferences"
+    Then the page mode is "editing"
+    And widgets cannot be added to the page
+    When I follow the breadcrumb "settings"
+    And I sign in as "admin"
+    And the server has had time to answer
+    # Inside a card widgets are added to the shared page: the admin edits for everyone.
+    And I edit for everyone
+    And I edit the page
+    And I edit the content of the cell "card-preferences"
+    And I choose the "antd-label" widget
+    And I set the setting "text" to "Added by the admin"
+    And I add the widget
+    Then the page has 6 cells
+    And the page mode is "editing"
+    And the cell "custom-1" reads "Added by the admin"
+    # Out of edit mode the palette is gone.
+    When I save the page
+    Then widgets cannot be added to the page
+    And the page has 6 cells
+
   Scenario: With the user overlay on, a card's content is edited into the user's own view — layout and widgets inside — and the shared page is untouched
     Given I open the "cards" page
     And the server has had time to answer

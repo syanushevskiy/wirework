@@ -562,6 +562,72 @@ widget, open "Show when", pick the path, "has the role" and the role's
 name — in its own scenario. Two scenarios in `roles.feature`: the page,
 and the builder's way.
 
+### Amended (17 November 2026): a widget is added for a role on any page
+
+The palette was offered on the builder's page only: on a demo page a role
+could be given another layout of the widgets there, never one more widget.
+The owner, editing for the admin on a demo page, found no way to add one.
+Since this day the host offers the palette on ANY page's own layout while
+it is edited for a role (`addsToPage` of `useLayoutNavigation`: the
+builder's page, or a role as the edit target with the page itself shown).
+Nothing else changed — Add for a role already put the widget's template
+under the builder's group and its cell into the role's own view. Edited
+for everyone, a demo page's own layout is still its configuration and has
+no palette; the user's own view still locks Add. Export page carries the
+role's view with the widget, so another administrator imports it
+(ADR-0011, "Import page").
+
+The owner's rule the same day: ON THE APPLICATION'S PAGES WIDGETS ARE
+ADDED IN EDIT MODE ONLY, AND BY ADMINS ONLY. The palette shows while a
+layout that takes widgets — a page edited for a role, or the layout inside
+a container of the shared page — is in an edit session of somebody whose
+session holds the `admin` role; in view mode, and for anybody else in edit
+mode, there is none. A placed widget is a commit of its own, so Add saves
+what the session has pending first (as Save page does), places the widget
+and opens the session again: the admin stays in edit mode, and Cancel
+afterwards drops only what was changed since. Choosing the engine of an
+empty layout does the same. The BUILDER's page is as it was — it has no
+session, so nobody there holds a role: its palette is always there and Add
+waits for an open page edit to end. This is the host's rule
+(`use-playground.ts`), not the builder package's: the role's name and "in
+edit mode" are what a host decides. Like every role check in the browser
+it is presentation — what a session may save is for the host's server.
+Scenarios: "On a demo page an admin adds a widget for a role, in edit
+mode" (`roles.feature`) and "On a demo page an admin adds a widget inside
+a card, in edit mode" (`containers.feature`).
+
+Two more answers of the owner's the same day, asked because an admin who
+pressed Edit page found no palette and the editor's wiring greyed out:
+
+- **An admin's edits are their ROLE's, from the start.** With the overlay
+  on, an edit is the user's own view, which holds no new widget; the owner
+  chose that an admin's widget goes to the view of their most specific
+  role, with no role to pick first. So when the session says who is signed
+  in — on opening and after "Sign in as" — the host starts an admin with
+  the overlay OFF and that role as the edit target (`admin`, or
+  `wirework-admin` for the Wirework admin); everybody else starts as the
+  page says, with their own view. The page an admin sees is the same (the
+  role target shows it as that role's holder sees it); what changes is
+  where Edit page writes: the role's view, not a copy named "my-own". The
+  toolbar still switches — the overlay on gives an admin their own views
+  back, "everyone" the shared page. This amends "a user who sees a role's
+  view and edits it gets their own copy": that holds with the overlay on.
+- **An admin rewires a widget from any session.** The editor locked the
+  ports, the reactions and the condition whenever the target was an
+  overlay — an overlay carries settings, never wiring. For an admin they
+  are open, and the overlay still carries no wiring: `saveWidgetOp` with
+  `rewires` writes the form's SETTINGS to the target as before and its
+  WIRING into the shared template, for everyone who uses it
+  (`usePageEditing({ rewires })`; the host's `bindingsLocked` is
+  `target !== "base"` for anybody but an admin).
+
+Not built: a palette inside a container while the target is a role — a
+widget inside a card is added to the shared page, so an admin chooses
+"everyone" there first. Scenarios: "An admin's edits are their role's from
+the start — the layout, and a widget's wiring for everyone", and the two
+that changed — a personal view as admin, and the admin's own copy — now
+turn the overlay on first.
+
 ## Later
 
 - **A warning in the builder** when a widget with a role `when` sits in a

@@ -112,6 +112,23 @@ text and downloads it; nothing is committed, the user's overlay never
 travels. A developer merges a received file into the application's view
 models with the engine's `mergePageFiles([file], viewModels)`.
 
+## Import page
+
+The same file read back by another administrator
+(doc/ADR/0011-pages-as-code.md, "Import page"). `usePageImport` takes the
+registries validation takes (`registry`, `layoutEngines`, and optionally
+`actions`, `predicates`, `appearances`, `migrations`, `knownRoles`), the
+shared tree, the page, `commit`, the edit lock and, optionally,
+`cancelEditing` and `onImported` (load the page again). It returns the
+panel — the text, and either `problem` (why the file is refused) or
+`summary` (its views, roles, the number of widget templates, new warnings)
+—, `setText`, `readFile` (a file from the disk), `apply` and `close`. The
+checks are the engine's `importPageFile`: one page, the one that is open,
+widget templates only and none of another page's, a data format this
+version reads (an older file is brought forward), and no new validation
+error. Import REPLACES the shared page in one commit; the user's own views
+are kept.
+
 ## Hooks
 
 - `useWidgetForm` — one field per input port, per primitive setting — and
@@ -148,7 +165,11 @@ models with the engine's `mergePageFiles([file], viewModels)`.
   location, the widgets, the naming, the shown view) and plain trees —
   `changeLayoutOp`, `removeCellOp`, `wrapCellOp`, `saveWidgetOp`,
   `setCellViewOp`, and `plannedInput` for the shown layout's plan — so the
-  routing by target and location is tested without a hook. With `at`
+  routing by target and location is tested without a hook. With `rewires`
+  (optional, for a host's administrators) a widget edit made from an
+  overlay's session writes the form's wiring into the SHARED template and
+  its settings to the target; without it an overlay's session saves
+  settings only. With `at`
   (doc/ADR/0009-containers.md — a chain of containers, `card-1`,
   `tabs-1/tabs.0.content`) the session edits the layout INSIDE a container's
   template, shown as the page under its nested name (`layoutPage`); every
@@ -176,4 +197,7 @@ models with the engine's `mergePageFiles([file], viewModels)`.
   the panel they open.
 - `usePageExport` — the whole shared page as a file to download and hand to
   a developer: `canExport`, the panel with the text, `download`.
+- `usePageImport` — a page file pasted or picked, checked as a file from
+  somebody else, and put in place of the shared page: `canImport`, the
+  panel with `problem` or `summary`, `apply`.
 - `usePathCombobox` — autocomplete over existing store paths.

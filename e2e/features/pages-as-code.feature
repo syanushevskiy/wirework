@@ -84,3 +84,53 @@ Feature: Pages as code — the whole page as a file
       { "editPages": false }
       """
     Then the page cannot be exported
+    And the page cannot be imported
+
+  Scenario: A page one admin built and exported is imported by another — its views, a role's own and the widgets
+    Given I open the "builder" page
+    When I choose the "antd-input" widget
+    And I set the setting "label" to "Your note"
+    And I add the widget
+    # One widget more for the admin alone: its cell is in the admin's own view.
+    And I edit for the role "admin"
+    And I choose the "antd-echo" widget
+    And I set the "input" port "value" to "demo.note"
+    And I add the widget
+    Then the page has 2 cells
+    When I export the page
+    And I keep the exported page
+    # Another admin's browser: the builder as it starts, with nothing on it.
+    Given I open the "builder" page
+    When I try to import the kept page
+    Then the import panel says the file holds "Views: default · roles: admin · widget templates: 2"
+    When I import the page
+    Then the page has 1 cell
+    And I see a widget "antd-input"
+    When I edit for the role "admin"
+    Then the page has 2 cells
+    And the page uses the "admin" view, which is "role: admin"
+    And I see a widget "antd-echo"
+
+  Scenario: A page file is somebody else's — one of another page, or one that writes more than a page, is refused
+    Given I open the "overview" page
+    And the server has had time to answer
+    When I export the page
+    And I keep the exported page
+    And I switch to the "runs" page
+    And the server has had time to answer
+    And I try to import the kept page
+    Then the import is refused: 'the file is the page "overview", and this is the page "runs"'
+    # A file named after this page that reaches for what every admin sees: the roles of the whole application.
+    Given I open the "overview" page
+    And the server has had time to answer
+    When I try to import the page:
+      """
+      { "kind": "wirework-page", "version": 1, "versions": { "app": 2 }, "page": "overview",
+        "templates": {}, "widgets": { "roles.admin": { "pages": {} } } }
+      """
+    Then the import is refused: 'the file writes outside the widgets: "roles.admin"'
+    When I try to import the page:
+      """
+      not a file
+      """
+    Then the import is refused: "not JSON"
