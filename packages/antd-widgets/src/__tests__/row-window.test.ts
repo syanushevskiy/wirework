@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { rowPosition, rowWindow, sameRowWindow, sliceRequest, sliceWindow, windowServes } from "../row-window";
+import {
+  headingOf,
+  rowPosition,
+  rowWindow,
+  sameRowWindow,
+  sliceRequest,
+  sliceWindow,
+  windowServes,
+  type Heading,
+} from "../row-window";
 
 /** A 400 px box of 40 px rows: ten rows fit, the window is twenty. */
 const box = { boxHeight: 400, rowHeight: 40 };
@@ -130,9 +139,85 @@ describe("sliceRequest — what a windowed list asks for, ahead of time", () => 
     expect(sliceRequest({ start: 100, end: 120 }, 400, 400, 800, true)).toEqual({ offset: 100, edge: "around" });
   });
 
+  it("regression: a list that goes on asks at its last known row even when the batch is too small to fetch ahead", () => {
+    // A tall box: a window of forty-four rows, two hundred held — fewer than six windows, so nothing ahead of time.
+    expect(sliceRequest({ start: 120, end: 164 }, 0, 200, 200, true)).toBeUndefined();
+    // At the last row known there is nowhere to scroll on to: without this the list stopped at its first batch.
+    expect(sliceRequest({ start: 156, end: 200 }, 0, 200, 200, true)).toEqual({ offset: 200, edge: "after" });
+    expect(sliceRequest({ start: 156, end: 200 }, 0, 200, 200, true, { rows: 180 })).toEqual({
+      offset: 200,
+      edge: "after",
+    });
+    // A counted list scrolls on into rows it does not hold and asks for the slice there, as before.
+    expect(sliceRequest({ start: 156, end: 200 }, 0, 200, 2000)).toBeUndefined();
+  });
+
   it("does not go back and forth once three batches are held", () => {
     // Rows 200–800 after the batch 600–800 joined: the window that asked for it, at row 450, asks for nothing now.
     expect(sliceRequest({ start: 430, end: 450 }, 200, 600, 2000)).toBeUndefined();
+  });
+});
+
+describe("sliceRequest — the page's own mark (fetchAhead, in rows)", () => {
+  const ask = (start: number, end: number, offset: number, held: number, heading?: Heading, rows = 100) =>
+    sliceRequest({ start, end }, offset, held, 2000, false, { rows, heading });
+
+  it("asks for the batch after once no more than that many rows held are left beyond the window", () => {
+    // Batches of 200, the mark at 100: the first batch asks at row 100 — three quarters would wait for row 150.
+    expect(ask(79, 99, 0, 200, "down")).toBeUndefined();
+    expect(ask(80, 100, 0, 200, "down")).toEqual({ offset: 200, edge: "after" });
+    expect(sliceRequest({ start: 80, end: 100 }, 0, 200, 2000)).toBeUndefined();
+    // The way not known yet (the list just opened, never scrolled): the batch after all the same.
+    expect(ask(80, 100, 0, 200)).toEqual({ offset: 200, edge: "after" });
+  });
+
+  it("asks for the batch before on the way up only, and for the batch after never on the way up", () => {
+    expect(ask(500, 520, 400, 400, "up")).toEqual({ offset: 400, edge: "before" });
+    expect(ask(501, 521, 400, 400, "up")).toBeUndefined();
+    expect(ask(500, 520, 400, 400, "down")).toBeUndefined();
+    expect(ask(700, 720, 400, 400, "up")).toBeUndefined();
+  });
+
+  it("does not go back and forth: the batch that joined leaves the window past the other mark, and nothing is asked", () => {
+    // A mark of 190 with batches of 200: rows 200–800 after the batch 600–800 joined, the window still at row 410.
+    expect(ask(390, 410, 200, 600, "down", 190)).toBeUndefined();
+    // Turning back is what asks for the batch before.
+    expect(ask(370, 390, 200, 600, "up", 190)).toEqual({ offset: 200, edge: "before" });
+  });
+
+  it("asks for nothing ahead of time of a batch no larger than the mark and the window", () => {
+    expect(ask(60, 80, 0, 120, "down")).toBeUndefined();
+    expect(ask(110, 130, 0, 120, "down")).toEqual({ offset: 110, edge: "around" });
+  });
+
+  it("zero is no mark: three quarters, as ever", () => {
+    expect(sliceRequest({ start: 530, end: 550 }, 400, 200, 2000, false, { rows: 0, heading: "up" })).toEqual({
+      offset: 600,
+      edge: "after",
+    });
+  });
+
+  it("stops at the ends of the list, and goes on past a total that is only the rows known", () => {
+    expect(ask(1880, 1900, 1800, 200, "down")).toBeUndefined();
+    expect(ask(0, 20, 0, 200, "up")).toBeUndefined();
+    expect(sliceRequest({ start: 80, end: 100 }, 0, 200, 200, true, { rows: 100 })).toEqual({
+      offset: 200,
+      edge: "after",
+    });
+  });
+});
+
+describe("headingOf — which way a box was scrolled", () => {
+  it("is down or up by where the box went", () => {
+    expect(headingOf(100, 140, undefined)).toBe("down");
+    expect(headingOf(140, 100, "down")).toBe("up");
+  });
+
+  it("regression: a box that did not move keeps the way it was heading", () => {
+    // A window made taller remakes the row window further back; nobody scrolled up.
+    expect(headingOf(140, 140, "down")).toBe("down");
+    expect(headingOf(140, 140, "up")).toBe("up");
+    expect(headingOf(0, 0, undefined)).toBeUndefined();
   });
 });
 

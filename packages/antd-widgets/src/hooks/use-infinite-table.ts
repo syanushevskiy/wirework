@@ -36,7 +36,7 @@ import type { InfiniteTableEvents } from "../widgets/antd-infinite-table";
 import { SPACED_BODY, type RowSpace } from "../widgets/row-spacers";
 import { useCellSelection } from "./use-cell-selection";
 import { useTableToolbar, type TableToolbarItems } from "./use-table-toolbar";
-import { rowPosition, sliceRequest, sliceWindow, type SliceRequest } from "../row-window";
+import { headingOf, rowPosition, sliceRequest, sliceWindow, type Heading, type SliceRequest } from "../row-window";
 import { useFillHeight } from "./use-fill-height";
 import { useRowWindow } from "./use-row-window";
 import type { TableCellRenderers } from "./use-table-cell";
@@ -80,12 +80,12 @@ export interface InfiniteTableView extends TableView {
   window: string;
 }
 
-/** Whether `end` lies within the visible part of `box` — measured now. */
-function inView(box: HTMLElement | null, end: HTMLElement | null): boolean {
+/** Whether `end` lies within the visible part of `box`, or no more than `ahead` pixels under it — measured now. */
+function withinReach(box: HTMLElement | null, end: HTMLElement | null, ahead: number): boolean {
   if (box === null || end === null) return false;
   const boxRect = box.getBoundingClientRect();
   const endRect = end.getBoundingClientRect();
-  return endRect.top < boxRect.bottom && endRect.bottom > boxRect.top;
+  return endRect.top < boxRect.bottom + ahead && endRect.bottom > boxRect.top;
 }
 
 /**
@@ -115,7 +115,14 @@ export function useInfiniteTable(
     offset: PortDefinition<number>;
     position: PortDefinition<number>;
   },
-  settings: TableSettings & { height: number; heightMode: HeightMode; bottomGap: number; windowed: boolean },
+  settings: TableSettings & {
+    height: number;
+    heightMode: HeightMode;
+    bottomGap: number;
+    windowed: boolean;
+    /** Rows left when the next ones are asked for; 0 = the list's own rule (its end in view; three quarters of a slice). */
+    fetchAhead: number;
+  },
   cells: TableCellRenderers,
   toolbarItems: TableToolbarItems,
   rowActions: TableRowActions,
@@ -175,21 +182,6 @@ export function useInfiniteTable(
     [],
   );
 
-  // "Look again": the end entered or left the visible part of the box. The
-  // observer's first word comes a task after the mount — and nothing is
-  // asked before it: an emit from the mount's own effects would find the
-  // page's reactions not bound yet (they bind in a parent's effect, which
-  // runs after this one's), as `load` knows (useAfterMount).
-  const [looks, setLooks] = useState(0);
-  useEffect(() => {
-    const box = scrollRef.current;
-    const end = endRef.current;
-    if (box === null || end === null || typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver(() => setLooks((count) => count + 1), { root: box });
-    observer.observe(end);
-    return () => observer.disconnect();
-  }, []);
-
   // The list GOES ON past the total (a server that does not count): the total is the rows known so far.
   const open = usePort(store, paths.hasMore, ports.hasMore) === true;
   const count = windowed ? Math.max(total ?? 0, offset + rows.length) : renderedRows.length;
@@ -213,17 +205,47 @@ export function useInfiniteTable(
   );
   const windowRows = useMemo(() => renderedRows.slice(shown.start, shown.end), [renderedRows, shown.start, shown.end]);
 
+  // "Look again": the end entered or left the visible part of the box. The
+  // observer's first word comes a task after the mount — and nothing is
+  // asked before it: an emit from the mount's own effects would find the
+  // page's reactions not bound yet (they bind in a parent's effect, which
+  // runs after this one's), as `load` knows (useAfterMount).
+  const [looks, setLooks] = useState(0);
+  // FETCH AHEAD (the setting, in rows; 0 = the list's own rule). A list that appends looks that many rows past its
+  // box for its end; the observer says "look again" when the end comes that near.
+  const { fetchAhead } = settings;
+  const aheadPixels = windowed ? 0 : Math.round(fetchAhead * whole.rowHeight);
+  useEffect(() => {
+    const box = scrollRef.current;
+    const end = endRef.current;
+    if (box === null || end === null || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(() => setLooks((count) => count + 1), {
+      root: box,
+      rootMargin: `0px 0px ${aheadPixels}px 0px`,
+    });
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [aheadPixels]);
+
   // What to ask for (sliceRequest): the next batch AHEAD OF TIME — the window passed three quarters of the rows
-  // held, which are still the ones in view —, the batch before the same way, or a slice around the window when it
-  // left the rows held. Once per set of rows and request, never while loading; and a slice around the same row is
-  // not asked for twice in a row (a server with fewer rows than it said would be asked for ever).
+  // held (or the page's own mark, `fetchAhead` rows left), which are still the ones in view —, the batch before
+  // the same way, or a slice around the window when it left the rows held. Once per set of rows and request, never
+  // while loading; and a slice around the same row is not asked for twice in a row (a server with fewer rows than
+  // it said would be asked for ever).
   const wanted = useRef<{ rows: TableRow[]; request: SliceRequest } | undefined>(undefined);
   const around = useRef<number | undefined>(undefined);
   /** The position the list was TOLD to stand at, the row height it was scrolled there by and where that put the box — until the user scrolls. */
   const told = useRef<{ position: number; rowHeight: number; top: number } | undefined>(undefined);
+  /** Which way the box was last SCROLLED (headingOf): the page's own mark asks only for the batch on that way. */
+  const moved = useRef<{ top: number; heading: Heading | undefined }>({ top: 0, heading: undefined });
   useEffect(() => {
+    const top = scrollRef.current?.scrollTop ?? 0;
+    moved.current = { top, heading: headingOf(moved.current.top, top, moved.current.heading) };
     if (looks === 0 || !windowed || loading || total === undefined) return;
-    const request = sliceRequest({ start: whole.start, end: whole.end }, offset, rows.length, total, open);
+    const request = sliceRequest({ start: whole.start, end: whole.end }, offset, rows.length, total, open, {
+      rows: fetchAhead,
+      heading: moved.current.heading,
+    });
     if (request?.edge !== "around") around.current = undefined;
     if (request === undefined) return;
     // Told where to stand, the list is not there yet (its rows were not measured, or it was not as tall as it will
@@ -240,7 +262,7 @@ export function useInfiniteTable(
     }
     wanted.current = { rows, request };
     emit("window", request);
-  }, [looks, windowed, loading, total, open, whole.start, whole.end, offset, rows, emit]);
+  }, [looks, windowed, loading, total, open, whole.start, whole.end, offset, rows, fetchAhead, emit]);
 
   // WHERE THE LIST STANDS (the `position` port, when bound): the first row in view is emitted as the box scrolls —
   // a frame after the scroll, and a frame after the mount, when the page has bound its reactions — and the box
@@ -317,10 +339,10 @@ export function useInfiniteTable(
   const asked = useRef<TableRow[] | undefined>(undefined);
   useEffect(() => {
     if (looks === 0 || loading || !hasMore || asked.current === rows) return;
-    if (!inView(scrollRef.current, endRef.current)) return;
+    if (!withinReach(scrollRef.current, endRef.current, aheadPixels)) return;
     asked.current = rows;
     emit("more", { offset: rows.length });
-  }, [looks, loading, hasMore, rows, emit]);
+  }, [looks, loading, hasMore, rows, aheadPixels, emit]);
 
   const status = statusOf(rows.length, total, windowed, open);
 

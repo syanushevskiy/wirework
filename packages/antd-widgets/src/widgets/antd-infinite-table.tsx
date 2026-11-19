@@ -76,6 +76,7 @@ export function createAntdInfiniteTable({
         heightMode: viewModel.heightMode,
         bottomGap: viewModel.bottomGap,
         windowed: viewModel.windowed,
+        fetchAhead: viewModel.fetchAhead,
       },
       cells,
       items,

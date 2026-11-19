@@ -464,6 +464,80 @@ export const EndUnknown: Story = {
 };
 
 /**
+ * FETCH AHEAD (`fetchAhead`, in rows): the page says when the next rows are
+ * asked for. Two hundred of four hundred rows are held and the mark is
+ * fifty: at row 100 nothing is asked — the end is a hundred rows away —, at
+ * row 150 `more` goes out, long before the end of the list is in view.
+ */
+export const FetchAhead: Story = {
+  render: () => (
+    <WidgetStory
+      key="fetch-ahead"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows, total: 400 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        on: { more: [{ set: "demo.asked", from: "offset" }] },
+        columns: headerColumns,
+        height: 240,
+        fetchAhead: 50,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    const store = canvas.getByTestId("story-store");
+    await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
+    const rowHeight = (canvas.getAllByTestId("table-row")[0] as HTMLElement).offsetHeight;
+    box.scrollTop = 100 * rowHeight;
+    await expect(canvas.findByText("Run 101")).resolves.toBeVisible();
+    // The observer speaks a frame after the scroll and the hook asks in the render after that: two frames on, a
+    // list that asked too early would have said so.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await expect(store).not.toHaveTextContent("asked");
+    box.scrollTop = 150 * rowHeight;
+    await waitFor(() => expect(store).toHaveTextContent('"asked": 200'));
+    // The end of the list itself is still far under the box.
+    expect(canvas.queryByText("Run 200")).toBeNull();
+  },
+};
+
+/**
+ * FETCH AHEAD, WINDOWED: batches of two hundred and the mark at a hundred —
+ * "fetch 200 and start fetching when you scroll to 100". At row 60 nothing
+ * is asked; at row 95 the rows rendered reach past row 100 and `window`
+ * asks for the batch after, where three quarters would wait for row 150.
+ */
+export const FetchAheadWindowed: Story = {
+  render: () => (
+    <WidgetStory
+      key="fetch-ahead-windowed"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows, total: 2000, offset: 0 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total", offset: "demo.offset" },
+        on: { window: [{ set: "demo.wanted" }] },
+        columns: headerColumns,
+        height: 240,
+        windowed: true,
+        fetchAhead: 100,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    const store = canvas.getByTestId("story-store");
+    await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
+    const rowHeight = (canvas.getAllByTestId("table-row")[0] as HTMLElement).offsetHeight;
+    box.scrollTop = 60 * rowHeight;
+    await expect(canvas.findByText("Run 61")).resolves.toBeVisible();
+    await expect(store).not.toHaveTextContent("wanted");
+    box.scrollTop = 95 * rowHeight;
+    await waitFor(() => expect(store).toHaveTextContent('"wanted": { "offset": 200, "edge": "after" }'));
+  },
+};
+
+/**
  * ROW ACTIONS, as the table has them (doc/ADR/0020-row-actions.md): the
  * star stands before the first column of every rendered row of the virtual
  * list — the blank rows around the window span it too — and pressing it

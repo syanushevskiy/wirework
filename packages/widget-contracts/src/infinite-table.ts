@@ -45,6 +45,11 @@
  *   after them is asked for the same way, and its line reads "<total>+
  *   rows". Whoever loads the rows turns `hasMore` off when the end is
  *   found. Exposed as `data-open`.
+ * - WHEN THE NEXT ROWS ARE ASKED FOR is the page's to say (`fetchAhead`, a
+ *   number of rows; 0 = the rules above): `more` goes out once the end of
+ *   the list is no more than that many rows under the box, and a windowed
+ *   list's `window` once no more than that many rows held are left beyond
+ *   the rows rendered — `after` on the way down, `before` on the way up.
  * - WHERE THE LIST STANDS is the `position` port: the first row in view,
  *   0-based in the whole list. The widget emits `position-changed` as it
  *   scrolls (written back by default) and SCROLLS to the position when
@@ -197,6 +202,14 @@ export const infiniteTableContract = defineContract({
       .default(false)
       .describe(
         "Hold only a SLICE of a long list: the scrollbar spans the total, and scrolling out of the rows held asks for the slice there (the `window` event) instead of appending — needs the total and offset ports",
+      ),
+    fetchAhead: z
+      .number()
+      .int()
+      .min(0)
+      .default(0)
+      .describe(
+        "How many rows before the end of the rows held the next ones are asked for — with batches of 200, 100 asks at row 100. 0 = the list's own rule: when its end comes into view, and for a windowed list past three quarters of the rows held. Windowed: keep it well under the batch size (a batch no larger than this plus the rows rendered is not fetched ahead); the batch before is asked for the same way while scrolling up",
       ),
   }),
   preview: {

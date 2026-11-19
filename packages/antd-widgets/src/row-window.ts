@@ -23,7 +23,7 @@ export interface RowWindowInput {
    * going up — so it serves for longer before it is made again. Without it,
    * half a box above and what is left below.
    */
-  heading?: "down" | "up" | undefined;
+  heading?: Heading | undefined;
 }
 
 export interface RowWindow {
@@ -72,8 +72,25 @@ export interface SliceRequest {
   edge: SliceEdge;
 }
 
-/** How far into the rows held the window may go before the next batch is asked for — ahead of time. */
-export const FETCH_AHEAD = 0.75;
+/** Which way a list is being scrolled. */
+export type Heading = "down" | "up";
+
+/**
+ * The way a box scrolled from `from` to `to` (px) — and the way it was
+ * heading `before` when it did not move: a box made taller, or rows measured
+ * again, remake the row window without anybody scrolling.
+ */
+export const headingOf = (from: number, to: number, before: Heading | undefined): Heading | undefined =>
+  to === from ? before : to > from ? "down" : "up";
+
+/** The page's own mark for asking ahead of time: how many rows held may be left beyond the window, and where it is heading. */
+export interface AheadMark {
+  rows: number;
+  heading?: Heading | undefined;
+}
+
+/** The SHARE of the rows held the window may pass before the next batch is asked for — ahead of time (no mark of the page's). */
+export const FETCH_AHEAD_SHARE = 0.75;
 
 /**
  * How many windows the rows held must exceed for a batch to be asked for
@@ -98,7 +115,18 @@ export const AHEAD_WINDOWS = 6;
  *
  * A list that GOES ON past its `total` (`hasMore`: the total is the rows
  * known so far, the end not found yet) asks for the batch after even when
- * it holds the last row known.
+ * it holds the last row known — and, its window AT that row, whatever the
+ * rules of asking ahead say: there is nothing further to scroll into.
+ *
+ * With `ahead` (the `fetchAhead` setting: a number of ROWS) the marks are
+ * the page's instead of the quarters: the batch after is asked for once no
+ * more than that many rows held are left beyond the window, the batch
+ * before the same way towards the start — and each only on the way THERE
+ * (`heading`; the batch after also before the list was ever scrolled), because a
+ * page's marks may cross: a batch that joined must not put the window past
+ * the opposite mark and be asked back, for ever. Nothing is asked ahead of
+ * time while the rows held are no more than the mark and the window
+ * together — a batch too small for it.
  */
 export function sliceRequest(
   view: { start: number; end: number },
@@ -106,17 +134,30 @@ export function sliceRequest(
   held: number,
   total: number,
   hasMore = false,
+  ahead?: AheadMark,
 ): SliceRequest | undefined {
   if (total <= 0) return undefined;
   const end = offset + held;
   if (held === 0 || view.start < offset || view.end > end) return { offset: view.start, edge: "around" };
+  // The window reached the last row KNOWN of a list that goes on: there is nothing to scroll into, so the window
+  // can never leave the rows held and ask that way — the batch after is asked for here, whatever the rules below
+  // say of a batch too small to be fetched ahead (a tall box: two hundred rows are fewer than six windows of it).
+  if (hasMore && end >= total && view.end >= end) return { offset: end, edge: "after" };
+  const goesOn = end < total || hasMore;
+  if (ahead !== undefined && ahead.rows > 0) {
+    if (held <= ahead.rows + (view.end - view.start)) return undefined;
+    if (ahead.heading === "up") {
+      return offset > 0 && view.start - offset <= ahead.rows ? { offset, edge: "before" } : undefined;
+    }
+    return goesOn && end - view.end <= ahead.rows ? { offset: end, edge: "after" } : undefined;
+  }
   // Too few rows held for the window (a small batch in a tall box): a batch joining them would put the window
   // past the opposite mark at once, and the two would be asked for in turn, for ever. Such a list waits until
   // the window leaves its rows.
   if (held <= AHEAD_WINDOWS * (view.end - view.start)) return undefined;
-  const goesOn = end < total || hasMore;
-  if (goesOn && view.end >= offset + Math.ceil(held * FETCH_AHEAD)) return { offset: end, edge: "after" };
-  if (offset > 0 && view.start <= offset + Math.floor(held * (1 - FETCH_AHEAD))) return { offset, edge: "before" };
+  if (goesOn && view.end >= offset + Math.ceil(held * FETCH_AHEAD_SHARE)) return { offset: end, edge: "after" };
+  if (offset > 0 && view.start <= offset + Math.floor(held * (1 - FETCH_AHEAD_SHARE)))
+    return { offset, edge: "before" };
   return undefined;
 }
 

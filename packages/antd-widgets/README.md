@@ -117,7 +117,13 @@ path>`), so it survives a reload. The `toolbar` setting lists the TOOLS
   total is the rows known so far: the list asks for the batch after them
   and reads "800+ rows" ("200 rows, more to load" when not windowed), the
   scale runs over the rows known, reads "401–425 of 800+" and shows no
-  percent (`data-open` on both). Its
+  percent (`data-open` on both). `fetchAhead` (rows; 0 = the list's own
+  rule) says WHEN the next rows are asked for: `more` once the end of the
+  list is no more than that many rows under the box, a windowed list's
+  `window` once no more than that many rows held are left beyond the rows
+  rendered — with batches of 200, `fetchAhead: 100` asks at row 100, where
+  the list's own rule (three quarters of the rows held) waits for row 150.
+  Its
   box takes the keyboard focus, so End, Home and Page Down scroll it. The
   events each widget emits are exported as types (`ButtonEvents`,
   `InputEvents`, `TableEvents`, `InfiniteTableEvents`, …). Peer:

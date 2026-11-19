@@ -12,7 +12,7 @@
  * half a box of scrolling, so a row scrolled past re-renders nothing.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { rowWindow, sameRowWindow, windowServes, type RowWindow } from "../row-window";
+import { rowWindow, sameRowWindow, windowServes, type Heading, type RowWindow } from "../row-window";
 
 /** antd's small table row — two 8 px paddings, a 22 px line, a 1 px border — the guess until rows are measured. */
 const SMALL_ROW_HEIGHT = 39;
@@ -23,7 +23,7 @@ interface Measure {
   scrollTop: number;
   boxHeight: number;
   rowHeight: number;
-  heading?: "down" | "up" | undefined;
+  heading?: Heading | undefined;
 }
 
 export function useRowWindow(scrollRef: RefObject<HTMLElement | null>, count: number, height: number): RowWindow {

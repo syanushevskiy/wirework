@@ -248,6 +248,72 @@ Tested by `row-window.test.ts` (`sliceRequest`), `table-view.test.ts`
 and `list-position.feature` ("The next two hundred rows are fetched ahead
 of time").
 
+### Amended: the page says when (`fetchAhead`, 17 November 2026)
+
+The owner: "can I specify for infinite table [when] it should fetch. For
+example fetch 200 and start fetching when you scroll to 100?" The batch
+size was the page's already (the loader's `pageSize`); the mark was a
+constant, three quarters of the rows HELD — row 150 of the first batch,
+and a different distance from the end with two or three batches held. Built:
+
+- One setting on the infinite table, `fetchAhead`, a number of ROWS, 0 by
+  default — the rules above, so no page changed. Rows, not a share: "100
+  rows before the end of what is held" is the same distance whether one
+  batch is held or three, and it is how the question was asked.
+- WINDOWED (`sliceRequest`'s `ahead`): the batch after is asked for once no
+  more than that many rows held are left beyond the rows rendered, the
+  batch before the same way towards the start.
+- A share of the rows held could not simply be lowered: with three batches
+  kept, a mark under two thirds puts the window that asked for a fourth
+  batch behind the opposite mark of the trimmed slice — asked back, for
+  ever (the reason for `AHEAD_WINDOWS`). The page's mark is therefore asked
+  for ON THE WAY THERE only: `after` while the window last moved down (or
+  has not moved), `before` while it last moved up. A batch that joins does
+  not move the window along the list, so nothing is asked back; turning
+  round is what asks for the other batch.
+- A batch no larger than the mark and the rows rendered together is not
+  fetched ahead (it would be asked for on arrival, every time): such a
+  list waits until the window leaves its rows, as before the amendment
+  above. So the mark belongs well under the batch size.
+- NOT WINDOWED: `more` goes out once the end of the list is no more than
+  that many rows under the box (the observer's `rootMargin` and the same
+  measured look, the rows as pixels by the measured row height) — it was:
+  only with the end in view.
+
+No demo page sets it. Tested by `row-window.test.ts` ("the page's own
+mark") and the `FetchAhead` and `FetchAheadWindowed` stories.
+
+**Fixed (18 November 2026): a tall list stopped at its first batch.** The
+owner: "when scrolling it stops on first offset 0–200. Never go 200–400".
+A batch too small to fetch ahead (fewer than six windows of rows — two
+hundred rows in a box taller than about 630 pixels, which the archive's
+list is in any tall window since it fills it) waits for the window to
+LEAVE its rows; but a list whose end is not known spans only the rows
+known, so its window never leaves them, and nothing was ever asked.
+`sliceRequest` now asks for the batch after whenever the window reaches
+the last row known of a list that goes on, before any rule about fetching
+ahead. Such a list gets its second batch at its end rather than ahead of
+time; from two batches on it fetches ahead as designed.
+`row-window.test.ts` ("a list that goes on asks at its last known row"),
+`table-height.feature` ("A tall list still gets its next rows").
+
+**Fixed (19 November 2026): a window made taller sent the list back.** A
+review of the amendment found the way of the page's mark read from the row
+window's START — which also moves back when the box grows or its rows are
+measured again (the window is then remade with half a box above the view,
+where a scroll down keeps one row). A list scrolled down was taken for one
+scrolled up: with a mark near the batch size it asked for the batch BEFORE,
+dropping the farthest one — reproduced on the archive with `fetchAhead:
+198`: rows 201–800 held, the window made taller, rows 1–600 held. The way
+is now read from the box's scroll position (`headingOf`, pure): a box that
+did not move keeps the way it was heading. `row-window.test.ts`
+("headingOf"), `table-height.feature` ("A window made taller does not send
+a list scrolled down back for the rows behind it"). In the same review:
+`FETCH_AHEAD` is `FETCH_AHEAD_SHARE` and the mark's type `AheadMark` (the
+setting alone is "fetch ahead"), the scenario's own copy of "until the
+list's end is found" is gone, and the `FetchAhead` story waits two frames
+before saying nothing was asked.
+
 ## The column menu (12 November 2026)
 
 The owner asked for the column settings menu antd's ProTable has, on both
@@ -881,6 +947,39 @@ under 1 s in a production build (before the State panel's last change,
 which a production host does not have). What is left in development is
 React's own development-mode cost of rendering antd's table, twice under
 StrictMode.
+
+### Ten thousand rows, as a scenario (18 November 2026)
+
+The owner asked for performance tests of both kinds of list, and whether
+they work over a server list of ten thousand rows. `performance.feature`
+(steps in `performance.steps.ts`): the fake servers are told to hold
+10 000 runs (`window.wireworkListSize`, a test's word before the
+application starts), a real mouse wheel scrolls the list a notch a frame,
+and the time between the page's animation frames is measured, with the
+browser's long tasks and the heap. Measured on the development server, the
+scenario alone / inside the full suite of six workers:
+
+| What                                                  | Median | 95th    | Longest   | Heap    |
+| ----------------------------------------------------- | ------ | ------- | --------- | ------- |
+| Windowed, 400 notches (about 1 300 rows, six batches) | 17 ms  | 33 / 50 | 67 / 117  | 83 MB   |
+| Windowed, jumps to 10 % and 90 % of the list          | 17 ms  | 17 / 33 | 33 / 50   | 75 MB   |
+| Appended, 400 notches with 10 000 rows held           | 17 ms  | 33 / 33 | 67 / 67   | ~130 MB |
+| Appended, end to end and back                         | 17 ms  | 33      | 33        |         |
+| Appended, four arrivals of 2 500 rows                 | 17 ms  | 50 / 67 | 467 / 500 |         |
+
+So both work: a windowed list never holds more than 600 rows nor renders
+more than a few dozen, wherever it stands in the ten thousand; a list that
+appends holds all of them and still renders a few dozen, and scrolls as
+the windowed one does. What costs is an ARRIVAL into a list that appends:
+2 500 rows joining thousands stop the page for about half a second — the
+fake server filtering its ten thousand rows on the page's own thread, the
+rows port validating every row held again, and the playground's State
+panel printing them all are in that number together; it was not taken
+apart. The scenarios assert bounds several times the measured numbers (95
+percent of the frames within 100 ms, none over 500 ms, an arrival's none
+over 1 000 ms): they catch a list that renders what it holds or a store
+that grows with the list, not a regression of ten percent. Not measured: a
+production build, a slow machine, rows of many columns.
 
 ## A title and the table's own filters (15 November 2026)
 
