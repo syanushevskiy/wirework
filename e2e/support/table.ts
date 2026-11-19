@@ -2,6 +2,10 @@
 import type { Page } from "@playwright/test";
 import { live } from "./page";
 
+/** The infinite table on the live page, and the box its rows scroll in. */
+export const infiniteTable = (page: Page) => live(page).getByTestId("antd-infinite-table");
+export const scrollBox = (page: Page) => infiniteTable(page).getByTestId("infinite-table-scroll");
+
 /** A table row on the live page, found by its row key (the rowKey property's value). */
 export const tableRow = (page: Page, key: string) =>
   live(page).locator(`[data-testid="table-row"][data-row-key="${key}"]`);

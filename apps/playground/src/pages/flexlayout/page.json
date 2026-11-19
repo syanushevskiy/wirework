@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "flexlayout",
+  "route": {
+    "path": "/demo/flexlayout",
+    "title": "FlexLayout",
+    "menu": true
+  }
+}

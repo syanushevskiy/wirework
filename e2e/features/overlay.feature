@@ -7,17 +7,17 @@ Feature: User view models
   per-cell settings overlays, and the base view models stay untouched.
 
   Scenario: User overlay selects a template and overrides its settings
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the label reads "WIREWORK PLAYGROUND!!!"
     And the label tone is "success"
 
   Scenario: Without the overlay the base template applies
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I disable the user overlay
     Then the label reads "Wirework playground"
 
   Scenario: Modifying a widget on a demo page is saved in the user overlay
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the edit target is "me"
     When I edit the page
     And I edit the cell "label-main"
@@ -31,7 +31,7 @@ Feature: User view models
     Then the label reads "Wirework playground"
 
   Scenario: In the user's own view a widget edit changes settings only
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I edit the page
     And I edit the cell "pagination-runs"
     Then the widget editor keeps inputs and reactions read-only
@@ -47,18 +47,18 @@ Feature: User view models
     And the table row "123461" shows "Failed" for "state"
 
   Scenario: Removing a cell on a demo page is saved in the user overlay
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I remove the cell "echo-demo"
-    Then the page has 7 cells
+    Then the page has 11 cells
     When I save the page
-    Then the page has 7 cells
+    Then the page has 11 cells
     And the page uses the "my-own" view
     When I disable the user overlay
-    Then the page has 8 cells
+    Then the page has 12 cells
 
   Scenario: Layout and widget edits are saved together in one session
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I drag the cell "counter-main" onto the cell "label-main"
     And I edit the cell "label-main"
@@ -71,19 +71,19 @@ Feature: User view models
     And the cell "counter-main" is placed at x 0 y 0 w 6 h 2
 
   Scenario: Cancelling a session drops widget edits and removals too
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I edit the cell "label-main"
     And I set the setting "text" to "Never saved"
     And I save the widget
     And I remove the cell "echo-demo"
-    Then the page has 7 cells
+    Then the page has 11 cells
     When I cancel the page edit
     Then the label reads "WIREWORK PLAYGROUND!!!"
-    And the page has 8 cells
+    And the page has 12 cells
 
   Scenario: Turning the overlay off ends the session and closes the editor
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I edit the cell "label-main"
     And I disable the user overlay
@@ -93,7 +93,7 @@ Feature: User view models
     And the label reads "Wirework playground"
 
   Scenario: Layout edits on a demo page become the user's own template
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I drag the cell "counter-main" onto the cell "label-main"
     And I save the page

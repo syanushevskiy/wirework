@@ -637,3 +637,33 @@ one and the upgrade of an older file; the hook; two scenarios in
 the builder, exported, imported into a fresh builder; a file of another
 page, one that writes `roles.admin`, and text that is no JSON, each
 refused with its reason.
+
+## The demo's pages redrawn (19 November 2026)
+
+The owner's word: no Overview and no History; "Pagination" for Runs,
+"Infinite List" for the Archive, "FlexLayout" for Cards — the rename all
+the way down. What was done, and what this record's sections above call
+by the old names:
+
+- The folders are `pages/pagination`, `pages/infinite-list` and
+  `pages/flexlayout`; a page's id, its address (`/demo/<id>`), its store
+  root and its model paths (`widgets.<id>.*`) follow. What names the DATA
+  kept its name — the fake servers and their URLs, the actions `runs/*` and
+  `archive/set-favorite`, the run page's `/demo/runs/:runId`, the cells'
+  ids.
+- `pages/overview` is gone. Its eight widgets and its two views stand at
+  the top of the SETTINGS page (its `title` model is `widgets.settings.banner`
+  there); its `overview/load` action and the fake server's numbers are
+  deleted. The demo's first page is Pagination.
+- `pages/history` is gone. Its table's bar — the title, the two filters
+  above the table, both tools — and its link cells are the Infinite List
+  table's. No demo page holds a list that appends any more; the builder
+  can still add one.
+
+One thing this showed and did not solve (doc/ADR/0017-versioning-and-upgrades.md):
+a page's NAME is in stored data — `userViewModels.pages.<page>`, a page
+file's `page` — and no migration verb renames or removes a page. The
+demo's users are fixtures, so nothing was lost; the frozen document of
+format 1 still names `overview`, and its choice there is now nobody's
+(`upgrades.feature`). A real application renaming a page needs that verb
+first.

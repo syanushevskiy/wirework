@@ -6,10 +6,10 @@ Feature: A heavy widget's code is loaded only by the pages that show it
   can be asked for again.
 
   Scenario: A page that does not show the editor never loads its code
-    Given I open the "overview" page
+    Given I open the "settings" page
     When the server has had time to answer
     Then the code of the widget "demo-code-editor" was not loaded
-    When I switch to the "runs" page
+    When I switch to the "pagination" page
     And the server has had time to answer
     Then the code of the widget "demo-code-editor" was not loaded
 
@@ -45,7 +45,7 @@ Feature: A heavy widget's code is loaded only by the pages that show it
   Scenario: Coming back to the editor's page does not load its code a second time
     Given I open the "editor" page
     Then the cell "editor-main" shows its widget
-    When I switch to the "overview" page
+    When I switch to the "settings" page
     And I switch to the "editor" page
     Then the cell "editor-main" shows its widget
     And the code of the widget "demo-code-editor" was loaded once

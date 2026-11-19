@@ -11,7 +11,7 @@ import { appPathSchema } from "@wirework/widget-contracts";
 
 /** The host's router, as much of it as an action needs. */
 export interface Navigator {
-  /** Go to a path of the application, e.g. "/demo/runs". */
+  /** Go to a path of the application, e.g. "/demo/pagination". */
   go(to: string): void;
 }
 
@@ -19,7 +19,7 @@ export function createNavActions(navigator: Navigator): ActionDefinition[] {
   return [
     {
       name: "nav/go",
-      description: 'Open another page: with { to: "/demo/runs" }',
+      description: 'Open another page: with { to: "/demo/pagination" }',
       handler: ({ args }) => {
         const to = appPathSchema.safeParse(args["to"]);
         if (!to.success) throw new Error('nav/go needs with: { to: "/a/path" }');

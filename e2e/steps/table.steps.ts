@@ -4,13 +4,11 @@ import { createBdd } from "playwright-bdd";
 import { closeDropdown, headerFilterDropdown, headerFilterTrigger, option } from "../support/antd";
 import { settledBox } from "../support/grid";
 import { live } from "../support/page";
-import { tableCell, tableRow } from "../support/table";
+import { infiniteTable, tableCell, tableRow } from "../support/table";
 
 const { When, Then } = createBdd();
 
 /* --------------------------- infinite table --------------------------- */
-
-const infiniteTable = (page: Page) => live(page).getByTestId("antd-infinite-table");
 
 /** A column header of the live page's table, by its title (the header holds its filter and sort triggers too). */
 const columnHeader = (page: Page, title: string) =>
@@ -268,6 +266,8 @@ When("I select the cell {string} of the table row {string}", async ({ page }, pr
 When(
   "I select the cells from {string} of the table row {string} to {string} of the table row {string}",
   async ({ page }, property: string, key: string, toProperty: string, toKey: string) => {
+    // Both cells in view BEFORE either is measured: bringing the second into view may move the first.
+    await cornerOf(page, toKey, toProperty);
     const from = await cornerOf(page, key, property);
     const to = await cornerOf(page, toKey, toProperty);
     await page.mouse.move(from.x, from.y);
@@ -289,8 +289,9 @@ When(
 When(
   "I drag the corner of the selection to {string} of the table row {string}",
   async ({ page }, property: string, key: string) => {
-    const box = await settledBox(selectingTable(page).locator('td[data-handle="true"]'));
+    // The target in view BEFORE the handle is measured: bringing it into view may move the handle.
     const to = await cornerOf(page, key, property);
+    const box = await settledBox(selectingTable(page).locator('td[data-handle="true"]'));
     await page.mouse.move(box.x + box.width - 3, box.y + box.height - 3);
     await page.mouse.down();
     await page.mouse.move(to.x, to.y, { steps: 8 });
@@ -889,7 +890,10 @@ Then("the list's end is known", async ({ page }) => {
 /**
  * Scrolls to the end of the rows known, again and again, until the list's
  * end is found (`data-open` false): every arrival at the end asks for the
- * batch after it, and the batch that comes back empty is the end.
+ * batch after it, and the batch that comes back empty is the end. Eleven
+ * batches for the archive's two thousand rows, fifty-one for the ten
+ * thousand of performance.feature — hence the long wait; it ends when the
+ * end is found.
  */
 When("I scroll the infinite table until the list's end is found", async ({ page }) => {
   const table = infiniteTable(page);
@@ -902,7 +906,7 @@ When("I scroll the infinite table until the list's end is found", async ({ page 
         });
         return false;
       },
-      { timeout: 30_000, intervals: [150] },
+      { timeout: 120_000, intervals: [150] },
     )
     .toBe(true);
 });

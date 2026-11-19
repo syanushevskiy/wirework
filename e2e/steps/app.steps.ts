@@ -84,11 +84,23 @@ When("the server has had time to answer", async ({ page }) => {
 
 /* ---------------------------- user overlay ---------------------------- */
 
+/**
+ * On a demo page the SESSION's answer says where edits go — it puts the overlay on for a QA, off for an admin
+ * (use-playground.ts) — so a toggle made before it answered would be undone: the steps wait for who is signed in
+ * (`data-person` beside "Signed in as"). The builder has no session to wait for.
+ */
+async function signedIn(page: Page): Promise<void> {
+  const signIn = page.locator(".pg-sign-in");
+  if ((await signIn.count()) > 0) await expect(signIn).not.toHaveAttribute("data-person", "");
+}
+
 When("I disable the user overlay", async ({ page }) => {
+  await signedIn(page);
   await page.getByTestId("toggle-user-overlay").uncheck();
 });
 
 When("I enable the user overlay", async ({ page }) => {
+  await signedIn(page);
   await page.getByTestId("toggle-user-overlay").check();
 });
 

@@ -1,0 +1,218 @@
+{
+  "widgets.infinite-list.error": {
+    "default": {
+      "inputs": {
+        "text": "infinite-list.error"
+      },
+      "text": "",
+      "tone": "danger"
+    }
+  },
+  "widgets.infinite-list.position": {
+    "default": {
+      "inputs": {
+        "position": "infinite-list.position",
+        "visible": "infinite-list.visible",
+        "total": "infinite-list.total",
+        "hasMore": "infinite-list.hasMore"
+      },
+      "label": "Position in the archive"
+    }
+  },
+  "widgets.infinite-list.table": {
+    "default": {
+      "inputs": {
+        "rows": "infinite-list.data",
+        "loading": "infinite-list.loading",
+        "columns": "infinite-list.columns",
+        "total": "infinite-list.total",
+        "hasMore": "infinite-list.hasMore",
+        "offset": "infinite-list.offset",
+        "position": "infinite-list.position",
+        "filterIn": "infinite-list.filterIn",
+        "filterLike": "infinite-list.filterLike",
+        "filterBetween": "infinite-list.filterBetween",
+        "orderBy": "infinite-list.orderBy"
+      },
+      "on": {
+        "load": [
+          {
+            "call": "table-view/load",
+            "with": {
+              "url": "/api/v1/view/archive",
+              "into": "infinite-list",
+              "metadata": true,
+              "pageSize": 200,
+              "countRows": false,
+              "columns": {
+                "id": {
+                  "required": true,
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "name": {
+                  "cell": {
+                    "kind": "link",
+                    "to": "/demo/runs/{id}"
+                  }
+                },
+                "started": {
+                  "hidden": false
+                },
+                "state": {
+                  "cell": {
+                    "kind": "tag",
+                    "tones": {
+                      "Success": "success",
+                      "Failed": "danger",
+                      "Running": "info",
+                      "Queued": "default"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "row-action": [
+          {
+            "call": "archive/set-favorite"
+          }
+        ],
+        "link-clicked": [
+          {
+            "call": "nav/follow"
+          }
+        ],
+        "refresh": [
+          {
+            "set": "infinite-list.wanted",
+            "value": 0
+          },
+          {
+            "set": "infinite-list.position",
+            "value": 0
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "infinite-list",
+              "window": true
+            }
+          }
+        ],
+        "window": [
+          {
+            "set": "infinite-list.wanted"
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "infinite-list",
+              "window": true
+            }
+          }
+        ],
+        "position-changed": [
+          {
+            "set": "infinite-list.position",
+            "from": "position"
+          },
+          {
+            "set": "infinite-list.visible",
+            "from": "visible"
+          }
+        ],
+        "filter-changed": [
+          {
+            "set": "infinite-list.filterIn",
+            "from": "filterIn"
+          },
+          {
+            "set": "infinite-list.filterLike",
+            "from": "filterLike"
+          },
+          {
+            "set": "infinite-list.filterBetween",
+            "from": "filterBetween"
+          },
+          {
+            "set": "infinite-list.wanted",
+            "value": 0
+          },
+          {
+            "set": "infinite-list.position",
+            "value": 0
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "infinite-list",
+              "window": true
+            }
+          }
+        ],
+        "sort-changed": [
+          {
+            "set": "infinite-list.orderBy",
+            "from": "orderBy"
+          },
+          {
+            "set": "infinite-list.wanted",
+            "value": 0
+          },
+          {
+            "set": "infinite-list.position",
+            "value": 0
+          },
+          {
+            "call": "table-view/load",
+            "with": {
+              "into": "infinite-list",
+              "window": true
+            }
+          }
+        ]
+      },
+      "height": 320,
+      "heightMode": "fill",
+      "bottomGap": 96,
+      "windowed": true,
+      "title": "Runs",
+      "filters": [
+        {
+          "id": "reference",
+          "label": "Reference",
+          "kind": "text"
+        },
+        {
+          "id": "started",
+          "label": "Started",
+          "kind": "dates"
+        }
+      ],
+      "toolbar": [
+        {
+          "name": "reset-filters"
+        },
+        {
+          "name": "refresh"
+        }
+      ],
+      "rowActions": [
+        {
+          "name": "favorite"
+        }
+      ],
+      "columnMenu": true
+    }
+  },
+  "widgets.infinite-list.title": {
+    "default": {
+      "text": "Archive — a long list nobody counts: two hundred runs at a time, how many there are known only at its end",
+      "tone": "accent"
+    }
+  }
+}

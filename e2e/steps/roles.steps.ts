@@ -48,7 +48,7 @@ Then("the server was not asked for {string}", async ({ page }, url: string) => {
 
 /** The shared runs table made to ask for the admin's view — what a page builder could configure; the session still decides. */
 Given("the shared runs table is made to ask for the admin's view", async ({ page }) => {
-  await editStateJson(page, "viewModels.widgets.runs.table.default.on.load.0.with.url", "/api/v1/view/runs/all");
+  await editStateJson(page, "viewModels.widgets.pagination.table.default.on.load.0.with.url", "/api/v1/view/runs/all");
 });
 
 /* ------------------------------ the builder ------------------------------ */

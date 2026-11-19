@@ -26,22 +26,17 @@ export const actionPresets: Record<string, ActionPreset> = {
     label: "Load the runs table",
     description: "The server describes the columns and the filters; five rows a page",
     tags: ["runs", "table", "load"],
-    with: { url: RUNS_VIEW_URL, into: "runs", metadata: true, pageSize: 5 },
+    with: { url: RUNS_VIEW_URL, into: "pagination", metadata: true, pageSize: 5 },
   }),
   "runs/table-refresh": preset(tableViewLoad, {
     label: "Refresh the runs table",
     description: "Re-request the rows of the view the page declared",
     tags: ["runs", "table", "refresh"],
-    with: { into: "runs" },
+    with: { into: "pagination" },
   }),
   "nav/to-runs": preset(navGo, {
-    label: "Open the runs page",
+    label: "Open the Pagination page",
     tags: ["navigate", "runs"],
-    with: { to: "/demo/runs" },
-  }),
-  "nav/to-overview": preset(navGo, {
-    label: "Open the overview",
-    tags: ["navigate", "overview"],
-    with: { to: "/demo" },
+    with: { to: "/demo/pagination" },
   }),
 };

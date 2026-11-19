@@ -5,7 +5,7 @@ Feature: A table scrolls sideways when its box is narrower than its columns need
   sideways, its header with it.
 
   Scenario: The runs table fills a wide page and scrolls sideways in a narrow one
-    Given I open the "runs" page
+    Given I open the "pagination" page
     # The id column and three more: 88 + 3 × 110.
     Then the table needs 418 pixels for its columns
     And the table fills its box without a sideways scroll
@@ -15,11 +15,10 @@ Feature: A table scrolls sideways when its box is narrower than its columns need
     Then the table fills its box without a sideways scroll
 
   Scenario: The infinite list does the same, and a hidden column needs no room
-    Given I open the "history" page
-    Then the table needs 528 pixels for its columns
-    And the table fills its box without a sideways scroll
-    When the browser window is 440 pixels wide
-    Then the table scrolls sideways
+    Given I open the "infinite-list" page
+    # Nine columns and the row actions: more than the page's column is wide.
+    Then the table needs 1012 pixels for its columns
+    And the table scrolls sideways
     When I open the column menu of the table
     And I hide the column "Inbound"
-    Then the table needs 418 pixels for its columns
+    Then the table needs 902 pixels for its columns

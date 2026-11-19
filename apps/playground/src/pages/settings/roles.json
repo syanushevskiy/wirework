@@ -6,12 +6,92 @@
         "engine": "react-grid-layout",
         "cells": [
           {
+            "id": "label-main",
+            "widget": "antd-label",
+            "model": "widgets.settings.banner",
+            "template": "default",
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 1
+          },
+          {
+            "id": "counter-main",
+            "widget": "antd-counter",
+            "model": "widgets.settings.counter",
+            "template": "default",
+            "x": 0,
+            "y": 1,
+            "w": 6,
+            "h": 2
+          },
+          {
+            "id": "echo-counter",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echo",
+            "template": "default",
+            "x": 6,
+            "y": 1,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "id": "echo-demo",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echoAll",
+            "template": "default",
+            "x": 9,
+            "y": 1,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "id": "button-reset",
+            "widget": "antd-button",
+            "model": "widgets.settings.resetButton",
+            "template": "default",
+            "x": 0,
+            "y": 3,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "id": "label-welcome",
+            "widget": "antd-label",
+            "model": "widgets.settings.welcome",
+            "template": "default",
+            "x": 3,
+            "y": 3,
+            "w": 6,
+            "h": 1
+          },
+          {
+            "id": "tag-role",
+            "widget": "antd-tag",
+            "model": "widgets.settings.role",
+            "template": "default",
+            "x": 9,
+            "y": 3,
+            "w": 3,
+            "h": 1
+          },
+          {
+            "id": "label-user",
+            "widget": "antd-label",
+            "model": "widgets.settings.user",
+            "template": "default",
+            "x": 3,
+            "y": 4,
+            "w": 6,
+            "h": 1
+          },
+          {
             "id": "label-settings",
             "widget": "antd-label",
             "model": "widgets.settings.title",
             "template": "default",
             "x": 0,
-            "y": 0,
+            "y": 5,
             "w": 12,
             "h": 1
           },
@@ -21,7 +101,7 @@
             "model": "widgets.settings.preferences",
             "template": "default",
             "x": 0,
-            "y": 1,
+            "y": 6,
             "w": 12,
             "h": 5
           },
@@ -31,7 +111,7 @@
             "model": "widgets.settings.echoSettings",
             "template": "default",
             "x": 0,
-            "y": 6,
+            "y": 11,
             "w": 6,
             "h": 2
           },
@@ -41,7 +121,7 @@
             "model": "widgets.settings.echoPermissions",
             "template": "default",
             "x": 6,
-            "y": 6,
+            "y": 11,
             "w": 6,
             "h": 2
           },
@@ -51,7 +131,7 @@
             "model": "widgets.settings.danger",
             "template": "default",
             "x": 0,
-            "y": 8,
+            "y": 13,
             "w": 12,
             "h": 2,
             "templates": {
@@ -86,12 +166,92 @@
         "engine": "react-grid-layout",
         "cells": [
           {
+            "id": "label-main",
+            "widget": "antd-label",
+            "model": "widgets.settings.banner",
+            "template": "default",
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 1
+          },
+          {
+            "id": "counter-main",
+            "widget": "antd-counter",
+            "model": "widgets.settings.counter",
+            "template": "default",
+            "x": 0,
+            "y": 1,
+            "w": 6,
+            "h": 2
+          },
+          {
+            "id": "echo-counter",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echo",
+            "template": "default",
+            "x": 6,
+            "y": 1,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "id": "echo-demo",
+            "widget": "antd-echo",
+            "model": "widgets.settings.echoAll",
+            "template": "default",
+            "x": 9,
+            "y": 1,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "id": "button-reset",
+            "widget": "antd-button",
+            "model": "widgets.settings.resetButton",
+            "template": "default",
+            "x": 0,
+            "y": 3,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "id": "label-welcome",
+            "widget": "antd-label",
+            "model": "widgets.settings.welcome",
+            "template": "default",
+            "x": 3,
+            "y": 3,
+            "w": 6,
+            "h": 1
+          },
+          {
+            "id": "tag-role",
+            "widget": "antd-tag",
+            "model": "widgets.settings.role",
+            "template": "default",
+            "x": 9,
+            "y": 3,
+            "w": 3,
+            "h": 1
+          },
+          {
+            "id": "label-user",
+            "widget": "antd-label",
+            "model": "widgets.settings.user",
+            "template": "default",
+            "x": 3,
+            "y": 4,
+            "w": 6,
+            "h": 1
+          },
+          {
             "id": "label-settings",
             "widget": "antd-label",
             "model": "widgets.settings.title",
             "template": "default",
             "x": 0,
-            "y": 0,
+            "y": 5,
             "w": 12,
             "h": 1
           },
@@ -101,7 +261,7 @@
             "model": "widgets.settings.preferences",
             "template": "default",
             "x": 0,
-            "y": 1,
+            "y": 6,
             "w": 12,
             "h": 5
           },
@@ -111,7 +271,7 @@
             "model": "widgets.settings.echoSettings",
             "template": "default",
             "x": 0,
-            "y": 6,
+            "y": 11,
             "w": 6,
             "h": 2
           },
@@ -121,7 +281,7 @@
             "model": "widgets.settings.echoPermissions",
             "template": "default",
             "x": 6,
-            "y": 6,
+            "y": 11,
             "w": 6,
             "h": 2
           },
@@ -131,7 +291,7 @@
             "model": "widgets.settings.danger",
             "template": "default",
             "x": 0,
-            "y": 8,
+            "y": 13,
             "w": 12,
             "h": 2
           },
@@ -141,7 +301,7 @@
             "model": "widgets.settings.sessions",
             "template": "default",
             "x": 0,
-            "y": 10,
+            "y": 15,
             "w": 12,
             "h": 4,
             "templates": {

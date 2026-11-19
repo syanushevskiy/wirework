@@ -1,5 +1,5 @@
 {
-  "widgets.runs.applicationsFilter": {
+  "widgets.pagination.applicationsFilter": {
     "default": {
       "inputs": {
         "value": "filters.applications",
@@ -16,7 +16,7 @@
       "placeholder": "choose applications"
     }
   },
-  "widgets.runs.deleteRun": {
+  "widgets.pagination.deleteRun": {
     "default": {
       "label": "Delete run",
       "variant": "danger",
@@ -29,14 +29,14 @@
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ]
       },
       "when": [
         {
-          "path": "runs.selected",
+          "path": "pagination.selected",
           "is": "empty",
           "not": true
         },
@@ -48,39 +48,39 @@
       ]
     }
   },
-  "widgets.runs.echoSelectedRun": {
+  "widgets.pagination.echoSelectedRun": {
     "default": {
       "inputs": {
-        "value": "runs.selected"
+        "value": "pagination.selected"
       },
       "label": "Selected run"
     }
   },
-  "widgets.runs.error": {
+  "widgets.pagination.error": {
     "default": {
       "inputs": {
-        "text": "runs.error"
+        "text": "pagination.error"
       },
       "text": "",
       "tone": "danger"
     }
   },
-  "widgets.runs.filterBar": {
+  "widgets.pagination.filterBar": {
     "default": {
       "inputs": {
-        "filters": "runs.filters",
-        "value": "runs.filterIn"
+        "filters": "pagination.filters",
+        "value": "pagination.filterIn"
       },
       "on": {
         "changed": [
           {
-            "set": "runs.page",
+            "set": "pagination.page",
             "value": 1
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ]
@@ -88,7 +88,7 @@
       "placeholder": "any"
     }
   },
-  "widgets.runs.openRun": {
+  "widgets.pagination.openRun": {
     "default": {
       "label": "Open run",
       "on": {
@@ -100,7 +100,7 @@
       },
       "when": [
         {
-          "path": "runs.selected",
+          "path": "pagination.selected",
           "is": "empty",
           "not": true
         }
@@ -109,70 +109,70 @@
       "disappear": "fade"
     }
   },
-  "widgets.runs.pagination": {
+  "widgets.pagination.pagination": {
     "default": {
       "inputs": {
-        "page": "runs.page",
-        "total": "runs.total",
-        "pageSize": "runs.pageSize"
+        "page": "pagination.page",
+        "total": "pagination.total",
+        "pageSize": "pagination.pageSize"
       },
       "on": {
         "changed": [
           {
-            "set": "runs.pageSize",
+            "set": "pagination.pageSize",
             "from": "pageSize"
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ]
       }
     }
   },
-  "widgets.runs.refresher": {
+  "widgets.pagination.refresher": {
     "default": {
       "inputs": {
-        "schedule": "runs.autoRefresh",
-        "busy": "runs.loading"
+        "schedule": "pagination.autoRefresh",
+        "busy": "pagination.loading"
       },
       "on": {
         "refresh": [
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ]
       }
     }
   },
-  "widgets.runs.startedRange": {
+  "widgets.pagination.startedRange": {
     "default": {
       "inputs": {
-        "value": "runs.filterBetween.started"
+        "value": "pagination.filterBetween.started"
       },
       "label": "Started between",
       "on": {
         "changed": [
           {
-            "set": "runs.page",
+            "set": "pagination.page",
             "value": 1
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ]
       }
     }
   },
-  "widgets.runs.suitesFilter": {
+  "widgets.pagination.suitesFilter": {
     "default": {
       "inputs": {
         "value": "filters.suites",
@@ -182,15 +182,15 @@
       "placeholder": "choose applications first"
     }
   },
-  "widgets.runs.table": {
+  "widgets.pagination.table": {
     "default": {
       "inputs": {
-        "rows": "runs.data",
-        "loading": "runs.loading",
-        "columns": "runs.columns",
-        "filterIn": "runs.filterIn",
-        "filterLike": "runs.filterLike",
-        "orderBy": "runs.orderBy"
+        "rows": "pagination.data",
+        "loading": "pagination.loading",
+        "columns": "pagination.columns",
+        "filterIn": "pagination.filterIn",
+        "filterLike": "pagination.filterLike",
+        "orderBy": "pagination.orderBy"
       },
       "headerFilters": true,
       "toolbar": [
@@ -204,7 +204,7 @@
             "call": "table-view/load",
             "with": {
               "url": "/api/v1/view/runs",
-              "into": "runs",
+              "into": "pagination",
               "metadata": true,
               "pageSize": 5,
               "columns": {
@@ -253,33 +253,33 @@
         ],
         "filter-changed": [
           {
-            "set": "runs.filterIn",
+            "set": "pagination.filterIn",
             "from": "filterIn"
           },
           {
-            "set": "runs.filterLike",
+            "set": "pagination.filterLike",
             "from": "filterLike"
           },
           {
-            "set": "runs.page",
+            "set": "pagination.page",
             "value": 1
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ],
         "sort-changed": [
           {
-            "set": "runs.orderBy",
+            "set": "pagination.orderBy",
             "from": "orderBy"
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ],
@@ -292,12 +292,12 @@
     },
     "admin": {
       "inputs": {
-        "rows": "runs.data",
-        "loading": "runs.loading",
-        "columns": "runs.columns",
-        "filterIn": "runs.filterIn",
-        "filterLike": "runs.filterLike",
-        "orderBy": "runs.orderBy"
+        "rows": "pagination.data",
+        "loading": "pagination.loading",
+        "columns": "pagination.columns",
+        "filterIn": "pagination.filterIn",
+        "filterLike": "pagination.filterLike",
+        "orderBy": "pagination.orderBy"
       },
       "headerFilters": true,
       "toolbar": [
@@ -311,7 +311,7 @@
             "call": "table-view/load",
             "with": {
               "url": "/api/v1/view/runs/all",
-              "into": "runs",
+              "into": "pagination",
               "metadata": true,
               "pageSize": 5,
               "columns": {
@@ -360,33 +360,33 @@
         ],
         "filter-changed": [
           {
-            "set": "runs.filterIn",
+            "set": "pagination.filterIn",
             "from": "filterIn"
           },
           {
-            "set": "runs.filterLike",
+            "set": "pagination.filterLike",
             "from": "filterLike"
           },
           {
-            "set": "runs.page",
+            "set": "pagination.page",
             "value": 1
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ],
         "sort-changed": [
           {
-            "set": "runs.orderBy",
+            "set": "pagination.orderBy",
             "from": "orderBy"
           },
           {
             "call": "table-view/load",
             "with": {
-              "into": "runs"
+              "into": "pagination"
             }
           }
         ],

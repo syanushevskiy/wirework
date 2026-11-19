@@ -33,8 +33,8 @@ Feature: CSS grid — a page laid out by template areas, filled by drag and drop
     And the cell "result-run" is hidden
     And the cell "result-run" fills the slots "4-1/4-2"
 
-  Scenario: The cards page holds a third card on a CSS grid below the two — four engines on one page
-    Given I open the "cards" page
+  Scenario: The FlexLayout page holds a third card on a CSS grid below the two — four engines on one page
+    Given I open the "flexlayout" page
     And the server has had time to answer
     Then the page layout uses the "flexlayout" engine
     And the page has 3 cells

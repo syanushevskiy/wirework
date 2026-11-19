@@ -18,7 +18,8 @@ export interface PageRoute {
   menu: boolean;
 }
 
-export const DEMO_HOME = "/demo";
+/** The demo's first page: where "/" and an address nobody knows lead. */
+export const DEMO_HOME = "/demo/pagination";
 
 export const PAGE_ROUTES: readonly PageRoute[] = [
   ...demoPageRoutes,

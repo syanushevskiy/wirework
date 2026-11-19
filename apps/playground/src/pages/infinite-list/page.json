@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "infinite-list",
+  "route": {
+    "path": "/demo/infinite-list",
+    "title": "Infinite List",
+    "menu": true
+  }
+}

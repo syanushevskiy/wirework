@@ -13,6 +13,8 @@ export type Console = Window & {
   wireworkHoldAnswers?: boolean;
   /** While true, a lazy widget's code cannot be fetched (doc/ADR/0018-lazy-widgets.md). */
   wireworkFailCode?: boolean;
+  /** How many runs both fake servers hold — a long list for the performance scenarios. */
+  wireworkListSize?: number;
   wirework?: {
     requests: () => RequestCounts;
     releaseAnswers: () => void;

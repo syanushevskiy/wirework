@@ -6,12 +6,12 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
   field for its classes, and every cell is DRAGGED by its handle: let go on
   another cell's middle the two swap places, on its left or right edge the
   dragged one goes beside it, on the strip between two rows it takes a row
-  of its own. The demo's cards page is a FlexLayout
+  of its own. The demo's FlexLayout page is a FlexLayout
   of two cards, one holding react-grid-layout and one holding flex rows:
   three engines on one page. (doc/ADR/0010-flex-rows.md)
 
-  Scenario: The cards page is a FlexLayout of two cards side by side, a grid inside one and flex rows inside the other
-    Given I open the "cards" page
+  Scenario: The FlexLayout page is a FlexLayout of two cards side by side, a grid inside one and flex rows inside the other
+    Given I open the "flexlayout" page
     Then the page layout uses the "flexlayout" engine
     # A third card on a CSS grid sits below the two (css-grid.feature).
     And the page has 3 cells
@@ -37,7 +37,7 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     Then the state JSON contains '"autoRefresh": true'
 
   Scenario: In the profile card a row of buttons of different sizes wraps when the card gets narrow, and the buttons write the name the field edits
-    Given I open the "cards" page
+    Given I open the "flexlayout" page
     And the server has had time to answer
     # Three buttons in one row: the first grows into the room left, the other two keep the width their basis says.
     Then the cell "button-name-alice" has the flex classes "basis-32 grow"
@@ -141,17 +141,17 @@ Feature: Flex rows — a layout engine that speaks Tailwind's flex classes
     Then the page shows no warnings
 
   Scenario: The content of a card on flex rows is edited like the page, classes and all
-    Given I open the "cards" page
+    Given I open the "flexlayout" page
     And the server has had time to answer
     When I disable the user overlay
     And I edit the page
     And I edit the content of the cell "card-profile"
-    Then the breadcrumb reads "cards › card-profile"
+    Then the breadcrumb reads "flexlayout › card-profile"
     And the page layout uses the "flex-rows" engine
     And the page has 3 rows
     When I set the flex classes of the cell "switch-profile-refresh" to "shrink-0 self-start"
     And I save the page
     Then the cell "switch-profile-refresh" has the flex classes "shrink-0 self-start"
-    When I follow the breadcrumb "cards"
+    When I follow the breadcrumb "flexlayout"
     Then the page layout uses the "flexlayout" engine
     And the page has 3 cells

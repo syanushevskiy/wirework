@@ -2,10 +2,11 @@
  * @wirework/view-data-models-examples — the demo's data, its user overlay
  * and the test fixtures, modelled on the Xsight sketch.
  *
- * The DEMO is a small multi-page application ("test runs"): an overview, the
- * runs list, the same runs as an infinite list (history), one run's details,
- * the user's settings, a page of three cards and a page of one card
- * showing how roles work. Its PAGES — their layouts, reactions, roles'
+ * The DEMO is a small multi-page application ("test runs"): the runs list
+ * in pages (pagination), two thousand runs as an infinite list, one run's
+ * details, the user's settings under the playground's banner strip (a
+ * counter and who the user is), a FlexLayout page of three cards and a page
+ * of one card showing how roles work. Its PAGES — their layouts, reactions, roles'
  * entries and widget templates — are NOT here: each is a folder of the
  * host's own source (`apps/playground/src/pages/<page>/`, one JSON file for
  * the page, its view model and its widgets; doc/ADR/0011-pages-as-code.md),
@@ -39,17 +40,7 @@ export const builderViewModels: ViewModels = {
 };
 
 /** The demo application's pages, in menu order. "run" is reached from the runs list, not the menu. */
-export const DEMO_PAGES = [
-  "overview",
-  "runs",
-  "history",
-  "archive",
-  "run",
-  "settings",
-  "cards",
-  "roles",
-  "editor",
-] as const;
+export const DEMO_PAGES = ["pagination", "infinite-list", "run", "settings", "flexlayout", "roles", "editor"] as const;
 export type DemoPage = (typeof DEMO_PAGES)[number];
 
 /**
@@ -145,7 +136,7 @@ export const failurePathViewModels: ViewModels = {
 /** The user's overlay of the demo application: proves per-CELL template selection + settings merge on top. */
 export const demoUserViewModels: UserViewModels = {
   pages: {
-    overview: {
+    settings: {
       cells: {
         "label-main": {
           view: "loud",
@@ -187,7 +178,7 @@ export interface Permissions {
 
 /** The user's own settings. Strings, numbers and booleans as the form widgets hold them — JSON, never a Date. */
 export interface UserSettings {
-  /** Absent until the user types one: the overview's welcome label then shows its own text. */
+  /** Absent until the user types one: the settings page's welcome label then shows its own text. */
   displayName?: string;
   /** Rows per page of the runs list — a select's value, hence text. */
   pageSize: string;
@@ -244,18 +235,17 @@ export const samplePermissions: Permissions = { editPages: true };
 
 /**
  * The DATA each page's visit starts with. Server data is deliberately NOT
- * here: runs, one run and the overview's numbers reach the store only when
- * the (fake) server answers.
+ * here: runs and one run reach the store only when the (fake) server
+ * answers.
  */
 export const demoPageData: Record<DemoPage, Record<string, unknown>> = {
-  overview: { demo: { counter: 0 } },
   // Nothing chosen yet, so no suites on offer.
-  runs: { filters: { applications: [], suiteOptions: [], suites: [] } },
-  history: {},
-  archive: {},
+  pagination: { filters: { applications: [], suiteOptions: [], suites: [] } },
+  "infinite-list": {},
   run: {},
-  settings: {},
-  cards: { demo: { counter: 0 } },
+  // The counter of the page's banner strip.
+  settings: { demo: { counter: 0 } },
+  flexlayout: { demo: { counter: 0 } },
   roles: {},
   // The code the editor opens with: three lines, so the page shows what a change does.
   editor: { editor: { source: '{\n  "hello": "world"\n}' } },

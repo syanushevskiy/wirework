@@ -9,13 +9,13 @@ Feature: A table the server describes (view table API)
   of the page's own. Filters, pages and refreshes re-request rows only.
 
   Scenario: The columns come from the server, as the page changes them
-    Given I open the "runs" page
+    Given I open the "pagination" page
     # "Message" and "Started" are hidden by the SERVER, "Inbound" by the page: the columns above are what is left.
     Then the table has the columns "#, Name, Reference, Status"
     And the state JSON contains '"url": "/api/v1/view/runs"'
 
   Scenario: The filters come from the server's filter values, as the page changes them
-    Given I open the "runs" page
+    Given I open the "pagination" page
     # The server offers Inbound and Status; the page drops Inbound and adds Suite.
     Then the filter bar offers the filters "Suite, Status"
     # The server's null ("no value") is not an option.
@@ -24,7 +24,7 @@ Feature: A table the server describes (view table API)
 
   Scenario: No filters and no rows until the server answers
     Given the server is slow to answer
-    And I open the "runs" page
+    And I open the "pagination" page
     Then the filter bar offers the filters ""
     And the table has 0 rows
     When the server has had time to answer
@@ -32,7 +32,7 @@ Feature: A table the server describes (view table API)
     And the table has 5 rows
 
   Scenario: A filter re-requests the rows and the count, from the first page
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And I expand the "events" panel
     When I go to page 2 of the pagination
     Then the pagination shows page 2
@@ -47,7 +47,7 @@ Feature: A table the server describes (view table API)
     And the pagination counts 11 rows
 
   Scenario: A header filter on the paged table works like the bar's filter — one choice, shown in both
-    Given I open the "runs" page
+    Given I open the "pagination" page
     # The runs table offers its headers too (headerFilters). Name is a LIST here, not a search: the page gives it values of its own.
     Then the "Name" column header has a filter icon
     And the "Status" column header has a filter icon
@@ -67,14 +67,14 @@ Feature: A table the server describes (view table API)
     Then the state JSON contains '"name": "ASC"'
 
   Scenario: A filter of the page's own values works like the server's
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I pick "Nightly regression" in the "Suite" filter
     Then the table has 1 row
     And the table row "123459" shows "Nightly regression" for "name"
     And the pagination counts 1 rows
 
   Scenario: Clearing a filter brings all rows back
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I pick "Smoke suite" in the "Suite" filter
     Then the table has 1 row
     When I pick "Smoke suite" in the "Suite" filter

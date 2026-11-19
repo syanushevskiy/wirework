@@ -6,7 +6,7 @@
         {
           "id": "refresher-runs",
           "widget": "antd-refresher",
-          "model": "widgets.runs.refresher",
+          "model": "widgets.pagination.refresher",
           "template": "default",
           "x": 0,
           "y": 0,
@@ -16,7 +16,7 @@
         {
           "id": "filters-runs",
           "widget": "antd-filter-bar",
-          "model": "widgets.runs.filterBar",
+          "model": "widgets.pagination.filterBar",
           "template": "default",
           "x": 0,
           "y": 1,
@@ -26,7 +26,7 @@
         {
           "id": "table-main",
           "widget": "antd-table",
-          "model": "widgets.runs.table",
+          "model": "widgets.pagination.table",
           "template": "default",
           "x": 0,
           "y": 3,
@@ -36,7 +36,7 @@
         {
           "id": "pagination-runs",
           "widget": "antd-pagination",
-          "model": "widgets.runs.pagination",
+          "model": "widgets.pagination.pagination",
           "template": "default",
           "x": 0,
           "y": 8,
@@ -46,7 +46,7 @@
         {
           "id": "label-runs-error",
           "widget": "antd-label",
-          "model": "widgets.runs.error",
+          "model": "widgets.pagination.error",
           "template": "default",
           "x": 0,
           "y": 9,
@@ -56,7 +56,7 @@
         {
           "id": "filter-applications",
           "widget": "antd-multi-select",
-          "model": "widgets.runs.applicationsFilter",
+          "model": "widgets.pagination.applicationsFilter",
           "template": "default",
           "x": 9,
           "y": 0,
@@ -66,7 +66,7 @@
         {
           "id": "filter-suites",
           "widget": "antd-multi-select",
-          "model": "widgets.runs.suitesFilter",
+          "model": "widgets.pagination.suitesFilter",
           "template": "default",
           "x": 9,
           "y": 2,
@@ -76,7 +76,7 @@
         {
           "id": "echo-selected-run",
           "widget": "antd-echo",
-          "model": "widgets.runs.echoSelectedRun",
+          "model": "widgets.pagination.echoSelectedRun",
           "template": "default",
           "x": 9,
           "y": 4,
@@ -86,7 +86,7 @@
         {
           "id": "button-open-run",
           "widget": "antd-button",
-          "model": "widgets.runs.openRun",
+          "model": "widgets.pagination.openRun",
           "template": "default",
           "x": 9,
           "y": 6,
@@ -96,7 +96,7 @@
         {
           "id": "button-delete-run",
           "widget": "antd-button",
-          "model": "widgets.runs.deleteRun",
+          "model": "widgets.pagination.deleteRun",
           "template": "default",
           "x": 9,
           "y": 8,
@@ -106,7 +106,7 @@
         {
           "id": "range-started",
           "widget": "antd-date-range",
-          "model": "widgets.runs.startedRange",
+          "model": "widgets.pagination.startedRange",
           "template": "default",
           "x": 9,
           "y": 10,

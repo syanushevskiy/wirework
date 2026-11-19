@@ -48,34 +48,28 @@ const demoPage = (name: DemoPage, onOpen?: (store: Store) => void): PlaygroundPa
 
 export function demoPages(runsServer: RunsServer, archiveServer: RunsServer): Record<DemoPage, PlaygroundPage> {
   return {
-    // Its numbers are loaded by the PAGE's `load` reaction (viewModels.on.overview).
-    overview: demoPage("overview"),
     // The list is loaded by the TABLE's `load` reaction — the URL is
     // configuration, not code. Here is only what this application knows:
     // the server starts over with every visit of the list, so a visit
     // always replays the same sequence, and the user's SETTINGS (global
     // state) decide the page size and how the refresher starts.
-    runs: demoPage("runs", (store) => {
+    pagination: demoPage("pagination", (store) => {
       runsServer.reset();
       const pageSize = store.getAs("app.settings.pageSize", pageSizeSetting);
-      if (pageSize !== undefined) store.set("runs.pageSize", pageSize);
+      if (pageSize !== undefined) store.set("pagination.pageSize", pageSize);
       if (store.get("app.settings.autoRefresh") === true) {
-        store.set("runs.autoRefresh", { enabled: true, interval: 5 });
+        store.set("pagination.autoRefresh", { enabled: true, interval: 5 });
       }
     }),
-    // The same list as an INFINITE one (widgets.history.table): loaded by the
-    // table's `load`, grown by its `more`. The server starts over with every
-    // visit here too, so the rows scrolled into view are always the same.
-    history: demoPage("history", () => runsServer.reset()),
-    // Two thousand runs as a WINDOWED list (widgets.archive.table): the store holds a slice of two hundred, the
+    // Two thousand runs as a WINDOWED list (widgets.infinite-list.table): the store holds a slice of two hundred, the
     // DOM two dozen, and the list-position widget under it says where the list stands and jumps along it.
-    archive: demoPage("archive", () => archiveServer.reset()),
+    "infinite-list": demoPage("infinite-list", () => archiveServer.reset()),
     // The run is loaded by the PAGE's `load` reaction (viewModels.on.run);
     // which run: the router's parameter, at route.params.runId.
     run: demoPage("run"),
     settings: demoPage("settings"),
     // Two cards as FlexLayout tabsets, a layout engine of its own inside each: a grid, flex rows (doc/ADR/0010-flex-rows.md).
-    cards: demoPage("cards"),
+    flexlayout: demoPage("flexlayout"),
     // One card showing how roles work: an input for everyone, a button and its echo for the admin by a condition (doc/ADR/0012-roles.md).
     roles: demoPage("roles"),
     // The one page with the LAZY widget (doc/ADR/0018-lazy-widgets.md): the code editor's code is asked for here only.

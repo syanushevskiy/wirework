@@ -15,22 +15,12 @@
  * Time passes on the server BETWEEN requests: after every answer of the
  * list, each unfinished run moves one step (queued → running → finished),
  * so the next refresh visibly brings news. `reset()` starts over — the
- * playground calls it when the runs page opens, so every visit of the list
- * replays the same sequence. Reading one run or the overview's numbers does
- * not move time.
+ * playground calls it when the Pagination page opens, so every visit of the list
+ * replays the same sequence. Reading one run does not move time.
  */
 import type { TableViewRequest, TableViewResponse } from "@wirework/table-view";
 import type { Run } from "@wirework/view-data-models-examples";
 import { tracked } from "./requests";
-
-/** What the overview shows: counted over ALL runs on the server, as they are now. */
-export interface RunsStats {
-  total: number;
-  failed: number;
-  running: number;
-  /** Share of successful runs among the finished ones, 0–100. */
-  passRate: number;
-}
 
 /** One entry of a run's history, as the server tells it — the shape the timeline widget shows. */
 export interface RunEvent {
@@ -63,8 +53,6 @@ export interface RunsServer {
    * then says so in every row's `favorite` — only with `details`. Time does not move.
    */
   setFavorite(id: string, favorite: boolean): Promise<void>;
-  /** The overview's numbers. Time does not move. */
-  fetchStats(): Promise<RunsStats>;
   /** Back to the initial runs. Requests still in flight no longer move time. */
   reset(): void;
 }
@@ -410,17 +398,6 @@ export function createRunsServer(options: {
         // The server decides by the id alone: a run it does not have is nobody's favourite.
         if (favorite && rows.some((row) => row.id === id)) favorites.add(id);
         else favorites.delete(id);
-      }),
-    fetchStats: () =>
-      roundTrip(() => {
-        const count = (state: string): number => rows.filter((row) => row.status.state === state).length;
-        const finished = count("Success") + count("Failed");
-        return {
-          total: rows.length,
-          failed: count("Failed"),
-          running: count("Running"),
-          passRate: finished === 0 ? 0 : Math.round((count("Success") / finished) * 100),
-        };
       }),
     reset: () => {
       epoch += 1;

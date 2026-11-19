@@ -26,7 +26,7 @@ Feature: Page visits
 
   Scenario: The runs table is empty until the server answers
     Given the server is slow to answer
-    And I open the "runs" page
+    And I open the "pagination" page
     Then the table is loading
     And the table has 0 rows
     And the state JSON contains '"loading": true'
@@ -39,13 +39,13 @@ Feature: Page visits
     And the state JSON contains '"pageSize": 5'
 
   Scenario: Switching pages starts each page's own data over
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I click the counter 2 times
     Then the state JSON contains '"counter": 2'
-    When I switch to the "runs" page
+    When I switch to the "pagination" page
     Then the state JSON does not contain '"counter": 2'
     And the table row "123458" shows "Running" for "state"
-    When I switch to the "overview" page
+    When I switch to the "settings" page
     Then the echo widget at "demo.counter" shows "0"
 
   Scenario: Opening the page you are on starts it over too
@@ -60,19 +60,19 @@ Feature: Page visits
 
   Scenario: A server answer for a page the user has left never reaches the next page
     Given the server is slow to answer
-    And I open the "runs" page
+    And I open the "pagination" page
     When I switch to the "settings" page
     And the server has had time to answer
     Then the state JSON does not contain '"data": ['
     And the state JSON does not contain '"total": 23'
 
   Scenario: A new visit starts its own event log
-    Given I open the "overview" page
+    Given I open the "settings" page
     And I expand the "events" panel
     When I click the counter 2 times
     # The page's own load event, then the two clicks.
     Then the event log has 3 entries
-    When I switch to the "overview" page
+    When I switch to the "settings" page
     # Nothing of the visit before: only this visit's page load.
     Then the event log has 1 entry
-    And the event log shows widget "page" event "load" with payload '{"page":"overview"}'
+    And the event log shows widget "page" event "load" with payload '{"page":"settings"}'

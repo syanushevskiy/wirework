@@ -117,7 +117,7 @@ export function PageVisitView({ playground, visit }: PageVisitViewProps) {
       <div>
         {/* "Sign in as" (doc/ADR/0012-roles.md): the HOST's, not a widget — the session request goes out again for the person picked. */}
         {people ? (
-          <Flex gap="small" align="center" className="pg-sign-in" data-visit={visit.id}>
+          <Flex gap="small" align="center" className="pg-sign-in" data-visit={visit.id} data-person={person ?? ""}>
             <label htmlFor="sign-in-as">Signed in as</label>
             <Select<string>
               id="sign-in-as"

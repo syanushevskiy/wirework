@@ -1,0 +1,10 @@
+{
+  "kind": "wirework-page",
+  "version": 1,
+  "page": "pagination",
+  "route": {
+    "path": "/demo/pagination",
+    "title": "Pagination",
+    "menu": true
+  }
+}

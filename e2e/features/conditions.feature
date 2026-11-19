@@ -1,22 +1,22 @@
 Feature: Conditions — a widget shown when a predicate holds
   A widget's template may say WHEN it shows: a list of checks over the
   page's data, every one of which must hold — "unless run.error is empty",
-  "when runs.total is greater than 10". The checks are named: eight
+  "when pagination.total is greater than 10". The checks are named: eight
   standard ones (empty, true, false, equals, one of, contains, greater
   than, less than) and whatever the application registers under its own
   name. A hidden widget keeps its place on the page and comes back as it
   was; while the page is edited it stays visible, dimmed, with the reason.
   (doc/ADR/0008-conditions.md)
 
-  Scenario: The runs page shows "Open run" only while a run is selected
-    Given I open the "runs" page
+  Scenario: The Pagination page shows "Open run" only while a run is selected
+    Given I open the "pagination" page
     Then the cell "button-open-run" is hidden
     When I click the table row "123456"
     Then the cell "button-open-run" is shown
     # It fades in, and fades out on its way: the cell is empty once the animation has ended.
     And the cell "button-open-run" appears with "fade"
     And the cell "button-open-run" disappears with "fade"
-    When the store holds at "runs.selected":
+    When the store holds at "pagination.selected":
       """
       ""
       """

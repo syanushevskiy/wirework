@@ -8,7 +8,7 @@
           {
             "call": "nav/go",
             "with": {
-              "to": "/demo/runs"
+              "to": "/demo/pagination"
             }
           }
         ]
@@ -81,7 +81,7 @@
           {
             "call": "nav/go",
             "with": {
-              "to": "/demo/runs"
+              "to": "/demo/pagination"
             }
           }
         ]

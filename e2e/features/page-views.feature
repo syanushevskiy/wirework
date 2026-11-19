@@ -10,8 +10,8 @@ Feature: Page views
   a view change a page, so they wait for the editing permission like Edit
   page does.
 
-  Scenario: The overview offers the team's two views, both labelled prebuilt
-    Given I open the "overview" page
+  Scenario: The settings page offers the team's two views, both labelled prebuilt
+    Given I open the "settings" page
     Then the page uses the "default" view, which is "prebuilt"
     And the view list offers "default" as "prebuilt"
     And the view list offers "compact" as "prebuilt"
@@ -20,10 +20,10 @@ Feature: Page views
     And the page has 3 cells
     And the cell "echo-counter" is placed at x 6 y 1 w 6 h 2
     When I choose the view "default"
-    Then the page has 8 cells
+    Then the page has 12 cells
 
   Scenario: Saving my own view and switching between it and the team's
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I choose the view "compact"
     And I save the view as "my-compact"
     Then the view panel is closed
@@ -39,13 +39,13 @@ Feature: Page views
     Then the page has 3 cells
     When I choose the view "my-compact"
     Then the page has 2 cells
-    When I switch to the "runs" page
-    And I switch to the "overview" page
+    When I switch to the "pagination" page
+    And I switch to the "settings" page
     Then the page uses the "my-compact" view, which is "mine"
     And the page has 2 cells
 
   Scenario: Editing a prebuilt view while "my-own" exists makes a numbered copy
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I remove the cell "echo-demo"
     And I save the page
@@ -59,7 +59,7 @@ Feature: Page views
     And the view list offers "my-own-2" as "mine"
 
   Scenario: Renaming and deleting my own view
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I save the view as "temporary"
     Then the page uses the "temporary" view, which is "mine"
     When I rename the view to "kept"
@@ -71,34 +71,34 @@ Feature: Page views
     And the view list does not offer "kept"
 
   Scenario: A name a view already has is refused, with the reason
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I save the view as "compact"
     Then the view panel says 'There is already a view named "compact"'
     When I save the view as "v1.0"
     Then the view panel says "cannot contain a dot"
 
   Scenario: Sharing a view as JSON
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I choose the view "compact"
     And I share the view
     Then the shared view JSON contains '"kind": "wirework-page-view"'
-    And the shared view JSON contains '"page": "overview"'
+    And the shared view JSON contains '"page": "settings"'
     And the shared view JSON contains '"name": "compact"'
     And the shared view JSON contains '"engine": "react-grid-layout"'
 
   Scenario: Importing a shared view makes it one of mine
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I import the view:
       """
       {
         "kind": "wirework-page-view",
         "version": 1,
-        "page": "overview",
+        "page": "settings",
         "name": "pasted",
         "template": {
           "engine": "react-grid-layout",
           "cells": [
-            { "id": "label-main", "widget": "antd-label", "model": "widgets.overview.title", "template": "default", "x": 0, "y": 0, "w": 12, "h": 1 }
+            { "id": "label-main", "widget": "antd-label", "model": "widgets.settings.banner", "template": "default", "x": 0, "y": 0, "w": 12, "h": 1 }
           ]
         }
       }
@@ -109,7 +109,7 @@ Feature: Page views
     And the label reads "WIREWORK PLAYGROUND!!!"
 
   Scenario: An import is refused when the text is not a view, is for another page, or takes a name in use
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I import the view:
       """
       { "hello": "world" }
@@ -117,12 +117,12 @@ Feature: Page views
     Then the view panel says "This is not a Wirework page view"
     When I import the view:
       """
-      { "kind": "wirework-page-view", "version": 1, "page": "runs", "name": "x", "template": { "engine": "react-grid-layout", "cells": [] } }
+      { "kind": "wirework-page-view", "version": 1, "page": "pagination", "name": "x", "template": { "engine": "react-grid-layout", "cells": [] } }
       """
-    Then the view panel says 'This view is for the page "runs"'
+    Then the view panel says 'This view is for the page "pagination"'
     When I import the view as "default":
       """
-      { "kind": "wirework-page-view", "version": 1, "page": "overview", "name": "x", "template": { "engine": "react-grid-layout", "cells": [] } }
+      { "kind": "wirework-page-view", "version": 1, "page": "settings", "name": "x", "template": { "engine": "react-grid-layout", "cells": [] } }
       """
     Then the view panel says 'There is already a view named "default"'
 
@@ -143,7 +143,7 @@ Feature: Page views
     And the page has 1 cell
 
   Scenario: Without the editing permission a view can be chosen but not saved
-    Given I open the "overview" page
+    Given I open the "settings" page
     When the server has had time to answer
     And the store holds at "app.permissions":
       """

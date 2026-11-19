@@ -10,7 +10,7 @@ Feature: Roles — one page, different for an admin and for everybody else
   stays the server's decision from the session. (doc/ADR/0012-roles.md)
 
   Scenario: As QA the runs table is the page's; signed in as admin it loads every owner's runs, with an Owner column and filter — and back as QA it is the page's again
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And the server has had time to answer
     Then the table has the columns "#, Name, Reference, Status"
     And the server was asked for "/api/v1/view/runs"
@@ -38,12 +38,12 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the state JSON contains '"total": 23'
 
   Scenario: The session decides the data — a QA's request for the admin's view is refused
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And the server has had time to answer
     # The next visit of the page asks for the admin's view as a QA.
     When the shared runs table is made to ask for the admin's view
-    And I switch to the "overview" page
-    And I switch to the "runs" page
+    And I switch to the "settings" page
+    And I switch to the "pagination" page
     And the server has had time to answer
     Then the server was asked for "/api/v1/view/runs/all"
     And the table has 0 rows
@@ -53,18 +53,18 @@ Feature: Roles — one page, different for an admin and for everybody else
     Given I open the "settings" page
     And the server has had time to answer
     Then the page uses the "default" view, which is "prebuilt"
-    And the page has 4 cells
+    And the page has 12 cells
     When I type "Sergey" into the input
     Then the state JSON contains '"displayName": "Sergey"'
     When I sign in as "admin"
     Then the page uses the "admin" view, which is "role: admin"
-    And the page has 5 cells
+    And the page has 13 cells
     And the container "card-danger" holds the cells "button-reset-settings"
     When I click the button "Reset every setting"
     Then the state JSON does not contain '"displayName"'
 
-  Scenario: A Wirework admin gets the admin's runs page with the Delete button, and a settings page with both cards — the later role wins where both set the page
-    Given I open the "runs" page
+  Scenario: A Wirework admin gets the admin's Pagination page with the Delete button, and a settings page with both cards — the later role wins where both set the page
+    Given I open the "pagination" page
     And the server has had time to answer
     When I sign in as "wirework-admin"
     And the server has had time to answer
@@ -80,7 +80,7 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the cell "button-delete-run" is hidden
     When I switch to the "settings" page
     Then the page uses the "wirework-admin" view, which is "role: wirework-admin"
-    And the page has 6 cells
+    And the page has 14 cells
     And the container "card-danger" holds the cells "button-reset-settings"
     And the container "card-sessions" holds the cells "table-sessions"
     When the server has had time to answer
@@ -89,7 +89,7 @@ Feature: Roles — one page, different for an admin and for everybody else
     # Signed in as admin again, the Wirework admin's card is gone and the admin's page is as it was.
     When I sign in as "admin"
     Then the page uses the "admin" view, which is "role: admin"
-    And the page has 5 cells
+    And the page has 13 cells
 
   Scenario: The roles page is one card — everyone's template with the note, the admin's with a button and its echo as well
     Given I open the "roles" page
@@ -215,9 +215,9 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the page uses the "default" view, which is "prebuilt"
 
   Scenario: On a demo page an admin adds a widget for a role, in edit mode — the role's page has it, everyone else's is as it was
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
-    Then the page has 8 cells
+    Then the page has 12 cells
     # A QA may edit the page, and gets no palette: widgets are an admin's to add.
     When I edit for the role "admin"
     And I edit the page
@@ -234,12 +234,13 @@ Feature: Roles — one page, different for an admin and for everybody else
     And I set the setting "text" to "Admins only"
     And I add the widget
     # Add saved what was pending, placed the widget and left the admin in edit mode.
-    Then the page has 9 cells
+    # The admin's own view of this page: the Danger zone under everyone's twelve, and now the new widget.
+    Then the page has 14 cells
     And the page mode is "editing"
     And the cell "custom-1" reads "Admins only"
     And the cell "counter-main" is placed at x 0 y 0 w 6 h 2
     When I cancel the page edit
-    Then the page has 9 cells
+    Then the page has 14 cells
     And the page uses the "admin" view, which is "role: admin"
     And widgets cannot be added to the page
     # The file another admin imports carries it: the role's view and the widget's template.
@@ -249,7 +250,7 @@ Feature: Roles — one page, different for an admin and for everybody else
     When I close the export panel
     # For everyone, a page's own layout is its configuration: no palette, edit mode or not.
     And I edit for everyone
-    Then the page has 8 cells
+    Then the page has 12 cells
     When I edit the page
     Then widgets cannot be added to the page
 
@@ -282,7 +283,7 @@ Feature: Roles — one page, different for an admin and for everybody else
     And the page has 2 cells
 
   Scenario: Editing for a role, a widget's template is the role's choice; the shared page keeps its own
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
     # Choosing a role turns the user overlay off: edits are the role's.
     When I edit for the role "admin"
@@ -298,7 +299,7 @@ Feature: Roles — one page, different for an admin and for everybody else
     Then the cell "label-main" reads "Wirework playground"
 
   Scenario: An admin's edits are their role's from the start — the layout, and a widget's wiring for everyone
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
     When I sign in as "admin"
     And the server has had time to answer
@@ -327,21 +328,21 @@ Feature: Roles — one page, different for an admin and for everybody else
     And I remove the cell "echo-permissions"
     And I save the page
     Then the page uses the "my-own" view, which is "mine"
-    And the page has 4 cells
+    And the page has 12 cells
     And the container "card-danger" holds the cells "button-reset-settings"
     When I choose the view "admin"
-    Then the page has 5 cells
+    Then the page has 13 cells
 
   Scenario: Validation names a role's view that does not exist, and a role the application does not grant
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
     Then the boot validation status is "view models: OK"
     When the store holds at "viewModels.roles.ops":
       """
-      { "pages": { "overview": { "view": "nowhere" } } }
+      { "pages": { "settings": { "view": "nowhere" } } }
       """
     And I expand the "validation" panel
     Then the boot validation status is "view models: OK, 2 warning(s)"
-    And the validation report mentions "roles.ops pages.overview"
+    And the validation report mentions "roles.ops pages.settings"
     And the validation report mentions 'page view "nowhere" does not exist'
     And the validation report mentions 'role "ops" is held by nobody'

@@ -3,8 +3,8 @@
  * not the builder's and not the engine's.
  *
  * A row click is an INTENT on the bus; the host turns it into STATE
- * ("runs.selected") that any widget can display. The payload is typed by the
- * widget's declaration — no cast. Scoped to the runs page's table: the table
+ * ("pagination.selected") that any widget can display. The payload is typed by the
+ * widget's declaration — no cast. Scoped to the Pagination page's table: the table
  * is generic, and a table added in the builder must not change the selected
  * run.
  *
@@ -17,7 +17,7 @@ import { useWidgetEvent } from "@wirework/react";
 import { antdTable } from "@wirework/antd-widgets";
 
 export function useDemoBridge(bus: EventBus, store: Store): void {
-  useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "runs", cell: "table-main" }), (event) =>
-    store.set("runs.selected", event.payload.key),
+  useWidgetEvent(bus, eventFilter(antdTable, "row-selected", { page: "pagination", cell: "table-main" }), (event) =>
+    store.set("pagination.selected", event.payload.key),
   );
 }

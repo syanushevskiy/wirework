@@ -17,38 +17,37 @@ Feature: Pages as code — the whole page as a file
     And the state editor "views" contains '"card-roles"'
     And the state editor "views" contains '"card": {'
     And the state editor "views" does not contain '"table-main"'
-    When I switch to the "runs" page
+    When I switch to the "pagination" page
     And the server has had time to answer
     Then the state editor "views" contains '"table-main"'
     And the state editor "views" contains '"admin"'
     And the state editor "views" does not contain '"card-roles"'
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
     When I save the view as "mine-only"
     Then the page uses the "mine-only" view, which is "mine"
     When I export the page
     Then the exported page JSON contains '"kind": "wirework-page"'
-    And the exported page JSON contains '"page": "overview"'
-    And the exported page JSON contains '"path": "/demo"'
+    And the exported page JSON contains '"page": "settings"'
+    And the exported page JSON contains '"path": "/demo/settings"'
     And the exported page JSON contains '"default": {'
     And the exported page JSON contains '"compact": {'
-    And the exported page JSON contains '"call": "overview/load"'
-    And the exported page JSON contains '"widgets.overview.title": {'
+    And the exported page JSON contains '"widgets.settings.banner": {'
     And the exported page JSON does not contain '"mine-only"'
     When I download the exported page
-    Then the downloaded file is "overview.page.json" and holds the page "overview"
+    Then the downloaded file is "settings.page.json" and holds the page "settings"
 
   Scenario: A page of cards is exported with the widgets inside its cards, three engines deep
-    Given I open the "cards" page
+    Given I open the "flexlayout" page
     And the server has had time to answer
     When I export the page
     Then the exported page JSON contains '"engine": "flexlayout"'
     And the exported page JSON contains '"engine": "flex-rows"'
     And the exported page JSON contains '"engine": "css-grid"'
-    And the exported page JSON contains '"widgets.cards.nameAlice": {'
-    And the exported page JSON contains '"widgets.cards.sessionName": {'
-    And the exported page JSON contains '"widgets.cards.reset": {'
-    And the exported page JSON contains '"path": "/demo/cards"'
+    And the exported page JSON contains '"widgets.flexlayout.nameAlice": {'
+    And the exported page JSON contains '"widgets.flexlayout.sessionName": {'
+    And the exported page JSON contains '"widgets.flexlayout.reset": {'
+    And the exported page JSON contains '"path": "/demo/flexlayout"'
     When I close the export panel
     Then the export panel is closed
 
@@ -77,7 +76,7 @@ Feature: Pages as code — the whole page as a file
     And the exported page JSON contains '"text": "Built here"'
 
   Scenario: Without the editing permission the page cannot be exported
-    Given I open the "overview" page
+    Given I open the "settings" page
     When the server has had time to answer
     And the store holds at "app.permissions":
       """
@@ -112,20 +111,20 @@ Feature: Pages as code — the whole page as a file
     And I see a widget "antd-echo"
 
   Scenario: A page file is somebody else's — one of another page, or one that writes more than a page, is refused
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
     When I export the page
     And I keep the exported page
-    And I switch to the "runs" page
+    And I switch to the "pagination" page
     And the server has had time to answer
     And I try to import the kept page
-    Then the import is refused: 'the file is the page "overview", and this is the page "runs"'
+    Then the import is refused: 'the file is the page "settings", and this is the page "pagination"'
     # A file named after this page that reaches for what every admin sees: the roles of the whole application.
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
     When I try to import the page:
       """
-      { "kind": "wirework-page", "version": 1, "versions": { "app": 2 }, "page": "overview",
+      { "kind": "wirework-page", "version": 1, "versions": { "app": 2 }, "page": "settings",
         "templates": {}, "widgets": { "roles.admin": { "pages": {} } } }
       """
     Then the import is refused: 'the file writes outside the widgets: "roles.admin"'

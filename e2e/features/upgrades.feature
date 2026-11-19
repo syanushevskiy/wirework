@@ -20,14 +20,16 @@ Feature: What I saved under an older version still opens, and what a newer versi
     And the state JSON contains '"badge-first"'
     And the state JSON does not contain "run-badge"
 
-  Scenario: A choice saved under data format 1 is still my choice
+  Scenario: A choice saved for a page the application no longer has does no harm
+    # The document of format 1 chose a view of the "overview" page, which is gone since: the choice is nobody's.
     Given my saved views are from data format 1
-    When I open the "overview" page
-    Then the page uses the "compact" view, which is "prebuilt"
+    When I open the "settings" page
+    Then the page uses the "default" view, which is "prebuilt"
+    And no widget has crashed
 
   Scenario: Views saved by a newer version are kept, not applied and not overwritten
     Given my saved views were saved by a newer version of the application
-    When I open the "overview" page
+    When I open the "settings" page
     Then the page uses the "default" view, which is "prebuilt"
     And the page says my own views were not applied: "saved by a newer version of the application"
     And the page cannot be edited because "Saved by a newer version of the application"

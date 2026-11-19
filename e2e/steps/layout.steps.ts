@@ -303,7 +303,8 @@ Then("the page mode is {string}", async ({ page }, mode: string) => {
 });
 
 Then("there are no drag handles", async ({ page }) => {
-  await expect(page.getByTestId("grid")).toBeVisible();
+  // The page's own grid: a card on the page may hold a grid of its own.
+  await expect(page.getByTestId("grid").first()).toBeVisible();
   await expect(page.getByTestId("grid-handle")).toHaveCount(0);
 });
 

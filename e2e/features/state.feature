@@ -8,7 +8,7 @@ Feature: State inspector
   widgets on the right.
 
   Scenario: Widget interactions are reflected in the state JSON
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I click the counter 2 times
     Then the state JSON contains '"counter": 2'
 
@@ -24,8 +24,8 @@ Feature: State inspector
     And the state editor "views" contains '"sessions": {'
     And the state editor "views" contains '"wirework-admin"'
     And the state editor "views" does not contain '"table-main"'
-    And the state editor "views" does not contain '"runs": {'
-    And the state editor "views" does not contain '"overview"'
+    And the state editor "views" does not contain '"pagination": {'
+    And the state editor "views" does not contain '"card-roles"'
     And the state editor "settings" contains '"pageSize": "5"'
     And the state editor "settings" does not contain '"user"'
     And the state editor "session" contains '"editPages": true'
@@ -40,34 +40,34 @@ Feature: State inspector
     Then the state panel has 1 editor
 
   Scenario: Editing a page's views changes that page alone, and the other pages keep theirs
-    Given I open the "overview" page
+    Given I open the "settings" page
     And the server has had time to answer
-    When I edit the state JSON setting "viewModels.widgets.overview.title.loud.text" to "HELLO FROM STATE"
+    When I edit the state JSON setting "viewModels.widgets.settings.banner.loud.text" to "HELLO FROM STATE"
     Then the label reads "HELLO FROM STATE"
     And the boot validation status is "view models: OK"
-    When I switch to the "runs" page
+    When I switch to the "pagination" page
     And the server has had time to answer
     Then the table has 5 rows
     And the state editor "views" does not contain '"HELLO FROM STATE"'
 
   Scenario: Editing a data value updates the widgets
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the state JSON setting "demo.counter" to 41
     Then the echo widget at "demo.counter" shows "41"
 
   Scenario: Editing a view model updates the widgets
-    Given I open the "overview" page
-    When I edit the state JSON setting "viewModels.widgets.overview.title.loud.text" to "HELLO FROM STATE"
+    Given I open the "settings" page
+    When I edit the state JSON setting "viewModels.widgets.settings.banner.loud.text" to "HELLO FROM STATE"
     Then the label reads "HELLO FROM STATE"
 
   Scenario: Invalid JSON is rejected with an error and never reaches the store
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I replace the state JSON with "not json at all"
     Then the state error is shown
     And I see a widget "antd-label"
 
   Scenario: A structurally invalid view-model tree is rejected and never reaches the store
-    Given I open the "overview" page
-    When I replace the state JSON with '{"viewModels": {"pages": {"overview": {"default": 5}}}}'
+    Given I open the "settings" page
+    When I replace the state JSON with '{"viewModels": {"pages": {"settings": {"default": 5}}}}'
     Then the state error is shown
     And I see a widget "antd-label"

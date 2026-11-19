@@ -101,8 +101,8 @@ Feature: User overlay on the builder page
     Then the edit target is "me"
     When I switch to the "builder" page
     Then the user overlay is not available
-    When I switch to the "overview" page
+    When I switch to the "settings" page
     Then the edit target is "me"
     When I disable the user overlay
-    And I switch to the "overview" page
+    And I switch to the "settings" page
     Then the edit target is "me"

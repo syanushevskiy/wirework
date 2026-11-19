@@ -25,7 +25,7 @@ Given("my saved views are from data format {int}", async ({ page }, format: numb
 });
 
 Given("my saved views were saved by a newer version of the application", async ({ page }) => {
-  await savedViews(page, { versions: { wirework: 99 }, pages: { overview: { view: "from-the-future" } } });
+  await savedViews(page, { versions: { wirework: 99 }, pages: { settings: { view: "from-the-future" } } });
 });
 
 Then("the page says my own views were not applied: {string}", async ({ page }, reason: string) => {

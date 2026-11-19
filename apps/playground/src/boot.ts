@@ -29,7 +29,7 @@
  *    when the user leaves resolves into the visit's own store, which nobody
  *    shows any more.
  * `layerStores` puts the two behind ONE tree, so a view model binds
- * "app.user.name" exactly like "runs.data". The builder is a single page
+ * "app.user.name" exactly like "pagination.data". The builder is a single page
  * with a plain store of its own and no global state.
  */
 import {

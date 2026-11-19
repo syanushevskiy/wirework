@@ -1,5 +1,5 @@
 {
-  "widgets.cards.autoRefresh": {
+  "widgets.flexlayout.autoRefresh": {
     "default": {
       "inputs": {
         "checked": "app.settings.autoRefresh"
@@ -7,7 +7,7 @@
       "label": "Auto-refresh"
     }
   },
-  "widgets.cards.clicker": {
+  "widgets.flexlayout.clicker": {
     "default": {
       "inputs": {
         "value": "demo.counter"
@@ -16,7 +16,7 @@
       "label": "Click"
     }
   },
-  "widgets.cards.clicks": {
+  "widgets.flexlayout.clicks": {
     "default": {
       "inputs": {
         "value": "demo.counter"
@@ -24,7 +24,7 @@
       "title": "Clicks"
     }
   },
-  "widgets.cards.greeting": {
+  "widgets.flexlayout.greeting": {
     "default": {
       "inputs": {
         "text": "app.settings.displayName"
@@ -33,7 +33,7 @@
       "tone": "muted"
     }
   },
-  "widgets.cards.name": {
+  "widgets.flexlayout.name": {
     "default": {
       "inputs": {
         "value": "app.settings.displayName"
@@ -42,7 +42,7 @@
       "placeholder": "type a name"
     }
   },
-  "widgets.cards.nameAlice": {
+  "widgets.flexlayout.nameAlice": {
     "default": {
       "label": "Alice",
       "on": {
@@ -55,7 +55,7 @@
       }
     }
   },
-  "widgets.cards.nameBob": {
+  "widgets.flexlayout.nameBob": {
     "default": {
       "label": "Bob",
       "variant": "secondary",
@@ -69,7 +69,7 @@
       }
     }
   },
-  "widgets.cards.nameClear": {
+  "widgets.flexlayout.nameClear": {
     "default": {
       "label": "Clear",
       "variant": "dashed",
@@ -83,7 +83,7 @@
       }
     }
   },
-  "widgets.cards.reset": {
+  "widgets.flexlayout.reset": {
     "default": {
       "label": "Reset",
       "variant": "secondary",
@@ -96,7 +96,7 @@
       }
     }
   },
-  "widgets.cards.sessionName": {
+  "widgets.flexlayout.sessionName": {
     "default": {
       "inputs": {
         "text": "app.user.name"
@@ -105,7 +105,7 @@
       "tone": "accent"
     }
   },
-  "widgets.cards.sessionRoles": {
+  "widgets.flexlayout.sessionRoles": {
     "default": {
       "inputs": {
         "value": "app.user.roles"
@@ -113,7 +113,7 @@
       "label": "Roles (from the session)"
     }
   },
-  "widgets.cards.sessionTitle": {
+  "widgets.flexlayout.sessionTitle": {
     "default": {
       "inputs": {
         "text": "app.user.title"

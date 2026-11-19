@@ -7,10 +7,11 @@ Feature: Layout engines
   chrome the engine places on each cell; "Save page" keeps everything,
   "Cancel" drops everything.
 
-  Scenario: The overview page renders on the grid engine
-    Given I open the "overview" page
+  Scenario: The settings page renders on the grid engine
+    Given I open the "settings" page
     Then the page layout uses the "react-grid-layout" engine
-    And the page has 8 cells
+    # The banner strip's eight cells, then the settings' own four.
+    And the page has 12 cells
     And I see a widget "antd-label"
     And I see a widget "antd-counter"
     And I see a widget "antd-echo"
@@ -18,8 +19,8 @@ Feature: Layout engines
     And I see a widget "antd-tag"
     And the cell "counter-main" is placed at x 0 y 1 w 6 h 2
 
-  Scenario: The runs page renders on the grid engine
-    Given I open the "runs" page
+  Scenario: The Pagination page renders on the grid engine
+    Given I open the "pagination" page
     Then the page layout uses the "react-grid-layout" engine
     # Ten widgets for everyone and the Wirework admin's Delete button, a blank for everybody else (roles.feature).
     And the page has 11 cells
@@ -31,17 +32,17 @@ Feature: Layout engines
     And the cell "table-main" is placed at x 0 y 3 w 9 h 5
 
   Scenario: The default page view applies without user selection
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the page uses the "default" view
 
   Scenario: Cells have no handles or chrome outside edit mode
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the page mode is "view"
     And there are no drag handles
     And the cell "counter-main" has no edit chrome
 
   Scenario: A dragged cell is saved (a demo page: into the user's own template)
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     Then the page mode is "editing"
     When I drag the cell "counter-main" onto the cell "label-main"
@@ -52,7 +53,7 @@ Feature: Layout engines
     And the cell "counter-main" is placed at x 0 y 0 w 6 h 2
 
   Scenario: Cancelling a page edit restores the saved layout
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I drag the cell "counter-main" onto the cell "label-main"
     Then the cell "counter-main" is placed at x 0 y 0 w 6 h 2
@@ -61,7 +62,7 @@ Feature: Layout engines
     And the cell "counter-main" is placed at x 0 y 1 w 6 h 2
 
   Scenario: A resized cell is saved (a demo page: into the user's own template)
-    Given I open the "overview" page
+    Given I open the "settings" page
     When I edit the page
     And I widen the cell "echo-counter" by 1 column
     Then the cell "echo-counter" is placed at x 6 y 1 w 4 h 2

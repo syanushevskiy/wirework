@@ -20,7 +20,7 @@ import { standardContracts, tableRowsSchema } from "@wirework/widget-contracts";
 import { antdTestWidgets, brokenWidgets, createAntdWidgets } from "@wirework/antd-widgets";
 import { createFilterActions } from "../actions/filter-actions";
 import { createNavActions, type Navigator } from "../actions/nav-actions";
-import { createOverviewLoader, createRunLoader, createRunsActions } from "../actions/runs-actions";
+import { createRunLoader, createRunsActions } from "../actions/runs-actions";
 import { createSessionLoader } from "../actions/session-loader";
 import { createRunsServer } from "../api/runs-server";
 import { createSessionApi } from "../api/session-api";
@@ -44,6 +44,19 @@ import { CopyCell } from "../widgets/copy-cell";
 import { RunStatusCell } from "../widgets/run-status-cell";
 import { statusBadge } from "../widgets/status-badge";
 import { builderPage, demoPages, demoSessionState } from "./pages";
+
+declare global {
+  interface Window {
+    /** A test's word on how long the fake servers' lists are (before the application starts): both hold that many runs. */
+    wireworkListSize?: number;
+  }
+}
+
+/** How many runs a fake server holds: its own count, unless a test asked for long lists (`window.wireworkListSize`). */
+const listSize = (own: number): number => {
+  const asked = window.wireworkListSize;
+  return typeof asked === "number" && Number.isInteger(asked) && asked > 0 ? asked : own;
+};
 
 /** A run record (whatever a page's `when` reads: live data) that failed and has an even id. */
 function isRetryable(run: unknown): boolean {
@@ -127,7 +140,7 @@ export function installDemo(
   actions.register({
     name: "clear-selected-run",
     description: "Forget the selected run",
-    handler: ({ store }) => store.set("runs.selected", undefined),
+    handler: ({ store }) => store.set("pagination.selected", undefined),
   });
   actions.register({
     name: "log-event",
@@ -141,9 +154,14 @@ export function installDemo(
     handler: ({ store }) => store.set("app.settings", demoAppState.app.settings),
   });
   // Server-side data for the demo: a fake server with real latency.
-  const runsServer = createRunsServer({ seed: sampleRuns, total: 23, latencyMs: 600 });
+  const runsServer = createRunsServer({ seed: sampleRuns, total: listSize(23), latencyMs: 600 });
   // The archive: the same kind of list, long — two thousand runs nobody holds whole (the windowed list's demo).
-  const archiveServer = createRunsServer({ seed: sampleRuns, total: ARCHIVE_TOTAL, latencyMs: 300, details: true });
+  const archiveServer = createRunsServer({
+    seed: sampleRuns,
+    total: listSize(ARCHIVE_TOTAL),
+    latencyMs: 300,
+    details: true,
+  });
   // The archive's STAR (doc/ADR/0020-row-actions.md): the table's `row-action` reaction calls this. The server is
   // told the run's KEY and the state asked for — never a field of the row, which is only what the browser holds —
   // and once it answered, that one row is patched where the table reads it: no list request. Another row action of
@@ -151,15 +169,15 @@ export function installDemo(
   actions.register({
     name: "archive/set-favorite",
     description:
-      'Mark the run a row action named "favorite" was used on as a favourite, or not (detail.active), on the server and in archive.data',
+      'Mark the run a row action named "favorite" was used on as a favourite, or not (detail.active), on the server and in infinite-list.data',
     handler: async ({ store, event }) => {
       const asked = favoriteAsked.safeParse(event.payload);
       if (!asked.success) return;
       const { key, detail } = asked.data;
       await archiveServer.setFavorite(key, detail.active);
-      const rows = store.getAs("archive.data", tableRowsSchema) ?? [];
+      const rows = store.getAs("infinite-list.data", tableRowsSchema) ?? [];
       store.set(
-        "archive.data",
+        "infinite-list.data",
         rows.map((row) => (String(row.id) === key ? { ...row, favorite: detail.active } : row)),
       );
     },
@@ -170,24 +188,23 @@ export function installDemo(
   // allowed — never a store write a condition hides. The fake server refuses every other session.
   actions.register({
     name: "runs/delete-selected",
-    description: "Delete the run at runs.selected on the server (Wirework admins only)",
+    description: "Delete the run at pagination.selected on the server (Wirework admins only)",
     handler: async ({ store }) => {
-      const id = store.get("runs.selected");
+      const id = store.get("pagination.selected");
       if (typeof id !== "string" || id === "") return;
       if (!sessionApi.current().roles.includes("wirework-admin")) {
         throw new Error("DELETE /api/v1/runs answered 403 Forbidden: your session may not delete runs");
       }
       await runsServer.deleteRun(id);
-      store.set("runs.selected", undefined);
+      store.set("pagination.selected", undefined);
     },
   });
-  // What the pages' own `load` reactions call (viewModels.on.<page>): the
-  // overview's numbers, one run — plus opening the selected run, and
-  // retrying the run on the server (the run page's dialog).
+  // What the run page's own `load` reaction calls (viewModels.on.run): one
+  // run — plus opening the selected run, and retrying the run on the server
+  // (the run page's dialog).
   const loadRun = createRunLoader(runsServer);
   for (const action of createRunsActions({
     loadRun,
-    loadOverview: createOverviewLoader(runsServer),
     retryRun: (id, reason) => runsServer.retryRun(id, reason),
     navigator,
   })) {

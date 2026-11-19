@@ -13,7 +13,7 @@ Feature: Table cells — links to the run and statuses as tags
   cannot change what it shows.
 
   Scenario: A run opens from its number
-    Given I open the "runs" page
+    Given I open the "pagination" page
     Then the table row "123456" links "id" to "/demo/runs/123456"
     And the table row "123456" links "name" to "/demo/runs/123456"
     When I click the link "123456" in the table row "123456"
@@ -21,17 +21,17 @@ Feature: Table cells — links to the run and statuses as tags
     And the "run" page is shown
     And the cell "label-run-name" reads "E2E Run # 98765"
     When I click the button "Back to runs"
-    Then the address is "/demo/runs"
+    Then the address is "/demo/pagination"
 
   Scenario: A run opens from its name
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I click the link "Smoke suite" in the table row "123460"
     Then the address is "/demo/runs/123460"
     And the "run" page is shown
     And the cell "label-run-name" reads "Smoke suite"
 
   Scenario: Statuses are tags in a tone per state
-    Given I open the "runs" page
+    Given I open the "pagination" page
     Then the table row "123456" shows a "danger" tag "Failed" for "state"
     And the table row "123457" shows a "success" tag "Success" for "state"
     And the table row "123458" shows a "info" tag "Running" for "state"
@@ -40,13 +40,13 @@ Feature: Table cells — links to the run and statuses as tags
     And the table row "123456" shows "Failed" for "state"
 
   Scenario: Clicking a row still selects it, next to the links
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I click the table row "123456"
     Then the cell "echo-selected-run" reads 'Selected run:"123456"'
-    And the address is "/demo/runs"
+    And the address is "/demo/pagination"
 
   Scenario: A reference is copied with its button — a cell the host renders — and the row stays unselected
-    Given I open the "runs" page
+    Given I open the "pagination" page
     Then the table row "123456" shows "REF55456735Copy" for "reference"
     When I click Copy in the table row "123456"
     Then the Copy button in the table row "123456" reads "Copied"

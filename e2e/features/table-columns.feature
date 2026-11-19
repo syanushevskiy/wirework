@@ -7,7 +7,7 @@ Feature: The column menu of a table
   no such button: the `NoToolbar` story.)
 
   Scenario: Hidden columns and their order are kept across a reload
-    Given I open the "runs" page
+    Given I open the "pagination" page
     Then the table has the columns "#, Name, Reference, Status"
     When I open the column menu of the table
     Then the column menu lists "#, Name, Reference, Status"
@@ -18,12 +18,12 @@ Feature: The column menu of a table
     Then the table has the columns "Status, #, Name"
     And the column menu lists "Status, #, Name, Reference"
     # A reload: the page opens as a fresh application, the browser's storage stays.
-    When I open the "runs" page
+    When I open the "pagination" page
     Then the table has the columns "Status, #, Name"
     And the table has 5 rows
 
   Scenario: Reset brings the columns back and forgets what was kept
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I open the column menu of the table
     And I hide the column "Name"
     And I drag the column "#" below the column "Status"
@@ -31,11 +31,11 @@ Feature: The column menu of a table
     And the columns of the table can be reset
     When I reset the columns of the table
     Then the table has the columns "#, Name, Reference, Status"
-    When I open the "runs" page
+    When I open the "pagination" page
     Then the table has the columns "#, Name, Reference, Status"
 
   Scenario: A hidden column comes back with its checkbox
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I open the column menu of the table
     And I hide the column "Status"
     Then the table has the columns "#, Name, Reference"
@@ -44,23 +44,23 @@ Feature: The column menu of a table
     And the columns of the table cannot be reset
 
   Scenario: The infinite list has the same menu, kept apart from the runs table's
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I open the column menu of the table
     And I hide the column "Name"
-    And I open the "history" page
-    Then the table has the columns "#, Name, Reference, Inbound, Status"
+    And I open the "infinite-list" page
+    Then the table has the columns "#, Name, Reference, Inbound, Status, Started, Runner, Branch, Duration"
     When I open the column menu of the table
     And I hide the column "Inbound"
     And I drag the column "Reference" above the column "#"
-    Then the table has the columns "Reference, #, Name, Status"
-    When I open the "history" page
-    Then the table has the columns "Reference, #, Name, Status"
-    And the table has 10 rows
-    When I open the "runs" page
+    Then the table has the columns "Reference, #, Name, Status, Started, Runner, Branch, Duration"
+    When I open the "infinite-list" page
+    Then the table has the columns "Reference, #, Name, Status, Started, Runner, Branch, Duration"
+    And the list holds the rows 1 to 200
+    When I open the "pagination" page
     Then the table has the columns "#, Reference, Status"
 
   Scenario: A required column is listed and cannot be hidden
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the table has the columns "#, Name, Reference, Inbound, Status, Started, Runner, Branch, Duration"
     When I open the column menu of the table
     Then the column "#" cannot be hidden
@@ -71,8 +71,11 @@ Feature: The column menu of a table
     When I reset the columns of the table
     Then the table has the columns "#, Name, Reference, Inbound, Status, Started, Runner, Branch, Duration"
 
+  # A long scenario of hovered menus over a list of two hundred rows: beside five other workers it needs more than
+  # the default half a minute.
+  @timeout:90000
   Scenario: Columns are pinned to the left and to the right, and the menu shows them in sections
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     When I open the column menu of the table
     # Nothing is pinned: the menu is one section.
     Then the column menu has the sections "COLUMNS"
@@ -93,7 +96,7 @@ Feature: The column menu of a table
     And the column menu shows "Status" pinned to the left
     And the column menu shows "Name" pinned to the right
     # Kept like the rest of the column state: a reload opens the table the same way.
-    When I open the "archive" page
+    When I open the "infinite-list" page
     Then the table has the columns "Status, #, Reference, Inbound, Started, Runner, Branch, Duration, Name"
     And the column "Status" is pinned to the left
     When I open the column menu of the table
@@ -111,7 +114,7 @@ Feature: The column menu of a table
     And the column "Name" is not pinned
 
   Scenario: A column dragged beside a pinned one is pinned with it
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     When I open the column menu of the table
     And I pin the column "Status" to the left
     And I drag the column "Runner" above the column "Status"

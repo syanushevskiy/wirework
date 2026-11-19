@@ -9,12 +9,11 @@
  *    which the host put at route.params.runId — with its PIPELINE position
  *    at run.pipeline, derived here for the steps widget (widgets and
  *    reactions never compute; actions do).
- *  - `overview/load` (`createOverviewLoader`): the overview's numbers.
  *  - `runs/open-selected`: open the page of the run the user selected.
  *  - `runs/retry`: run the page's run again on the server, with the reason
  *    typed at run.retry.reason, then load it again.
- * The two loaders are what those pages' own `load` reactions call
- * (`viewModels.on.<page>.load`) — nothing in the host starts them.
+ * The loader is what the run page's own `load` reaction calls
+ * (`viewModels.on.run.load`) — nothing in the host starts it.
  * Results travel through the store, one visible step at a time:
  * `<root>.loading` while the request is in flight, then the answer.
  */
@@ -80,36 +79,13 @@ export function createRunLoader(server: RunsServer): Loader {
   };
 }
 
-export function createOverviewLoader(server: RunsServer): Loader {
-  const begin = latestWins();
-
-  return async (store) => {
-    const isLatest = begin(store);
-    store.set("overview.loading", true);
-    try {
-      const stats = await server.fetchStats();
-      if (!isLatest()) return;
-      store.set("overview.stats", {
-        ...stats,
-        // Text for a widget to show: widgets and reactions never compute.
-        notice: `${stats.failed} of ${stats.total} runs failed, ${stats.running} still running`,
-      });
-    } catch (error) {
-      if (isLatest()) store.set("overview.error", errorText(error));
-    } finally {
-      if (isLatest()) store.set("overview.loading", false);
-    }
-  };
-}
-
 export function createRunsActions(services: {
   loadRun: Loader;
-  loadOverview: Loader;
   /** Run a run again on the server, with the reason the user gave. */
   retryRun: (id: string, reason: string) => Promise<void>;
   navigator: Navigator;
 }): ActionDefinition[] {
-  const { loadRun, loadOverview, retryRun, navigator } = services;
+  const { loadRun, retryRun, navigator } = services;
   return [
     {
       name: "runs/retry",
@@ -123,11 +99,6 @@ export function createRunsActions(services: {
       },
     },
     {
-      name: "overview/load",
-      description: "Request the overview's numbers into overview.stats — for the page's load reaction",
-      handler: ({ store }) => loadOverview(store),
-    },
-    {
       name: "run/load",
       description:
         "Request the run named by the address (route.params.runId) into run.data — for the page's load reaction",
@@ -135,9 +106,9 @@ export function createRunsActions(services: {
     },
     {
       name: "runs/open-selected",
-      description: "Open the page of the run at runs.selected (nothing happens while none is selected)",
+      description: "Open the page of the run at pagination.selected (nothing happens while none is selected)",
       handler: ({ store }) => {
-        const id = store.getAs("runs.selected", runId);
+        const id = store.getAs("pagination.selected", runId);
         if (id !== undefined) navigator.go(`/demo/runs/${encodeURIComponent(id)}`);
       },
     },

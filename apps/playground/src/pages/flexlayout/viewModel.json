@@ -6,7 +6,7 @@
         {
           "id": "card-counter",
           "widget": "antd-card",
-          "model": "widgets.cards.counter",
+          "model": "widgets.flexlayout.counter",
           "template": "default",
           "templates": {
             "default": {
@@ -17,7 +17,7 @@
                   {
                     "id": "statistic-clicks",
                     "widget": "antd-statistic",
-                    "model": "widgets.cards.clicks",
+                    "model": "widgets.flexlayout.clicks",
                     "template": "default",
                     "x": 0,
                     "y": 0,
@@ -27,7 +27,7 @@
                   {
                     "id": "counter-clicks",
                     "widget": "antd-counter",
-                    "model": "widgets.cards.clicker",
+                    "model": "widgets.flexlayout.clicker",
                     "template": "default",
                     "x": 6,
                     "y": 0,
@@ -37,7 +37,7 @@
                   {
                     "id": "button-reset-clicks",
                     "widget": "antd-button",
-                    "model": "widgets.cards.reset",
+                    "model": "widgets.flexlayout.reset",
                     "template": "default",
                     "x": 0,
                     "y": 2,
@@ -52,7 +52,7 @@
         {
           "id": "card-profile",
           "widget": "antd-card",
-          "model": "widgets.cards.profile",
+          "model": "widgets.flexlayout.profile",
           "template": "default",
           "templates": {
             "default": {
@@ -66,21 +66,21 @@
                       {
                         "id": "button-name-alice",
                         "widget": "antd-button",
-                        "model": "widgets.cards.nameAlice",
+                        "model": "widgets.flexlayout.nameAlice",
                         "template": "default",
                         "classes": "basis-32 grow"
                       },
                       {
                         "id": "button-name-bob",
                         "widget": "antd-button",
-                        "model": "widgets.cards.nameBob",
+                        "model": "widgets.flexlayout.nameBob",
                         "template": "default",
                         "classes": "flex-none basis-24"
                       },
                       {
                         "id": "button-name-clear",
                         "widget": "antd-button",
-                        "model": "widgets.cards.nameClear",
+                        "model": "widgets.flexlayout.nameClear",
                         "template": "default",
                         "classes": "flex-none basis-20"
                       }
@@ -92,14 +92,14 @@
                       {
                         "id": "input-profile-name",
                         "widget": "antd-input",
-                        "model": "widgets.cards.name",
+                        "model": "widgets.flexlayout.name",
                         "template": "default",
                         "classes": "flex-1"
                       },
                       {
                         "id": "switch-profile-refresh",
                         "widget": "antd-switch",
-                        "model": "widgets.cards.autoRefresh",
+                        "model": "widgets.flexlayout.autoRefresh",
                         "template": "default",
                         "classes": "shrink-0"
                       }
@@ -110,7 +110,7 @@
                       {
                         "id": "label-greeting",
                         "widget": "antd-label",
-                        "model": "widgets.cards.greeting",
+                        "model": "widgets.flexlayout.greeting",
                         "template": "default",
                         "classes": "w-full"
                       }
@@ -124,7 +124,7 @@
         {
           "id": "card-session",
           "widget": "antd-card",
-          "model": "widgets.cards.session",
+          "model": "widgets.flexlayout.session",
           "template": "default",
           "templates": {
             "default": {
@@ -140,19 +140,19 @@
                   {
                     "id": "label-session-name",
                     "widget": "antd-label",
-                    "model": "widgets.cards.sessionName",
+                    "model": "widgets.flexlayout.sessionName",
                     "template": "default"
                   },
                   {
                     "id": "tag-session-title",
                     "widget": "antd-tag",
-                    "model": "widgets.cards.sessionTitle",
+                    "model": "widgets.flexlayout.sessionTitle",
                     "template": "default"
                   },
                   {
                     "id": "echo-session-roles",
                     "widget": "antd-echo",
-                    "model": "widgets.cards.sessionRoles",
+                    "model": "widgets.flexlayout.sessionRoles",
                     "template": "default"
                   }
                 ]

@@ -8,8 +8,9 @@ Feature: Containers — a card that holds other widgets
 
   Scenario: The settings page keeps its controls in a card, and they work inside it
     Given I open the "settings" page
-    # The title, the card and the two echoes: the five controls inside the card are the card's cells, not the page's.
-    Then the page has 4 cells
+    # The banner strip's eight, then the title, the card and the two echoes: the five controls inside the card are
+    # the card's cells, not the page's.
+    Then the page has 12 cells
     And the container "card-preferences" holds the cells "input-name, select-page-size, checkbox-auto-refresh, number-refresh-seconds, date-report-day"
     When I type "Sergey" into the input
     Then the input is valid
@@ -84,7 +85,7 @@ Feature: Containers — a card that holds other widgets
     When I follow the breadcrumb "settings"
     Then there is no breadcrumb
     And the page mode is "view"
-    And the page has 4 cells
+    And the page has 12 cells
 
   Scenario: On a demo page an admin adds a widget inside a card, in edit mode — a QA editing the same card has no palette
     Given I open the "settings" page
@@ -113,11 +114,11 @@ Feature: Containers — a card that holds other widgets
     And the page has 6 cells
 
   Scenario: With the user overlay on, a card's content is edited into the user's own view — layout and widgets inside — and the shared page is untouched
-    Given I open the "cards" page
+    Given I open the "flexlayout" page
     And the server has had time to answer
     When I edit the page
     And I edit the content of the cell "card-profile"
-    Then the breadcrumb reads "cards › card-profile"
+    Then the breadcrumb reads "flexlayout › card-profile"
     And the page mode is "editing"
     And the page has 3 rows
     # The greeting joins the row of the name field; the user's copy of the card's layout holds it.
@@ -133,7 +134,7 @@ Feature: Containers — a card that holds other widgets
     Then the cell "label-greeting" has the flex classes "w-full order-first"
     And the cell "label-greeting" reads "Nobody yet"
     And the state JSON contains '"card-profile/label-greeting"'
-    When I follow the breadcrumb "cards"
+    When I follow the breadcrumb "flexlayout"
     Then the page layout uses the "flexlayout" engine
     # The DOM order is the user's layout (the greeting in the second row); order-first only draws it first.
     And the container "card-profile" holds the cells "button-name-alice, button-name-bob, button-name-clear, input-profile-name, switch-profile-refresh, label-greeting"
@@ -148,7 +149,7 @@ Feature: Containers — a card that holds other widgets
     Then the cell "label-greeting" has the flex classes "w-full order-first"
 
   Scenario: A view holds the layouts inside its cards — Save as keeps what was changed, another view shows the cards as they were, and a card resets to the original
-    Given I open the "cards" page
+    Given I open the "flexlayout" page
     And the server has had time to answer
     When I edit the page
     And I edit the content of the cell "card-profile"
@@ -156,7 +157,7 @@ Feature: Containers — a card that holds other widgets
     # Save as with the change still pending: the new view takes it, nothing is lost.
     And I save the view as "mine"
     Then the cell "label-greeting" has the flex classes "w-full order-first"
-    When I follow the breadcrumb "cards"
+    When I follow the breadcrumb "flexlayout"
     Then the page uses the "mine" view, which is "mine"
     And the cell "label-greeting" has the flex classes "w-full order-first"
     # The card's layout belongs to the view: the prebuilt one shows the card as it was, mine as I left it.

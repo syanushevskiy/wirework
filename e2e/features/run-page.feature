@@ -27,7 +27,7 @@ Feature: The run page — a fact sheet, a pipeline, a history, an outcome and a 
     And the result says "There is no run nope"
     And the result says "Check the address, or go back to the list."
     When I click the button "Open the runs list"
-    Then the address is "/demo/runs"
+    Then the address is "/demo/pagination"
 
   Scenario: A failed run is retried from a dialog, with a reason, and comes back queued
     Given I open the address "/demo/runs/123456"

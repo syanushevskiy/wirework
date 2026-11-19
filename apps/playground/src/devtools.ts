@@ -12,7 +12,7 @@
  * "wirework/builder", …). Zustand's `devtools` middleware wraps the store
  * BEFORE `fromZustand` sees it — the Store contract's notifications derive
  * from the state, so the extension's time travel reaches widgets like any
- * other change. Each write names itself after its path ("set runs.page").
+ * other change. Each write names itself after its path ("set pagination.page").
  * While off, the middleware is a pass-through with no extension involved.
  */
 import { createStore as createZustandStore } from "zustand/vanilla";

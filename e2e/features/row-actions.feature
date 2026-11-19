@@ -1,5 +1,5 @@
 Feature: Row actions — a star that appears on a row under the pointer and marks it as a favourite
-  A table may offer tools of a single row. The Archive page lists one, the
+  A table may offer tools of a single row. The Infinite List page lists one, the
   standard star: it stands at the start of every row, out of sight until the
   pointer is over the row, and pressing it tells the page — which asks the
   server to mark the run as a favourite. A row that is a favourite keeps its
@@ -7,7 +7,7 @@ Feature: Row actions — a star that appears on a row under the pointer and mark
   data, as the server has it.
 
   Scenario: The star shows on the row under the pointer, and only there
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the list holds the rows 1 to 200
     And the table row "123456" hides the action "favorite"
     When I hover the table row "123456"
@@ -18,7 +18,7 @@ Feature: Row actions — a star that appears on a row under the pointer and mark
     And the table row "123456" hides the action "favorite"
 
   Scenario: Pressing the star marks the row as a favourite, and it stays in view
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the table row "123456" is not a favorite
     When I use the action "favorite" on the table row "123456"
     Then the table row "123456" is a favorite
@@ -32,7 +32,7 @@ Feature: Row actions — a star that appears on a row under the pointer and mark
     And no widget has crashed
 
   Scenario: Pressing the star of a favourite takes the mark away
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     When I use the action "favorite" on the table row "123457"
     Then the table row "123457" is a favorite
     When I use the action "favorite" on the table row "123457"
@@ -41,7 +41,7 @@ Feature: Row actions — a star that appears on a row under the pointer and mark
     Then the table row "123457" hides the action "favorite"
 
   Scenario: The mark is the server's: it is there when the rows are let go and fetched again
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     When I use the action "favorite" on the table row "123456"
     Then the table row "123456" is a favorite
     When I scroll the infinite table to row 150

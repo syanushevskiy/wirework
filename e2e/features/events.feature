@@ -7,21 +7,21 @@ Feature: Widget events
   event log subscribes to everything so events are visible and testable.
 
   Scenario: The event log starts collapsed, with the page's own load event
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the "events" panel is collapsed
     When I expand the "events" panel
     Then the event log has 1 entry
-    And the event log shows widget "page" event "load" with payload '{"page":"overview"}'
+    And the event log shows widget "page" event "load" with payload '{"page":"settings"}'
 
   Scenario: Clicking the counter emits a typed event from its cell
-    Given I open the "overview" page
+    Given I open the "settings" page
     And I expand the "events" panel
     When I click the counter 1 time
     Then the event log shows widget "antd-counter" event "incremented" with payload '{"value":1}'
     And the event log shows widget "antd-counter" event "incremented" from cell "counter-main"
 
   Scenario: Every emit is logged, newest first
-    Given I open the "overview" page
+    Given I open the "settings" page
     And I expand the "events" panel
     When I click the counter 3 times
     # The page's own load event, then the three clicks.
@@ -29,14 +29,14 @@ Feature: Widget events
     And the event log shows widget "antd-counter" event "incremented" with payload '{"value":3}'
 
   Scenario: The host subscribes to an event and turns it into state
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And I expand the "events" panel
-    Then the echo widget at "runs.selected" shows "∅"
+    Then the echo widget at "pagination.selected" shows "∅"
     When I click the table row "123456"
     Then the event log shows widget "antd-table" event "row-selected" with '"key":"123456"' in its payload
-    And the echo widget at "runs.selected" shows '"123456"'
+    And the echo widget at "pagination.selected" shows '"123456"'
     When I click the table row "123457"
-    Then the echo widget at "runs.selected" shows '"123457"'
+    Then the echo widget at "pagination.selected" shows '"123457"'
 
   Scenario: The builder lists the events a widget emits
     Given I open the "builder" page
@@ -62,14 +62,14 @@ Feature: Widget events
     And the event log shows widget "antd-counter" event "incremented" from cell "custom-2"
 
   Scenario: The event log can be cleared
-    Given I open the "overview" page
+    Given I open the "settings" page
     And I expand the "events" panel
     When I click the counter 2 times
     And I clear the event log
     Then the event log is empty
 
   Scenario: The counter's own write is its default reaction, not widget code
-    Given I open the "overview" page
+    Given I open the "settings" page
     # Nothing in the page's configuration writes demo.counter: the counter's
     # `incremented` writes its value back to its port by default.
     Then the state JSON does not contain '"set": "demo.counter"'
@@ -95,7 +95,7 @@ Feature: Widget events
     Then the echo widget at "sample.picked" shows '"123457"'
 
   Scenario: A button click runs a host action wired in the view model
-    Given I open the "overview" page
+    Given I open the "settings" page
     And I expand the "events" panel
     When I click the counter 2 times
     Then the echo widget at "demo.counter" shows "2"
@@ -104,7 +104,7 @@ Feature: Widget events
     And the echo widget at "demo.counter" shows "0"
 
   Scenario: A page change requests that page from the server through a host action
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And I expand the "events" panel
     Then the pagination shows page 1
     And the table has 5 rows
@@ -120,12 +120,12 @@ Feature: Widget events
     And the table has 3 rows
 
   Scenario: Editing the paginator on the shared page keeps its whole reaction chain
-    Given I open the "runs" page
+    Given I open the "pagination" page
     When I disable the user overlay
     And I edit the page
     And I edit the cell "pagination-runs"
     # The page is written back by default; the page size and the request follow, as configured.
-    Then the event "changed" writes "page" back to "runs.page" by default
+    Then the event "changed" writes "page" back to "pagination.page" by default
     And the event "changed" has 2 more reactions
     When I set the setting "size" to "small"
     And I save the widget

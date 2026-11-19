@@ -7,6 +7,41 @@
       "label": "Auto-refresh the runs list"
     }
   },
+  "widgets.settings.banner": {
+    "default": {
+      "text": "Wirework playground",
+      "tone": "accent"
+    },
+    "loud": {
+      "text": "WIREWORK PLAYGROUND!!!",
+      "tone": "danger"
+    }
+  },
+  "widgets.settings.counter": {
+    "default": {
+      "inputs": {
+        "value": "demo.counter"
+      },
+      "step": 1,
+      "label": "Increment"
+    }
+  },
+  "widgets.settings.echo": {
+    "default": {
+      "inputs": {
+        "value": "demo.counter"
+      },
+      "label": "Counter value"
+    }
+  },
+  "widgets.settings.echoAll": {
+    "default": {
+      "inputs": {
+        "value": "demo"
+      },
+      "label": "Demo state"
+    }
+  },
   "widgets.settings.echoPermissions": {
     "default": {
       "inputs": {
@@ -85,6 +120,28 @@
       }
     }
   },
+  "widgets.settings.resetButton": {
+    "default": {
+      "label": "Reset counter",
+      "variant": "danger",
+      "on": {
+        "clicked": [
+          {
+            "call": "reset-counter"
+          }
+        ]
+      }
+    }
+  },
+  "widgets.settings.role": {
+    "default": {
+      "inputs": {
+        "text": "app.user.title"
+      },
+      "text": "title",
+      "tone": "info"
+    }
+  },
   "widgets.settings.sessionsTable": {
     "default": {
       "inputs": {
@@ -109,6 +166,23 @@
     "default": {
       "text": "Your settings — global state: every page sees them",
       "tone": "accent"
+    }
+  },
+  "widgets.settings.user": {
+    "default": {
+      "inputs": {
+        "text": "app.user.name"
+      },
+      "text": "Signing in…",
+      "tone": "muted"
+    }
+  },
+  "widgets.settings.welcome": {
+    "default": {
+      "inputs": {
+        "text": "app.settings.displayName"
+      },
+      "text": "Tell us your name on the Settings page"
     }
   }
 }

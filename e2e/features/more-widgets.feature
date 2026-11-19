@@ -37,7 +37,7 @@ Feature: More widgets
     Then the state JSON contains '"reportDay": "2026-11-09"'
 
   Scenario: A date range above the runs table filters the list on the server
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And the server has had time to answer
     Then the table has 5 rows
     And the state JSON contains '"total": 23'
@@ -59,7 +59,7 @@ Feature: More widgets
     Then the state JSON contains '"notes": "first line"'
 
   Scenario: A button has a variant: primary by default, or secondary, dashed, danger
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the button "Reset counter" has the variant "danger"
     Given I open the "builder" page
     When I choose the "antd-button" widget

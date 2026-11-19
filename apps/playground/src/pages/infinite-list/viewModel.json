@@ -8,7 +8,7 @@
             {
               "id": "label-archive",
               "widget": "antd-label",
-              "model": "widgets.archive.title",
+              "model": "widgets.infinite-list.title",
               "template": "default",
               "classes": "w-full"
             }
@@ -19,7 +19,7 @@
             {
               "id": "table-archive",
               "widget": "antd-infinite-table",
-              "model": "widgets.archive.table",
+              "model": "widgets.infinite-list.table",
               "template": "default",
               "classes": "w-full"
             }
@@ -30,7 +30,7 @@
             {
               "id": "position-archive",
               "widget": "antd-list-position",
-              "model": "widgets.archive.position",
+              "model": "widgets.infinite-list.position",
               "template": "default",
               "classes": "w-full"
             }
@@ -41,7 +41,7 @@
             {
               "id": "label-archive-error",
               "widget": "antd-label",
-              "model": "widgets.archive.error",
+              "model": "widgets.infinite-list.error",
               "template": "default",
               "classes": "w-full"
             }

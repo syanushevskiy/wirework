@@ -7,11 +7,11 @@ Feature: Load events — a page and a table ask for their data
   (`on: { load: [...] }`). Both fire after the page has bound its reactions,
   and once — also under React's StrictMode, which mounts everything twice.
 
-  Scenario: The overview loads its numbers through the page's own load reaction
-    Given I open the "overview" page
-    Then the state JSON contains '"call": "overview/load"'
+  Scenario: The run page loads its run through the page's own load reaction
+    Given I open the address "/demo/runs/123456"
+    Then the state JSON contains '"call": "run/load"'
     When the server has had time to answer
-    Then the state JSON contains '"notice": "6 of 23 runs failed, 6 still running"'
+    Then the cell "label-run-name" reads "E2E Run # 98765"
 
   Scenario: A page's load event fires once per opening
     Given I open the address "/demo/runs/123456"
@@ -21,7 +21,7 @@ Feature: Load events — a page and a table ask for their data
     And the cell "label-run-name" reads "E2E Run # 98765"
 
   Scenario: The runs table asks for its data when it appears
-    Given I open the "runs" page
+    Given I open the "pagination" page
     And I expand the "events" panel
     Then the event log shows widget "antd-table" event "load" from cell "table-main"
     # The page's load and the table's: two events, one request.
@@ -94,9 +94,9 @@ Feature: Load events — a page and a table ask for their data
     And the event log shows widget "antd-table" event "load" from cell "custom-1"
 
   Scenario: A wrong page reaction is ignored loudly, and the page still renders
-    Given I open the "overview" page
+    Given I open the "settings" page
     Then the page shows no warnings
-    When the store holds at "viewModels.on.overview":
+    When the store holds at "viewModels.on.settings":
       """
       { "load": [{ "call": "no-such-action" }] }
       """
@@ -104,12 +104,12 @@ Feature: Load events — a page and a table ask for their data
     And the label reads "WIREWORK PLAYGROUND!!!"
     And the boot validation status is "view models: 1 problem(s)"
     When I expand the "validation" panel
-    Then the validation report mentions "on.overview"
+    Then the validation report mentions "on.settings"
 
   Scenario: A reaction to an event pages do not have never reaches the store
-    Given I open the "overview" page
-    When I try to put into the store at "viewModels.on.overview":
+    Given I open the "settings" page
+    When I try to put into the store at "viewModels.on.settings":
       """
-      { "opened": [{ "call": "overview/load" }] }
+      { "opened": [{ "call": "run/load" }] }
       """
     Then the state error is shown

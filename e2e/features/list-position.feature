@@ -1,5 +1,5 @@
 Feature: A long list held as a slice, and a scale that says where it stands and jumps along it
-  The Archive page lists two thousand runs — and its server does not COUNT
+  The Infinite List page lists two thousand runs — and its server does not COUNT
   them: how many there are is not known until the list's end is reached.
   Nobody holds them all either: the server is asked for two hundred at a
   time — the next two hundred AHEAD OF TIME, once three quarters of the rows
@@ -14,7 +14,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
   place.
 
   Scenario: The list holds a slice of two hundred rows and does not know how many there are
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the list holds the rows 1 to 200
     And the infinite table shows "200+ rows"
     And the infinite table renders only a window of its rows
@@ -23,7 +23,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
     And the first table row is "123456"
 
   Scenario: The next two hundred rows are fetched ahead of time, and the farthest rows are let go
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the list holds the rows 1 to 200
     # Past three quarters of the rows held: the next batch is asked for while the rows in view are still there.
     When I scroll the infinite table to row 150
@@ -43,7 +43,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
     And the infinite table shows "800+ rows"
 
   Scenario: The end of the list is where the total becomes known
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the list holds the rows 1 to 200
     When I scroll the infinite table until the list's end is found
     # The batch after row 2000 came back empty: the last six hundred rows are held, and the list is counted.
@@ -60,7 +60,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
     And the list stands at row 1 of 2000
 
   Scenario: Moving the scale jumps the list, which asks for the slice there
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the list holds the rows 1 to 200
     When I scroll the infinite table until the list's end is found
     And I move the list position to 40 percent
@@ -71,7 +71,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
     And no widget has crashed
 
   Scenario: A filter that leaves a few rows is counted at once, and the unfiltered list is open again
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the infinite table shows "200+ rows"
     When I filter the "Started" column from "2026-10-01 00:00" to "2026-10-10 23:59"
     # Fewer rows than a batch came back: that is all of them.
@@ -84,7 +84,7 @@ Feature: A long list held as a slice, and a scale that says where it stands and 
     And the list's end is not known
 
   Scenario: Moving the scale to its end scrolls ahead: the rows known grow under it
-    Given I open the "archive" page
+    Given I open the "infinite-list" page
     Then the list stands at row 1 of at least 200
     # The end of the scale is the last row known — from there the next batch is fetched, and the scale is longer.
     When I move the list position to 99 percent

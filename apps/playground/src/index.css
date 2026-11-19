@@ -16,6 +16,11 @@
   align-items: start;
 }
 
+/* A column is as wide as the grid makes it, never as wide as what is in it: a wide table scrolls inside itself. */
+.pg-columns > * {
+  min-width: 0;
+}
+
 @media (min-width: 64rem) {
   .pg-columns {
     grid-template-columns: minmax(22rem, 30rem) 1fr;

@@ -3,12 +3,10 @@ import type { Page } from "@playwright/test";
 
 /** Where each page of the menu lives (apps/playground/src/routes.ts). */
 export const PAGE_PATHS: Record<string, string> = {
-  overview: "/demo",
-  runs: "/demo/runs",
-  history: "/demo/history",
-  archive: "/demo/archive",
+  pagination: "/demo/pagination",
+  "infinite-list": "/demo/infinite-list",
   settings: "/demo/settings",
-  cards: "/demo/cards",
+  flexlayout: "/demo/flexlayout",
   roles: "/demo/roles",
   editor: "/demo/editor",
   builder: "/builder",
