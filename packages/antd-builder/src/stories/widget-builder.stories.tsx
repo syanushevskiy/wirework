@@ -127,6 +127,39 @@ export const ShowsWhen: Story = {
   },
 };
 
+/**
+ * A setting's DESCRIPTION is part of its label and may run to several lines
+ * (the infinite table's `filterRow`, `windowed`, `columnStateKey`,
+ * `fetchAhead`): the label is as tall as its text, so every line is whole
+ * and the field stands under it — never over its last line.
+ */
+export const LongDescriptions: Story = {
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Show widgets" }));
+    await userEvent.click(canvas.getByRole("button", { name: /antd-infinite-table/ }));
+    const settings = await canvas.findByTestId("widget-settings");
+    const labels = [...settings.querySelectorAll<HTMLElement>(".ant-form-item-label > label")];
+    await expect(labels.length).toBeGreaterThan(10);
+    // In a narrow panel several descriptions wrap.
+    canvasElement.style.width = "480px";
+    const wrapped = labels.filter((label) => label.getBoundingClientRect().height > 40);
+    await expect(wrapped.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      const box = label.getBoundingClientRect();
+      // The text inside is no taller than the label that holds it…
+      for (const text of label.querySelectorAll<HTMLElement>(".ant-typography")) {
+        const lines = text.getBoundingClientRect();
+        await expect(lines.top).toBeGreaterThanOrEqual(box.top - 1);
+        await expect(lines.bottom).toBeLessThanOrEqual(box.bottom + 1);
+      }
+      // …and the field begins where the label ends.
+      const control = label.closest(".ant-form-item")?.querySelector<HTMLElement>(".ant-form-item-control");
+      if (control) await expect(control.getBoundingClientRect().top).toBeGreaterThanOrEqual(box.bottom - 1);
+    }
+    canvasElement.style.width = "";
+  },
+};
+
 /** The host is not accepting widgets (a page edit is open): Add is locked, and says why. */
 export const Locked: Story = {
   args: { addLock: "editing" },

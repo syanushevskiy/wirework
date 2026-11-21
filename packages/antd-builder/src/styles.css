@@ -23,6 +23,17 @@
   padding-bottom: 0;
 }
 
+/*
+ * A label carries its field's DESCRIPTION, which may run to several lines:
+ * it is as tall as its text. antd's small form gives every label one
+ * control's height, so a second line was cut in half above and below.
+ * (The form's own classes are named to outweigh antd's rule for a small form.)
+ */
+.ww-builder .ant-form.ant-form-small .ant-form-item .ant-form-item-label > label {
+  height: auto;
+  min-height: var(--ant-control-height-sm, 24px);
+}
+
 /* Doubled class: antd's own "fill the form item" rule is a single class. */
 .ww-builder-field.ww-builder-field {
   width: 16rem;
