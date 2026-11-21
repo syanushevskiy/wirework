@@ -856,6 +856,27 @@ Then("the list holds a slice around row {int}", async ({ page }, row: number) =>
     .toBe(true);
 });
 
+/** The rows in view are rows of the slice held — and so rendered: the list did not scroll out of what it has. */
+Then("the list holds the rows in view", async ({ page }) => {
+  const table = infiniteTable(page);
+  await expect
+    .poll(async () => {
+      const offset = Number(await table.getAttribute("data-offset"));
+      const held = Number(await table.getAttribute("data-held"));
+      const view = await table.getByTestId("infinite-table-scroll").evaluate((box) => {
+        const rendered = box.querySelector<HTMLElement>('[data-testid="table-row"]');
+        if (rendered === null) return undefined;
+        const height = rendered.offsetHeight;
+        return {
+          first: Math.floor(box.scrollTop / height),
+          last: Math.ceil((box.scrollTop + box.clientHeight) / height),
+        };
+      });
+      return view !== undefined && view.first >= offset && view.last <= offset + held;
+    })
+    .toBe(true);
+});
+
 /** Where the list stands, as the widget under it says: its first row in view (from 1) of how many. */
 Then("the list stands at row {int} of {int}", async ({ page }, row: number, total: number) => {
   await expect(listPosition(page)).toHaveAttribute("data-position", String(row - 1));

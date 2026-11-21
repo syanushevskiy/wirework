@@ -116,6 +116,24 @@ When("I turn the mouse wheel {int} times over the infinite table", async ({ page
   }
 });
 
+/**
+ * The same wheel at a HAND's pace — a notch every so many milliseconds, so
+ * the server answers between them as it does for a person. The pointer is
+ * put back over the box before every notch: a list standing at its last row
+ * known passes the wheel on to the page, which would scroll the box away
+ * from under a pointer that stays where it was.
+ */
+When(
+  "I turn the mouse wheel {int} times over the infinite table, a notch every {int} ms",
+  async ({ page }, notches: number, pause: number) => {
+    for (let notch = 0; notch < notches; notch += 1) {
+      await scrollBox(page).hover();
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(pause);
+    }
+  },
+);
+
 const found = (page: Page): Measured => {
   const result = measured.get(page);
   if (result === undefined) throw new Error("nothing was measured: start and stop measuring first");
