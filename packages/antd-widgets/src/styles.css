@@ -194,10 +194,25 @@
   height: 100%;
 }
 
-/* The end of the list: what is held of what there is, and the place a scroll reaches. */
+/* The end of the list: the place a scroll reaches — a line of its own, so it is in view only when the rows end. */
 .ww-infinite-table__end {
+  height: 1px;
+}
+
+/*
+ * What is held of what there is: the line STAYS at the bottom of the box (and at its left while the table scrolls
+ * sideways), over the rows that pass under it — the count is in view without scrolling to the list's end. Above
+ * the pinned columns, like the header that sticks to the top.
+ */
+.ww-infinite-table__status {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
   padding: 0.5rem;
   text-align: center;
+  background: var(--ant-color-bg-container, #fff);
+  border-top: 1px solid var(--ant-color-split, rgba(5, 5, 5, 0.06));
 }
 
 /* The blank rows above and below the window of rendered rows: height only, nothing to see or hover. */
@@ -283,6 +298,19 @@
   margin-right: auto;
   font-weight: 500;
   font-size: 16px;
+}
+
+/* `toolbarAlign: "left"`: the filters and the tools stand straight after the title, the room left over at the bar's right. */
+.ww-table__bar[data-align="left"] {
+  justify-content: flex-start;
+}
+
+.ww-table__bar[data-align="left"] .ww-table__title {
+  margin-right: 0;
+}
+
+.ww-table__bar[data-align="left"] .ww-table__toolbar {
+  justify-content: flex-start;
 }
 
 .ww-table__filters {

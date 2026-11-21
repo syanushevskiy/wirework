@@ -365,7 +365,10 @@ Two settings on both tables, empty by default:
   definition plus a kind. The optional `filters` PORT holds the same list in
   the store and wins over the setting, as the `columns` port does.
 
-The filters stand at the bar's right, before the tools. They are NOT a
+The filters stand at the bar's right, before the tools; `toolbarAlign:
+"left"` (a setting of both tables, `right` by default) puts the filters and
+the tools straight after the title instead (`data-align` on the bar; the
+`ToolbarAtTheLeft` story). They are NOT a
 second state: they read `filterIn` / `filterLike` / `filterBetween` and emit
 `filter-changed` with the whole choice, as a header does. So a bar filter, a
 header on the same property and "Reset Filters" show one choice. A `dates`

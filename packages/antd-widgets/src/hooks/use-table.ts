@@ -10,7 +10,7 @@
 import { useMemo } from "react";
 import type { TableColumnsType, TableProps } from "antd";
 import type { Emit, PortDefinition, ReadableStore } from "@wirework/schema";
-import { useAfterMount, usePort } from "@wirework/react";
+import { useAfterMount, usePort, useStorePath } from "@wirework/react";
 import type {
   ColumnOrder,
   ColumnState,
@@ -26,6 +26,7 @@ import type {
 import { columnStateKey } from "../column-state";
 import type { TableEvents } from "../widgets/antd-table";
 import { useCellSelection, type CellSelectionView } from "./use-cell-selection";
+import { useLoadingIndicator, type LoadingIndicator, type LoadingIndicatorView } from "./use-loading-indicator";
 import { useTableToolbar, type TableToolbarItems, type ToolbarEntry } from "./use-table-toolbar";
 import { useColumnState, type ColumnEvents, type ColumnMenuView, type ColumnStateView } from "./use-column-state";
 import type { TableCellRenderers } from "./use-table-cell";
@@ -46,6 +47,8 @@ export interface TableView {
   columns: TableColumnsType<RenderedRow>;
   rows: RenderedRow[];
   loading: boolean;
+  /** Whether the spinner shows, and whether the first answer is still awaited (`loadingIndicator`). */
+  indicator: LoadingIndicatorView;
   rowProps: NonNullable<TableProps<RenderedRow>["onRow"]>;
   /** antd's one callback for header filters and sorting. */
   change: NonNullable<TableProps<RenderedRow>["onChange"]>;
@@ -100,6 +103,7 @@ export interface TableSettings {
   rowActions: RowAction[];
   cellSelection: boolean;
   exportName: string;
+  loadingIndicator: LoadingIndicator;
 }
 
 /** The columns as the column menu's state shows and orders them, and the menu — what both table kinds do with it. */
@@ -140,6 +144,18 @@ export function useColumnsWithActions(
   );
 }
 
+/** When the table shows that it is loading (use-loading-indicator.ts) — what both table kinds ask with their paths. */
+export function useTableLoadingIndicator(
+  store: ReadableStore,
+  paths: TablePaths,
+  mode: LoadingIndicator,
+  loading: boolean,
+): LoadingIndicatorView {
+  // The RAW value: the port reads a path nothing was written at as its default, an empty list.
+  const received = useStorePath<unknown>(store, paths.rows) !== undefined;
+  return useLoadingIndicator(mode, loading, paths.loading !== undefined, received);
+}
+
 export function useTable(
   store: ReadableStore,
   emit: Emit<TableEvents>,
@@ -157,6 +173,7 @@ export function useTable(
   // Validated by the contract's ports: a malformed value shows no rows, never a crash.
   const rows = usePort(store, paths.rows, ports.rows) ?? NO_ROWS;
   const loading = usePort(store, paths.loading, ports.loading) === true;
+  const indicator = useTableLoadingIndicator(store, paths, settings.loadingIndicator, loading);
   const columns = useTableColumns(store, paths.columns, ports.columns, settings.columns, rows);
   const renderedRows = useRenderedRows(rows, settings.rowKey);
   const menu = useMenuColumns(store, emit, paths, ports, settings, columns);
@@ -200,6 +217,7 @@ export function useTable(
     columns: withActions.columns,
     rows: renderedRows,
     loading,
+    indicator,
     rowProps,
     change: headers.change,
     columnMenu: menu.menu,

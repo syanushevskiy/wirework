@@ -29,6 +29,7 @@ import { CellTip } from "./cell-tip";
 import type { TableRowActions } from "../hooks/use-row-actions";
 import { rowActionsOf } from "./row-actions";
 import { TableTheme } from "./table-theme";
+import { emptyTextOf } from "../hooks/use-loading-indicator";
 import { TableToolbar, toolbarItems } from "./table-toolbar";
 
 /** Exported so the hook can type its `emit` without a runtime cycle. */
@@ -62,6 +63,7 @@ export function createAntdTable({
       columns,
       rows,
       loading,
+      indicator,
       rowProps,
       change,
       columnMenu,
@@ -96,6 +98,7 @@ export function createAntdTable({
         rowActions: viewModel.rowActions,
         cellSelection: viewModel.cellSelection,
         exportName: viewModel.exportName,
+        loadingIndicator: viewModel.loadingIndicator,
       },
       cells,
       items,
@@ -110,6 +113,7 @@ export function createAntdTable({
         data-testid="antd-table"
         data-path={viewModel.inputs.rows}
         data-loading={loading}
+        data-waiting={indicator.waiting}
         data-filter-row={viewModel.filterRow}
         data-min-width={scroll.x}
         data-cell-selection={viewModel.cellSelection}
@@ -121,15 +125,22 @@ export function createAntdTable({
         <TableTheme>
           <CellMenu view={selection} />
           <CellTip tip={tip.tip} />
-          <TableToolbar title={viewModel.title} filters={filters} items={toolbar} columnMenu={columnMenu} />
+          <TableToolbar
+            title={viewModel.title}
+            filters={filters}
+            items={toolbar}
+            columnMenu={columnMenu}
+            align={viewModel.toolbarAlign}
+          />
           <Table
             size="small"
             pagination={false}
-            loading={loading}
+            // The spinner: on every fetch, or only until the first answer (`loadingIndicator`).
+            loading={indicator.spinning}
             columns={columns}
             dataSource={rows}
             rowKey="key"
-            locale={{ emptyText: viewModel.emptyText }}
+            locale={{ emptyText: emptyTextOf(indicator, viewModel.emptyText) }}
             onRow={rowProps}
             onChange={change}
             scroll={scroll}

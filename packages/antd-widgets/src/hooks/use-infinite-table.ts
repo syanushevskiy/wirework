@@ -44,6 +44,7 @@ import { useRowActions, type TableRowActions } from "./use-row-actions";
 import {
   useColumnsWithActions,
   useMenuColumns,
+  useTableLoadingIndicator,
   type TablePaths,
   type TablePorts,
   type TableSettings,
@@ -134,6 +135,7 @@ export function useInfiniteTable(
   // Validated by the contract's ports: a malformed value shows the default, never a crash.
   const rows = usePort(store, paths.rows, ports.rows) ?? NO_ROWS;
   const loading = usePort(store, paths.loading, ports.loading) === true;
+  const indicator = useTableLoadingIndicator(store, paths, settings.loadingIndicator, loading);
   const total = usePort(store, paths.total, ports.total);
   const columns = useTableColumns(store, paths.columns, ports.columns, settings.columns, rows);
   const renderedRows = useRenderedRows(rows, settings.rowKey);
@@ -344,12 +346,14 @@ export function useInfiniteTable(
     emit("more", { offset: rows.length });
   }, [looks, loading, hasMore, rows, aheadPixels, emit]);
 
-  const status = statusOf(rows.length, total, windowed, open);
+  // Waiting for the first answer (`loadingIndicator: "first"`), the line claims no count.
+  const status = indicator.waiting ? "Loading…" : statusOf(rows.length, total, windowed, open);
 
   return {
     columns: withActions.columns,
     rows: windowRows,
     loading,
+    indicator,
     rowProps,
     change: headers.change,
     columnMenu: menu.menu,

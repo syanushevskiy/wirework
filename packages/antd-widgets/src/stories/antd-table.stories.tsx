@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { Button, Tag, Tooltip } from "antd";
 import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { antdTable, createAntdTable } from "../widgets/antd-table";
@@ -70,6 +71,72 @@ export const Rows: Story = conformance.Rows;
 export const RowSelected: Story = conformance.RowSelected;
 export const LoadsOnAppearance: Story = conformance.LoadsOnAppearance;
 export const BoundToEmptyPath: Story = conformance.BoundToEmptyPath;
+
+/** What a loader writes, step by step: the buttons under the table are the loader. */
+const LOADER_STEPS: { label: string; data: Record<string, unknown> }[] = [
+  { label: "The load begins", data: { "demo.loading": true } },
+  { label: "The first rows arrive", data: { "demo.loading": false, "demo.rows": rows } },
+  { label: "A filter asks again", data: { "demo.loading": true, "demo.rows": rows } },
+  { label: "The filtered rows arrive", data: { "demo.loading": false, "demo.rows": rows.slice(0, 1) } },
+];
+
+function LoadedStepByStep() {
+  const [step, setStep] = useState(-1);
+  return (
+    <>
+      <WidgetStory
+        key="loading-first"
+        definition={antdTable}
+        data={LOADER_STEPS[step]?.data}
+        viewModel={{
+          inputs: { rows: "demo.rows", loading: "demo.loading" },
+          columns: [
+            { title: "Name", property: "name" },
+            { title: "Status", property: "status" },
+          ],
+          loadingIndicator: "first",
+        }}
+      />
+      {LOADER_STEPS.map(({ label }, index) => (
+        <Button key={label} size="small" disabled={index !== step + 1} onClick={() => setStep(index)}>
+          {label}
+        </Button>
+      ))}
+    </>
+  );
+}
+
+/**
+ * `loadingIndicator: "first"`: the table shows that it is loading only until
+ * its FIRST answer — from the moment it appears, never saying "No rows" of a
+ * list it was not told about yet. A later fetch (a filter, a sort, Reload)
+ * shows nothing: the rows held stay in view until the new ones replace them.
+ */
+export const LoadingOnlyAtFirst: Story = {
+  render: () => <LoadedStepByStep />,
+  play: async ({ canvas, userEvent }) => {
+    const table = canvas.getByTestId("antd-table");
+    const spinning = () => table.querySelector(".ant-spin-spinning") !== null;
+    // Before the loader said anything: waiting, not empty.
+    await expect(table).toHaveAttribute("data-waiting", "true");
+    await expect(spinning()).toBe(true);
+    await expect(canvas.queryByText("No rows")).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "The load begins" }));
+    await expect(spinning()).toBe(true);
+    await userEvent.click(canvas.getByRole("button", { name: "The first rows arrive" }));
+    await expect(canvas.findByText("Nightly")).resolves.toBeVisible();
+    await waitFor(() => expect(spinning()).toBe(false));
+    await expect(table).toHaveAttribute("data-waiting", "false");
+    // The next fetch: loading, and nothing shown of it — the rows stay.
+    await userEvent.click(canvas.getByRole("button", { name: "A filter asks again" }));
+    await expect(table).toHaveAttribute("data-loading", "true");
+    await expect(spinning()).toBe(false);
+    await expect(canvas.getByText("Regression")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "The filtered rows arrive" }));
+    await waitFor(() => expect(canvas.queryByText("Regression")).toBeNull());
+    await expect(spinning()).toBe(false);
+  },
+};
 
 /**
  * Cells: `#` and Name are links to the run, Status a tag in a tone. A plain

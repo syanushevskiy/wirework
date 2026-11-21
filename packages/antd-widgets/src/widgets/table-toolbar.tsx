@@ -66,13 +66,15 @@ export interface TableToolbarProps {
   filters: ToolbarFilterEntry[];
   items: ToolbarEntry[];
   columnMenu: ColumnMenuView | undefined;
+  /** Where the filters and the tools stand (`toolbarAlign`): at the bar's right edge, or straight after the title. */
+  align: "left" | "right";
 }
 
-export function TableToolbar({ title, filters, items, columnMenu }: TableToolbarProps) {
+export function TableToolbar({ title, filters, items, columnMenu, align }: TableToolbarProps) {
   const tools = items.length > 0 || columnMenu !== undefined;
   if (title === "" && filters.length === 0 && !tools) return null;
   return (
-    <div className="ww-table__bar" data-testid="table-bar">
+    <div className="ww-table__bar" data-testid="table-bar" data-align={align}>
       {title === "" ? null : (
         <div className="ww-table__title" data-testid="table-title" role="heading" aria-level={3}>
           {title}

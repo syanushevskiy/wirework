@@ -22,6 +22,7 @@ import { useInfiniteTable } from "../hooks/use-infinite-table";
 import { NO_CELLS } from "../hooks/use-table";
 import type { AntdTableOptions } from "./antd-table";
 import { useCellTip } from "../hooks/use-cell-tip";
+import { emptyTextOf } from "../hooks/use-loading-indicator";
 import { CellMenu } from "./cell-menu";
 import { CellTip } from "./cell-tip";
 import { rowActionsOf } from "./row-actions";
@@ -72,6 +73,7 @@ export function createAntdInfiniteTable({
         rowActions: viewModel.rowActions,
         cellSelection: viewModel.cellSelection,
         exportName: viewModel.exportName,
+        loadingIndicator: viewModel.loadingIndicator,
         height: viewModel.height,
         heightMode: viewModel.heightMode,
         bottomGap: viewModel.bottomGap,
@@ -90,6 +92,7 @@ export function createAntdInfiniteTable({
         data-testid="antd-infinite-table"
         data-path={viewModel.inputs.rows}
         data-loading={view.loading}
+        data-waiting={view.indicator.waiting}
         data-filter-row={viewModel.filterRow}
         data-min-width={view.scroll.x}
         data-held={view.held}
@@ -113,6 +116,7 @@ export function createAntdInfiniteTable({
             filters={view.filters}
             items={view.toolbar}
             columnMenu={view.columnMenu}
+            align={viewModel.toolbarAlign}
           />
           {/*
           The box the rows scroll in: as tall as the settings say (at most the height, exactly it, or what fills the
@@ -133,11 +137,12 @@ export function createAntdInfiniteTable({
               <Table
                 size="small"
                 pagination={false}
-                loading={view.loading}
+                // The spinner: on every fetch, or only until the first answer (`loadingIndicator`).
+                loading={view.indicator.spinning}
                 columns={view.columns}
                 dataSource={view.rows}
                 rowKey="key"
-                locale={{ emptyText: viewModel.emptyText }}
+                locale={{ emptyText: emptyTextOf(view.indicator, viewModel.emptyText) }}
                 onRow={view.rowProps}
                 onChange={view.change}
                 sticky={view.sticky}
@@ -147,7 +152,10 @@ export function createAntdInfiniteTable({
                 components={view.components}
               />
             </RowSpaceProvider>
-            <div ref={view.endRef} className="ww-infinite-table__end" data-testid="infinite-table-status">
+            {/* The END of the list — what a scroll reaches, and what asks for more rows when it comes into view. */}
+            <div ref={view.endRef} className="ww-infinite-table__end" data-testid="infinite-table-end" />
+            {/* The line that says how many rows there are: it STAYS at the bottom of the box, whatever is scrolled. */}
+            <div className="ww-infinite-table__status" data-testid="infinite-table-status">
               <Typography.Text type="secondary">{view.status}</Typography.Text>
             </div>
           </div>

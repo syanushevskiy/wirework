@@ -195,6 +195,43 @@ export const FilterRow: Story = {
 };
 
 /**
+ * `toolbarAlign: "left"`: the filters and the tools stand straight after the
+ * title instead of at the bar's right edge (the default — the other stories).
+ */
+export const ToolbarAtTheLeft: Story = {
+  render: () => (
+    <WidgetStory
+      key="toolbar-left"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows, total: 3 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total", filterLike: "demo.filterLike" },
+        on: reactions,
+        columns: headerColumns,
+        height: 240,
+        title: "Runs",
+        filters: [{ id: "branch", label: "Branch", kind: "text" }],
+        toolbar: [{ name: "reset-filters" }],
+        toolbarAlign: "left",
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const bar = canvas.getByTestId("table-bar");
+    await expect(bar).toHaveAttribute("data-align", "left");
+    const edges = (element: HTMLElement) => element.getBoundingClientRect();
+    const title = edges(canvas.getByTestId("table-title"));
+    const filters = edges(canvas.getByTestId("table-filters"));
+    const tools = edges(canvas.getByTestId("table-toolbar"));
+    // The title, the filters and the tools follow one another by the bar's gap; the room is left at the right.
+    await expect(title.left).toBeCloseTo(edges(bar).left, 0);
+    await expect(filters.left - title.right).toBeCloseTo(16, 0);
+    await expect(tools.left - filters.right).toBeCloseTo(16, 0);
+    await expect(edges(bar).right - tools.right).toBeGreaterThan(100);
+  },
+};
+
+/**
  * The BAR above the table: a TITLE at its left, and the table's own FILTERS
  * before the tools — always in view, by a property that need not be a
  * column's filter (Team) or a column at all (Branch). They are one choice
@@ -373,6 +410,50 @@ export const Window: Story = {
     // status line. The keys themselves (End, Home) scroll only under a real keyboard: infinite-table.feature.
     box.focus();
     await expect(canvas.getByRole("region", { name: "200 of 200" })).toHaveFocus();
+  },
+};
+
+/**
+ * The line that COUNTS the rows stays at the bottom of the box, whatever is
+ * scrolled: how many rows there are is in view at the top of a long list,
+ * in its middle and at its end — and the list still asks for more only when
+ * its END comes into view, not because the line is.
+ */
+export const StatusStaysInView: Story = {
+  render: () => (
+    <WidgetStory
+      key="status-in-view"
+      definition={antdInfiniteTable}
+      seed={{ demo: { rows: manyRows, total: 2000 } }}
+      viewModel={{
+        inputs: { rows: "demo.rows", total: "demo.total" },
+        on: { more: [{ set: "demo.asked", from: "offset" }] },
+        columns: headerColumns,
+        height: 240,
+        heightMode: "fixed",
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId("infinite-table-scroll");
+    const status = canvas.getByTestId("infinite-table-status");
+    const store = canvas.getByTestId("story-store");
+    const inView = () => {
+      const around = box.getBoundingClientRect();
+      const line = status.getBoundingClientRect();
+      return line.top >= around.top && line.bottom <= around.bottom + 1 && line.height > 0;
+    };
+    await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
+    await expect(status).toHaveTextContent("200 of 2000");
+    await waitFor(() => expect(inView()).toBe(true));
+    // At the top the end is far below: nothing was asked for.
+    await expect(store).not.toHaveTextContent("asked");
+    box.scrollTop = box.scrollHeight / 2;
+    await waitFor(() => expect(inView()).toBe(true));
+    await expect(store).not.toHaveTextContent("asked");
+    box.scrollTop = box.scrollHeight;
+    await waitFor(() => expect(store).toHaveTextContent('"asked": 200'));
+    await expect(inView()).toBe(true);
   },
 };
 

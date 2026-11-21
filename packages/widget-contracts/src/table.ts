@@ -77,7 +77,14 @@
  *   They are filters of the LIST, not of a column — the id may be a
  *   property no column shows —, always in view, and one choice with the
  *   headers: they read the same `filterIn` / `filterLike` / `filterBetween`
- *   ports and emit the same `filter-changed`.
+ *   ports and emit the same `filter-changed`. The filters and the tools
+ *   stand at the bar's RIGHT edge, or straight after the title with
+ *   `toolbarAlign: "left"`. Exposed as `data-align` on the bar.
+ * - WHEN IT SHOWS THAT IT IS LOADING is the `loadingIndicator` setting:
+ *   `always` (the default) whenever the `loading` port says so; `first`
+ *   only until the first answer — from the moment the table appears, never
+ *   saying it is empty meanwhile (`data-waiting`) —, every later fetch
+ *   showing nothing: the rows held stay until the new ones replace them.
  * - A table SCROLLS SIDEWAYS when its box is narrower than its columns need:
  *   a column is `COLUMN_WIDTH.default` (110) px wide, an id column
  *   (`isIdColumn`: the rows' key, or a property named like one) 88, unless
@@ -489,6 +496,18 @@ export const tableSettings = {
     .default([])
     .describe(
       'Tools above the table, in order: [{ "name": "reset-filters" }, { "name": "refresh" }] — the standard two — or names the host registered',
+    ),
+  loadingIndicator: z
+    .enum(["always", "first"])
+    .default("always")
+    .describe(
+      "When the table shows that it is loading: always — on every fetch, over the rows —, or first — only until the first answer, never saying it is empty meanwhile; later fetches then show nothing (needs the loading input bound)",
+    ),
+  toolbarAlign: z
+    .enum(["left", "right"])
+    .default("right")
+    .describe(
+      "Where the bar's filters and tools stand: right (the default) at the bar's right edge, left straight after the title",
     ),
   columnStateKey: z
     .string()
