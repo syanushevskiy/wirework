@@ -119,17 +119,39 @@ When("I reset the header filter", async ({ page }) => {
   await headerValues(page).getByRole("button", { name: "Done" }).click();
 });
 
-/** The search icon of a text column opens a box; Enter searches. */
+/**
+ * The search icon of a text column opens a box that searches as the text is typed, once typing pauses. Enter searches
+ * at once — ONE request, whatever the pause would have been —, and Done only closes.
+ */
 When("I search the {string} column for {string}", async ({ page }, title: string, text: string) => {
   await headerFilterTrigger(columnHeader(page, title)).click();
   const box = headerFilterDropdown(page).getByRole("textbox", { name: `Search ${title}` });
   await box.fill(text);
   await box.press("Enter");
+  await headerFilterDropdown(page).getByRole("button", { name: "Done" }).click();
+});
+
+/** Typed and left alone: the pause searches, the box stays open. */
+When("I type {string} into the search of the {string} column", async ({ page }, text: string, title: string) => {
+  await headerFilterTrigger(columnHeader(page, title)).click();
+  await headerFilterDropdown(page)
+    .getByRole("textbox", { name: `Search ${title}` })
+    .fill(text);
+});
+
+Then("the search of the column is open, with no {string} button", async ({ page }, label: string) => {
+  await expect(headerFilterDropdown(page).getByRole("button", { name: "Done" })).toBeVisible();
+  await expect(headerFilterDropdown(page).getByRole("button", { name: label })).toHaveCount(0);
+});
+
+When("I close the search of the column", async ({ page }) => {
+  await headerFilterDropdown(page).getByRole("button", { name: "Done" }).click();
 });
 
 When("I clear the search of the {string} column", async ({ page }, title: string) => {
   await headerFilterTrigger(columnHeader(page, title)).click();
   await headerFilterDropdown(page).getByRole("button", { name: "Reset" }).click();
+  await headerFilterDropdown(page).getByRole("button", { name: "Done" }).click();
 });
 
 /** The period a date column's header opens: a start and an end date. */

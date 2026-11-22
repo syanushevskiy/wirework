@@ -77,6 +77,16 @@ Feature: Infinite list — one table that scrolls its rows, with its filters in 
     Then the infinite table shows "200+ rows"
     And the state JSON contains '"filterLike": {}'
 
+  Scenario: The search of a column filters as the text is typed, and Done only closes it
+    Given I open the "infinite-list" page
+    When I type "suite" into the search of the "Name" column
+    # Nothing was pressed: the pause after the last letter searched.
+    Then the table has 1 row
+    And the search of the column is open, with no "Search" button
+    When I close the search of the column
+    Then the infinite table shows "1 rows"
+    And the state JSON contains '"name": "suite"'
+
   Scenario: A click on a sortable header orders the rows on the server
     Given I open the "infinite-list" page
     Then the first table row is "123456"

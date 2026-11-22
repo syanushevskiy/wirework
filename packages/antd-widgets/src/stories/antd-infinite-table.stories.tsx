@@ -106,7 +106,11 @@ export const HeaderFilter: Story = {
   },
 };
 
-/** A text filter is a SEARCH icon in its column header: type, Enter — the text reaches the store as `filterLike`; Reset clears it. */
+/**
+ * A text filter is a SEARCH icon in its column header: the text reaches the
+ * store as `filterLike` AS IT IS TYPED, once typing pauses — no Search
+ * button; Reset clears it, Done only closes the box.
+ */
 export const HeaderSearch: Story = {
   play: async ({ canvas, userEvent }) => {
     const header = canvas.getByRole("columnheader", { name: /Name/ });
@@ -115,13 +119,21 @@ export const HeaderSearch: Story = {
     await expect(within(canvas.getByRole("columnheader", { name: /Team/ })).queryByRole("button")).toBeNull();
     await userEvent.click(within(header).getByRole("button"));
     const box = await page().findByRole("textbox", { name: "Search Name" });
-    await userEvent.type(box, "smo{Enter}");
     const store = canvas.getByTestId("story-store");
-    await expect(store).toHaveTextContent('"filterLike": { "name": "smo" }');
+    await userEvent.type(box, "smo");
+    // Nothing is pressed: the pause searches, and the box stays open.
+    await waitFor(() => expect(store).toHaveTextContent('"filterLike": { "name": "smo" }'));
     await expect(store).toHaveTextContent('"filterIn": {}');
-    await userEvent.click(within(header).getByRole("button"));
-    await userEvent.click(await page().findByRole("button", { name: "Reset" }));
+    await expect(box).toBeVisible();
+    await expect(page().queryByRole("button", { name: /Search/ })).toBeNull();
+    // Enter searches at once.
+    await userEvent.type(box, "k{Enter}");
+    await expect(store).toHaveTextContent('"filterLike": { "name": "smok" }');
+    await userEvent.click(page().getByRole("button", { name: "Reset" }));
     await expect(store).toHaveTextContent('"filterLike": {}');
+    await expect(box).toBeVisible();
+    await userEvent.click(page().getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(box).not.toBeVisible());
   },
 };
 
@@ -429,6 +441,8 @@ export const StatusStaysInView: Story = {
         inputs: { rows: "demo.rows", total: "demo.total" },
         on: { more: [{ set: "demo.asked", from: "offset" }] },
         columns: headerColumns,
+        // A column pinned at the rows' start: the line lies over it too.
+        rowActions: [{ name: "favorite" }],
         height: 240,
         heightMode: "fixed",
       }}
@@ -441,7 +455,11 @@ export const StatusStaysInView: Story = {
     const inView = () => {
       const around = box.getBoundingClientRect();
       const line = status.getBoundingClientRect();
-      return line.top >= around.top && line.bottom <= around.bottom + 1 && line.height > 0;
+      // In the box, and on top along its whole width — the pinned column at its left edge included.
+      const onTop = [line.left + 4, line.left + line.width / 2, line.right - 4].every((x) =>
+        status.contains(document.elementFromPoint(x, line.top + line.height / 2)),
+      );
+      return line.top >= around.top && line.bottom <= around.bottom + 1 && line.height > 0 && onTop;
     };
     await expect(canvas.findByText("Run 1")).resolves.toBeVisible();
     await expect(status).toHaveTextContent("200 of 2000");

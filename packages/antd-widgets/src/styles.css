@@ -202,13 +202,14 @@
 /*
  * What is held of what there is: the line STAYS at the bottom of the box (and at its left while the table scrolls
  * sideways), over the rows that pass under it — the count is in view without scrolling to the list's end. Above
- * the pinned columns, like the header that sticks to the top.
+ * the pinned columns and the header that sticks to the top: antd stacks those by the NUMBER of columns (up to twice
+ * the count plus three), so the line stands above any table there is — and under what opens outside the page.
  */
 .ww-infinite-table__status {
   position: sticky;
   bottom: 0;
   left: 0;
-  z-index: 3;
+  z-index: 1000;
   padding: 0.5rem;
   text-align: center;
   background: var(--ant-color-bg-container, #fff);
