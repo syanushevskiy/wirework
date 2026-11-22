@@ -197,6 +197,13 @@ export function joinedSlice(
   return { rows: rows.slice(dropped), offset: held.offset + dropped };
 }
 
+/** The filters a list was asked under, as one text: other filters are another list. */
+const filtersKey = (query: TableViewQuery): string =>
+  JSON.stringify([query.filterIn, query.filterLike ?? {}, query.filterBetween ?? {}]);
+
+/** Before a list's filters in what was learned of it: its total came from the server's COUNT, not from its batches. */
+const COUNTED = "counted:";
+
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /** Structural equality of plain JSON data — key order does not matter, as it must not for a declaration. */
@@ -262,7 +269,7 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
   ): void => {
     const lists = learnedUnder.get(store) ?? new Map<string, string>();
     learnedUnder.set(store, lists);
-    const filters = JSON.stringify([query.filterIn, query.filterLike ?? {}, query.filterBetween ?? {}]);
+    const filters = filtersKey(query);
     const startsOver = afresh || lists.get(into) !== filters;
     lists.set(into, filters);
     // The end was found under these filters: the total is exact, and no later answer makes it a guess again.
@@ -387,6 +394,14 @@ export function createTableViewLoader(transport: TableViewTransport): TableViewL
         store.set(at("total"), answer.totalRecords);
         // Counted: the total is the whole list. (Said only where an uncounted answer said otherwise before.)
         if (store.get(at("hasMore")) !== undefined) store.set(at("hasMore"), false);
+        // A server may count some answers and not others: what a count says is said of ITS filters. An answer
+        // without one under the same filters leaves it standing; under others it starts a mark of its own — never
+        // "the end was found" under a total that is another list's.
+        const lists = learnedUnder.get(store) ?? new Map<string, string>();
+        learnedUnder.set(store, lists);
+        lists.set(into, COUNTED + filtersKey(query));
+      } else if (answer.data && learnedUnder.get(store)?.get(into) === COUNTED + filtersKey(query)) {
+        // Counted under these very filters by an earlier answer: the count stands.
       } else if (answer.data) {
         const join = held !== undefined ? "append" : (plan?.join ?? "replace");
         learn(store, into, query, answer.data.length, join, held === undefined && plan === undefined, at);

@@ -565,6 +565,49 @@ describe("the loader", () => {
     expect([store.get("t.total"), store.get("t.hasMore")]).toEqual([25, false]);
   });
 
+  it("a server that counts only SOME answers: a counted total does not outlive its filter", async () => {
+    const all = Array.from({ length: 50 }, (_, index) => ({ id: String(index + 1), odd: index % 2 === 0 }));
+    // It counts a filtered list and answers the whole one with rows only.
+    const transport: TableViewTransport = async (_url, request) => {
+      const { offset, limit, filterIn } = request.dataFilter;
+      const data = (filterIn.odd === undefined ? all : all.filter((row) => row.odd)).slice(offset, offset + limit);
+      return filterIn.odd === undefined ? { data } : { data, totalRecords: 25 };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    const known = () => [store.get("t.total"), store.get("t.hasMore")];
+    for (const args of [{ window: true }, { more: true }, {}]) {
+      store.set("t.filterIn", {});
+      await load(store, { url: "/x", into: "t", pageSize: 30 });
+      expect(known()).toEqual([30, true]);
+      store.set("t.filterIn", { odd: ["true"] });
+      store.set("t.wanted", 0);
+      await load(store, { into: "t", window: true });
+      expect(known()).toEqual([25, false]);
+      // The filter is taken away: the list is the one of before, and what the count said of the other is gone.
+      store.set("t.filterIn", {});
+      if (args.more === true) store.set("t.data", []);
+      await load(store, { into: "t", ...args });
+      expect(known()).toEqual([30, true]);
+    }
+  });
+
+  it("a server that counts only the FIRST batch: the count stands while the next ones join under the same filters", async () => {
+    const all = Array.from({ length: 50 }, (_, index) => ({ id: String(index + 1) }));
+    const transport: TableViewTransport = async (_url, request) => {
+      const { offset, limit } = request.dataFilter;
+      const data = all.slice(offset, offset + limit);
+      return offset === 0 ? { data, totalRecords: 50 } : { data };
+    };
+    const load = createTableViewLoader(transport);
+    const store = createStore({ t: { columns: [] } });
+    await load(store, { url: "/x", into: "t", pageSize: 20 });
+    await load(store, { into: "t", more: true });
+    expect(store.get<unknown[]>("t.data")).toHaveLength(40);
+    expect(store.get("t.total")).toBe(50);
+    expect(store.get("t.hasMore")).not.toBe(true);
+  });
+
   it("countRows: false — a list that ends on a full batch is known to end when the next one comes back empty", async () => {
     const all = Array.from({ length: 40 }, (_, index) => ({ id: String(index + 1) }));
     const transport: TableViewTransport = async (_url, request) => {
