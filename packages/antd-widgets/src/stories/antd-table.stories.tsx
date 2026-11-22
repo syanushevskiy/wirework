@@ -87,7 +87,8 @@ function LoadedStepByStep() {
       <WidgetStory
         key="loading-first"
         definition={antdTable}
-        data={LOADER_STEPS[step]?.data}
+        // Before the loader's first word the store holds what stores start with: no rows, not loading.
+        data={LOADER_STEPS[step]?.data ?? { "demo.loading": false, "demo.rows": [] }}
         viewModel={{
           inputs: { rows: "demo.rows", loading: "demo.loading" },
           columns: [

@@ -13,6 +13,9 @@
  *
  * `first` needs the `loading` port BOUND: a table nobody tells when its
  * load ended would wait for ever, so without it the table never waits.
+ * An EMPTY list at the rows path is not an answer — stores often start
+ * their rows as `[]` —, so a table whose rows stay empty and whose load
+ * never begins keeps waiting: `first` is for a table something loads.
  */
 import { useState } from "react";
 
@@ -38,7 +41,7 @@ export function useLoadingIndicator(
   /** What the `loading` port says, and whether it is bound at all. */
   loading: boolean,
   bound: boolean,
-  /** Whether rows were ever written at the rows path — an empty list counts. */
+  /** Whether the rows path holds rows — an EMPTY list does not count: only the load's end says a list is empty. */
   received: boolean,
 ): LoadingIndicatorView {
   // State derived while rendering (react.dev, "You might not need an effect"): a load was seen to begin, and the

@@ -151,8 +151,10 @@ export function useTableLoadingIndicator(
   mode: LoadingIndicator,
   loading: boolean,
 ): LoadingIndicatorView {
-  // The RAW value: the port reads a path nothing was written at as its default, an empty list.
-  const received = useStorePath<unknown>(store, paths.rows) !== undefined;
+  // Rows that ARE there: an empty list is no answer — a store that starts its rows as `[]` has been told nothing
+  // yet, and an answer that is empty is known by the load's end.
+  const held = useStorePath<unknown>(store, paths.rows);
+  const received = Array.isArray(held) && held.length > 0;
   return useLoadingIndicator(mode, loading, paths.loading !== undefined, received);
 }
 
