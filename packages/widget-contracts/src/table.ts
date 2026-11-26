@@ -537,6 +537,12 @@ export const tableSettings = {
     .describe(
       "Let a cell's text wrap onto more lines; off (the default), every cell is one line, cut with an ellipsis where it does not fit its column",
     ),
+  oneLineHeaders: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Keep every column header on one line: a title that does not fit its column is cut with an ellipsis, and the pointer over it shows it whole; off (the default), a long title wraps",
+    ),
 };
 
 export const tableContract = defineContract({

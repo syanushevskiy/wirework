@@ -84,7 +84,7 @@ export function createAntdInfiniteTable({
       items,
       actions,
     );
-    const tip = useCellTip(!viewModel.wrapCells);
+    const tip = useCellTip(!viewModel.wrapCells, viewModel.oneLineHeaders);
 
     return (
       <div
@@ -104,6 +104,7 @@ export function createAntdInfiniteTable({
         data-window={view.window}
         data-cell-selection={viewModel.cellSelection}
         data-wrap-cells={viewModel.wrapCells}
+        data-one-line-headers={viewModel.oneLineHeaders}
         data-selected={view.cells.selected}
         {...view.cells.root}
         {...tip.root}
@@ -149,6 +150,8 @@ export function createAntdInfiniteTable({
                 scroll={view.scroll}
                 // One line a cell: the columns keep their widths whatever the text (styles.css).
                 tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
+                // A header cut to one line shows its title whole: antd's own "Click to sort" tip would lie over it.
+                showSorterTooltip={!viewModel.oneLineHeaders}
                 components={view.components}
               />
             </RowSpaceProvider>

@@ -206,7 +206,10 @@ export function useTableHeaders(
         // Pinned: antd keeps it at that edge; its header says so for tests.
         ...(edge === undefined
           ? {}
-          : { fixed: edge, onHeaderCell: () => ({ "data-pinned": edge }) as Record<string, string> }),
+          : {
+              fixed: edge,
+              onHeaderCell: () => ({ "data-head-tip": column.title, "data-pinned": edge }) as Record<string, string>,
+            }),
         ...(offered ? headerOf(column, current, order) : {}),
         // The filter row: the title above the column's own control.
         ...(filterRow && filter !== undefined

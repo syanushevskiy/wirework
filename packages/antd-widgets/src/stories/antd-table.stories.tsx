@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button, Tag, Tooltip } from "antd";
 import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { antdTable, createAntdTable } from "../widgets/antd-table";
+import { cutBoxOf } from "../hooks/use-cell-tip";
 import type { TableRowActionProps } from "../hooks/use-row-actions";
 import type { TableCellProps } from "../hooks/use-table-cell";
 import type { TableToolbarItemProps } from "../hooks/use-table-toolbar";
@@ -1042,6 +1043,90 @@ export const OneLineCells: Story = {
     // A cell that fits says nothing more than it shows.
     await userEvent.hover(bodyCell(canvasElement, "2", "name"));
     await waitFor(() => expect(body.queryByRole("tooltip")).toBeNull());
+  },
+};
+
+const LONG_TITLE = "The name the run was given when it was started";
+const LONG_SORTED_TITLE = "Whatever was noted about the run afterwards";
+const longTitleColumns = [
+  { title: "#", property: "id" },
+  { title: LONG_TITLE, property: "name", width: 140 },
+  // A header with a sorter and a filter icon is a flexbox in antd: its title is cut too, the icons stay in the cell.
+  { title: LONG_SORTED_TITLE, property: "note", width: 140, sortable: true, filter: { kind: "text" as const } },
+];
+const headTitle = (root: HTMLElement, title: string): HTMLElement => {
+  const head = root.querySelector<HTMLElement>(`thead th[data-head-tip="${title}"]`);
+  if (head === null) throw new Error(`no header titled "${title}"`);
+  return head;
+};
+
+/**
+ * `oneLineHeaders`: every header is ONE LINE — a title longer than its
+ * column is cut with an ellipsis, and the pointer over it shows it whole,
+ * in the tip a cut cell has. A title that fits has no tip.
+ */
+export const OneLineHeaders: Story = {
+  render: () => (
+    <div style={{ width: 420 }}>
+      <WidgetStory
+        key="one-line-headers"
+        definition={antdTable}
+        seed={{ demo: { rows: longRows } }}
+        viewModel={{
+          inputs: { rows: "demo.rows" },
+          columns: longTitleColumns,
+          headerFilters: true,
+          oneLineHeaders: true,
+        }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement, userEvent }) => {
+    const body = within(document.body);
+    const short = headTitle(canvasElement, "#");
+    for (const title of [LONG_TITLE, LONG_SORTED_TITLE]) {
+      const long = headTitle(canvasElement, title);
+      // What is cut: the header cell itself, or — beside a sorter and a filter icon — the title's own box in it.
+      const cut = cutBoxOf(long);
+      await expect(getComputedStyle(cut).textOverflow).toBe("ellipsis");
+      await expect(cut.scrollWidth).toBeGreaterThan(cut.clientWidth);
+      // One line: a header of two lines would be over fifty pixels tall.
+      await expect(long.offsetHeight).toBeLessThan(50);
+      // The header is still named by its whole title.
+      await expect(within(canvasElement).getByRole("columnheader", { name: title })).toBe(long);
+      await userEvent.hover(long);
+      await expect(await body.findByRole("tooltip")).toHaveTextContent(title);
+    }
+    // The icons of the sorted, filtered header are inside it: nothing was pushed out.
+    const sorted = headTitle(canvasElement, LONG_SORTED_TITLE);
+    const edge = sorted.getBoundingClientRect().right;
+    for (const icon of sorted.querySelectorAll(".anticon")) {
+      await expect(icon.getBoundingClientRect().right).toBeLessThanOrEqual(edge);
+    }
+    // A title that fits says nothing more than it shows.
+    await userEvent.hover(short);
+    await waitFor(() => expect(body.queryByRole("tooltip")).toBeNull());
+  },
+};
+
+/** Without the setting a long title wraps onto more lines, as it always did, and has no tip. */
+export const WrappedHeaders: Story = {
+  render: () => (
+    <div style={{ width: 420 }}>
+      <WidgetStory
+        key="wrapped-headers"
+        definition={antdTable}
+        seed={{ demo: { rows: longRows } }}
+        viewModel={{ inputs: { rows: "demo.rows" }, columns: longTitleColumns }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement, userEvent }) => {
+    const long = headTitle(canvasElement, LONG_TITLE);
+    // More lines than one: the header row is over fifty pixels tall.
+    await expect(long.offsetHeight).toBeGreaterThan(50);
+    await userEvent.hover(long);
+    await expect(within(document.body).queryByRole("tooltip")).toBeNull();
   },
 };
 

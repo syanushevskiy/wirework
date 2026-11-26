@@ -9,7 +9,14 @@
  * (a link, a button, a form control) OWNS its click and never selects the
  * row. Hooks and pure helpers; each table's own hook composes them.
  */
-import { createElement, useCallback, useMemo, type MouseEvent, type TdHTMLAttributes } from "react";
+import {
+  createElement,
+  useCallback,
+  useMemo,
+  type MouseEvent,
+  type TdHTMLAttributes,
+  type ThHTMLAttributes,
+} from "react";
 import type { TableColumnType, TableProps } from "antd";
 import { getPath, type Emit, type PortDefinition, type ReadableStore } from "@wirework/schema";
 import { usePort } from "@wirework/react";
@@ -113,7 +120,10 @@ export function antdColumnOf(
 ): TableColumnType<RenderedRow> & { key: string } {
   return {
     key: `${index}:${column.property}`,
+    // The title stays TEXT: antd names the header by it for screen readers.
     title: column.title,
+    // With `oneLineHeaders` a title is one line, cut where it does not fit: what its tip then says (use-cell-tip.ts).
+    onHeaderCell: () => ({ "data-head-tip": column.title }) as ThHTMLAttributes<HTMLElement>,
     // The width the table's least width is the sum of (tableWidth): narrower than that, the table scrolls sideways.
     width: columnWidth(column, rowKey),
     render: (_, rendered) =>

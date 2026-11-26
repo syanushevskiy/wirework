@@ -6,6 +6,9 @@
  *
  * One pair of handlers on the table's root, as the cell selection has: a
  * body cell says its value as `data-tip` (use-table-rows.ts).
+ *
+ * A HEADER's title has the same tip with the `oneLineHeaders` setting: the
+ * title is then one line, said whole as `data-head-tip` on its header cell.
  */
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 
@@ -31,27 +34,46 @@ export interface CellTipView {
 
 const NO_HANDLERS: CellTipView["root"] = {};
 
+/**
+ * The box whose text is cut: the cell itself — or, in a header with a sorter or a filter icon, the title's own box,
+ * which antd lays out beside the icons (the INNERMOST one: a header with both nests two).
+ */
+export function cutBoxOf(cell: HTMLElement): HTMLElement {
+  const titles = cell.querySelectorAll<HTMLElement>(".ant-table-column-title");
+  return titles[titles.length - 1] ?? cell;
+}
+
 /** The tip of `cell`, when it has a value and its content is wider than itself. */
 function tipOf(cell: Element | null): CellTip | undefined {
-  if (!(cell instanceof HTMLElement) || cell.scrollWidth <= cell.clientWidth) return undefined;
-  const text = cell.dataset["tip"] ?? "";
+  if (!(cell instanceof HTMLElement)) return undefined;
+  const cut = cutBoxOf(cell);
+  if (cut.scrollWidth <= cut.clientWidth) return undefined;
+  const text = cell.dataset["tip"] ?? cell.dataset["headTip"] ?? "";
   if (text === "") return undefined;
   const rect = cell.getBoundingClientRect();
   const below = rect.top < ROOM_ABOVE;
   return { text, x: rect.left + rect.width / 2, y: below ? rect.bottom : rect.top, below };
 }
 
-export function useCellTip(enabled: boolean): CellTipView {
+/** What can be cut and so have a tip: a body cell (one line unless `wrapCells`), a header's title (`oneLineHeaders`). */
+const CELLS = "td[data-tip]";
+const HEADERS = "th[data-head-tip]";
+
+export function useCellTip(cells: boolean, headers = false): CellTipView {
   const [tip, setTip] = useState<CellTip>();
   /** The cell the pointer is over: the same cell is not measured twice. */
   const over = useRef<Element | null>(null);
+  const cut = [cells ? CELLS : "", headers ? HEADERS : ""].filter(Boolean).join(", ");
 
-  const onPointerOver = useCallback((event: PointerEvent<HTMLElement>) => {
-    const cell = (event.target as Element).closest("td[data-tip]");
-    if (cell === over.current) return;
-    over.current = cell;
-    setTip(tipOf(cell));
-  }, []);
+  const onPointerOver = useCallback(
+    (event: PointerEvent<HTMLElement>) => {
+      const cell = (event.target as Element).closest(cut);
+      if (cell === over.current) return;
+      over.current = cell;
+      setTip(tipOf(cell));
+    },
+    [cut],
+  );
 
   const hide = useCallback(() => {
     over.current = null;
@@ -66,6 +88,6 @@ export function useCellTip(enabled: boolean): CellTipView {
     return () => window.removeEventListener("scroll", hide, true);
   }, [shown, hide]);
 
-  if (!enabled) return { root: NO_HANDLERS, tip: undefined };
+  if (cut === "") return { root: NO_HANDLERS, tip: undefined };
   return { root: { onPointerOver, onPointerLeave: hide }, tip };
 }

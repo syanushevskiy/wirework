@@ -104,7 +104,7 @@ export function createAntdTable({
       items,
       actions,
     );
-    const tip = useCellTip(!viewModel.wrapCells);
+    const tip = useCellTip(!viewModel.wrapCells, viewModel.oneLineHeaders);
 
     return (
       // The root hears every press, right click and key of its cells: the cell selection is decided in one place.
@@ -118,6 +118,7 @@ export function createAntdTable({
         data-min-width={scroll.x}
         data-cell-selection={viewModel.cellSelection}
         data-wrap-cells={viewModel.wrapCells}
+        data-one-line-headers={viewModel.oneLineHeaders}
         data-selected={selection.selected}
         {...selection.root}
         {...tip.root}
@@ -146,6 +147,8 @@ export function createAntdTable({
             scroll={scroll}
             // One line a cell: the columns keep their widths whatever the text (styles.css).
             tableLayout={viewModel.wrapCells ? "auto" : "fixed"}
+            // A header cut to one line shows its title whole: antd's own "Click to sort" tip would lie over it.
+            showSorterTooltip={!viewModel.oneLineHeaders}
           />
         </TableTheme>
       </div>
