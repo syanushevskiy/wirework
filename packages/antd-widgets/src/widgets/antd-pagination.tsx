@@ -39,6 +39,7 @@ function AntdPagination({ viewModel, store, emit }: ContractProps<typeof paginat
         pageSize={pageSize}
         {...density}
         showSizeChanger={viewModel.showSizeChanger}
+        showQuickJumper={viewModel.showQuickJumper}
         {...(viewModel.showTotal ? { showTotal } : {})}
         onChange={change}
       />

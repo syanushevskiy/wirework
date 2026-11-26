@@ -8,6 +8,21 @@
       "tone": "danger"
     }
   },
+  "widgets.infinite-list.pages": {
+    "default": {
+      "inputs": {
+        "position": "infinite-list.position",
+        "visible": "infinite-list.visible",
+        "total": "infinite-list.total",
+        "hasMore": "infinite-list.hasMore"
+      },
+      "label": "Pages of the archive",
+      "mode": "pages",
+      "pageSize": 200,
+      "showRange": false,
+      "showPercent": false
+    }
+  },
   "widgets.infinite-list.position": {
     "default": {
       "inputs": {

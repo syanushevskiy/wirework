@@ -23,6 +23,22 @@
   white-space: nowrap;
 }
 
+/*
+ * A HEADER is one line with `oneLineHeaders`: its title is cut with an ellipsis where the column is too narrow for
+ * it (the tip says it whole, use-cell-tip.ts). antd lays a header with a sorter or a filter icon out as a flexbox:
+ * the title's box must be allowed to shrink under its text, or it would push the icons out instead of being cut.
+ */
+.ww-table[data-one-line-headers="true"] .ant-table-thead > tr > th[data-head-tip],
+.ww-table[data-one-line-headers="true"] .ant-table-thead > tr > th[data-head-tip] .ant-table-column-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ww-table[data-one-line-headers="true"] .ant-table-thead > tr > th[data-head-tip] .ant-table-column-title {
+  min-width: 0;
+}
+
 /* The tip of a cut cell: in the body, hung at the middle of the cell's top edge (its bottom edge at the window's top). */
 .ww-table__tip {
   position: fixed;
@@ -409,6 +425,12 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 6rem;
+}
+
+/* As pages: the pagination an antd Table has under it — across its cell, the pages at the right edge. */
+.ww-list-position__pages {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .ww-list-position .ant-typography {

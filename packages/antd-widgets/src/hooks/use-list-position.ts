@@ -6,10 +6,10 @@
  * once: a list that fetches the rows at a place is asked for one place, not
  * for every one the handle passed.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Emit, PortDefinition, ReadableStore } from "@wirework/schema";
 import { usePort } from "@wirework/react";
-import { listPercent } from "@wirework/widget-contracts";
+import { listPage, listPages, listPercent } from "@wirework/widget-contracts";
 import type { ListPositionEvents } from "../widgets/antd-list-position";
 
 const count = new Intl.NumberFormat("en-US", { useGrouping: true });
@@ -26,6 +26,8 @@ export function useListPosition(
     hasMore: PortDefinition<boolean>;
     visible: PortDefinition<number>;
   },
+  /** Rows a page, for the widget shown as pages. */
+  pageSize: number,
 ) {
   // Validated by the contract's ports; a malformed value shows the default.
   const total = usePort(store, paths.total, ports.total) ?? 0;
@@ -55,6 +57,36 @@ export function useListPosition(
     [stored, emit],
   );
 
+  // AS PAGES: the page the list stands in, and a page chosen — its first row, or the last position there is when
+  // that page is the list's short end. The same `changed` as the scale's.
+  const pages = listPages(total, pageSize);
+  const page = listPage(stored, visible, total, pageSize);
+  // A list whose END IS NOT KNOWN has a page after the last one known: NEXT is never the end of it. Its rows are
+  // not there yet, so the list is sent to the end of the rows known — where it asks for the next ones — and the
+  // page's first row is AWAITED: once the rows known reach it, the list goes there. Not state: nothing shown
+  // depends on it.
+  const awaited = useRef<{ first: number; total: number } | undefined>(undefined);
+  const goTo = useCallback(
+    (next: number) => {
+      const wanted = (Math.min(open ? pages + 1 : pages, Math.max(1, next)) - 1) * pageSize;
+      awaited.current = wanted > known && open ? { first: wanted, total } : undefined;
+      const first = Math.min(known, wanted);
+      if (first !== stored) emit("changed", { position: first });
+    },
+    [known, open, pages, pageSize, stored, total, emit],
+  );
+  useEffect(() => {
+    const wish = awaited.current;
+    if (wish === undefined) return;
+    if (wish.first <= known) {
+      awaited.current = undefined;
+      emit("changed", { position: wish.first });
+      // The list ended before that page, or was scrolled back from the end it was sent to: nothing is awaited.
+    } else if (!open || stored + 2 * visible < wish.total) {
+      awaited.current = undefined;
+    }
+  }, [known, open, stored, visible, emit]);
+
   // A share of a whole nobody knows would be a guess: no percent until the end is found.
   const percent = open ? undefined : listPercent(position, visible, total);
   const range =
@@ -79,5 +111,12 @@ export function useListPosition(
     valueText: open ? (value: number): string => placeOf(value) : undefined,
     drag,
     release,
+    page,
+    pages,
+    /** "Page 3 of 40" — "of 4+" while the list goes on past the rows known. */
+    pageText: `Page ${rows(page)} of ${rows(pages)}${open ? "+" : ""}`,
+    /** The rows the pagination spans: the list's — and one page more while it goes on, so that Next is offered. */
+    pagedTotal: open ? (pages + 1) * pageSize : total,
+    goTo,
   };
 }

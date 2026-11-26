@@ -26,13 +26,21 @@
           ]
         },
         {
+          "classes": "items-center gap-4",
           "cells": [
             {
               "id": "position-archive",
               "widget": "antd-list-position",
               "model": "widgets.infinite-list.position",
               "template": "default",
-              "classes": "w-full"
+              "classes": "flex-1"
+            },
+            {
+              "id": "pages-archive",
+              "widget": "antd-list-position",
+              "model": "widgets.infinite-list.pages",
+              "template": "default",
+              "classes": "flex-none"
             }
           ]
         },

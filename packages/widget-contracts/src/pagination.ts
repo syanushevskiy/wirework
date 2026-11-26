@@ -50,6 +50,10 @@ export const paginationContract = defineContract({
     pageSize: z.number().int().min(1).default(10).describe("Items per page while no page-size input is bound"),
     showSizeChanger: z.boolean().default(false).describe("Let the user change the page size"),
     showTotal: z.boolean().default(true).describe("Show the item range and the total"),
+    showQuickJumper: z
+      .boolean()
+      .default(false)
+      .describe('Offer a "Go to" field: a page number typed and entered is the page shown, however far it is'),
     size: z.enum(PAGINATION_SIZES).default("default").describe("Visual density"),
   }),
   preview: {

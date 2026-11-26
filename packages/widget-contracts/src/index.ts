@@ -74,7 +74,7 @@ export { filterBarContract, filterDefinitionSchema, filterValuesSchema } from ".
 export type { FilterDefinition, FilterValues } from "./filter-bar";
 export { infiniteTableContract, SLICE_EDGES, HEIGHT_MODES } from "./infinite-table";
 export type { SliceEdge, HeightMode } from "./infinite-table";
-export { listPercent, listPositionContract } from "./list-position";
+export { listPage, listPages, listPercent, listPositionContract } from "./list-position";
 // More of what every UI library has.
 export { switchContract } from "./switch";
 export { sliderContract } from "./slider";

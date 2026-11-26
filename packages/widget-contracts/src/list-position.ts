@@ -23,6 +23,14 @@
  * (the end of the list is 100%). With `vertical` the scale stands upright
  * (aria-orientation "vertical"), the START of the list at its top — as a
  * scrollbar beside the list would — and the texts sit under it.
+ *
+ * AS PAGES (`mode: "pages"`): the same position, said and moved in PAGES of
+ * `pageSize` rows — a pagination in place of the scale, its current page
+ * the one the list stands in (`listPage`), following the list as it
+ * scrolls; choosing a page EMITS the same `changed` with that page's first
+ * row. The list is not cut into pages — it scrolls on as it did; the pages
+ * are a way to say where it stands and to go somewhere. Exposed as
+ * `data-mode`, `data-page`, `data-pages`.
  */
 import { z } from "zod";
 import { defineContract } from "@wirework/schema";
@@ -31,6 +39,23 @@ import { defineContract } from "@wirework/schema";
 export function listPercent(position: number, visible: number, total: number): number {
   if (total <= 0) return 0;
   return Math.min(100, Math.round((Math.min(total, position + Math.max(1, visible)) / total) * 100));
+}
+
+/** How many pages of `pageSize` rows a list of `total` rows is — one at least: an empty list stands on page 1 of 1. */
+export function listPages(total: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
+}
+
+/**
+ * The page a list STANDS in, from 1 — one rule for every implementation: the
+ * page of its first row in view, and the LAST page once its last row is in
+ * view (the end of a list is rarely the start of a page: without this the
+ * last page would never be the current one).
+ */
+export function listPage(position: number, visible: number, total: number, pageSize: number): number {
+  const pages = listPages(total, pageSize);
+  if (total > 0 && position + Math.max(1, visible) >= total) return pages;
+  return Math.min(pages, Math.floor(position / Math.max(1, pageSize)) + 1);
 }
 
 export const listPositionContract = defineContract({
@@ -79,6 +104,24 @@ export const listPositionContract = defineContract({
       .boolean()
       .default(false)
       .describe("Stand the scale upright, the start of the list at its top — for a place beside the list"),
+    mode: z
+      .enum(["scale", "pages"])
+      .default("scale")
+      .describe(
+        "How the position is shown and moved: scale — a slider over the whole list —, or pages — a pagination whose current page follows the list as it scrolls",
+      ),
+    pageSize: z
+      .number()
+      .int()
+      .min(1)
+      .default(50)
+      .describe("Rows a page, with mode pages (the list still scrolls: a page is only a way to say where it stands)"),
+    showQuickJumper: z
+      .boolean()
+      .default(false)
+      .describe(
+        'With mode pages, offer a "Go to" field: a page number typed and entered is where the list goes, however far it is',
+      ),
   }),
   preview: {
     seed: { preview: { position: 400, visible: 25, total: 2000 } },

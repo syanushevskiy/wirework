@@ -859,7 +859,36 @@ Then("the table row {string} is not a favorite", async ({ page }, key: string) =
 
 /* ------------------- windowed list and list position ------------------- */
 
-const listPosition = (page: Page) => live(page).getByTestId("antd-list-position");
+/** The list position shown as a SCALE — a page may show the same position as pages too (`listPages`). */
+const listPosition = (page: Page) => live(page).locator('[data-testid="antd-list-position"][data-mode="scale"]');
+/** The list position shown as PAGES: a pagination whose current page follows the list. */
+const listPages = (page: Page) => live(page).locator('[data-testid="antd-list-position"][data-mode="pages"]');
+
+/** The page the list STANDS in, as its pages say — of how many (`+`: of the rows known so far, the end not found). */
+Then("the list stands on page {int} of {string}", async ({ page }, number: number, pages: string) => {
+  await expect(listPages(page)).toHaveAttribute("data-page", String(number));
+  await expect(listPages(page).getByTestId("list-position-page")).toHaveText(`Page ${number} of ${pages}`);
+});
+
+/** The page alone — how many there are depends on what the list has fetched ahead meanwhile. */
+Then("the list stands on page {int}", async ({ page }, number: number) => {
+  await expect(listPages(page)).toHaveAttribute("data-page", String(number));
+});
+
+/** Next — offered on the last page known too, while the list's end is not: the list fetches on and goes there. */
+When("I go to the next page of the list", async ({ page }) => {
+  await listPages(page).getByTitle("Next Page").click();
+});
+
+/** Several pages at once: the "•••" after the current page goes five pages on. */
+When("I go five pages on in the list", async ({ page }) => {
+  await listPages(page).getByTitle("Next 5 Pages").click();
+});
+
+/** A page chosen in the list's pages: the list goes to that page's first row. */
+When("I go to page {int} of the list", async ({ page }, number: number) => {
+  await listPages(page).getByTitle(String(number), { exact: true }).click();
+});
 
 /** A windowed list holds a SLICE of the whole list: these rows of it are in the store (rows count from 1). */
 Then("the list holds the rows {int} to {int}", async ({ page }, from: number, to: number) => {
@@ -933,8 +962,8 @@ Then("the list's end is known", async ({ page }) => {
 /**
  * Scrolls to the end of the rows known, again and again, until the list's
  * end is found (`data-open` false): every arrival at the end asks for the
- * batch after it, and the batch that comes back empty is the end. Eleven
- * batches for the archive's two thousand rows, fifty-one for the ten
+ * batch after it, and the batch that comes back empty is the end. Sixteen
+ * batches for the archive's three thousand rows, fifty-one for the ten
  * thousand of performance.feature — hence the long wait; it ends when the
  * end is found.
  */

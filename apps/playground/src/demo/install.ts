@@ -155,7 +155,7 @@ export function installDemo(
   });
   // Server-side data for the demo: a fake server with real latency.
   const runsServer = createRunsServer({ seed: sampleRuns, total: listSize(23), latencyMs: 600 });
-  // The archive: the same kind of list, long — two thousand runs nobody holds whole (the windowed list's demo).
+  // The archive: the same kind of list, long — three thousand runs nobody holds whole (the windowed list's demo).
   const archiveServer = createRunsServer({
     seed: sampleRuns,
     total: listSize(ARCHIVE_TOTAL),

@@ -1,5 +1,5 @@
 Feature: Infinite list — one table that scrolls its rows, with its filters in the column headers
-  The Infinite List page shows two thousand runs as ONE widget: the rows
+  The Infinite List page shows three thousand runs as ONE widget: the rows
   scroll inside the table — no pagination. It is a VIRTUAL list: of the rows
   it holds only those around the visible part of its box are rendered
   (twice the box's height), with blank space of the right height standing
@@ -54,7 +54,7 @@ Feature: Infinite list — one table that scrolls its rows, with its filters in 
     When I tick "Failed" in the header filter
     And I apply the header filter
     Then the event log shows widget "antd-infinite-table" event "filter-changed" with payload '{"filterIn":{"state":["Failed"]},"filterLike":{},"filterBetween":{}}'
-    # More than a batch of the two thousand runs failed: the first two hundred of them are held.
+    # More than a batch of the three thousand runs failed: the first two hundred of them are held.
     And the list holds the rows 1 to 200
     And the first table row is "123456"
     And the table row "123456" shows a "danger" tag "Failed" for "state"

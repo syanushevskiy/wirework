@@ -57,7 +57,7 @@ Feature: Cells of a table are selected like a spreadsheet's, copied and exported
     Then the list holds the rows 1 to 200
     When I open the cell menu on "inbound" of the table row "123456"
     And I choose "Export as CSV" in the cell menu and keep the file
-    # The titles, then the two hundred rows held — not the two thousand the server has.
+    # The titles, then the two hundred rows held — not the three thousand the server has.
     Then the exported file is "infinite-list-data.csv" with 201 lines, the first "#,Name,Reference,Inbound,Status,Started,Runner,Branch,Duration"
     # Both # and Name are links to the run: each is exported as the address it leads to.
     And line 2 of the exported file is "{origin}/demo/runs/123456,{origin}/demo/runs/123456,REF55456735,IND539363,Failed,2026-11-01 09:00,qa-1,main,5 min"
